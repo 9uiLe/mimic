@@ -40,11 +40,7 @@
     "definition": {
       "intent": "Compare alternatives"
     },
-    "usageRules": [
-      "Use for two or more candidates"
-    ],
-    "antiUsageRules": [
-      "Do not imply approval"
-    ]
+    "usageRules": ["Use for two or more candidates"],
+    "antiUsageRules": ["Do not imply approval"]
   }
 }

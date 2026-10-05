@@ -19,12 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "domains",
-            "steps",
-            "preservedContext"
-          ],
+          "required": ["summary", "domains", "steps", "preservedContext"],
           "properties": {
             "summary": {
               "type": "string",

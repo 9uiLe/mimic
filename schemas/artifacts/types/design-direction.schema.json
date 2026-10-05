@@ -47,11 +47,7 @@
               "minItems": 1
             },
             "selectionStatus": {
-              "enum": [
-                "candidate",
-                "proposed-selection",
-                "selected"
-              ]
+              "enum": ["candidate", "proposed-selection", "selected"]
             }
           },
           "additionalProperties": false,

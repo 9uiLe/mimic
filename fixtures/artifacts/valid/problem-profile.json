@@ -35,14 +35,8 @@
   ],
   "content": {
     "summary": "Illustrative provisional problem-profile.",
-    "traits": [
-      "Multiple domains"
-    ],
-    "principles": [
-      "Preserve entity context"
-    ],
-    "risks": [
-      "Navigation discontinuity"
-    ]
+    "traits": ["Multiple domains"],
+    "principles": ["Preserve entity context"],
+    "risks": ["Navigation discontinuity"]
   }
 }

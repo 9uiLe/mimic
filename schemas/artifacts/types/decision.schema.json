@@ -19,12 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "question",
-            "alternatives",
-            "outcome"
-          ],
+          "required": ["summary", "question", "alternatives", "outcome"],
           "properties": {
             "summary": {
               "type": "string",
@@ -43,11 +38,7 @@
               "minItems": 1
             },
             "outcome": {
-              "enum": [
-                "open",
-                "proposed",
-                "committed"
-              ]
+              "enum": ["open", "proposed", "committed"]
             },
             "chosenAlternative": {
               "type": "string",
@@ -70,10 +61,7 @@
                 "type": "object"
               },
               "then": {
-                "required": [
-                  "chosenAlternative",
-                  "rationale"
-                ],
+                "required": ["chosenAlternative", "rationale"],
                 "type": "object",
                 "properties": {
                   "chosenAlternative": {},

@@ -37,10 +37,7 @@
     "summary": "Illustrative provisional scenario.",
     "actor": "Product designer",
     "context": "Reviewing provisional directions",
-    "steps": [
-      "Open candidate list",
-      "Inspect evidence"
-    ],
+    "steps": ["Open candidate list", "Inspect evidence"],
     "expectedOutcome": "Can identify open decisions"
   }
 }

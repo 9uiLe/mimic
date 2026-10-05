@@ -36,10 +36,7 @@
   "content": {
     "summary": "Illustrative provisional decision.",
     "question": "Which direction should be selected?",
-    "alternatives": [
-      "Pattern first",
-      "Component first"
-    ],
+    "alternatives": ["Pattern first", "Component first"],
     "outcome": "open"
   }
 }

@@ -19,12 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "changeType",
-            "request",
-            "rationale"
-          ],
+          "required": ["summary", "changeType", "request", "rationale"],
           "properties": {
             "summary": {
               "type": "string",

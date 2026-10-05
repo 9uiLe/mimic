@@ -35,10 +35,7 @@
               "minLength": 1
             },
             "availability": {
-              "enum": [
-                "current",
-                "proposed"
-              ]
+              "enum": ["current", "proposed"]
             },
             "description": {
               "type": "string",
@@ -65,9 +62,7 @@
                 "type": "object"
               },
               "then": {
-                "required": [
-                  "supportingEvidence"
-                ],
+                "required": ["supportingEvidence"],
                 "type": "object",
                 "properties": {
                   "supportingEvidence": {}

@@ -36,12 +36,8 @@
   ],
   "content": {
     "summary": "Pattern-first direction.",
-    "principles": [
-      "Structural clarity"
-    ],
-    "mechanisms": [
-      "Task to pattern to layout to component"
-    ],
+    "principles": ["Structural clarity"],
+    "mechanisms": ["Task to pattern to layout to component"],
     "selectionStatus": "selected"
   }
 }

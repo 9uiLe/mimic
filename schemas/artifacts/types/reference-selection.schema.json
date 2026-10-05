@@ -19,10 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "references"
-          ],
+          "required": ["summary", "references"],
           "properties": {
             "summary": {
               "type": "string",
@@ -55,18 +52,10 @@
                     ]
                   },
                   "structuralRelevance": {
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ]
+                    "enum": ["low", "medium", "high"]
                   },
                   "contextDistance": {
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ]
+                    "enum": ["low", "medium", "high"]
                   },
                   "transferableMechanisms": {
                     "type": "array",
@@ -85,9 +74,7 @@
                           "const": "far"
                         }
                       },
-                      "required": [
-                        "classification"
-                      ],
+                      "required": ["classification"],
                       "type": "object"
                     },
                     "then": {

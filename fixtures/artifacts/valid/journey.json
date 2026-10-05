@@ -35,14 +35,8 @@
   ],
   "content": {
     "summary": "Illustrative provisional journey.",
-    "domains": [
-      "exploration",
-      "review"
-    ],
-    "steps": [
-      "Explore candidates",
-      "Review a direction"
-    ],
+    "domains": ["exploration", "review"],
+    "steps": ["Explore candidates", "Review a direction"],
     "preservedContext": [
       "entity",
       "terminology",

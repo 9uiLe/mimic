@@ -19,12 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "traits",
-            "principles",
-            "risks"
-          ],
+          "required": ["summary", "traits", "principles", "risks"],
           "properties": {
             "summary": {
               "type": "string",

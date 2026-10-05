@@ -41,9 +41,7 @@
         "classification": "far",
         "structuralRelevance": "high",
         "contextDistance": "high",
-        "transferableMechanisms": [
-          "Progressive disclosure"
-        ]
+        "transferableMechanisms": ["Progressive disclosure"]
       }
     ]
   }

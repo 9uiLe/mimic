@@ -19,13 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "target",
-            "method",
-            "state",
-            "evidenceRefs"
-          ],
+          "required": ["summary", "target", "method", "state", "evidenceRefs"],
           "properties": {
             "summary": {
               "type": "string",
@@ -40,13 +34,7 @@
               "minLength": 1
             },
             "state": {
-              "enum": [
-                "PASS",
-                "CONCERN",
-                "FAIL",
-                "UNVERIFIED",
-                "N/A"
-              ]
+              "enum": ["PASS", "CONCERN", "FAIL", "UNVERIFIED", "N/A"]
             },
             "evidenceRefs": {
               "type": "array",
@@ -71,11 +59,7 @@
               "if": {
                 "properties": {
                   "state": {
-                    "enum": [
-                      "PASS",
-                      "CONCERN",
-                      "FAIL"
-                    ]
+                    "enum": ["PASS", "CONCERN", "FAIL"]
                   }
                 },
                 "type": "object"

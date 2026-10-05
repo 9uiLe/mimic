@@ -19,11 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "target",
-            "findings"
-          ],
+          "required": ["summary", "target", "findings"],
           "properties": {
             "summary": {
               "type": "string",
@@ -38,33 +34,17 @@
               "minItems": 1,
               "items": {
                 "type": "object",
-                "required": [
-                  "criterion",
-                  "state",
-                  "severity",
-                  "reason"
-                ],
+                "required": ["criterion", "state", "severity", "reason"],
                 "properties": {
                   "criterion": {
                     "type": "string",
                     "minLength": 1
                   },
                   "state": {
-                    "enum": [
-                      "PASS",
-                      "CONCERN",
-                      "FAIL",
-                      "UNVERIFIED",
-                      "N/A"
-                    ]
+                    "enum": ["PASS", "CONCERN", "FAIL", "UNVERIFIED", "N/A"]
                   },
                   "severity": {
-                    "enum": [
-                      "BLOCKER",
-                      "MAJOR",
-                      "MINOR",
-                      "NOTE"
-                    ]
+                    "enum": ["BLOCKER", "MAJOR", "MINOR", "NOTE"]
                   },
                   "reason": {
                     "type": "string",

@@ -19,12 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "vision",
-            "goals",
-            "nonGoals"
-          ],
+          "required": ["summary", "vision", "goals", "nonGoals"],
           "properties": {
             "summary": {
               "type": "string",

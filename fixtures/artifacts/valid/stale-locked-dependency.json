@@ -43,16 +43,9 @@
   ],
   "content": {
     "summary": "A shared navigation model.",
-    "navigation": [
-      "Product",
-      "Domain"
-    ],
-    "terminology": [
-      "Design Package"
-    ],
-    "entityContext": [
-      "Product ID"
-    ],
+    "navigation": ["Product", "Domain"],
+    "terminology": ["Design Package"],
+    "entityContext": ["Product ID"],
     "accessibilityBaseline": "WCAG 2.2 AA"
   }
 }

@@ -35,11 +35,7 @@
   ],
   "content": {
     "summary": "Illustrative provisional user-task-model.",
-    "users": [
-      "Product designer"
-    ],
-    "tasks": [
-      "Compare candidate directions"
-    ]
+    "users": ["Product designer"],
+    "tasks": ["Compare candidate directions"]
   }
 }

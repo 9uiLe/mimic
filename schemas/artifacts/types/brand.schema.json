@@ -19,12 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "attributes",
-            "voice",
-            "visualIntent"
-          ],
+          "required": ["summary", "attributes", "voice", "visualIntent"],
           "properties": {
             "summary": {
               "type": "string",

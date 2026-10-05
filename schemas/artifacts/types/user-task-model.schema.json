@@ -19,11 +19,7 @@
         },
         "content": {
           "type": "object",
-          "required": [
-            "summary",
-            "users",
-            "tasks"
-          ],
+          "required": ["summary", "users", "tasks"],
           "properties": {
             "summary": {
               "type": "string",

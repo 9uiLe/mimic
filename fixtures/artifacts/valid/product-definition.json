@@ -36,11 +36,7 @@
   "content": {
     "summary": "Illustrative provisional product-definition.",
     "vision": "Make design decisions traceable.",
-    "goals": [
-      "Versioned Design Package"
-    ],
-    "nonGoals": [
-      "Production application generation"
-    ]
+    "goals": ["Versioned Design Package"],
+    "nonGoals": ["Production application generation"]
   }
 }
