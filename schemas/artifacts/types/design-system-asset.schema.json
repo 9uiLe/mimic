@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:design-system-asset",
+  "title": "design-system-asset",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "design-system-asset"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": [
+            "summary",
+            "assetKind",
+            "name",
+            "definition",
+            "usageRules",
+            "antiUsageRules"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "assetKind": {
+              "enum": [
+                "foundation",
+                "dtcg-tokens",
+                "semantic-icon",
+                "provider-binding",
+                "component",
+                "pattern",
+                "layout",
+                "responsive-rule",
+                "accessibility-rule",
+                "governance"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "definition": {
+              "type": "object",
+              "minProperties": 1
+            },
+            "usageRules": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "antiUsageRules": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "providerLicense": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

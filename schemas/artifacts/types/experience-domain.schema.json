@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:experience-domain",
+  "title": "experience-domain",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "experience-domain"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": [
+            "summary",
+            "primaryGoal",
+            "interactionModel",
+            "informationStructure",
+            "temporalBehavior",
+            "riskModel",
+            "sessionModel"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "primaryGoal": {
+              "type": "string",
+              "minLength": 1
+            },
+            "interactionModel": {
+              "type": "string",
+              "minLength": 1
+            },
+            "informationStructure": {
+              "type": "string",
+              "minLength": 1
+            },
+            "temporalBehavior": {
+              "type": "string",
+              "minLength": 1
+            },
+            "riskModel": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sessionModel": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
