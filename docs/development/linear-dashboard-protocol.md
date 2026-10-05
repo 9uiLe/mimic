@@ -10,13 +10,13 @@ This protocol makes the [Mimic Linear project](https://linear.app/9uile/project/
 - Put a focused finding or bug under the closest owning workstream. Link related issues where useful; do not expand an unrelated issue's scope to absorb it.
 - Keep produced references on the relevant issue as they become concrete: primary PR, repository files, specifications, prototypes, validation results, and decisions. Update stale references when artifacts move.
 
-## Execute one issue at a time
+## Execute one issue per coding task
 
 The clean `main` checkout is for coordination. Each coding task uses one issue, branch, worktree, and primary PR. Start from fresh `origin/main`; do not use the same branch in multiple worktrees. Use no more than four coding worktrees at once, and create only those needed for useful parallel work.
 
 Before starting parallel tasks, compare their write sets and outputs. Serialize work that edits a shared design contract or whose output is a prerequisite for another task. Prioritize the critical path while limiting conflicts, rework, and idle time. Run targeted checks for the changed area, then the repository's canonical checks; never disable tests to make a change pass.
 
-Reference the Linear issue in the primary PR. Maintainers may squash only after CI is green for the PR's actual current head and repository policy permits the merge. Never auto-merge an external contributor's PR. Mark the coding issue Done only after its PR actually merges; record the merge SHA and evidence on the issue. Then sync `main` and dependent branches, re-evaluate dependent issues before starting them from the latest `main`, resolve conflicts, rerun affected checks, and clean up the merged worktree and branch. A draft PR or green CI alone is not completion.
+Reference the Linear issue in the primary PR. Maintainers may squash only after CI is green for the PR's actual current head and repository policy permits the merge. Never auto-merge an external contributor's PR. Mark the coding issue Done only after its primary PR actually merges and the issue's acceptance criteria are satisfied; record the merge SHA and evidence on the issue. Then sync `main` and dependent branches, re-evaluate dependent issues before starting them from the latest `main`, resolve conflicts, rerun affected checks, and clean up the merged worktree and branch. A draft PR or green CI alone is not completion.
 
 Retry recoverable worker failures safely. If a durable architectural choice needs the owner, use the decision process below and continue independent reversible work. Record any blocked dependent work explicitly.
 
