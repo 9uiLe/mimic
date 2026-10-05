@@ -66,7 +66,7 @@ These are qualitative judgments with reasons, not a synthetic overall score. Con
 | --- | --- | --- |
 | Near | High structural similarity and low context distance. | Establish credible baseline mechanisms and local conventions. |
 | Adjacent | Useful structural similarity and medium context distance. | Reveal alternative mechanisms without losing task relevance. |
-| Far | Useful, often high, structural relevance and high context distance. | Expose transferable mechanisms obscured by familiar domain conventions. Far is never random inspiration. |
+| Far | High structural relevance and high context distance; the similarity must be useful to the current problem. | Expose transferable mechanisms obscured by familiar domain conventions. Far is never random inspiration. |
 | Wildcard | An unconventional candidate with at least a minimum defensible structural fit. | Challenge an assumption while retaining a stated trait or mechanism link. Novelty alone is insufficient. |
 | Anti-reference | A conventional trap or structurally poor fit, including an attractive example whose mechanism would fail here. | Make rejection boundaries and likely failure modes explicit. |
 
