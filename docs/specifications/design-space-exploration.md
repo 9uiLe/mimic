@@ -32,14 +32,14 @@ Problem Trait → Design Principle → Reference Space → Reference Case
                          └────────→ Failure Mode
 ```
 
-| Concept | Meaning and boundary |
-| --- | --- |
-| Problem Trait | A specific property of the current design problem that calls for a design response. |
-| Design Principle | A reusable design intent or decision rule that responds to a trait, such as “make ownership and the next handoff visible.” It does not prescribe a screen layout. |
-| Reference Space | A class of contexts in which relevant principles or coordination mechanisms appear. It is a search and comparison domain, not a visual style collection. |
-| Reference Case | A particular example within a reference space. It can illuminate a mechanism and its limits; it is never a ready-made UI direction. |
-| UI Pattern | A reusable interaction or information arrangement that can realize a principle under stated conditions. Its suitability is conditional on the current problem and contract. |
-| Failure Mode | A way the principle or candidate pattern can fail, including a context transfer error, misuse, omission, or conventional design trap. |
+| Concept          | Meaning and boundary                                                                                                                                                        |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Problem Trait    | A specific property of the current design problem that calls for a design response.                                                                                         |
+| Design Principle | A reusable design intent or decision rule that responds to a trait, such as “make ownership and the next handoff visible.” It does not prescribe a screen layout.           |
+| Reference Space  | A class of contexts in which relevant principles or coordination mechanisms appear. It is a search and comparison domain, not a visual style collection.                    |
+| Reference Case   | A particular example within a reference space. It can illuminate a mechanism and its limits; it is never a ready-made UI direction.                                         |
+| UI Pattern       | A reusable interaction or information arrangement that can realize a principle under stated conditions. Its suitability is conditional on the current problem and contract. |
+| Failure Mode     | A way the principle or candidate pattern can fail, including a context transfer error, misuse, omission, or conventional design trap.                                       |
 
 The arrows mean “provides a reason to examine” or “can inform,” not “automatically entails.” A trait may support several principles; a principle may lead to several spaces, patterns, or failure modes. A case may illuminate several principles. The graph must allow new traits, principles, spaces, cases, patterns, and failure modes without assuming the initial taxonomy is exhaustive or that each node has exactly one parent.
 
@@ -62,17 +62,17 @@ Evaluate each candidate on two separate questions:
 
 These are qualitative judgments with reasons, not a synthetic overall score. Context distance is not a quality judgment; a distant case can reveal a strong transferable mechanism.
 
-| Role | Structural fit and context distance | Exploration purpose |
-| --- | --- | --- |
-| Near | High structural similarity and low context distance. | Establish credible baseline mechanisms and local conventions. |
-| Adjacent | Useful structural similarity and medium context distance. | Reveal alternative mechanisms without losing task relevance. |
-| Far | High structural relevance and high context distance; the similarity must be useful to the current problem. | Expose transferable mechanisms obscured by familiar domain conventions. Far is never random inspiration. |
-| Wildcard | An unconventional candidate with at least a minimum defensible structural fit. | Challenge an assumption while retaining a stated trait or mechanism link. Novelty alone is insufficient. |
-| Anti-reference | A conventional trap or structurally poor fit, including an attractive example whose mechanism would fail here. | Make rejection boundaries and likely failure modes explicit. |
+| Role           | Structural fit and context distance                                                                            | Exploration purpose                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Near           | High structural similarity and low context distance.                                                           | Establish credible baseline mechanisms and local conventions.                                            |
+| Adjacent       | Useful structural similarity and medium context distance.                                                      | Reveal alternative mechanisms without losing task relevance.                                             |
+| Far            | High structural relevance and high context distance; the similarity must be useful to the current problem.     | Expose transferable mechanisms obscured by familiar domain conventions. Far is never random inspiration. |
+| Wildcard       | An unconventional candidate with at least a minimum defensible structural fit.                                 | Challenge an assumption while retaining a stated trait or mechanism link. Novelty alone is insufficient. |
+| Anti-reference | A conventional trap or structurally poor fit, including an attractive example whose mechanism would fail here. | Make rejection boundaries and likely failure modes explicit.                                             |
 
 These roles are lenses, not permanent labels for cases. The same case may be adjacent for one problem and far for another. An anti-reference is documented for what to avoid, not promoted as a direction. A candidate with no plausible trait → principle → mechanism connection is out of scope even if its appearance is striking.
 
-Retrieval first identifies relevant principles and searches reference spaces that might illuminate them, then examines particular cases. Divergence compares distinct mechanisms and tradeoffs. The explorer must not simply return the most similar *K* cases or fill a fixed quota for each role. It assembles an explainable portfolio covering important principles and distinct mechanisms, including counterexamples when they clarify risk. Repeated cases teaching the same mechanism add little. A missing role is preferable to an irrelevant case; a critical uncovered principle should be called out rather than concealed by quantity.
+Retrieval first identifies relevant principles and searches reference spaces that might illuminate them, then examines particular cases. Divergence compares distinct mechanisms and tradeoffs. The explorer must not simply return the most similar _K_ cases or fill a fixed quota for each role. It assembles an explainable portfolio covering important principles and distinct mechanisms, including counterexamples when they clarify risk. Repeated cases teaching the same mechanism add little. A missing role is preferable to an irrelevant case; a critical uncovered principle should be called out rather than concealed by quantity.
 
 ## Transfer before direction
 
@@ -96,13 +96,13 @@ Do-not-borrow notes and failure modes belong in the exploration account even for
 
 Suppose a product supports a team coordinating an ongoing service incident. The operational domain needs rapid shared-state updates and accountable handoffs; a later review domain needs slower reconstruction and explanation. The profile contains the trait “several roles coordinate time-sensitive work on one incident while ownership changes.” A corresponding principle is “show current ownership, next handoff, and the reason for each state change.”
 
-| Candidate role | Conceptual case | Transferable mechanism | Do not borrow / failure to examine |
-| --- | --- | --- | --- |
-| Near | A service incident console. | Shared timeline with explicit owner and status transitions. | Do not inherit its exact severity labels or assume its escalation chain matches this team. |
-| Adjacent | An editorial production queue. | Visible assignment, review gate, and return-to-author path. | A scheduled publication cadence may delay urgent incident action. |
-| Far | Theater stage management during a live performance. | A common cue sequence and explicit acknowledgment before a responsibility handoff. | Do not import performance terminology or a rigid cue order into unpredictable incident work. |
-| Wildcard | A restaurant kitchen pass coordinating concurrent orders. | One shared view of readiness and blockers across roles. | Minimum fit is concurrent work plus handoffs; per-order timing and physical layout may not transfer. |
-| Anti-reference | A generic KPI dashboard used as the main work surface. | It may summarize outcomes but does not itself coordinate ownership and next actions. | A decorative status grid can hide the handoff and leave users guessing who acts next. |
+| Candidate role | Conceptual case                                           | Transferable mechanism                                                               | Do not borrow / failure to examine                                                                   |
+| -------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Near           | A service incident console.                               | Shared timeline with explicit owner and status transitions.                          | Do not inherit its exact severity labels or assume its escalation chain matches this team.           |
+| Adjacent       | An editorial production queue.                            | Visible assignment, review gate, and return-to-author path.                          | A scheduled publication cadence may delay urgent incident action.                                    |
+| Far            | Theater stage management during a live performance.       | A common cue sequence and explicit acknowledgment before a responsibility handoff.   | Do not import performance terminology or a rigid cue order into unpredictable incident work.         |
+| Wildcard       | A restaurant kitchen pass coordinating concurrent orders. | One shared view of readiness and blockers across roles.                              | Minimum fit is concurrent work plus handoffs; per-order timing and physical layout may not transfer. |
+| Anti-reference | A generic KPI dashboard used as the main work surface.    | It may summarize outcomes but does not itself coordinate ownership and next actions. | A decorative status grid can hide the handoff and leave users guessing who acts next.                |
 
 These are conceptual comparisons, not claims that a named product has been studied or validated. One possible direction emphasizes an incident timeline with explicit acknowledgments; another emphasizes a queue of handoffs with contextual return paths. Both need critique against risk, domain boundaries, and cross-domain continuity. The human chooses the durable direction; subsequent system resolution and prototyping test the selected approach. Neither the stage-management case nor the kitchen case supplies a UI to copy.
 
