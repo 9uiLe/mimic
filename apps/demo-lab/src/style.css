@@ -1,0 +1,21 @@
+body {
+  color: #17212b;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  margin: 2rem auto;
+  max-width: 42rem;
+  padding: 0 1rem;
+}
+
+button {
+  background: #143e71;
+  border: 0;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.7rem 1rem;
+}
+
+button:focus-visible {
+  outline: 3px solid #ed9b00;
+  outline-offset: 3px;
+}
