@@ -16,7 +16,7 @@ The clean `main` checkout is for coordination. Each coding task uses one issue, 
 
 Before starting parallel tasks, compare their write sets and outputs. Serialize work that edits a shared design contract or whose output is a prerequisite for another task. Prioritize the critical path while limiting conflicts, rework, and idle time. Run targeted checks for the changed area, then the repository's canonical checks; never disable tests to make a change pass.
 
-Reference the Linear issue in the primary PR. Maintainers may squash only after CI is green for the PR's actual current head and repository policy permits the merge. Never auto-merge an external contributor's PR. After a merge, sync `main` and dependent branches, resolve conflicts, rerun affected checks, and clean up the merged worktree and branch.
+Reference the Linear issue in the primary PR. Maintainers may squash only after CI is green for the PR's actual current head and repository policy permits the merge. Never auto-merge an external contributor's PR. Mark the coding issue Done only after its PR actually merges; record the merge SHA and evidence on the issue. Then sync `main` and dependent branches, re-evaluate dependent issues before starting them from the latest `main`, resolve conflicts, rerun affected checks, and clean up the merged worktree and branch. A draft PR or green CI alone is not completion.
 
 Retry recoverable worker failures safely. If a durable architectural choice needs the owner, use the decision process below and continue independent reversible work. Record any blocked dependent work explicitly.
 
