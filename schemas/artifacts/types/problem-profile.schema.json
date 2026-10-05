@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:problem-profile",
+  "title": "problem-profile",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "problem-profile"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": ["summary", "traits", "principles", "risks"],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "traits": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "principles": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "risks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

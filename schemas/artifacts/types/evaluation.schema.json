@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:evaluation",
+  "title": "evaluation",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "evaluation"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": ["summary", "target", "findings"],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "target": {
+              "type": "string",
+              "minLength": 1
+            },
+            "findings": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["criterion", "state", "severity", "reason"],
+                "properties": {
+                  "criterion": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "state": {
+                    "enum": ["PASS", "CONCERN", "FAIL", "UNVERIFIED", "N/A"]
+                  },
+                  "severity": {
+                    "enum": ["BLOCKER", "MAJOR", "MINOR", "NOTE"]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1",
+  "title": "Mimic v1 artifact",
+  "oneOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:type:product-definition"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:user-task-model"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:brand"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:system-capability"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:product-ui-contract"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:experience-domain"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:problem-profile"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:reference-selection"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:design-direction"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:evaluation"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:system-request"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:design-system-asset"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:scenario"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:journey"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:decision"
+    },
+    {
+      "$ref": "urn:mimic:artifact:v1:type:validation"
+    }
+  ]
+}

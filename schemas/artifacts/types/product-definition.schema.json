@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:product-definition",
+  "title": "product-definition",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "product-definition"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": ["summary", "vision", "goals", "nonGoals"],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "vision": {
+              "type": "string",
+              "minLength": 1
+            },
+            "goals": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "nonGoals": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

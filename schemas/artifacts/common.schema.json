@@ -1,0 +1,511 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:common",
+  "title": "Mimic v1 artifact envelope",
+  "type": "object",
+  "required": [
+    "meta",
+    "scope",
+    "lifecycle",
+    "origin",
+    "dependencies",
+    "approval",
+    "provenance",
+    "content"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "schemaVersion",
+        "revision",
+        "title",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^art_[A-Za-z0-9_-]+$"
+        },
+        "type": {
+          "enum": [
+            "product-definition",
+            "user-task-model",
+            "brand",
+            "system-capability",
+            "product-ui-contract",
+            "experience-domain",
+            "problem-profile",
+            "reference-selection",
+            "design-direction",
+            "evaluation",
+            "system-request",
+            "design-system-asset",
+            "scenario",
+            "journey",
+            "decision",
+            "validation"
+          ]
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "supersedesRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "contentDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "required": ["level", "ownerId"],
+      "properties": {
+        "level": {
+          "enum": ["organization", "product", "domain", "local"]
+        },
+        "ownerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parentId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "level": {
+                "const": "organization"
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "not": {
+              "required": ["parentId"],
+              "type": "object",
+              "properties": {
+                "parentId": {}
+              }
+            }
+          },
+          "else": {
+            "required": ["parentId"],
+            "type": "object",
+            "properties": {
+              "parentId": {}
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "lifecycle": {
+      "type": "object",
+      "required": ["status", "freshness"],
+      "properties": {
+        "status": {
+          "enum": ["provisional", "proposed", "approved", "rejected"]
+        },
+        "freshness": {
+          "enum": ["valid", "stale", "blocked"]
+        },
+        "freshnessReason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "freshness": {
+                "enum": ["stale", "blocked"]
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "required": ["freshnessReason"],
+            "type": "object",
+            "properties": {
+              "freshnessReason": {}
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "origin": {
+      "type": "object",
+      "required": ["actorKind", "actorId", "runId", "createdAt"],
+      "properties": {
+        "actorKind": {
+          "enum": ["human", "agent", "skill", "import"]
+        },
+        "actorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sourceArtifactIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifactId", "revision", "lockDigest", "onChange"],
+        "properties": {
+          "artifactId": {
+            "$ref": "#/$defs/artifactId"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "lockDigest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "onChange": {
+            "enum": ["none", "validate", "revise", "invalidate"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "approval": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "decisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": ["approved", "rejected"]
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "required": ["decisionId", "actorId", "at"],
+            "type": "object",
+            "properties": {
+              "decisionId": {},
+              "actorId": {},
+              "at": {}
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/provenanceEntry"
+      }
+    },
+    "content": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "meta": {
+            "properties": {
+              "revision": {
+                "minimum": 2,
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "then": {
+        "properties": {
+          "meta": {
+            "required": ["supersedesRevision"],
+            "type": "object",
+            "properties": {
+              "supersedesRevision": {}
+            }
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "status": {
+                "const": "approved"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "status": {
+                "const": "approved"
+              }
+            },
+            "type": "object"
+          },
+          "meta": {
+            "required": ["contentDigest"],
+            "type": "object",
+            "properties": {
+              "contentDigest": {}
+            }
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "status": {
+                "const": "rejected"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "status": {
+                "const": "rejected"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "lifecycle": {
+            "properties": {
+              "status": {
+                "enum": ["provisional", "proposed"]
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "then": {
+        "properties": {
+          "approval": {
+            "properties": {
+              "status": {
+                "const": "pending"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "type": "object"
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "artifactId": {
+      "type": "string",
+      "pattern": "^art_[A-Za-z0-9_-]+$"
+    },
+    "provenanceEntry": {
+      "type": "object",
+      "required": ["path", "kind"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^/content(?:/.*)?$"
+        },
+        "kind": {
+          "enum": [
+            "fact",
+            "human-decision",
+            "assumption",
+            "hypothesis",
+            "derived",
+            "unknown"
+          ]
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "decisionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "inputRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "fact"
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "required": ["evidenceRefs"],
+            "type": "object",
+            "properties": {
+              "evidenceRefs": {}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "human-decision"
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "required": ["decisionId"],
+            "type": "object",
+            "properties": {
+              "decisionId": {}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": ["assumption", "hypothesis", "unknown"]
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "required": ["rationale"],
+            "type": "object",
+            "properties": {
+              "rationale": {}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "derived"
+              }
+            },
+            "type": "object"
+          },
+          "then": {
+            "required": ["inputRefs"],
+            "type": "object",
+            "properties": {
+              "inputRefs": {}
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

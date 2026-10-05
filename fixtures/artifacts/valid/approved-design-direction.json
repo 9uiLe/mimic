@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "id": "art_direction_01",
+    "type": "design-direction",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Navigation contract",
+    "createdAt": "2026-10-05T17:00:00Z",
+    "contentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "approved",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "agent",
+    "actorId": "agent_designer",
+    "runId": "run_123",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "approved",
+    "decisionId": "decision_42",
+    "actorId": "human_owner",
+    "at": "2026-10-05T18:00:00Z"
+  },
+  "provenance": [
+    {
+      "path": "/content/selectionStatus",
+      "kind": "human-decision",
+      "decisionId": "decision_42"
+    }
+  ],
+  "content": {
+    "summary": "Pattern-first direction.",
+    "principles": ["Structural clarity"],
+    "mechanisms": ["Task to pattern to layout to component"],
+    "selectionStatus": "selected"
+  }
+}

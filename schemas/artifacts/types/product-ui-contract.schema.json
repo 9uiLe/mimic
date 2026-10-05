@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:product-ui-contract",
+  "title": "product-ui-contract",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "product-ui-contract"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": [
+            "summary",
+            "navigation",
+            "terminology",
+            "entityContext",
+            "accessibilityBaseline"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "navigation": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "terminology": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "entityContext": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "accessibilityBaseline": {
+              "const": "WCAG 2.2 AA"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
