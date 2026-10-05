@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:system-capability",
+  "title": "system-capability",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "system-capability"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": [
+            "summary",
+            "capabilityId",
+            "availability",
+            "description"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "capabilityId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "availability": {
+              "enum": [
+                "current",
+                "proposed"
+              ]
+            },
+            "description": {
+              "type": "string",
+              "minLength": 1
+            },
+            "supportingEvidence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "availability": {
+                    "const": "current"
+                  }
+                },
+                "type": "object"
+              },
+              "then": {
+                "required": [
+                  "supportingEvidence"
+                ],
+                "type": "object",
+                "properties": {
+                  "supportingEvidence": {}
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

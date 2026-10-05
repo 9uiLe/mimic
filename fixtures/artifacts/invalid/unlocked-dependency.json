@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "id": "art_navigation_01",
+    "type": "product-ui-contract",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Navigation contract",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "proposed",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "agent",
+    "actorId": "agent_designer",
+    "runId": "run_123",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "dependencies": [
+    {
+      "artifactId": "art_system_1",
+      "revision": 2,
+      "onChange": "validate"
+    }
+  ],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Initial design hypothesis; requires review."
+    }
+  ],
+  "content": {
+    "summary": "A shared navigation model.",
+    "navigation": [
+      "Product",
+      "Domain"
+    ],
+    "terminology": [
+      "Design Package"
+    ],
+    "entityContext": [
+      "Product ID"
+    ],
+    "accessibilityBaseline": "WCAG 2.2 AA"
+  }
+}

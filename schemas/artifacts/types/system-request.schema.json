@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:system-request",
+  "title": "system-request",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "system-request"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": [
+            "summary",
+            "changeType",
+            "request",
+            "rationale"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "changeType": {
+              "enum": [
+                "capability",
+                "token",
+                "component",
+                "pattern",
+                "layout",
+                "rule",
+                "other"
+              ]
+            },
+            "request": {
+              "type": "string",
+              "minLength": 1
+            },
+            "rationale": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}

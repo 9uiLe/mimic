@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "id": "art_sample_problem_profile",
+    "type": "problem-profile",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Sample problem-profile",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "agent",
+    "actorId": "agent_designer",
+    "runId": "run_123",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Initial design hypothesis; requires review."
+    }
+  ],
+  "content": {
+    "summary": "Illustrative provisional problem-profile.",
+    "traits": [
+      "Multiple domains"
+    ],
+    "principles": [
+      "Preserve entity context"
+    ],
+    "risks": [
+      "Navigation discontinuity"
+    ]
+  }
+}

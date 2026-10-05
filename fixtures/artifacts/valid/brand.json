@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "id": "art_sample_brand",
+    "type": "brand",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Sample brand",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "agent",
+    "actorId": "agent_designer",
+    "runId": "run_123",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Initial design hypothesis; requires review."
+    }
+  ],
+  "content": {
+    "summary": "Illustrative provisional brand.",
+    "attributes": [
+      "Clear"
+    ],
+    "voice": "Direct and calm",
+    "visualIntent": "Readable hierarchy"
+  }
+}

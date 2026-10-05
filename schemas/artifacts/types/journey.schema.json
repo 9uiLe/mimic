@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:artifact:v1:type:journey",
+  "title": "journey",
+  "allOf": [
+    {
+      "$ref": "urn:mimic:artifact:v1:common"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "meta": {
+          "properties": {
+            "type": {
+              "const": "journey"
+            }
+          },
+          "type": "object"
+        },
+        "content": {
+          "type": "object",
+          "required": [
+            "summary",
+            "domains",
+            "steps",
+            "preservedContext"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            },
+            "domains": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "preservedContext": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "entity",
+                  "terminology",
+                  "navigation",
+                  "return-path",
+                  "state"
+                ]
+              },
+              "uniqueItems": true,
+              "minItems": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  ]
+}
