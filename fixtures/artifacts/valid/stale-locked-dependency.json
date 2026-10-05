@@ -15,7 +15,7 @@
   "lifecycle": {
     "status": "proposed",
     "freshness": "stale",
-    "freshnessReason": "Locked token revision changed; validation is pending."
+    "freshnessReason": "A newer token revision is available; validation before any proposed adoption is pending."
   },
   "origin": {
     "actorKind": "agent",
