@@ -12,19 +12,19 @@ Workspaces are mutable, but approved or locked artifacts are immutable in place 
 
 ## Stack
 
-| Concern | v1 baseline | Boundary |
-| --- | --- | --- |
-| Runtime | Node.js 24 LTS | CLI, builders, validators, and development tools |
-| Language and modules | TypeScript 6, ESM, `NodeNext` module and resolution settings | Internal runtime and package code; emit and imports must work under Node ESM |
-| Repository | pnpm workspace monorepo | One root lockfile; no Nx or Turborepo initially |
-| Prototype | Semantic HTML, plain CSS, ES JavaScript | Canonical deliverable, independent of Vite and any app framework |
-| Demo lab | Vite vanilla | Local preview and demonstrations only; its bundling is not a Design Package requirement |
-| Artifact contracts | JSON Schema 2020-12 with Ajv | Schemas validate canonical machine-readable artifacts, primarily YAML data parsed as data |
-| Design tokens | DTCG tokens compiled to CSS custom properties | Preserve source token semantics and references; generated CSS is a derived output |
-| Formatting | Prettier | Repository formatting contract |
-| Static checks | ESLint with typescript-eslint, Stylelint, html-validate, markdownlint-cli2 | Check the relevant source and prototype file types |
-| Tests | Vitest, Playwright, axe-core | Unit and browser checks, including automated accessibility checks |
-| Development environment | Dev Container | Canonical reproducible development environment; local installs use the same pinned tools |
+| Concern                 | v1 baseline                                                                | Boundary                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Runtime                 | Node.js 24 LTS                                                             | CLI, builders, validators, and development tools                                          |
+| Language and modules    | TypeScript 6, ESM, `NodeNext` module and resolution settings               | Internal runtime and package code; emit and imports must work under Node ESM              |
+| Repository              | pnpm workspace monorepo                                                    | One root lockfile; no Nx or Turborepo initially                                           |
+| Prototype               | Semantic HTML, plain CSS, ES JavaScript                                    | Canonical deliverable, independent of Vite and any app framework                          |
+| Demo lab                | Vite vanilla                                                               | Local preview and demonstrations only; its bundling is not a Design Package requirement   |
+| Artifact contracts      | JSON Schema 2020-12 with Ajv                                               | Schemas validate canonical machine-readable artifacts, primarily YAML data parsed as data |
+| Design tokens           | DTCG tokens compiled to CSS custom properties                              | Preserve source token semantics and references; generated CSS is a derived output         |
+| Formatting              | Prettier                                                                   | Repository formatting contract                                                            |
+| Static checks           | ESLint with typescript-eslint, Stylelint, html-validate, markdownlint-cli2 | Check the relevant source and prototype file types                                        |
+| Tests                   | Vitest, Playwright, axe-core                                               | Unit and browser checks, including automated accessibility checks                         |
+| Development environment | Dev Container                                                              | Canonical reproducible development environment; local installs use the same pinned tools  |
 
 React, Tailwind, Sass, Nx, and Turborepo are not canonical dependencies. The demo lab must not impose Vite conventions on emitted prototypes. Accessibility targets WCAG 2.2 AA; axe results are evidence for automated rules, not a claim of full conformance.
 
@@ -54,16 +54,16 @@ Use explicit workspace dependencies and public package entry points. Avoid cross
 
 The bootstrap must expose these root commands through `pnpm <command>` with the same meaning in the Dev Container, local development, and CI:
 
-| Command | Contract |
-| --- | --- |
-| `dev` | Start the local CLI/demo development workflow without modifying released artifacts. |
-| `build` | Build workspace packages and the demo lab in dependency order. |
-| `format` | Apply Prettier formatting to owned source files; provide a non-mutating format check for CI. |
-| `lint` | Run ESLint, Stylelint, html-validate, and markdownlint-cli2 on applicable files. |
-| `typecheck` | Check all TypeScript workspace projects without emitting build artifacts. |
-| `validate` | Validate schemas and representative canonical artifact fixtures with Ajv. |
-| `test` | Run the applicable Vitest unit suite; browser tests have a distinct CI invocation. |
-| `check` | Run the local quality gate: format check, lint, typecheck, validate, build, and unit tests without changing tracked/source files; ignored build and cache output is allowed. |
+| Command     | Contract                                                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dev`       | Start the local CLI/demo development workflow without modifying released artifacts.                                                                                          |
+| `build`     | Build workspace packages and the demo lab in dependency order.                                                                                                               |
+| `format`    | Apply Prettier formatting to owned source files; provide a non-mutating format check for CI.                                                                                 |
+| `lint`      | Run ESLint, Stylelint, html-validate, and markdownlint-cli2 on applicable files.                                                                                             |
+| `typecheck` | Check all TypeScript workspace projects without emitting build artifacts.                                                                                                    |
+| `validate`  | Validate schemas and representative canonical artifact fixtures with Ajv.                                                                                                    |
+| `test`      | Run the applicable Vitest unit suite; browser tests have a distinct CI invocation.                                                                                           |
+| `check`     | Run the local quality gate: format check, lint, typecheck, validate, build, and unit tests without changing tracked/source files; ignored build and cache output is allowed. |
 
 Scripts must return nonzero on failure and must not silently skip a relevant package. Browser setup and browser checks may use additional named scripts; `test` must not misleadingly claim browser coverage. The exact script wiring and package names are bootstrap work, not established repository behavior today.
 
