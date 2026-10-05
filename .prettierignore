@@ -1,9 +1,7 @@
 node_modules/
-**/node_modules/
 **/dist/
 **/.vite/
-**/.cache/
 coverage/
 playwright-report/
 test-results/
-*.tsbuildinfo
+pnpm-lock.yaml

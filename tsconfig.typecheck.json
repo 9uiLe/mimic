@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "noEmit": true,
+    "paths": { "@mimic/core": ["./packages/core/src/index.ts"] }
+  },
+  "include": ["packages/core/src/**/*.ts", "apps/cli/src/**/*.ts"]
+}

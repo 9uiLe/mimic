@@ -1,5 +1,5 @@
 {
-  "name": "mimic-spec-ci",
+  "name": "mimic",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.9.1",
@@ -10,12 +10,34 @@
     "check:docs": "prettier --check \"**/*.md\" \"**/*.json\" && markdownlint-cli2 \"**/*.md\"",
     "check:schemas": "node scripts/check-schemas.mjs",
     "test:ci": "node --test scripts/check-schemas.test.mjs",
-    "check:ci": "pnpm run test:ci && pnpm run check:docs && pnpm run check:schemas"
+    "check:ci": "pnpm run test:ci && pnpm run check:docs && pnpm run check:schemas",
+    "dev": "pnpm --filter @mimic/demo-lab dev",
+    "build": "pnpm --filter @mimic/core build && pnpm --filter @mimic/cli build && pnpm --filter @mimic/demo-lab build",
+    "format": "prettier --write package.json pnpm-workspace.yaml .devcontainer apps packages scripts docs/development eslint.config.mjs playwright.config.mjs vitest.config.mjs tsconfig.json tsconfig.base.json tsconfig.typecheck.json .stylelintrc.json .htmlvalidate.json",
+    "format:check": "prettier --check package.json pnpm-workspace.yaml .devcontainer apps packages scripts docs/development eslint.config.mjs playwright.config.mjs vitest.config.mjs tsconfig.json tsconfig.base.json tsconfig.typecheck.json .stylelintrc.json .htmlvalidate.json",
+    "lint": "eslint apps packages scripts *.config.mjs && stylelint \"apps/demo-lab/src/**/*.css\" && html-validate apps/demo-lab/index.html && markdownlint-cli2 \"**/*.md\"",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
+    "validate": "pnpm run check:schemas && node scripts/check-yaml.mjs",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run validate && pnpm run build && pnpm run test && pnpm run check:ci"
   },
   "devDependencies": {
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "markdownlint-cli2": "0.23.3",
-    "prettier": "3.9.9"
+    "prettier": "3.9.9",
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.58.2",
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "html-validate": "10.17.0",
+    "stylelint": "16.26.1",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.70.0",
+    "vite": "8.3.0",
+    "vitest": "4.1.9",
+    "yaml": "2.9.1"
   }
 }
