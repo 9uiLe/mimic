@@ -36,7 +36,7 @@ An **artifact reference** names a logical artifact ID and exact integer revision
 
 ## Distribution modes
 
-Both modes are releases of one immutable, versioned manifest and lock. Mode affects which dependency bytes travel with the release, not which versions are selected.
+Each mode is recorded in its own immutable, versioned manifest and lock. A `(logical package ID, release version)` fixes the mode and included bytes at publication; distributing the other mode requires a separately approved release version or package ID. Mode affects which dependency bytes travel with the release, not which artifact or dependency versions are selected.
 
 | Mode              | Included                                                                                                                                                                                            | Referenced and acquisition requirement                                                                                                                                                                          | Portability limit                                                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -49,7 +49,7 @@ For either mode, reconstruction starts from the immutable manifest, verifies the
 
 The following is an inventory sketch, not a proposed YAML schema. **All shortened digests are illustrative and unverified.**
 
-| Item                       | Reference Package `catalog/1.2.0`                                                            | Portable Snapshot `catalog/1.2.0`                                                    |
+| Item                       | Reference Package `catalog/1.2.0`                                                            | Portable Snapshot `catalog/1.3.0`                                                    |
 | -------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Selected direction         | `art_direction` revision 4, schema `1.0.0`, digest `sha256:…a4` included                     | Same exact approved artifact included                                                |
 | Product UI Contract        | `art_ui_contract` revision 2, digest `sha256:…b2` included                                   | Same exact approved artifact included                                                |
@@ -57,7 +57,7 @@ The following is an inventory sketch, not a proposed YAML schema. **All shortene
 | Semantic icons and binding | `org/icons` version `1.4.0`, digest `sha256:…d0` referenced with provider/license data       | Same exact bytes bundled only if its license permits redistribution                  |
 | Prototype                  | `prototype/index.html`, CSS, JavaScript, fixtures, and each file's digest included           | Identical package-owned files included                                               |
 
-The two modes select the same design and dependency versions. Copying dependency bytes into the portable form does not upgrade or reinterpret them. A real release must carry full verified digests; the shortened values above must never be used as locks.
+These separately approved releases select the same design and dependency versions. Bundling dependency bytes in the later portable release does not upgrade or reinterpret them, and the earlier reference release remains unchanged. A real release must carry full verified digests; the shortened values above must never be used as locks.
 
 ## Scope, distribution, and promotion
 
@@ -83,7 +83,7 @@ Reusable released packages and Design Packages use Semantic Versioning (`MAJOR.M
 
 `meta.schemaVersion` describes an artifact's structural contract. `meta.revision` is an integer snapshot sequence for one artifact ID. A Git commit records repository history; a path locates a file. None is interchangeable with a package Semantic Versioning release. A newer package may select the same artifact revisions, and a new artifact revision does not automatically create a release.
 
-Decision Records preserve immutable history. A later decision explicitly supersedes an earlier decision and records the reason and human authority where required; it does not overwrite the earlier record or retroactively change a released package. For example, `art_decision_nav` revision 3 in `catalog/1.2.0` remains part of that release. A newly approved decision `art_decision_nav` revision 4 supersedes revision 3; a later `catalog/1.3.0` may select revision 4 and record both the decision replacement and `catalog/1.2.0` as its predecessor release. Consumers of `1.2.0` still reconstruct revision 3 and its original package bytes. This same rule applies to approved asset snapshots and package files.
+Decision Records preserve immutable history. A later decision explicitly supersedes an earlier decision and records the reason and human authority where required; it does not overwrite the earlier record or retroactively change a released package. For example, `art_decision_nav` revision 3 in `catalog/1.3.0` remains part of that release. A newly approved decision `art_decision_nav` revision 4 supersedes revision 3; a later `catalog/1.4.0` may select revision 4 and record both the decision replacement and `catalog/1.3.0` as its predecessor release. Consumers of `1.3.0` still reconstruct revision 3 and its original package bytes. This same rule applies to approved asset snapshots and package files.
 
 ## Asset status and removal
 
