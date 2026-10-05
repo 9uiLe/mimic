@@ -1,0 +1,21 @@
+{
+  "name": "mimic-spec-ci",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": "24.21.0"
+  },
+  "scripts": {
+    "check:docs": "prettier --check \"**/*.md\" \"**/*.json\" && markdownlint-cli2 \"**/*.md\"",
+    "check:schemas": "node scripts/check-schemas.mjs",
+    "test:ci": "node --test scripts/check-schemas.test.mjs",
+    "check:ci": "pnpm run test:ci && pnpm run check:docs && pnpm run check:schemas"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "markdownlint-cli2": "0.23.3",
+    "prettier": "3.9.9"
+  }
+}
