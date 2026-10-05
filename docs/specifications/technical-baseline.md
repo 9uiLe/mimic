@@ -1,6 +1,6 @@
 # Mimic v1 technical baseline
 
-Status: architecture specification for [9UI-94](https://linear.app/9uile/issue/9UI-94/specify-technical-stack-repository-layout-and-development-environment). Implementation belongs to the [monorepo bootstrap](https://linear.app/9uile/issue/9UI-96/bootstrap-the-pnpmtypescript-monorepo-and-development-toolchain) and [CI and supply-chain setup](https://linear.app/9uile/issue/9UI-120/set-up-pre-release-ci-security-scanning-and-supply-chain-safeguards). The [v1 architecture and operating reference](https://linear.app/9uile/document/mimic-v1-architecture-and-operating-reference-4b4a6ddcb408) governs product and operating boundaries.
+Status: architecture specification for [9UI-94](https://linear.app/9uile/issue/9UI-94/specify-technical-stack-repository-layout-and-development-environment). Implementation belongs to the [monorepo bootstrap](https://linear.app/9uile/issue/9UI-96/bootstrap-the-pnpmtypescript-monorepo-and-development-toolchain), [initial-specification CI](https://linear.app/9uile/issue/9UI-131/bootstrap-minimal-ci-for-initial-specification-prs), and [full CI and supply-chain setup](https://linear.app/9uile/issue/9UI-120/set-up-pre-release-ci-security-scanning-and-supply-chain-safeguards). The [v1 architecture and operating reference](https://linear.app/9uile/document/mimic-v1-architecture-and-operating-reference-4b4a6ddcb408) governs product and operating boundaries.
 
 ## Purpose and boundaries
 
@@ -8,7 +8,7 @@ Mimic is a model-independent, AI-operated product design engine. It produces ver
 
 The interaction path is human → controlling AI agent → Mimic CLI and filesystem protocol. MCP may be an adapter, but is not required by Core. Large artifacts remain in files; command stdout returns compact IDs, paths, status, and next actions. Skills exchange artifacts through the orchestrator rather than calling one another. Reasoning and proposals stay separate from deterministic runtime, schema validation, token transformation, and prototype builders.
 
-Workspaces are mutable. A release snapshots an approved Design Package as an immutable, versioned artifact; revisions create new versions rather than editing released bytes. Git is the initial history store. Registry and storage access stay behind abstract interfaces so the initial filesystem/Git implementation does not become the package contract. Human approval gates durable decisions and release; provisional exploration can continue independently.
+Workspaces are mutable, but approved or locked artifacts are immutable in place even before release. Revisions are proposed, reviewed, and versioned. A release snapshots an approved Design Package as an immutable, versioned artifact; later changes produce a new version rather than editing released bytes. Git is the initial history store. Registry and storage access stay behind abstract interfaces so the initial filesystem/Git implementation does not become the package contract. Human approval gates durable decisions and release; provisional exploration can continue independently.
 
 ## Stack
 
@@ -63,7 +63,7 @@ The bootstrap must expose these root commands through `pnpm <command>` with the 
 | `typecheck` | Check all TypeScript workspace projects without emitting build artifacts. |
 | `validate` | Validate schemas and representative canonical artifact fixtures with Ajv. |
 | `test` | Run the applicable Vitest unit suite; browser tests have a distinct CI invocation. |
-| `check` | Run the local non-mutating quality gate: format check, lint, typecheck, validate, build, and unit tests. |
+| `check` | Run the local quality gate: format check, lint, typecheck, validate, build, and unit tests without changing tracked/source files; ignored build and cache output is allowed. |
 
 Scripts must return nonzero on failure and must not silently skip a relevant package. Browser setup and browser checks may use additional named scripts; `test` must not misleadingly claim browser coverage. The exact script wiring and package names are bootstrap work, not established repository behavior today.
 
@@ -77,11 +77,11 @@ Generated code and assets carry a reproducible generator command and source refe
 
 ## CI contract
 
-When CI is implemented, PRs require four checks:
+The [9UI-131 initial-specification CI slice](https://linear.app/9uile/issue/9UI-131/bootstrap-minimal-ci-for-initial-specification-prs) provides scoped documentation, schema, and fixture validation for the first specification PRs. Its checks must actually pass on each current PR head before merge. The later [9UI-120 full pre-release CI baseline](https://linear.app/9uile/issue/9UI-120/set-up-pre-release-ci-security-scanning-and-supply-chain-safeguards) requires four PR checks:
 
 1. **quality:** non-mutating format check, lint, typecheck, schema/fixture validation, and build.
 2. **unit:** Vitest.
 3. **browser:** Playwright on Chromium desktop and mobile viewports, with axe-core checks on representative prototype flows.
 4. **dco:** verify DCO sign-off on commits.
 
-The broader Firefox, WebKit, and mobile browser matrix can run post-merge or on a schedule. Keep tests enabled, and report an absent suite or unimplemented check as not run rather than passed. Use least-privilege GitHub Actions tokens, frozen lockfile installation, and pinned tool versions. The security baseline includes Dependabot alerts and updates, secret scanning with push protection, and CodeQL. External contributors do not gain release or merge authority through CI configuration. The CI workflow and repository settings are implementation work for 9UI-120; this document defines the target contract, not current enforcement.
+The broader Firefox, WebKit, and mobile browser matrix can run post-merge or on a schedule. Keep tests enabled, and report an absent suite or unimplemented check as not run rather than passed. Use least-privilege GitHub Actions tokens, frozen lockfile installation, and pinned tool versions. The security baseline includes Dependabot alerts and updates, secret scanning with push protection, and CodeQL. External contributors do not gain release or merge authority through CI configuration. The full CI workflow and supply-chain safeguards are implementation work for 9UI-120; 9UI-131 is the initial merge-enabling slice, not a waiver of required checks or completion of the full CI contract. This document defines the target contract, not current enforcement.
