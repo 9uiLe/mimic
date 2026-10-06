@@ -1,11 +1,18 @@
 import { mkdir, open, readFile, rename, rm } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { canonicalJson, jsonCopy } from "../artifact-canonical.js";
+import {
+  artifactDigest,
+  canonicalJson,
+  jsonCopy,
+} from "../artifact-canonical.js";
 import type { ArtifactSnapshot } from "../artifact-store.js";
-import type {
-  ExactArtifactRef,
-  SnapshotReader,
+import type { AtomicRegistryStorage } from "../workspace-transaction.js";
+import type { TransactionalArtifactPublisher } from "./publication.js";
+import {
+  DependencyGraph,
+  type ExactArtifactRef,
+  type SnapshotReader,
 } from "../runtime-engines/dependency.js";
 
 export type { ExactArtifactRef } from "../runtime-engines/dependency.js";
@@ -25,6 +32,10 @@ export interface DecisionRecord {
   readonly at: string;
   readonly rationale: string;
   readonly supersedesDecisionId?: string;
+  readonly output?: {
+    readonly ref: ExactArtifactRef;
+    readonly artifact: ArtifactSnapshot;
+  };
 }
 export interface Proposal {
   readonly id: string;
@@ -35,8 +46,14 @@ export interface Proposal {
   readonly evidenceLimits: readonly string[];
   readonly dependents: readonly ExactArtifactRef[];
   readonly priorRejectionId?: string;
+  readonly impactEvidence?: readonly {
+    readonly dependency: ExactArtifactRef;
+    readonly evidenceRefs: readonly string[];
+  }[];
   readonly packetId: string;
   status: "pending" | "merged" | "rejected" | "discarded" | "superseded";
+  readiness: "ready" | "stale" | "blocked";
+  readinessReason?: string;
 }
 export interface DecisionPacket {
   readonly id: string;
@@ -54,6 +71,9 @@ export interface RunEvent {
   readonly reason: string;
   readonly inputs: readonly ExactArtifactRef[];
   readonly outputs: readonly ExactArtifactRef[];
+  readonly runAfter: Run;
+  readonly canonicalAfter: RegistryState["canonical"];
+  readonly freshnessAfter: RegistryState["freshness"];
 }
 export interface Run {
   readonly id: string;
@@ -71,11 +91,27 @@ export interface Run {
     fates: Record<string, Proposal["status"]>;
   };
 }
+export interface CommitRequest {
+  readonly id: string;
+  readonly packetId: string;
+  readonly approvals: readonly { proposalId: string; decisionId: string }[];
+  readonly actor: Actor;
+  readonly at: string;
+  readonly reason: string;
+}
 export interface RegistryState {
   canonical: Record<string, { ref: ExactArtifactRef; decisionId?: string }>;
+  freshness: Record<
+    string,
+    { ref: ExactArtifactRef; status: "stale" | "blocked"; reason: string }
+  >;
   runs: Record<string, Run>;
   packets: Record<string, DecisionPacket>;
   decisions: Record<string, DecisionRecord>;
+  commits: Record<
+    string,
+    { request: CommitRequest; outputs: readonly ExactArtifactRef[] }
+  >;
   events: RunEvent[];
 }
 export interface TransactionalRegistryStorage {
@@ -85,9 +121,11 @@ export interface TransactionalRegistryStorage {
 }
 const empty = (): RegistryState => ({
   canonical: {},
+  freshness: {},
   runs: {},
   packets: {},
   decisions: {},
+  commits: {},
   events: [],
 });
 export class RegistryError extends Error {
@@ -146,11 +184,18 @@ function event(
     reason,
     inputs,
     outputs,
+    runAfter: jsonCopy(state.runs[runId]),
+    canonicalAfter: jsonCopy(state.canonical),
+    freshnessAfter: jsonCopy(state.freshness),
   });
 }
 export function deriveRunState(run: Run): RunState {
   if (run.closed) return "closed";
-  if (Object.values(run.proposals).some((p) => p.status === "pending"))
+  if (
+    Object.values(run.proposals).some(
+      (p) => p.status === "pending" && p.readiness === "ready",
+    )
+  )
     return "review-ready";
   if (run.safeActions.length) return "active";
   if (Object.keys(run.blockers).length) return "blocked";
@@ -175,6 +220,15 @@ function closeCompleted(
 }
 export interface RegistryAuthority {
   verify(record: DecisionRecord, proposal: Proposal): Promise<boolean>;
+  verifyEvidence?(
+    proposal: Proposal,
+    dependency: ExactArtifactRef,
+    refs: readonly string[],
+  ): Promise<boolean>;
+  verifyResolution?(
+    blockerId: string,
+    evidenceRefs: readonly string[],
+  ): Promise<boolean>;
   allowCommit(
     record: DecisionRecord,
     proposal: Proposal,
@@ -186,6 +240,7 @@ export class RunRegistry {
     private readonly storage: TransactionalRegistryStorage,
     private readonly artifacts: SnapshotReader,
     private readonly authority: RegistryAuthority,
+    private readonly publisher?: TransactionalArtifactPublisher,
   ) {}
   async snapshot(): Promise<RegistryState> {
     return this.storage.read();
@@ -265,16 +320,18 @@ export class RunRegistry {
           "Canonical base moved",
           "CONFLICT",
         );
+        const approved = await this.checked(ref);
+        requireThat(
+          approved.lifecycle.status === "approved" &&
+            approved.approval.status === "approved",
+          "Canonical base must read back as an approved envelope",
+          "UNVERIFIED",
+        );
         if (selection.decisionId)
           requireThat(
-            state.decisions[selection.decisionId]?.outcome === "approved",
-            "Canonical authority missing",
-            "UNVERIFIED",
-          );
-        else
-          requireThat(
-            (await this.checked(ref)).lifecycle.status === "approved",
-            "Base must be approved",
+            state.decisions[selection.decisionId]?.outcome === "approved" &&
+              approved.approval.decisionId === selection.decisionId,
+            "Canonical authority missing or mismatched",
             "UNVERIFIED",
           );
       }
@@ -314,8 +371,10 @@ export class RunRegistry {
     await this.storage.transact(async (state) => {
       const run = state.runs[x.runId];
       requireThat(
-        run && !run.closed && deriveRunState(run) !== "closed",
-        "Run is closed",
+        run &&
+          !run.closed &&
+          ["active", "review-ready"].includes(deriveRunState(run)),
+        "Run cannot produce provisional work",
         "CONFLICT",
       );
       requireThat(
@@ -362,7 +421,10 @@ export class RunRegistry {
   async submit(input: {
     runId: string;
     packetId: string;
-    proposals: readonly Omit<Proposal, "packetId" | "status">[];
+    proposals: readonly Omit<
+      Proposal,
+      "packetId" | "status" | "readiness" | "readinessReason"
+    >[];
     actor: Actor;
     at: string;
     reason: string;
@@ -389,8 +451,10 @@ export class RunRegistry {
     await this.storage.transact(async (state) => {
       const run = state.runs[x.runId];
       requireThat(
-        run && !run.closed && deriveRunState(run) !== "closed",
-        "Run is closed",
+        run &&
+          !run.closed &&
+          ["active", "review-ready"].includes(deriveRunState(run)),
+        "Run cannot submit proposals",
         "CONFLICT",
       );
       requireThat(
@@ -400,7 +464,9 @@ export class RunRegistry {
       );
       for (const p of x.proposals) {
         requireThat(
-          !run.proposals[p.id] && run.artifacts.some((r) => same(r, p.ref)),
+          !run.proposals[p.id] &&
+            run.artifacts.some((r) => same(r, p.ref)) &&
+            !Object.values(run.proposals).some((old) => same(old.ref, p.ref)),
           "Proposal must own a unique produced revision",
         );
         const rejected = Object.values(run.proposals).filter(
@@ -430,7 +496,12 @@ export class RunRegistry {
           "Expected canonical selection moved",
           "CONFLICT",
         );
-        run.proposals[p.id] = { ...p, packetId: x.packetId, status: "pending" };
+        run.proposals[p.id] = {
+          ...p,
+          packetId: x.packetId,
+          status: "pending",
+          readiness: "ready",
+        };
       }
       state.packets[x.packetId] = {
         id: x.packetId,
@@ -453,6 +524,44 @@ export class RunRegistry {
       );
     });
   }
+  private atomicStorage(): AtomicRegistryStorage {
+    const storage = this.storage as Partial<AtomicRegistryStorage>;
+    requireThat(
+      typeof storage.transactWorkspace === "function" &&
+        !!storage.snapshots &&
+        !!this.publisher &&
+        this.publisher.sourceStorage === storage.snapshots,
+      "Shared artifact/registry transaction unavailable",
+      "UNAVAILABLE",
+    );
+    return storage as AtomicRegistryStorage;
+  }
+  private validateOutput(record: DecisionRecord, proposal: Proposal): void {
+    if (record.outcome !== "approved" && record.outcome !== "rejected") return;
+    const output = record.output;
+    requireThat(
+      output && validRef(output.ref),
+      "Decision must bind an exact output",
+      "INVALID",
+    );
+    const artifact = output.artifact;
+    requireThat(
+      artifact.meta.id === proposal.ref.artifactId &&
+        output.ref.artifactId === proposal.ref.artifactId &&
+        artifact.meta.revision === proposal.ref.revision + 1 &&
+        output.ref.revision === artifact.meta.revision &&
+        artifact.meta.supersedesRevision === proposal.ref.revision &&
+        artifact.lifecycle.status === record.outcome &&
+        artifact.approval.status === record.outcome &&
+        artifact.approval.decisionId === record.id &&
+        artifact.approval.actorId === record.actor.id &&
+        artifact.approval.at === record.at &&
+        artifact.meta.contentDigest === output.ref.lockDigest &&
+        artifactDigest(artifact) === output.ref.lockDigest,
+      "Decision output does not match the exact approved/rejected envelope",
+      "INVALID",
+    );
+  }
   async decide(input: DecisionRecord): Promise<void> {
     const x = jsonCopy(input);
     requireThat(
@@ -462,7 +571,10 @@ export class RunRegistry {
         Number.isFinite(Date.parse(x.at)),
       "Decision needs human identity, time, rationale",
     );
-    await this.storage.transact(async (state) => {
+    const change = async (
+      state: RegistryState,
+      snapshots?: import("../artifact-store.js").SnapshotStorage,
+    ): Promise<void> => {
       const previous = state.decisions[x.id];
       if (previous) {
         requireThat(same(previous, x), "Decision ID conflict", "CONFLICT");
@@ -476,25 +588,63 @@ export class RunRegistry {
           run &&
           !run.closed &&
           packet.proposalIds.includes(x.proposalId) &&
-          proposal?.status === "pending",
-        "Decision does not name pending proposal",
+          proposal?.status === "pending" &&
+          proposal.readiness === "ready",
+        "Decision does not name a ready pending proposal",
         "CONFLICT",
       );
       requireThat(
         !Object.values(state.decisions).some(
-          (d) => d.proposalId === x.proposalId && d.outcome !== "deferred",
+          (d) =>
+            d.packetId === x.packetId &&
+            d.proposalId === x.proposalId &&
+            d.outcome !== "deferred",
         ),
         "Proposal already decided",
         "CONFLICT",
       );
+      this.validateOutput(x, proposal);
+      if (x.supersedesDecisionId) {
+        const prior = state.decisions[x.supersedesDecisionId];
+        const priorPacket = prior && state.packets[prior.packetId];
+        const priorProposal =
+          priorPacket &&
+          state.runs[priorPacket.runId]?.proposals[prior.proposalId];
+        requireThat(
+          prior &&
+            priorPacket?.runId === run.id &&
+            priorProposal?.ref.artifactId === proposal.ref.artifactId &&
+            !same(priorProposal.ref, proposal.ref),
+          "Supersession must cite a prior decision on another revision of the same Run artifact",
+          "CONFLICT",
+        );
+        if (priorProposal.status === "pending")
+          priorProposal.status = "superseded";
+      }
       requireThat(
         await this.authority.verify(x, proposal),
         "Decision authority unverified",
         "UNVERIFIED",
       );
-      if (x.outcome === "rejected" || x.outcome === "superseded")
-        proposal.status = x.outcome;
       state.decisions[x.id] = x;
+      if (x.outcome === "rejected") {
+        requireThat(
+          snapshots && this.publisher && x.output,
+          "Atomic rejection publication unavailable",
+          "UNAVAILABLE",
+        );
+        const published = await this.publisher.publish(
+          snapshots,
+          state,
+          x.output.artifact,
+        );
+        requireThat(
+          published.digest === x.output.ref.lockDigest,
+          "Rejected output digest mismatch",
+          "CONFLICT",
+        );
+        proposal.status = "rejected";
+      } else if (x.outcome === "superseded") proposal.status = "superseded";
       event(
         state,
         run.id,
@@ -503,26 +653,35 @@ export class RunRegistry {
         x.at,
         x.rationale,
         [proposal.ref],
+        x.output ? [x.output.ref] : [],
       );
       closeCompleted(state, run.id, x.actor, x.at);
-    });
+    };
+    if (x.outcome === "rejected")
+      await this.atomicStorage().transactWorkspace(change);
+    else await this.storage.transact((state) => change(state));
   }
-  async commit(input: {
-    packetId: string;
-    approvals: readonly { proposalId: string; decisionId: string }[];
-    actor: Actor;
-    at: string;
-    reason: string;
-  }): Promise<void> {
+  async commit(input: CommitRequest): Promise<void> {
     const x = jsonCopy(input);
     requireThat(
-      x.actor.kind === "human" &&
+      x.id?.trim() &&
+        x.actor.kind === "human" &&
         x.approvals.length > 0 &&
         new Set(x.approvals.map((a) => a.proposalId)).size ===
           x.approvals.length,
-      "Commit needs distinct named approvals",
+      "Commit needs ID and distinct named approvals",
     );
-    await this.storage.transact(async (state) => {
+    const storage = this.atomicStorage();
+    await storage.transactWorkspace(async (state, snapshots) => {
+      const previous = state.commits[x.id];
+      if (previous) {
+        requireThat(
+          same(previous.request, x),
+          "Commit ID conflict",
+          "CONFLICT",
+        );
+        return;
+      }
       const packet = state.packets[x.packetId];
       const run = packet && state.runs[packet.runId];
       requireThat(
@@ -530,11 +689,7 @@ export class RunRegistry {
         "Run or packet unavailable",
         "CONFLICT",
       );
-      const approved: {
-        proposal: Proposal;
-        record: DecisionRecord;
-        artifact: ArtifactSnapshot;
-      }[] = [];
+      const approved: { proposal: Proposal; record: DecisionRecord }[] = [];
       const selectedArtifactIds = new Set<string>();
       for (const item of x.approvals) {
         requireThat(
@@ -547,10 +702,29 @@ export class RunRegistry {
           proposal?.status === "pending" &&
             record?.proposalId === item.proposalId &&
             record.packetId === x.packetId &&
-            record.outcome === "approved",
-          "No valid named approval",
+            record.outcome === "approved" &&
+            record.output,
+          "No exact named approval",
           "CONFLICT",
         );
+        requireThat(
+          !selectedArtifactIds.has(proposal.ref.artifactId),
+          "Commit has overlapping canonical effects",
+          "CONFLICT",
+        );
+        selectedArtifactIds.add(proposal.ref.artifactId);
+        requireThat(
+          !Object.values(state.runs).some((other) =>
+            Object.values(other.proposals).some(
+              (p) =>
+                same(p.ref, proposal.ref) &&
+                (p.status === "rejected" || p.status === "superseded"),
+            ),
+          ),
+          "Rejected exact candidate cannot be committed",
+          "CONFLICT",
+        );
+        this.validateOutput(record, proposal);
         requireThat(
           (await this.authority.verify(record, proposal)) &&
             (await this.authority.allowCommit(
@@ -562,20 +736,6 @@ export class RunRegistry {
           "UNVERIFIED",
         );
         requireThat(
-          !selectedArtifactIds.has(proposal.ref.artifactId),
-          "Commit has overlapping canonical effects",
-          "CONFLICT",
-        );
-        selectedArtifactIds.add(proposal.ref.artifactId);
-        const artifact = await this.checked(proposal.ref);
-        requireThat(
-          artifact.lifecycle.status === "proposed" &&
-            artifact.approval.status === "pending" &&
-            artifact.lifecycle.freshness === "valid",
-          "Proposal is no longer fresh and pending",
-          "CONFLICT",
-        );
-        requireThat(
           same(
             state.canonical[proposal.ref.artifactId]?.ref,
             proposal.expectedCanonical,
@@ -585,29 +745,139 @@ export class RunRegistry {
           "Latest canonical selection changed",
           "CONFLICT",
         );
+        const candidate = await this.publisher!.reader(snapshots, state).read(
+          proposal.ref.artifactId,
+          proposal.ref.revision,
+        );
+        requireThat(
+          candidate.digest === proposal.ref.lockDigest &&
+            candidate.artifact.lifecycle.status === "proposed" &&
+            candidate.artifact.approval.status === "pending" &&
+            candidate.artifact.lifecycle.freshness === "valid",
+          "Proposal is no longer fresh, exact, and pending",
+          "CONFLICT",
+        );
+        approved.push({ proposal, record });
+      }
+      // Publish dependency-first inside an isolated state. None become visible until the workspace rename.
+      const remaining = [...approved];
+      const outputs = approved.map((a) => a.record.output!.ref);
+      while (remaining.length) {
+        const index = remaining.findIndex(
+          (a) =>
+            !a.record.output!.artifact.dependencies.some((dep) =>
+              remaining.some((other) =>
+                same(other.record.output!.ref, {
+                  artifactId: dep.artifactId,
+                  revision: dep.revision,
+                  lockDigest: dep.lockDigest,
+                }),
+              ),
+            ),
+        );
+        requireThat(
+          index >= 0,
+          "Cyclic approved output dependencies",
+          "CONFLICT",
+        );
+        const [{ record, proposal }] = remaining.splice(index, 1);
+        const artifact = record.output!.artifact;
         for (const dep of artifact.dependencies) {
-          const current = state.canonical[dep.artifactId]?.ref;
+          const ref = {
+            artifactId: dep.artifactId,
+            revision: dep.revision,
+            lockDigest: dep.lockDigest,
+          };
+          const exact = await this.publisher!.reader(snapshots, state).read(
+            ref.artifactId,
+            ref.revision,
+          );
           requireThat(
-            current &&
-              same(current, {
-                artifactId: dep.artifactId,
-                revision: dep.revision,
-                lockDigest: dep.lockDigest,
-              }),
-            "Canonical dependency lock changed",
+            exact.digest === ref.lockDigest &&
+              exact.artifact.lifecycle.status === "approved" &&
+              exact.artifact.lifecycle.freshness === "valid",
+            "Dependency must be a fresh approved exact revision",
             "CONFLICT",
           );
-          await this.checked(current);
+          const current = state.canonical[ref.artifactId]?.ref;
+          const adoptedInSet = outputs.some((output) => same(output, ref));
+          if (current && !same(current, ref) && !adoptedInSet) {
+            if (dep.onChange === "validate") {
+              const evidence =
+                proposal.impactEvidence?.find((item) =>
+                  same(item.dependency, ref),
+                )?.evidenceRefs ?? [];
+              requireThat(
+                evidence.length > 0 &&
+                  (await this.authority.verifyEvidence?.(
+                    proposal,
+                    ref,
+                    evidence,
+                  )),
+                "Changed dependency requires verified validation evidence",
+                "UNVERIFIED",
+              );
+            } else
+              requireThat(
+                dep.onChange === "none" || dep.onChange === "revise",
+                "Changed canonical dependency requires a new revision or resolution",
+                "CONFLICT",
+              );
+          }
         }
-        approved.push({ proposal, record, artifact });
+        const published = await this.publisher!.publish(
+          snapshots,
+          state,
+          artifact,
+        );
+        requireThat(
+          published.digest === record.output!.ref.lockDigest,
+          "Approved output digest mismatch",
+          "CONFLICT",
+        );
+      }
+      const txReader = this.publisher!.reader(snapshots, state);
+      await DependencyGraph.load(txReader, outputs);
+      const previousRoots = Object.values(state.canonical).map(
+        (selection) => selection.ref,
+      );
+      const graph = previousRoots.length
+        ? await DependencyGraph.load(txReader, previousRoots)
+        : undefined;
+      const changes = approved
+        .filter((item) => !!state.canonical[item.proposal.ref.artifactId])
+        .map((item) => ({
+          artifactId: item.proposal.ref.artifactId,
+          fromRevision:
+            state.canonical[item.proposal.ref.artifactId].ref.revision,
+          candidateRevision: item.record.output!.ref.revision,
+          candidateDigest: item.record.output!.ref.lockDigest,
+        }));
+      const findings =
+        graph && changes.length ? await graph.assessChanges(changes) : [];
+      for (const finding of findings) {
+        if (selectedArtifactIds.has(finding.artifact.artifactId)) continue;
+        state.freshness[finding.artifact.artifactId] = {
+          ref: finding.artifact,
+          status: finding.freshness,
+          reason: finding.reason,
+        };
       }
       for (const { proposal, record } of approved) {
+        delete state.freshness[proposal.ref.artifactId];
         state.canonical[proposal.ref.artifactId] = {
-          ref: proposal.ref,
+          ref: record.output!.ref,
           decisionId: record.id,
         };
         proposal.status = "merged";
       }
+      state.commits[x.id] = { request: x, outputs };
+      await this.refreshPending(
+        state,
+        this.publisher!.reader(snapshots, state),
+        x.actor,
+        x.at,
+      );
       event(
         state,
         run.id,
@@ -615,13 +885,81 @@ export class RunRegistry {
         x.actor,
         x.at,
         x.reason,
-        approved
-          .map((a) => a.proposal.expectedCanonical)
-          .filter((r): r is ExactArtifactRef => !!r),
         approved.map((a) => a.proposal.ref),
+        outputs,
       );
       closeCompleted(state, run.id, x.actor, x.at);
     });
+  }
+  private async refreshPending(
+    state: RegistryState,
+    reader: SnapshotReader,
+    actor: Actor,
+    at: string,
+  ): Promise<void> {
+    for (const run of Object.values(state.runs)) {
+      if (run.closed) continue;
+      let changed = false;
+      for (const proposal of Object.values(run.proposals)) {
+        if (proposal.status !== "pending") continue;
+        let readiness: Proposal["readiness"] = "ready";
+        let reason: string | undefined;
+        if (
+          !same(
+            state.canonical[proposal.ref.artifactId]?.ref,
+            proposal.expectedCanonical,
+          )
+        ) {
+          readiness = "stale";
+          reason = "Canonical selection moved since proposal submission";
+        } else {
+          try {
+            const exact = await reader.read(
+              proposal.ref.artifactId,
+              proposal.ref.revision,
+            );
+            if (
+              exact.digest !== proposal.ref.lockDigest ||
+              exact.artifact.lifecycle.freshness !== "valid"
+            ) {
+              readiness = "blocked";
+              reason = "Exact proposal lock or freshness is invalid";
+            }
+          } catch {
+            readiness = "blocked";
+            reason = "Exact proposal cannot be verified";
+          }
+        }
+        if (
+          proposal.readiness !== readiness ||
+          proposal.readinessReason !== reason
+        )
+          changed = true;
+        proposal.readiness = readiness;
+        if (reason) {
+          proposal.readinessReason = reason;
+          run.blockers[`proposal:${proposal.id}`] = reason;
+        } else {
+          delete proposal.readinessReason;
+          delete run.blockers[`proposal:${proposal.id}`];
+        }
+      }
+      if (changed)
+        event(
+          state,
+          run.id,
+          "proposal-readiness",
+          actor,
+          at,
+          "Revalidated pending proposals against current canonical state",
+        );
+    }
+  }
+  async refreshReadiness(input: { actor: Actor; at: string }): Promise<void> {
+    const x = jsonCopy(input);
+    await this.storage.transact(async (state) =>
+      this.refreshPending(state, this.artifacts, x.actor, x.at),
+    );
   }
   async setWork(input: {
     runId: string;
@@ -630,6 +968,10 @@ export class RunRegistry {
     actor: Actor;
     at: string;
     reason: string;
+    resolutions?: Record<
+      string,
+      { evidenceRefs?: readonly string[]; decisionId?: string }
+    >;
   }): Promise<void> {
     const x = jsonCopy(input);
     requireThat(
@@ -644,6 +986,30 @@ export class RunRegistry {
         "Run is closed",
         "CONFLICT",
       );
+      for (const blockerId of Object.keys(run.blockers)) {
+        if (Object.hasOwn(x.blockers, blockerId)) continue;
+        requireThat(
+          !blockerId.startsWith("proposal:"),
+          "Stale proposal requires a new exact revision",
+          "CONFLICT",
+        );
+        const resolution = x.resolutions?.[blockerId];
+        requireThat(
+          resolution,
+          `Missing resolution for ${blockerId}`,
+          "UNVERIFIED",
+        );
+        const decision =
+          resolution.decisionId && state.decisions[resolution.decisionId];
+        const evidence = resolution.evidenceRefs ?? [];
+        requireThat(
+          (decision && decision.actor.kind === "human") ||
+            (evidence.length > 0 &&
+              (await this.authority.verifyResolution?.(blockerId, evidence))),
+          `Unverified resolution for ${blockerId}`,
+          "UNVERIFIED",
+        );
+      }
       state.runs[x.runId] = {
         ...run,
         safeActions: x.safeActions,

@@ -245,18 +245,28 @@ function pointerExists(artifact: ArtifactSnapshot, pointer: string): boolean {
 
 export class ArtifactStore {
   private readonly scopes = new Map<string, ScopeNode>();
+  private readonly scopeNodes: readonly ScopeNode[];
   constructor(
     readonly storage: SnapshotStorage,
     readonly schemas: SchemaRegistry,
     scopes: readonly ScopeNode[],
     readonly authority?: AuthorityVerifier,
   ) {
+    this.scopeNodes = jsonCopy(scopes);
     for (const scope of scopes) {
       if (this.scopes.has(scope.ownerId))
         throw new Error(`Duplicate scope owner: ${scope.ownerId}`);
       this.scopes.set(scope.ownerId, jsonCopy(scope));
     }
     for (const scope of this.scopes.values()) this.ancestry(scope);
+  }
+
+  /** Reuse the same validation and authority configuration with a transaction-local snapshot view. */
+  withStorage(
+    storage: SnapshotStorage,
+    authority: AuthorityVerifier | undefined = this.authority,
+  ): ArtifactStore {
+    return new ArtifactStore(storage, this.schemas, this.scopeNodes, authority);
   }
 
   private ancestry(scope: ScopeNode): string[] {

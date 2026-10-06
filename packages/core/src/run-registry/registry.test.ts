@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { jsonCopy } from "../artifact-canonical.js";
-import type { ArtifactSnapshot } from "../artifact-store.js";
+import { artifactDigest, jsonCopy } from "../artifact-canonical.js";
+import type { ArtifactSnapshot, SnapshotStorage } from "../artifact-store.js";
 import type {
   ExactArtifactRef,
   SnapshotReader,
@@ -13,6 +13,8 @@ import {
   type RegistryState,
   type TransactionalRegistryStorage,
 } from "./registry.js";
+import type { AtomicRegistryStorage } from "../workspace-transaction.js";
+import type { TransactionalArtifactPublisher } from "./publication.js";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -26,24 +28,68 @@ const agent = { kind: "agent" as const, id: "agent_1" };
 const at = "2026-10-06T12:00:00Z";
 const empty = (): RegistryState => ({
   canonical: {},
+  freshness: {},
   runs: {},
   packets: {},
   decisions: {},
+  commits: {},
   events: [],
 });
-class MemoryStorage implements TransactionalRegistryStorage {
+class MemoryStorage implements AtomicRegistryStorage {
   state = empty();
+  records = new Map<string, { artifact: ArtifactSnapshot; digest: string }>();
   private pending: Promise<void> = Promise.resolve();
   fail = false;
+  readonly snapshots: SnapshotStorage = {
+    read: async (id, revision) => {
+      const record = this.records.get(`${id}@${revision}`);
+      return record && JSON.stringify(record);
+    },
+    revisions: async (id) =>
+      [...this.records.keys()]
+        .filter((k) => k.startsWith(`${id}@`))
+        .map((k) => Number(k.split("@")[1]))
+        .sort((a, b) => a - b),
+    writeIfAbsent: (id, revision, record) =>
+      this.transactWorkspace(async (_state, snapshots) =>
+        snapshots.writeIfAbsent(id, revision, record),
+      ),
+  };
   read() {
     return Promise.resolve(jsonCopy(this.state));
   }
   transact<T>(change: (state: RegistryState) => Promise<T>): Promise<T> {
+    return this.transactWorkspace(async (state) => change(state));
+  }
+  transactWorkspace<T>(
+    change: (state: RegistryState, snapshots: SnapshotStorage) => Promise<T>,
+  ): Promise<T> {
     const task = this.pending.then(async () => {
       const copy = jsonCopy(this.state);
-      const result = await change(copy);
+      const records = new Map(
+        [...this.records].map(([k, v]) => [k, jsonCopy(v)]),
+      );
+      const snapshots: SnapshotStorage = {
+        read: async (id, revision) => {
+          const record = records.get(`${id}@${revision}`);
+          return record && JSON.stringify(record);
+        },
+        revisions: async (id) =>
+          [...records.keys()]
+            .filter((k) => k.startsWith(`${id}@`))
+            .map((k) => Number(k.split("@")[1]))
+            .sort((a, b) => a - b),
+        writeIfAbsent: async (id, revision, record) => {
+          const key = `${id}@${revision}`;
+          if (records.has(key)) return false;
+          records.set(key, JSON.parse(record));
+          return true;
+        },
+      };
+      const result = await change(copy, snapshots);
       if (this.fail) throw Error("simulated write failure");
       this.state = copy;
+      this.records = records;
       return result;
     });
     this.pending = task.then(
@@ -75,10 +121,7 @@ function artifact(
 }
 function setup() {
   const storage = new MemoryStorage();
-  const artifacts = new Map<
-    string,
-    { artifact: ArtifactSnapshot; digest: string }
-  >();
+  const artifacts = storage.records;
   for (const [ref, status] of [
     [base, "approved"],
     [a2, "proposed"],
@@ -88,21 +131,43 @@ function setup() {
       artifact: artifact(ref, status),
       digest: ref.lockDigest,
     });
-  const reader: SnapshotReader = {
+  const readerFor = (snapshots: SnapshotStorage): SnapshotReader => ({
     async read(id, revision) {
-      const snapshot = artifacts.get(`${id}@${revision}`);
-      if (!snapshot) throw Error("missing");
-      return jsonCopy(snapshot);
-    },
-  };
-  const registry = new RunRegistry(storage, reader, {
-    async verify() {
-      return true;
-    },
-    async allowCommit() {
-      return true;
+      const raw = await snapshots.read(id, revision);
+      if (!raw) throw Error("missing");
+      return JSON.parse(raw);
     },
   });
+  const publisher: TransactionalArtifactPublisher = {
+    sourceStorage: storage.snapshots,
+    reader: readerFor,
+    async publish(snapshots, _state, output) {
+      const digest = artifactDigest(output);
+      const created = await snapshots.writeIfAbsent(
+        output.meta.id,
+        output.meta.revision,
+        JSON.stringify({ artifact: output, digest }),
+      );
+      if (!created) throw Error("revision conflict");
+      return { artifact: output, digest };
+    },
+  };
+  const registry = new RunRegistry(
+    storage,
+    readerFor(storage.snapshots),
+    {
+      async verify() {
+        return true;
+      },
+      async allowCommit() {
+        return true;
+      },
+      async verifyResolution(_id, refs) {
+        return refs.includes("evidence:verified");
+      },
+    },
+    publisher,
+  );
   return { storage, artifacts, registry };
 }
 async function started(registry: RunRegistry) {
@@ -155,15 +220,45 @@ const decision = (
   proposalId: string,
   id: string,
   outcome: DecisionRecord["outcome"] = "approved",
-): DecisionRecord => ({
-  id,
-  packetId: "packet_1",
-  proposalId,
-  outcome,
-  actor,
-  at,
-  rationale: "human choice",
-});
+  ref: ExactArtifactRef = proposalId === "proposal_1" ? b1 : a2,
+  packetId = "packet_1",
+): DecisionRecord => {
+  const record: DecisionRecord = {
+    id,
+    packetId,
+    proposalId,
+    outcome,
+    actor,
+    at,
+    rationale: "human choice",
+  };
+  if (outcome !== "approved" && outcome !== "rejected") return record;
+  const output: ArtifactSnapshot = {
+    ...artifact(ref),
+    meta: {
+      ...artifact(ref).meta,
+      revision: ref.revision + 1,
+      supersedesRevision: ref.revision,
+    },
+    lifecycle: { status: outcome, freshness: "valid" },
+    approval: { status: outcome, decisionId: id, actorId: actor.id, at },
+  };
+  const lockDigest = artifactDigest(output);
+  return {
+    ...record,
+    output: {
+      ref: {
+        artifactId: ref.artifactId,
+        revision: ref.revision + 1,
+        lockDigest,
+      },
+      artifact: {
+        ...output,
+        meta: { ...output.meta, contentDigest: lockDigest },
+      },
+    },
+  };
+};
 
 describe("Run registry", () => {
   test("review-ready takes precedence over safe work and blockers; partial approval leaves siblings pending", async () => {
@@ -181,6 +276,7 @@ describe("Run registry", () => {
     expect((await registry.run("run_1")).state).toBe("review-ready");
     await registry.decide(decision("proposal_0", "decision_0"));
     await registry.commit({
+      id: "commit_1",
       packetId: "packet_1",
       approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
       actor,
@@ -188,7 +284,9 @@ describe("Run registry", () => {
       reason: "approve A",
     });
     const snapshot = await registry.snapshot();
-    expect(snapshot.canonical.art_a.ref).toEqual(a2);
+    expect(snapshot.canonical.art_a.ref).toEqual(
+      decision("proposal_0", "decision_0").output!.ref,
+    );
     expect(snapshot.canonical.art_b).toBeUndefined();
     expect((await registry.run("run_1")).state).toBe("review-ready");
     expect(snapshot.runs.run_1.proposals.proposal_1.status).toBe("pending");
@@ -226,13 +324,14 @@ describe("Run registry", () => {
     expect((await registry.snapshot()).canonical.art_a.ref).toEqual(base);
   });
   test("stale selection, wrong lock, and lost commit authority fail closed", async () => {
-    const { registry, storage, artifacts } = setup();
+    const { registry, storage } = setup();
     await started(registry);
     await proposed(registry);
     await registry.decide(decision("proposal_0", "decision_0"));
     storage.state.canonical.art_a.ref = b1;
     await expect(
       registry.commit({
+        id: "commit_1",
         packetId: "packet_1",
         approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
         actor,
@@ -241,9 +340,10 @@ describe("Run registry", () => {
       }),
     ).rejects.toThrow();
     storage.state.canonical.art_a.ref = base;
-    artifacts.get("art_a@2")!.digest = digest("d");
+    storage.records.get("art_a@2")!.digest = digest("d");
     await expect(
       registry.commit({
+        id: "commit_1",
         packetId: "packet_1",
         approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
         actor,
@@ -264,6 +364,7 @@ describe("Run registry", () => {
     storage.fail = true;
     await expect(
       registry.commit({
+        id: "commit_1",
         packetId: "packet_1",
         approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
         actor,
@@ -279,6 +380,7 @@ describe("Run registry", () => {
     await proposed(registry);
     await registry.decide(decision("proposal_0", "decision_0"));
     const input = {
+      id: "commit_1",
       packetId: "packet_1",
       approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
       actor,
@@ -288,6 +390,7 @@ describe("Run registry", () => {
     const first = registry.commit(input);
     input.approvals[0].proposalId = "other";
     const second = registry.commit({
+      id: "commit_1",
       packetId: "packet_1",
       approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
       actor,
@@ -297,9 +400,16 @@ describe("Run registry", () => {
     const results = await Promise.allSettled([first, second]);
     expect(results.map((r) => r.status).sort()).toEqual([
       "fulfilled",
-      "rejected",
+      "fulfilled",
     ]);
-    expect((await registry.snapshot()).canonical.art_a.ref).toEqual(a2);
+    expect(
+      (await registry.snapshot()).events.filter(
+        (e) => e.action === "commit-point-approve",
+      ),
+    ).toHaveLength(1);
+    expect((await registry.snapshot()).canonical.art_a.ref).toEqual(
+      decision("proposal_0", "decision_0").output!.ref,
+    );
   });
   test("discard retains decision history and closes branch permanently", async () => {
     const { registry } = setup();
@@ -344,6 +454,19 @@ describe("Run registry", () => {
             reason: "x",
             inputs: [],
             outputs: [],
+            canonicalAfter: {},
+            freshnessAfter: {},
+            runAfter: {
+              id: "x",
+              scope: "p",
+              entryMode: "hybrid",
+              base: [],
+              reused: [],
+              artifacts: [],
+              proposals: {},
+              blockers: {},
+              safeActions: [],
+            },
           });
           throw Error("fail");
         }),
@@ -359,6 +482,19 @@ describe("Run registry", () => {
           reason: "x",
           inputs: [],
           outputs: [],
+          canonicalAfter: {},
+          freshnessAfter: {},
+          runAfter: {
+            id: "x",
+            scope: "p",
+            entryMode: "hybrid",
+            base: [],
+            reused: [],
+            artifacts: [],
+            proposals: {},
+            blockers: {},
+            safeActions: [],
+          },
         });
       });
       expect((await store.read()).events).toHaveLength(1);
@@ -380,6 +516,7 @@ describe("Run registry", () => {
       reason: "exploration complete",
     });
     await registry.commit({
+      id: "commit_1",
       packetId: "packet_1",
       approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
       actor,
@@ -396,14 +533,289 @@ describe("Run registry", () => {
       id: "run_2",
       scope: "product",
       entryMode: "system-first",
-      base: [a2],
-      reused: [{ ref: a2, reason: "approved by registry decision" }],
+      base: [decision("proposal_0", "decision_0").output!.ref],
+      reused: [
+        {
+          ref: decision("proposal_0", "decision_0").output!.ref,
+          reason: "approved by registry decision",
+        },
+      ],
       safeActions: ["explore"],
       actor: agent,
       at,
       reason: "new branch",
     });
     expect((await registry.run("run_2")).state).toBe("active");
+  });
+  test("one exact revision cannot have two proposal identities", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await registry.produce({
+      runId: "run_1",
+      ref: a2,
+      inputs: [base],
+      actor: agent,
+      at,
+      reason: "draft",
+    });
+    await expect(
+      registry.submit({
+        runId: "run_1",
+        packetId: "packet_alias",
+        proposals: [0, 1].map((i) => ({
+          id: `alias_${i}`,
+          ref: a2,
+          expectedCanonical: base,
+          alternatives: ["adopt"],
+          rationale: "alias",
+          evidenceLimits: [],
+          dependents: [],
+        })),
+        actor: agent,
+        at,
+        reason: "two names",
+      }),
+    ).rejects.toThrow();
+  });
+  test("commit rejects a legacy alias after its exact candidate was rejected", async () => {
+    const { registry, storage } = setup();
+    await started(registry);
+    await proposed(registry);
+    storage.state.runs.run_1.proposals.alias = {
+      ...jsonCopy(storage.state.runs.run_1.proposals.proposal_0),
+      id: "alias",
+      status: "pending",
+    };
+    Object.assign(storage.state.packets.packet_1, {
+      proposalIds: ["proposal_0", "alias"],
+    });
+    await registry.decide(
+      decision("proposal_0", "decision_reject", "rejected"),
+    );
+    await registry.decide(decision("alias", "decision_alias"));
+    await expect(
+      registry.commit({
+        id: "commit_1",
+        packetId: "packet_1",
+        approvals: [{ proposalId: "alias", decisionId: "decision_alias" }],
+        actor,
+        at,
+        reason: "alias commit",
+      }),
+    ).rejects.toThrow();
+    expect((await registry.snapshot()).canonical.art_a.ref).toEqual(base);
+  });
+  test("proposal identity is scoped by packet across Runs", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await proposed(registry);
+    await registry.start({
+      id: "run_2",
+      scope: "product",
+      entryMode: "hybrid",
+      base: [base],
+      reused: [],
+      safeActions: ["explore"],
+      actor: agent,
+      at,
+      reason: "second",
+    });
+    await registry.produce({
+      runId: "run_2",
+      ref: b1,
+      inputs: [base],
+      actor: agent,
+      at,
+      reason: "draft B",
+    });
+    await registry.submit({
+      runId: "run_2",
+      packetId: "packet_2",
+      proposals: [
+        {
+          id: "proposal_0",
+          ref: b1,
+          alternatives: ["adopt"],
+          rationale: "review B",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "review B",
+    });
+    await registry.decide(decision("proposal_0", "decision_1"));
+    await expect(
+      registry.decide({
+        ...decision("proposal_0", "decision_2", "approved", b1, "packet_2"),
+      }),
+    ).resolves.toBeUndefined();
+  });
+  test("work events capture enough data to reconstruct blockers and state", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await registry.setWork({
+      runId: "run_1",
+      safeActions: [],
+      blockers: { flow: "capability unverified" },
+      actor: agent,
+      at,
+      reason: "triage",
+    });
+    const snapshot = await registry.snapshot();
+    const workEvent = snapshot.events.findLast((e) => e.action === "set-work");
+    expect(workEvent?.runAfter?.blockers).toEqual({
+      flow: "capability unverified",
+    });
+    expect(workEvent?.runAfter && deriveRunState(workEvent.runAfter)).toBe(
+      "blocked",
+    );
+    await registry.setWork({
+      runId: "run_1",
+      safeActions: ["critique"],
+      blockers: { flow: "capability unverified" },
+      actor: agent,
+      at,
+      reason: "safe alternative",
+    });
+    expect(
+      (await registry.snapshot()).events.findLast(
+        (e) => e.action === "set-work",
+      )?.runAfter?.safeActions,
+    ).toEqual(["critique"]);
+  });
+  test("blocked work needs a verified resolution before production resumes", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await registry.produce({
+      runId: "run_1",
+      ref: a2,
+      inputs: [base],
+      actor: agent,
+      at,
+      reason: "draft",
+    });
+    await registry.setWork({
+      runId: "run_1",
+      safeActions: [],
+      blockers: { fact: "missing capability evidence" },
+      actor: agent,
+      at,
+      reason: "blocked",
+    });
+    await expect(
+      registry.submit({
+        runId: "run_1",
+        packetId: "packet_blocked",
+        proposals: [
+          {
+            id: "proposal_blocked",
+            ref: a2,
+            expectedCanonical: base,
+            alternatives: ["adopt"],
+            rationale: "review",
+            evidenceLimits: [],
+            dependents: [],
+          },
+        ],
+        actor: agent,
+        at,
+        reason: "premature",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      registry.setWork({
+        runId: "run_1",
+        safeActions: ["continue"],
+        blockers: {},
+        actor: agent,
+        at,
+        reason: "unsupported resolution",
+      }),
+    ).rejects.toThrow();
+    await registry.setWork({
+      runId: "run_1",
+      safeActions: ["continue"],
+      blockers: {},
+      resolutions: { fact: { evidenceRefs: ["evidence:verified"] } },
+      actor: agent,
+      at,
+      reason: "verified evidence",
+    });
+    expect((await registry.run("run_1")).state).toBe("active");
+  });
+  test("a new exact revision and human decision can supersede an uncommitted approval", async () => {
+    const { registry, storage } = setup();
+    await started(registry);
+    await proposed(registry);
+    await registry.decide(decision("proposal_0", "decision_old"));
+    const next = { artifactId: "art_a", revision: 3, lockDigest: digest("e") };
+    storage.records.set("art_a@3", {
+      artifact: artifact(next),
+      digest: next.lockDigest,
+    });
+    await registry.produce({
+      runId: "run_1",
+      ref: next,
+      inputs: [base],
+      actor: agent,
+      at,
+      reason: "new revision",
+    });
+    await registry.submit({
+      runId: "run_1",
+      packetId: "packet_new",
+      proposals: [
+        {
+          id: "proposal_new",
+          ref: next,
+          expectedCanonical: base,
+          alternatives: ["adopt"],
+          rationale: "revised",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "new review",
+    });
+    const updated = {
+      ...decision(
+        "proposal_new",
+        "decision_new",
+        "approved",
+        next,
+        "packet_new",
+      ),
+      supersedesDecisionId: "decision_old",
+    };
+    await registry.decide(updated);
+    expect(
+      (await registry.snapshot()).runs.run_1.proposals.proposal_0.status,
+    ).toBe("superseded");
+    await expect(
+      registry.commit({
+        id: "commit_old",
+        packetId: "packet_1",
+        approvals: [{ proposalId: "proposal_0", decisionId: "decision_old" }],
+        actor,
+        at,
+        reason: "old",
+      }),
+    ).rejects.toThrow();
+    await registry.commit({
+      id: "commit_new",
+      packetId: "packet_new",
+      approvals: [{ proposalId: "proposal_new", decisionId: "decision_new" }],
+      actor,
+      at,
+      reason: "new",
+    });
+    expect((await registry.snapshot()).canonical.art_a.ref).toEqual(
+      updated.output!.ref,
+    );
   });
   test("state precedence is explicit", () => {
     const run = {
