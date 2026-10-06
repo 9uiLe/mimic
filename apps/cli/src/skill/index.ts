@@ -103,7 +103,11 @@ function parse(args: readonly string[]) {
 function relative(repo: string, file: string) {
   return path.relative(repo, file).split(path.sep).join("/");
 }
-async function safeFile(repo: string, file: string): Promise<string> {
+async function safeSource(
+  repo: string,
+  file: string,
+  kind: "file" | "directory",
+): Promise<string> {
   const resolved = path.resolve(repo, file);
   const rel = path.relative(repo, resolved);
   if (
@@ -119,9 +123,16 @@ async function safeFile(repo: string, file: string): Promise<string> {
     if ((await lstat(cursor)).isSymbolicLink())
       throw new SkillError(3, "Source symlink is not allowed");
   }
-  if (!(await lstat(resolved)).isFile())
-    throw new SkillError(3, "Source is not a regular file");
+  const stat = await lstat(resolved);
+  if (kind === "file" ? !stat.isFile() : !stat.isDirectory())
+    throw new SkillError(3, `Source is not a ${kind}`);
   return resolved;
+}
+async function safeFile(repo: string, file: string): Promise<string> {
+  return safeSource(repo, file, "file");
+}
+async function safeDirectory(repo: string, file: string): Promise<string> {
+  return safeSource(repo, file, "directory");
 }
 async function readBounded(repo: string, file: string): Promise<string> {
   const target = await safeFile(repo, file);
@@ -155,21 +166,24 @@ function section(body: string, name: string): string {
   return lines.slice(start, end).join("\n").trim();
 }
 async function catalog(repo: string): Promise<Skill[]> {
-  const entries = (
-    await readdir(path.join(repo, "skills"), { withFileTypes: true })
-  )
+  const skillsRoot = await safeDirectory(repo, "skills");
+  const schemasRoot = await safeDirectory(repo, "schemas");
+  await safeFile(repo, "schemas/skills/skill-package.schema.json");
+  await safeFile(repo, "schemas/artifacts/common.schema.json");
+  await schemas(repo);
+  const entries = (await readdir(skillsRoot, { withFileTypes: true }))
     .filter((item) => item.isDirectory())
     .sort((a, b) => a.name.localeCompare(b.name));
   const skills: Skill[] = [];
   const ids = new Set<string>();
   for (const entry of entries) {
-    const dir = path.join(repo, "skills", entry.name);
+    const dir = await safeDirectory(repo, path.join("skills", entry.name));
     const names = await readdir(dir);
     if (!names.includes("manifest.yaml") && !names.includes("manifest.json"))
       continue;
     let pack;
     try {
-      pack = await loadSkillPackage(dir, path.join(repo, "schemas"));
+      pack = await loadSkillPackage(dir, schemasRoot);
     } catch (error) {
       throw new SkillError(
         3,
@@ -218,15 +232,18 @@ function resolveSkill(skills: readonly Skill[], input: string): Skill {
   return matches[0]!;
 }
 async function schemas(repo: string) {
-  return (await readdir(path.join(repo, "schemas/artifacts/types")))
+  const directory = await safeDirectory(repo, "schemas/artifacts/types");
+  const files = (await readdir(directory))
     .filter((name) => name.endsWith(".schema.json"))
-    .map((name) => name.slice(0, -".schema.json".length))
     .sort();
+  for (const file of files)
+    await safeFile(repo, path.join("schemas/artifacts/types", file));
+  return files.map((name) => name.slice(0, -".schema.json".length));
 }
 async function documents(repo: string) {
   const files: string[] = [];
   for (const folder of ["docs/specifications", "docs/development"])
-    for (const name of await readdir(path.join(repo, folder)))
+    for (const name of await readdir(await safeDirectory(repo, folder)))
       if (name.endsWith(".md")) files.push(`${folder}/${name}`);
   return files.sort();
 }
@@ -338,6 +355,8 @@ export async function runSkillCli(
     } else if (command === "flow") {
       const mode = options.mode ? String(options.mode) : undefined;
       const source = "docs/specifications/design-space-exploration.md";
+      await safeFile(repo, source);
+      await safeFile(repo, "docs/specifications/orchestrator-runs.md");
       const body = options.full
         ? section(await readBounded(repo, source), "Place in the design flow")
         : undefined;
@@ -477,8 +496,9 @@ export async function runSkillCli(
         throw error;
       }
       const registry = await new FileWorkspaceStorage(state).read();
-      const run = registry.runs[runId];
-      if (!run) throw new SkillError(3, `Run not found: ${runId}`);
+      if (!Object.hasOwn(registry.runs, runId))
+        throw new SkillError(3, `Run not found: ${runId}`);
+      const run = registry.runs[runId]!;
       output(
         io,
         {

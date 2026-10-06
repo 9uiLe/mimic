@@ -215,7 +215,37 @@ test("built CLI reads current Run without changing any workspace bytes", () => {
     runId: "run_bootstrap",
     statePath: ".mimic/workspace.json",
   });
+  expect(invoke("current", "--run", "constructor", "--root", root).status).toBe(
+    3,
+  );
   expect(snapshot(root)).toBe(before);
+});
+
+test("built source reader rejects symlinked Skill and schema ancestors", () => {
+  const root = temp();
+  cpSync(path.join(repo, "schemas"), path.join(root, "schemas"), {
+    recursive: true,
+  });
+  symlinkSync(path.join(repo, "skills"), path.join(root, "skills"));
+  for (const args of [["list"], ["show", "s01", "--full"]]) {
+    const result = fixtureInvoke(root, ...args);
+    expect(result.status, result.stderr).toBe(3);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toMatch(/Source symlink is not allowed/);
+  }
+  rmSync(path.join(root, "skills"));
+  mkdirSync(path.join(root, "skills"));
+  cpSync(
+    path.join(repo, "skills/s01-product-definition"),
+    path.join(root, "skills/s01-product-definition"),
+    { recursive: true },
+  );
+  rmSync(path.join(root, "schemas"), { recursive: true });
+  symlinkSync(path.join(repo, "schemas"), path.join(root, "schemas"));
+  const schemaAncestor = fixtureInvoke(root, "show", "s01", "--full");
+  expect(schemaAncestor.status, schemaAncestor.stderr).toBe(3);
+  expect(schemaAncestor.stdout).toBe("");
+  expect(schemaAncestor.stderr).toMatch(/Source symlink is not allowed/);
 });
 
 test("built source reader fails closed for malformed packages, symlinks, and large sources", () => {
