@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a product or developer workflow improvement
+title: "Feature: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and affected users
+      description: What task is difficult, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the outcome and an example workflow.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and tradeoffs
+      description: What else could address the problem, and what are the costs?
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Scope and evidence
+      description: Note relevant Mimic contracts, affected artifacts, and evidence or assumptions.

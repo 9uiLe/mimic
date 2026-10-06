@@ -1,6 +1,14 @@
 # Contributing to Mimic
 
-Mimic is a public, maintainer-led project. Open a pull request against `main` for proposed changes. The maintainer decides what to merge; passing checks does not itself approve a contribution. See the [development guide](docs/development/README.md) for the pinned toolchain and local checks.
+Mimic is a public, maintainer-led project. External bug reports, feature ideas, knowledge proposals, and pull requests are welcome. During pre-release, the maintainer reviews contributions and is the only person who merges pull requests or publishes releases. Passing checks does not itself approve a contribution. See the [code of conduct](CODE_OF_CONDUCT.md) when participating and the [security policy](SECURITY.md) for sensitive reports.
+
+## Propose a change
+
+1. Search existing issues and pull requests for related work. Use the [bug, feature, or knowledge issue template](.github/ISSUE_TEMPLATE) to describe a proposal. For a security vulnerability, follow [SECURITY.md](SECURITY.md) instead of posting exploit details in an issue.
+2. For code or documentation changes, create a focused branch from current `main`. Follow the [development guide](docs/development/README.md) for the pinned toolchain and local checks. Include applicable tests or validation evidence, and report checks that could not run.
+3. Open a pull request against `main` using the [PR template](.github/PULL_REQUEST_TEMPLATE.md). Link the issue or explain the change, its evidence, and any compatibility or licensing effects. The maintainer may ask for revisions before merging.
+
+Knowledge contributions should state the problem traits and the transferable principle or mechanism, including poor-fit conditions and failure modes. Cite sources and distinguish observations from unverified claims. Reference cases are evidence to examine, not UI to copy; see the [design-space rules](docs/specifications/design-space-exploration.md). Promotion into shared knowledge needs a human decision.
 
 ## License and contribution terms
 

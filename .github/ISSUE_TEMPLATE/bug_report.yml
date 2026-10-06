@@ -1,0 +1,38 @@
+name: Bug report
+description: Report reproducible behavior that does not match expectations
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Do not disclose vulnerabilities, secrets, or private data here. Follow SECURITY.md for sensitive reports.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and why it is a problem.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include a small example and relevant inputs when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Version or commit
+      description: Include the exact revision if known.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and evidence
+      description: Include Node, pnpm, OS, logs, or screenshots when relevant. Remove secrets and private data.
