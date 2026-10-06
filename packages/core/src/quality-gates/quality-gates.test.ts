@@ -192,6 +192,94 @@ test("malformed selection and empty states with valid plan digests cannot pass",
   expect(state(emptyBrowser.findings, "axe")).toBe("UNVERIFIED");
 });
 
+test.each([
+  {
+    name: "missing title",
+    expected: "title must be nonempty safe text",
+    change: (plan: Record<string, unknown>) => {
+      delete plan.title;
+    },
+  },
+  {
+    name: "missing required-state fixtures",
+    expected: "fixtures.loading must be a field-to-text map",
+    change: (plan: Record<string, unknown>) => {
+      plan.fixtures = {};
+    },
+  },
+  {
+    name: "out-of-range mobile columns",
+    expected: "layout must contain bounded breakpoint and column counts",
+    change: (plan: Record<string, unknown>) => {
+      (plan.layout as Record<string, unknown>).mobileColumns = -7;
+    },
+  },
+  {
+    name: "unsupported semantic tag",
+    expected: "unsupported semantic tag blink",
+    change: (plan: Record<string, unknown>) => {
+      const states = plan.states as Array<{
+        root: { children: Array<Record<string, unknown>> };
+      }>;
+      states[0]!.root.children[0]!.tag = "blink";
+    },
+  },
+  {
+    name: "non-text fixture-backed label",
+    expected: "fixtures.loading.message must be safe text",
+    change: (plan: Record<string, unknown>) => {
+      const fixtures = plan.fixtures as Record<string, Record<string, unknown>>;
+      fixtures.loading!.message = 23;
+    },
+  },
+  {
+    name: "blank interactive label",
+    expected: "needs a discernible text label",
+    change: (plan: Record<string, unknown>) => {
+      const states = plan.states as Array<{
+        root: {
+          children: Array<{
+            children: Array<Record<string, unknown>>;
+          }>;
+        };
+      }>;
+      const loadingButton = states[0]!.root.children[0]!.children.find(
+        (node) => node.tag === "button",
+      )!;
+      loadingButton.text = " ";
+    },
+  },
+  {
+    name: "escaping output path",
+    expected: "outputPath must be a contained relative directory",
+    change: (plan: Record<string, unknown>) => {
+      plan.outputPath = "../escape";
+    },
+  },
+  {
+    name: "different output directory",
+    expected: "output directory",
+    change: (plan: Record<string, unknown>) => {
+      plan.outputPath = "different-generated-directory";
+    },
+  },
+])(
+  "generated plan with $name and recomputed digest cannot pass",
+  async ({ change, expected }) => {
+    const { input, output } = await built();
+    await rewritePlan(output.directory, (plan) => change(plan));
+    const { report } = await runStaticQualityGates(input);
+    const manifest = report.findings.find(
+      (item) => item.criterion === "bundle-manifest",
+    );
+    expect(manifest?.state).toBe("FAIL");
+    expect(manifest?.reason).toContain(expected);
+    const browser = await runBrowserQualityGates(input);
+    expect(state(browser.findings, "navigation-state")).toBe("FAIL");
+    expect(state(browser.findings, "axe")).toBe("UNVERIFIED");
+  },
+);
+
 test("an approved artifact in the wrong scenario role fails validity", async () => {
   const { input, output, fixture } = await built();
   await rewritePlan(output.directory, (plan, manifest) => {

@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
+import { realpath } from "node:fs/promises";
+import path from "node:path";
 import type { AddressInfo } from "node:net";
 import { AxeBuilder } from "@axe-core/playwright";
 import {
@@ -68,6 +70,29 @@ function transitions(plan: PrototypeBuilderInput): Map<string, Edge[]> {
   }
   return graph;
 }
+function fragments(plan: PrototypeBuilderInput): Map<string, string[]> {
+  const result = new Map<string, string[]>();
+  for (const state of plan.states) {
+    const hrefs: string[] = [];
+    const walk = (node: typeof state.root): void => {
+      if (node.tag === "a" && node.href) hrefs.push(node.href);
+      for (const child of node.children ?? []) walk(child);
+    };
+    walk(state.root);
+    result.set(state.name, hrefs);
+  }
+  return result;
+}
+function executionUnavailable(
+  error: unknown,
+  page: Page,
+  browser: Browser,
+): boolean {
+  if (page.isClosed() || !browser.isConnected()) return true;
+  return /(?:target page|browser|context|connection).*(?:closed|disconnected)|(?:ECONNRESET|ECONNREFUSED|ERR_CONNECTION_REFUSED|ERR_CONNECTION_RESET|ERR_EMPTY_RESPONSE)/i.test(
+    String(error),
+  );
+}
 function paths(graph: Map<string, Edge[]>, start: string): Map<string, Edge[]> {
   const result = new Map<string, Edge[]>([[start, []]]);
   const queue: string[] = [start];
@@ -123,6 +148,7 @@ export async function runBrowserQualityGates(
   const { target, manifest } = bundle;
   const checked = qualityPlan(bundle.plan);
   const plan = checked.plan;
+  const trustedRoot = await realpath(input.trustedRoot);
   const findings: BrowserFinding[] = [];
   const basic = { bundleDigest: target.bundleDigest };
   const criteria = [
@@ -140,10 +166,11 @@ export async function runBrowserQualityGates(
       manifest.planDigest !==
         `sha256:${createHash("sha256").update(canonicalJson(plan)).digest("hex")}` ||
       canonicalJson(manifest.requiredStates) !==
-        canonicalJson(plan.requiredStates)
+        canonicalJson(plan.requiredStates) ||
+      path.resolve(trustedRoot, plan.outputPath) !== target.directory
     )
       checked.errors.push(
-        "manifest and plan identity or required states differ",
+        "manifest, plan, required states, or output directory differ",
       );
   } catch {
     checked.errors.push("manifest or plan cannot be canonicalized");
@@ -208,6 +235,7 @@ export async function runBrowserQualityGates(
     }
     engine = browser.browserType().name();
     const graph = transitions(plan!);
+    const plannedFragments = fragments(plan!);
     const routes = paths(graph, plan!.initialState);
     for (const device of devices) {
       const deviceName = `${engine}-${device.mobile ? "mobile" : "desktop"}`;
@@ -274,6 +302,7 @@ export async function runBrowserQualityGates(
         const navigation: string[] = missing.map(
           (state) => `${state}: unreachable from ${plan!.initialState}`,
         );
+        const unknownNavigation: string[] = [];
         const axe: string[] = [];
         const overflow: string[] = [];
         const keyboard: string[] = [];
@@ -288,6 +317,7 @@ export async function runBrowserQualityGates(
           unverified.set(criterion, messages);
         };
         let completed = 0;
+        let linksChecked = 0;
         for (const state of plan!.requiredStates) {
           const route = routes.get(state);
           if (!route) continue;
@@ -324,6 +354,14 @@ export async function runBrowserQualityGates(
                   target: element.getAttribute("href")?.slice(1) ?? "",
                 })),
               );
+            const declaredLinks = plannedFragments.get(state) ?? [];
+            if (
+              links.length !== declaredLinks.length ||
+              links.some((link, index) => link.href !== declaredLinks[index])
+            )
+              navigation.push(
+                `${state}: rendered links differ from declared fragments`,
+              );
             for (const link of links) {
               if (
                 !link.href.startsWith("#") ||
@@ -334,6 +372,7 @@ export async function runBrowserQualityGates(
                   `${state}: broken or nonlocal link ${link.href}`,
                 );
             }
+            linksChecked += links.length;
             try {
               const result = await new AxeBuilder({ page }).analyze();
               axe.push(
@@ -382,7 +421,10 @@ export async function runBrowserQualityGates(
             }
             completed++;
           } catch (error) {
-            navigation.push(`${state}: ${String(error)}`);
+            (executionUnavailable(error, page, browser)
+              ? unknownNavigation
+              : navigation
+            ).push(`${state}: ${String(error)}`);
           }
         }
         const totalEdges = [...graph.values()].reduce(
@@ -411,26 +453,36 @@ export async function runBrowserQualityGates(
                 repeatedEdges++;
               }
             } catch (error) {
-              navigation.push(
+              (executionUnavailable(error, page, browser)
+                ? unknownNavigation
+                : navigation
+              ).push(
                 `${edge.from} → ${edge.to} ${edge.label}: ${String(error)}`,
               );
             }
           }
         }
+        const totalLinks = [...plannedFragments.values()].reduce(
+          (count, hrefs) => count + hrefs.length,
+          0,
+        );
         const navigationState = navigation.length
           ? "FAIL"
-          : totalEdges === 0
-            ? "N/A"
-            : completed === plan!.requiredStates.length &&
-                edgesChecked === totalEdges
-              ? "PASS"
-              : "UNVERIFIED";
+          : unknownNavigation.length
+            ? "UNVERIFIED"
+            : totalEdges === 0 && totalLinks === 0
+              ? "N/A"
+              : completed === plan!.requiredStates.length &&
+                  edgesChecked === totalEdges &&
+                  linksChecked === totalLinks
+                ? "PASS"
+                : "UNVERIFIED";
         for (const [criterion, failures, severity, limit] of [
           [
             "navigation-state",
             navigation,
             "MAJOR",
-            "Every declared transition is exercised; repeat checks use a same-session return path when one exists",
+            "Every declared transition and fragment link is checked; repeat checks use a same-session return path when one exists",
           ],
           [
             "axe",
@@ -465,15 +517,23 @@ export async function runBrowserQualityGates(
               severity,
               (criterion === "navigation-state" && !failures.length
                 ? navigationState === "N/A"
-                  ? "One state has no transition controls; navigation does not apply"
-                  : `${edgesChecked}/${totalEdges} transitions exercised; ${repeatedEdges} repeated after same-session return`
+                  ? "One state has no transition controls or fragment links; navigation does not apply"
+                  : navigationState === "UNVERIFIED"
+                    ? `Navigation incomplete: ${unknownNavigation.join("; ") || `${completed}/${plan!.requiredStates.length} states reached`}`
+                    : `${edgesChecked}/${totalEdges} transitions and ${linksChecked}/${totalLinks} fragment links checked; ${repeatedEdges} repeated after same-session return`
                 : failures.join("; ")) ||
                 (completed < plan!.requiredStates.length ||
                 unverified.has(criterion)
                   ? `Only ${completed}/${plan!.requiredStates.length} states were reached; ${unverified.get(criterion)?.join("; ") ?? ""}`
                   : `${criterion} passed in ${completed} declared states`),
               ["index.html", "prototype.css", "prototype.js", "plan.json"],
-              conditions,
+              criterion === "navigation-state"
+                ? {
+                    ...conditions,
+                    transitionsChecked: edgesChecked,
+                    fragmentLinksChecked: linksChecked,
+                  }
+                : conditions,
               limit,
             ),
           );
@@ -498,7 +558,11 @@ export async function runBrowserQualityGates(
               ),
             );
       } finally {
-        await context?.close();
+        try {
+          await context?.close();
+        } catch {
+          // A lost browser transport cannot invalidate findings already recorded.
+        }
       }
     }
   } catch (error) {
@@ -519,7 +583,13 @@ export async function runBrowserQualityGates(
           ),
         );
   } finally {
-    if (launched) await browser?.close();
+    if (launched) {
+      try {
+        await browser?.close();
+      } catch {
+        // A failed cleanup cannot replace the recorded tool outcome.
+      }
+    }
     if (server.listening)
       await new Promise<void>((resolve) => server.close(() => resolve()));
   }

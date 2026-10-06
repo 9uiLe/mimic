@@ -188,6 +188,7 @@ export async function runStaticQualityGates(
   const { manifest, target } = bundle;
   const planShape = qualityPlan(bundle.plan);
   const plan = planShape.plan;
+  const trustedRoot = await realpath(input.trustedRoot);
   const findings: GateFinding[] = [];
   const base = { bundleDigest: target.bundleDigest };
   const planMatches = (() => {
@@ -199,7 +200,10 @@ export async function runStaticQualityGates(
         manifest.productionReady === false &&
         manifest.fixtures === "synthetic" &&
         typeof manifest.planDigest === "string" &&
-        manifest.planDigest === digest(canonicalJson(plan))
+        manifest.planDigest === digest(canonicalJson(plan)) &&
+        canonicalJson(manifest.requiredStates) ===
+          canonicalJson(plan.requiredStates) &&
+        path.resolve(trustedRoot, plan.outputPath) === target.directory
       );
     } catch {
       return false;
@@ -214,7 +218,7 @@ export async function runStaticQualityGates(
         ? "Manifest describes this exact plan and synthetic specification output"
         : planShape.errors.length
           ? `Invalid render plan: ${planShape.errors.join("; ")}`
-          : "Missing, malformed, or inconsistent manifest/plan digest",
+          : "Missing, malformed, or inconsistent manifest, plan digest, or output directory",
       ["manifest.json", "plan.json"],
       "A matching plan digest does not approve authored render intent",
       base,
