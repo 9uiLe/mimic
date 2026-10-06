@@ -368,6 +368,10 @@ export function parseManifest(bytes: Uint8Array): PackageManifest {
     value.dependencies.map((item) => key(item.ref)),
     "dependency identity",
   );
+  unique(
+    value.dependencies.map((item) => item.ref.packageId),
+    "dependency package ID",
+  );
   const root = key(value.ref);
   assert(
     !value.dependencies.some((item) => key(item.ref) === root),
@@ -409,6 +413,10 @@ function lockNode(value: unknown): asserts value is LockNode {
     "locked artifact revision",
   );
   unique(node.dependencies.map(key), "locked dependency edge");
+  unique(
+    node.dependencies.map((ref) => ref.packageId),
+    "locked dependency package ID",
+  );
 }
 export function parseDesignLock(bytes: Uint8Array): DesignLock {
   const value = fields(parseJson(bytes), [
@@ -427,9 +435,16 @@ export function parseDesignLock(bytes: Uint8Array): DesignLock {
     value.packages.map((node) => key(node.ref)),
     "locked package identity",
   );
+  unique(
+    value.packages.map((node) => node.ref.packageId),
+    "locked package ID",
+  );
   const root = key(value.root);
+  const rootId = value.root.packageId;
   assert(
-    !value.packages.some((node) => key(node.ref) === root),
+    !value.packages.some(
+      (node) => key(node.ref) === root || node.ref.packageId === rootId,
+    ),
     "Root listed as dependency",
   );
   return value as unknown as DesignLock;

@@ -253,6 +253,19 @@ describe("package registry", () => {
     await expect(
       registry(memory([bad])).resolve(ref("product/app"), packageDigest(bad)),
     ).rejects.toMatchObject({ code: "INVALID" });
+    const nodeB = node(release(ref("org/tokens", "2.0.0"), org));
+    const conflict = release(
+      ref("product/app"),
+      product,
+      [nodeA],
+      [nodeA, nodeB],
+    );
+    await expect(
+      registry(memory([conflict])).resolve(
+        ref("product/app"),
+        packageDigest(conflict),
+      ),
+    ).rejects.toMatchObject({ code: "CORRUPT" });
     const noAuthority = new PackageRegistry(memory([fixed]), {
       scopes,
       supportedSchemaVersions: ["1.0.0"],
