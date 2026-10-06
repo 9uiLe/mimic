@@ -1,6 +1,6 @@
 # Skill package runtime
 
-`@mimic/core` exports `loadSkillPackage` and `runSkillPackage` for the 9UI-103 execution boundary. The [static manifest contract](skill-package.md) and [reasoning Skill contract](../specifications/reasoning-skill-contracts.md) define the metadata and domain duties. This runtime consumes the merged 9UI-136 schema; it does not implement the eighteen catalog Skills.
+`@mimic/core` exports `loadSkillPackage` and `runSkillPackage` for the 9UI-103 execution boundary. The [static manifest contract](skill-package.md) and [reasoning Skill contract](../specifications/reasoning-skill-contracts.md) define the metadata and domain duties. The [S01–S18 static packages](../../skills/README.md) are available. This runtime consumes the merged 9UI-136 schema and routes them to a trusted injected executor; it does not itself implement their reasoning.
 
 ## Load a package
 

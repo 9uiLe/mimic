@@ -1,4 +1,4 @@
-/** Local, immutable design-knowledge input. It is not a canonical artifact or a seed library. */
+/** Local, immutable graph types and retrieval helpers. The seed corpus is separate data in knowledge/seed, not a canonical artifact. */
 export type NodeKind =
   | "trait"
   | "principle"
