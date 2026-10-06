@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "evidence": [
+    {
+      "id": "obs:gov-journey",
+      "kind": "observation",
+      "sourceUrl": "https://design-system.service.gov.uk/patterns/step-by-step-navigation/",
+      "sourceTitle": "Step by step navigation – GOV.UK Design System",
+      "relevantSection": "When to use this pattern; When not to use this pattern; Elements of step by step navigation",
+      "accessDate": "2026-10-06",
+      "claim": "GOV.UK documents numbered steps, task links, an end-to-end journey, and stated when-to-use and when-not-to-use conditions.",
+      "claimLinkage": ["case:gov-journey"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:gov-journey",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://design-system.service.gov.uk/patterns/step-by-step-navigation/",
+      "sourceTitle": "Step by step navigation – GOV.UK Design System",
+      "relevantSection": "When to use this pattern; When not to use this pattern; Elements of step by step navigation",
+      "accessDate": "2026-10-06",
+      "claim": "For a multi-service journey, an explicit task map may reduce loss of place if the actual dependencies and re-entry points are verified.",
+      "claimLinkage": [
+        "trait:gov-journey",
+        "principle:gov-journey",
+        "space:gov-journey",
+        "mechanism:gov-journey",
+        "pattern:gov-journey",
+        "failure:gov-journey"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:wiki-history",
+      "kind": "observation",
+      "sourceUrl": "https://www.mediawiki.org/wiki/Help:History",
+      "sourceTitle": "Help:History – MediaWiki",
+      "relevantSection": "Summary; Navigating the revision history page",
+      "accessDate": "2026-10-06",
+      "claim": "MediaWiki Help describes newest-first history, timestamp links to versions, and controls to compare previous, current, or selected revisions.",
+      "claimLinkage": ["case:wiki-history"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:wiki-history",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://www.mediawiki.org/wiki/Help:History",
+      "sourceTitle": "Help:History – MediaWiki",
+      "relevantSection": "Summary; Navigating the revision history page",
+      "accessDate": "2026-10-06",
+      "claim": "A content product may benefit from version comparison when changes affect trust, provided privacy and retention rules allow it.",
+      "claimLinkage": [
+        "trait:wiki-history",
+        "principle:wiki-history",
+        "space:wiki-history",
+        "mechanism:wiki-history",
+        "pattern:wiki-history",
+        "failure:wiki-history"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:toyota-andon",
+      "kind": "observation",
+      "sourceUrl": "https://global.toyota/en/company/vision-and-philosophy/production-system/",
+      "sourceTitle": "Toyota Production System – Toyota Motor Corporation",
+      "relevantSection": "The Two Pillars of TPS; Jidoka; Just-in-Time",
+      "accessDate": "2026-10-06",
+      "claim": "Toyota describes Jidoka as detecting an abnormality, stopping equipment or line, and notifying workers; its Just-in-Time pillar coordinates downstream demand.",
+      "claimLinkage": ["case:toyota-andon"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:toyota-andon",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://global.toyota/en/company/vision-and-philosophy/production-system/",
+      "sourceTitle": "Toyota Production System – Toyota Motor Corporation",
+      "relevantSection": "The Two Pillars of TPS; Jidoka; Just-in-Time",
+      "accessDate": "2026-10-06",
+      "claim": "An operational workflow may transfer the explicit interrupt-and-escalate principle after specifying who can stop, respond and restart.",
+      "claimLinkage": [
+        "trait:toyota-andon",
+        "principle:toyota-andon",
+        "space:toyota-andon",
+        "mechanism:toyota-andon",
+        "pattern:toyota-andon",
+        "failure:toyota-andon"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:vscode-debug",
+      "kind": "observation",
+      "sourceUrl": "https://code.visualstudio.com/docs/debugtest/debugging",
+      "sourceTitle": "Debug code with Visual Studio Code",
+      "relevantSection": "Start a debugging session; Debug actions; Breakpoints",
+      "accessDate": "2026-10-06",
+      "claim": "VS Code documentation describes breakpoints, paused execution, variable and call-stack inspection, stepping, and conditional breakpoints.",
+      "claimLinkage": ["case:vscode-debug"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:vscode-debug",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://code.visualstudio.com/docs/debugtest/debugging",
+      "sourceTitle": "Debug code with Visual Studio Code",
+      "relevantSection": "Start a debugging session; Debug actions; Breakpoints",
+      "accessDate": "2026-10-06",
+      "claim": "A complex tool may benefit from user-selected pause points and contextual inspection where interruption is safe.",
+      "claimLinkage": [
+        "trait:vscode-debug",
+        "principle:vscode-debug",
+        "space:vscode-debug",
+        "mechanism:vscode-debug",
+        "pattern:vscode-debug",
+        "failure:vscode-debug"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:factorio-chain",
+      "kind": "observation",
+      "sourceUrl": "https://wiki.factorio.com/Tutorial:Quick_start_guide",
+      "sourceTitle": "Tutorial:Quick start guide – Factorio Wiki",
+      "relevantSection": "Re-thinking our resources and research; Automating that research",
+      "accessDate": "2026-10-06",
+      "claim": "The Factorio quick-start guide walks through ore processing, belts, inserters, assemblers and automated science-pack production.",
+      "claimLinkage": ["case:factorio-chain"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:factorio-chain",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://wiki.factorio.com/Tutorial:Quick_start_guide",
+      "sourceTitle": "Tutorial:Quick start guide – Factorio Wiki",
+      "relevantSection": "Re-thinking our resources and research; Automating that research",
+      "accessDate": "2026-10-06",
+      "claim": "A planning experience might make dependencies easier to reason about through manipulable input-output chains, subject to domain validation.",
+      "claimLinkage": [
+        "trait:factorio-chain",
+        "principle:factorio-chain",
+        "space:factorio-chain",
+        "mechanism:factorio-chain",
+        "pattern:factorio-chain",
+        "failure:factorio-chain"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:stripe-checkout",
+      "kind": "observation",
+      "sourceUrl": "https://docs.stripe.com/payments/checkout",
+      "sourceTitle": "Checkout – Stripe Documentation",
+      "relevantSection": "Stripe Checkout; payment UI comparison table",
+      "accessDate": "2026-10-06",
+      "claim": "Stripe documents hosted and embedded Checkout variants and order-summary support in its comparison of payment UIs.",
+      "claimLinkage": ["case:stripe-checkout"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:stripe-checkout",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://docs.stripe.com/payments/checkout",
+      "sourceTitle": "Checkout – Stripe Documentation",
+      "relevantSection": "Stripe Checkout; payment UI comparison table",
+      "accessDate": "2026-10-06",
+      "claim": "A service handoff may preserve trust by carrying an explicit order summary and completion state, subject to actual payment and legal requirements.",
+      "claimLinkage": [
+        "trait:stripe-checkout",
+        "principle:stripe-checkout",
+        "space:stripe-checkout",
+        "mechanism:stripe-checkout",
+        "pattern:stripe-checkout",
+        "failure:stripe-checkout"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:slack-thread",
+      "kind": "observation",
+      "sourceUrl": "https://slack.com/help/articles/115000769927-Use-threads-to-organize-discussions",
+      "sourceTitle": "Use threads to organise discussions – Slack Help",
+      "relevantSection": "Start or reply to a thread; Manage thread notifications",
+      "accessDate": "2026-10-06",
+      "claim": "Slack Help describes replying to a specific message in a thread, optionally posting a reply to the main view, and thread notification controls.",
+      "claimLinkage": ["case:slack-thread"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:slack-thread",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://slack.com/help/articles/115000769927-Use-threads-to-organize-discussions",
+      "sourceTitle": "Use threads to organise discussions – Slack Help",
+      "relevantSection": "Start or reply to a thread; Manage thread notifications",
+      "accessDate": "2026-10-06",
+      "claim": "A collaboration tool may use topic-anchored replies with explicit broadcast rules to reduce channel noise without hiding important decisions.",
+      "claimLinkage": [
+        "trait:slack-thread",
+        "principle:slack-thread",
+        "space:slack-thread",
+        "mechanism:slack-thread",
+        "pattern:slack-thread",
+        "failure:slack-thread"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:skos-relations",
+      "kind": "observation",
+      "sourceUrl": "https://www.w3.org/TR/skos-reference/",
+      "sourceTitle": "SKOS Simple Knowledge Organization System Reference – W3C",
+      "relevantSection": "Section 8 Semantic Relations; Section 8.6.6 broader and Transitivity",
+      "accessDate": "2026-10-06",
+      "claim": "The W3C SKOS reference distinguishes broader/narrower hierarchical links from related associative links, and direct from transitive relations.",
+      "claimLinkage": ["case:skos-relations"],
+      "rightsStrategy": "Link and paraphrase only; no third-party text passage, screenshot, icon, CSS or other asset copied."
+    },
+    {
+      "id": "hyp:skos-relations",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://www.w3.org/TR/skos-reference/",
+      "sourceTitle": "SKOS Simple Knowledge Organization System Reference – W3C",
+      "relevantSection": "Section 8 Semantic Relations; Section 8.6.6 broader and Transitivity",
+      "accessDate": "2026-10-06",
+      "claim": "A conceptual browser may support both precise local navigation and expanded discovery by keeping relation types distinct.",
+      "claimLinkage": [
+        "trait:skos-relations",
+        "principle:skos-relations",
+        "space:skos-relations",
+        "mechanism:skos-relations",
+        "pattern:skos-relations",
+        "failure:skos-relations"
+      ],
+      "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    }
+  ]
+}

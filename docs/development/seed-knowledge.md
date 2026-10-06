@@ -1,0 +1,11 @@
+# Public seed design knowledge
+
+`knowledge/seed/graph.json` is a local `DesignKnowledgeGraph` input for the read-only helper in `packages/core/src/design-knowledge`. `spaces.json` supplies the human-reviewable Reference Space fields that do not have typed graph-node fields. `sources.json` is the evidence ledger. The three files form one versioned seed corpus; load them together.
+
+Each space records a problem trait, principle, mechanism, documented case, conditional pattern, good and poor fit, failure mode, and superficial features to avoid. The graph follows trait → principle → space → case → mechanism → principle. It never connects a case directly to a UI direction. All nodes are `provisional`; inclusion in this public seed is not approval of a shared knowledge promotion or evidence that the proposed transfer works.
+
+The ledger distinguishes `observation` from `transfer-hypothesis`. An observation is a concise paraphrase of a named section of a primary source read on 2026-10-06. A hypothesis is original analysis about potential use in another problem. Evidence IDs resolve from graph nodes and edges to this ledger; a source citation alone does not validate transfer. Structural fit, context distance and exploration role must be assessed for a particular problem. No case carries a permanent Near, Far or Anti-reference role.
+
+The corpus contains original summaries and references by URL only. No third-party screenshots, icons, CSS, prose passages, brand assets, or source files are bundled. Brand and product names identify observed cases. The rights strategy for each entry is recorded in the ledger. If later work bundles an upstream asset, apply `THIRD_PARTY_NOTICES.md` and the exact upstream rights before distribution.
+
+Run `pnpm exec vitest run packages/core/src/skill-catalog-tests/seed-knowledge.test.ts` to check shape, linkage and representative retrieval behavior. Those structural tests cannot establish factual accuracy, source accessibility over time, legal rights for future assets, or product-specific transfer fitness. The initial source and content review is recorded in `knowledge/seed/research-review.md`. Recheck each ledger URL and section, paraphrase, fit boundary and hypothesis before product-specific use.
