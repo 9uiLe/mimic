@@ -1,0 +1,193 @@
+{
+  "rule": {
+    "meta": {
+      "id": "art_s15_rule",
+      "type": "design-system-asset",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Narrow comparison transformation",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.s15.responsive-architect",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content",
+        "kind": "assumption",
+        "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+      }
+    ],
+    "content": {
+      "summary": "Narrow comparison transformation candidate for the comparison task.",
+      "assetKind": "responsive-rule",
+      "name": "Narrow comparison transformation",
+      "definition": {
+        "primaryGoal": "Compare plans and decide or defer",
+        "constraints": ["narrow viewport", "touch input", "long criteria"],
+        "actions": [
+          {
+            "action": "preserve",
+            "target": "criterion labels",
+            "reason": "Maintain comparison meaning"
+          },
+          {
+            "action": "reorder",
+            "target": "evidence before decision",
+            "reason": "Keep reading order meaningful"
+          },
+          {
+            "action": "collapse",
+            "target": "supporting details",
+            "reason": "Reduce load while keeping access"
+          },
+          {
+            "action": "hide",
+            "target": "decorative illustration",
+            "reason": "No task meaning"
+          },
+          {
+            "action": "replace",
+            "target": "side-by-side grid with criterion sequence",
+            "reason": "Retain candidate association"
+          },
+          {
+            "action": "split",
+            "target": "long criteria into steps",
+            "reason": "Maintain focus and progress"
+          },
+          {
+            "action": "progressive-disclose",
+            "target": "secondary evidence",
+            "reason": "Preserve discoverability without crowding"
+          }
+        ],
+        "parityCheck": {
+          "desktop": "Compare plans and decide or defer",
+          "mobile": "Compare plans and decide or defer",
+          "status": "UNVERIFIED"
+        },
+        "failureModes": ["Hidden candidate identity or uncertainty"],
+        "primaryAction": "Choose a plan or defer"
+      },
+      "usageRules": [
+        "Use when side-by-side comparison cannot fit without lost meaning"
+      ],
+      "antiUsageRules": [
+        "Do not hide primary action, candidate identity or uncertainty"
+      ]
+    }
+  },
+  "scenario": {
+    "meta": {
+      "id": "art_s15_mobile_scenario",
+      "type": "scenario",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Compare plans in a narrow touch viewport.",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.s15.responsive-architect",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content",
+        "kind": "assumption",
+        "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+      }
+    ],
+    "content": {
+      "summary": "Compare plans in a narrow touch viewport.",
+      "actor": "Plan owner",
+      "context": "Choosing a plan on a narrow touch viewport with partial evidence",
+      "steps": [
+        "Open comparison with candidate identity visible",
+        "Read each criterion with candidate evidence and uncertainty in sequence",
+        "Expand secondary evidence as needed",
+        "Choose a plan or defer with uncertainty visible"
+      ],
+      "expectedOutcome": "A choice or defer action retains candidate identity and uncertainty"
+    }
+  },
+  "sourceScenario": {
+    "meta": {
+      "id": "art_s15_source_scenario",
+      "type": "scenario",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Source comparison scenario",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.fixture",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content",
+        "kind": "assumption",
+        "rationale": "Synthetic source scenario, not an observed task result."
+      }
+    ],
+    "content": {
+      "summary": "Compare two plans against shared criteria and uncertainty.",
+      "actor": "Plan owner",
+      "context": "Choosing a plan with partial evidence",
+      "steps": [
+        "Open the comparison task with two candidate plans",
+        "Read each criterion with candidate evidence and uncertainty",
+        "Inspect differences and follow an evidence link",
+        "Choose a plan or defer with uncertainty visible"
+      ],
+      "expectedOutcome": "A choice or defer action retains candidate identity and uncertainty"
+    }
+  }
+}

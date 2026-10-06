@@ -1,0 +1,79 @@
+{
+  "candidate": {
+    "meta": {
+      "id": "art_s12_comparison_variant",
+      "type": "design-system-asset",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Candidate comparison variant",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.s12.design-system-resolver",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content",
+        "kind": "assumption",
+        "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+      }
+    ],
+    "content": {
+      "summary": "Candidate comparison variant candidate for the comparison task.",
+      "assetKind": "pattern",
+      "name": "Candidate comparison variant",
+      "definition": {
+        "intent": "Compare plans with traceable uncertainty",
+        "parentAsset": "Candidate comparison",
+        "change": "Add explicit uncertainty slot only when base composition cannot express it",
+        "failureModes": ["Unsupported local name shadows parent"]
+      },
+      "usageRules": ["Use after exact approved parent review finds a task gap"],
+      "antiUsageRules": ["Do not use for simple presentation variation"]
+    }
+  },
+  "resolutions": [
+    {
+      "need": "Compare plans",
+      "choice": "REUSE",
+      "asset": "Candidate comparison",
+      "reason": "Approved slots fit task and risks"
+    },
+    {
+      "need": "Dense presentation",
+      "choice": "CONFIGURE",
+      "asset": "Comparison row",
+      "property": "density",
+      "value": "compact",
+      "reason": "Within approved comfortable/compact boundary"
+    },
+    {
+      "need": "Show uncertainty",
+      "choice": "EXTEND",
+      "asset": "Candidate comparison",
+      "reason": "Existing pattern lacks required uncertainty behavior"
+    },
+    {
+      "need": "Entirely new interaction",
+      "choice": "CREATE",
+      "asset": "New pattern",
+      "reason": "No applicable pattern or variant covers the task"
+    }
+  ]
+}

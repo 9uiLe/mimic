@@ -1,0 +1,237 @@
+{
+  "assets": [
+    {
+      "meta": {
+        "id": "art_s13_foundation",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Calm evidence hierarchy",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "proposed",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s13.visual-system-builder",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+        }
+      ],
+      "content": {
+        "summary": "Calm evidence hierarchy candidate for the comparison task.",
+        "assetKind": "foundation",
+        "name": "Calm evidence hierarchy",
+        "definition": {
+          "brandBasis": "Measured, candid",
+          "structuralBasis": "Criterion-first comparison",
+          "principles": ["Emphasize evidence and uncertainty before action"],
+          "failureModes": ["Decorative color implies unsupported confidence"]
+        },
+        "usageRules": ["Use for evidence comparison"],
+        "antiUsageRules": ["Do not imply validated preference"]
+      }
+    },
+    {
+      "meta": {
+        "id": "art_s13_tokens",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Comparison semantics",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "proposed",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s13.visual-system-builder",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+        }
+      ],
+      "content": {
+        "summary": "Comparison semantics candidate for the comparison task.",
+        "assetKind": "dtcg-tokens",
+        "name": "Comparison semantics",
+        "definition": {
+          "tokens": {
+            "color": {
+              "evidence": {
+                "$type": "color",
+                "$value": "#16324f"
+              },
+              "uncertain": {
+                "$type": "color",
+                "$value": "#8c5a16"
+              }
+            },
+            "space": {
+              "section": {
+                "$type": "dimension",
+                "$value": "1rem"
+              }
+            }
+          },
+          "references": ["color.evidence", "space.section"],
+          "modes": ["light"]
+        },
+        "usageRules": ["Use as source token semantics"],
+        "antiUsageRules": ["Do not treat as compiled CSS"]
+      }
+    },
+    {
+      "meta": {
+        "id": "art_s13_icon",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Uncertainty meaning",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "proposed",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s13.visual-system-builder",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+        }
+      ],
+      "content": {
+        "summary": "Uncertainty meaning candidate for the comparison task.",
+        "assetKind": "semantic-icon",
+        "name": "Uncertainty meaning",
+        "definition": {
+          "meaning": "Evidence is incomplete",
+          "representation": {
+            "comparison": "icon+label",
+            "ambiguousContext": "label-only"
+          },
+          "failureModes": ["Glyph appears to mean error"]
+        },
+        "usageRules": ["Use when uncertainty is visible in text"],
+        "antiUsageRules": ["Do not encode uncertainty through shape alone"]
+      }
+    },
+    {
+      "meta": {
+        "id": "art_s13_binding",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Uncertainty / Lucide",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "proposed",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s13.visual-system-builder",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [
+        {
+          "artifactId": "art_s13_icon",
+          "revision": 1,
+          "lockDigest": "sha256:b284e17541c784f51dab3908907a737ce6524c2041108e8188b0e64b81d332c0",
+          "onChange": "invalidate"
+        }
+      ],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+        }
+      ],
+      "content": {
+        "summary": "Uncertainty / Lucide candidate for the comparison task.",
+        "assetKind": "provider-binding",
+        "name": "Uncertainty / Lucide",
+        "definition": {
+          "semanticIconArtifactId": "art_s13_icon",
+          "provider": "Lucide",
+          "glyph": "circle-help",
+          "providerVersion": "illustrative; verify before approval",
+          "review": "Verify glyph and license terms against distributed version"
+        },
+        "usageRules": [
+          "Use only with exact semantic icon dependency and verified terms"
+        ],
+        "antiUsageRules": ["Do not distribute without license review"],
+        "providerLicense": "Proposed Lucide ISC terms; confirm glyph origin and retain applicable notices before trusted use"
+      }
+    }
+  ],
+  "derivation": {
+    "brand": "Measured, candid",
+    "direction": "Criterion-first comparison",
+    "tokenPurpose": "Evidence and uncertainty semantic contrast",
+    "iconMeaning": "Evidence is incomplete",
+    "provider": "Lucide",
+    "licenseState": "review-required"
+  }
+}

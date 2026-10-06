@@ -1,0 +1,247 @@
+{
+  "scenario": {
+    "meta": {
+      "id": "art_s14_scenario",
+      "type": "scenario",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Compare two plans against shared criteria and uncertainty.",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.s14.ui-composition-planner",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [
+      {
+        "artifactId": "art_s14_pattern",
+        "revision": 1,
+        "lockDigest": "sha256:0d264e0a13ceac34f11905a92892b2febc85607b3177234343bcf664f35b450b",
+        "onChange": "validate"
+      },
+      {
+        "artifactId": "art_s14_layout",
+        "revision": 1,
+        "lockDigest": "sha256:46e8ded6fcb77e68463ebc0b961efae1dc933cc7b45cbd1065577cd3fe7a520b",
+        "onChange": "validate"
+      },
+      {
+        "artifactId": "art_s14_component",
+        "revision": 1,
+        "lockDigest": "sha256:46e5ccc9ff48e9266e1029cdf5102e3720337067addbab28f995cbe71fb15f40",
+        "onChange": "validate"
+      }
+    ],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content/steps",
+        "kind": "derived",
+        "inputRefs": [
+          "art_s14_pattern@1#sha256:0d264e0a13ceac34f11905a92892b2febc85607b3177234343bcf664f35b450b",
+          "art_s14_layout@1#sha256:46e8ded6fcb77e68463ebc0b961efae1dc933cc7b45cbd1065577cd3fe7a520b",
+          "art_s14_component@1#sha256:46e5ccc9ff48e9266e1029cdf5102e3720337067addbab28f995cbe71fb15f40"
+        ],
+        "rationale": "Task → Candidate comparison pattern → criterion-by-criterion layout → existing comparison row variant, evidence link and decision control; preserve uncertainty and candidate identity in reading order."
+      },
+      {
+        "path": "/content/expectedOutcome",
+        "kind": "assumption",
+        "rationale": "Proposed task outcome; no observed user completion evidence."
+      }
+    ],
+    "content": {
+      "summary": "Compare two plans against shared criteria and uncertainty.",
+      "actor": "Plan owner",
+      "context": "Choosing a plan with partial evidence",
+      "steps": [
+        "Open the comparison task with two candidate plans",
+        "Read each criterion with candidate evidence and uncertainty",
+        "Inspect differences and follow an evidence link",
+        "Choose a plan or defer with uncertainty visible"
+      ],
+      "expectedOutcome": "A choice or defer action retains candidate identity and uncertainty"
+    }
+  },
+  "compositionEvidence": {
+    "task": "Compare two plans",
+    "pattern": "Candidate comparison",
+    "layout": "Criterion-by-criterion comparison",
+    "components": [
+      "Comparison row variant",
+      "Evidence link",
+      "Decision control"
+    ],
+    "selectedExactAssets": ["pattern", "layout", "component"],
+    "existingVariant": "Comparison row variant",
+    "newLocalComponent": null,
+    "rationale": "Pattern slots preserve shared criteria, uncertainty and action in reading order",
+    "capability": "provisional-mock-only",
+    "patternAntiUsage": ["Do not rank candidates with unverified evidence"]
+  },
+  "selectedAssets": [
+    {
+      "meta": {
+        "id": "art_s14_pattern",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Candidate comparison",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.fixture",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic resolved asset fixture; not approved."
+        }
+      ],
+      "content": {
+        "summary": "Illustrative pattern for comparison.",
+        "assetKind": "pattern",
+        "name": "Candidate comparison",
+        "definition": {
+          "task": "Compare two plans",
+          "slots": ["shared criteria", "uncertainty", "decision action"],
+          "failureModes": ["Unverified evidence appears ranked"]
+        },
+        "usageRules": ["Use for the bounded two-plan comparison"],
+        "antiUsageRules": ["Do not rank unverified evidence"]
+      }
+    },
+    {
+      "meta": {
+        "id": "art_s14_layout",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Criterion-by-criterion comparison",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.fixture",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic resolved asset fixture; not approved."
+        }
+      ],
+      "content": {
+        "summary": "Illustrative layout for comparison.",
+        "assetKind": "layout",
+        "name": "Criterion-by-criterion comparison",
+        "definition": {
+          "pattern": "Candidate comparison",
+          "readingOrder": [
+            "criterion",
+            "candidate evidence",
+            "uncertainty",
+            "decision action"
+          ],
+          "failureModes": ["Candidate identity lost on narrow view"]
+        },
+        "usageRules": ["Use for the bounded two-plan comparison"],
+        "antiUsageRules": ["Do not rank unverified evidence"]
+      }
+    },
+    {
+      "meta": {
+        "id": "art_s14_component",
+        "type": "design-system-asset",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Comparison row variant",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "scope": {
+        "level": "product",
+        "ownerId": "product_mimic",
+        "parentId": "org_9uile"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.fixture",
+        "runId": "run_example",
+        "createdAt": "2026-10-06T12:00:00Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content",
+          "kind": "assumption",
+          "rationale": "Synthetic resolved asset fixture; not approved."
+        }
+      ],
+      "content": {
+        "summary": "Illustrative component for comparison.",
+        "assetKind": "component",
+        "name": "Comparison row variant",
+        "definition": {
+          "parent": "Comparison row",
+          "variant": "comparison",
+          "states": ["complete", "uncertain"],
+          "failureModes": ["Uncertainty omitted"]
+        },
+        "usageRules": ["Use for the bounded two-plan comparison"],
+        "antiUsageRules": ["Do not rank unverified evidence"]
+      }
+    }
+  ]
+}

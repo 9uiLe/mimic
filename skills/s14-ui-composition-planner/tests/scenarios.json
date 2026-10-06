@@ -1,0 +1,40 @@
+{
+  "scenarios": [
+    {
+      "id": "task-pattern-layout-component",
+      "order": ["task", "pattern", "layout", "components"],
+      "expected": "composed"
+    },
+    {
+      "id": "existing-variant",
+      "variant": "Comparison row variant",
+      "expected": "no-new-component"
+    },
+    {
+      "id": "pattern-antiusage",
+      "constraint": "unverified evidence shown as ranking",
+      "expected": "blocked"
+    },
+    {
+      "id": "missing-asset-lock",
+      "expected": "blocked",
+      "outputCount": 0
+    },
+    {
+      "id": "proposed-capability",
+      "availability": "proposed",
+      "expected": "mock-only"
+    },
+    {
+      "id": "wrong-lock",
+      "expected": "rejected",
+      "message": "Input exact lock mismatch"
+    },
+    {
+      "id": "rejection-repeat",
+      "rejectedRevision": 2,
+      "newRevision": 3,
+      "expected": "new-revision"
+    }
+  ]
+}

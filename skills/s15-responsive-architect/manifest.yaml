@@ -1,0 +1,67 @@
+{
+  "skillId": "mimic.s15.responsive-architect",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "scenario",
+            "kind": "artifact",
+            "artifactType": "scenario",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "selected-assets",
+            "kind": "artifact",
+            "artifactType": "design-system-asset",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "journey",
+            "kind": "artifact",
+            "artifactType": "journey",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "direction",
+            "kind": "artifact",
+            "artifactType": "design-direction",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "viewport-evidence", "kind": "evidence-file" },
+        ],
+      "alternatives": [],
+    },
+  "outputs": ["design-system-asset", "scenario"],
+  "forbiddenResponsibilities":
+    [
+      "Reduce mobile to desktop stacking or remove the primary goal",
+      "Claim empirical viewport or WCAG outcomes from synthetic fixtures",
+      "Hide meaningful state without an alternative accessible path",
+      "Compile CSS or build a prototype",
+    ],
+  "humanGates":
+    [{ "decision": "organization-promotion", "authority": "PROPOSE_ONLY" }],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "design-direction", "schemaVersion": "1.0.0" },
+      { "artifactType": "design-system-asset", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "scenario", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/output.json"],
+  "tests": ["tests/scenarios.json"],
+}

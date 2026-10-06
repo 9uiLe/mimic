@@ -1,0 +1,52 @@
+{
+  "scenarios": [
+    {
+      "id": "brand-structure",
+      "brand": "Measured, candid",
+      "direction": "Criterion-first comparison",
+      "expected": "derived"
+    },
+    {
+      "id": "token-source",
+      "token": "color.evidence",
+      "expected": "source-only"
+    },
+    {
+      "id": "semantic-separation",
+      "meaning": "Evidence is incomplete",
+      "glyph": "circle-help",
+      "expected": "separate"
+    },
+    {
+      "id": "license-unverified",
+      "state": "review-required",
+      "expected": "blocked-binding"
+    },
+    {
+      "id": "locked-conflict",
+      "property": "color.evidence",
+      "expected": "blocked"
+    },
+    {
+      "id": "wrong-lock",
+      "expected": "rejected",
+      "message": "Input exact lock mismatch"
+    },
+    {
+      "id": "rejection-repeat",
+      "rejectedRevision": 2,
+      "newRevision": 3,
+      "expected": "new-revision"
+    },
+    {
+      "id": "license-fixture-review",
+      "fixture": "examples/license-reviewed.json",
+      "expected": "provisional-binding"
+    },
+    {
+      "id": "wrong-icon-reference",
+      "wrongArtifactId": "art_s13_icon",
+      "expected": "blocked"
+    }
+  ]
+}
