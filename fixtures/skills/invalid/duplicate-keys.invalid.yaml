@@ -1,0 +1,21 @@
+skillId: mimic.invalid.duplicate-keys
+skillId: mimic.invalid.duplicate-keys
+manifestVersion: 1.0.0
+packageVersion: 0.1.0
+skillFile: SKILL.md
+inputs:
+  required:
+    - name: human-intent
+      kind: human-brief
+  optional: []
+  alternatives: []
+outputs: [product-definition]
+forbiddenResponsibilities: [Approve product definition]
+humanGates:
+  - decision: product-definition
+    authority: PROPOSE_ONLY
+supportedArtifactSchemas:
+  - artifactType: product-definition
+    schemaVersion: 1.0.0
+examples: [examples/intent.json]
+tests: [tests/contract-case.json]

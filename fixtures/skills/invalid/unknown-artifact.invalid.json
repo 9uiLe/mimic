@@ -1,0 +1,26 @@
+{
+  "skillId": "mimic.invalid.unknown-artifact",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs": {
+    "required": [
+      {
+        "name": "unknown",
+        "kind": "artifact",
+        "artifactType": "imaginary-artifact",
+        "schemaVersion": "1.0.0"
+      }
+    ],
+    "optional": [],
+    "alternatives": []
+  },
+  "outputs": ["imaginary-artifact"],
+  "forbiddenResponsibilities": ["Claim unsupported artifact shape"],
+  "humanGates": [],
+  "supportedArtifactSchemas": [
+    { "artifactType": "imaginary-artifact", "schemaVersion": "1.0.0" }
+  ],
+  "examples": ["examples/intent.json"],
+  "tests": ["tests/contract-case.json"]
+}
