@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir, realpath, lstat } from "node:fs/promises";
 import { atomicCreateJson } from "./atomic-file.js";
+import { runSkillCli } from "./skill/index.js";
 import { PlanError, preflightPlan, scopeChain } from "./plan.js";
 import {
   ReceiptAuthority,
@@ -342,6 +343,7 @@ export async function runCli(
     io.out(JSON.stringify(getStatus()));
     return EXIT.OK;
   }
+  if (argv[0] === "skill") return runSkillCli(argv.slice(1), io);
   try {
     const { command, options, positionals, json } = parse(argv);
     const root = await realpath(path.resolve(options.root ?? process.cwd()));
