@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-import { getStatus } from "@mimic/core";
+import { dispatchCli } from "./entry.js";
 
-if (process.argv.length > 2) {
-  console.error("Usage: mimic");
-  process.exitCode = 2;
-} else {
-  console.log(JSON.stringify(getStatus()));
-}
+process.exitCode = await dispatchCli(process.argv.slice(2));
