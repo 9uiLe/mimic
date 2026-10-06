@@ -8,6 +8,14 @@ import type {
   TransactionalRegistryStorage,
 } from "./run-registry/registry.js";
 
+const activeTransactionViews = new WeakMap<SnapshotStorage, SnapshotStorage>();
+export function isWorkspaceTransactionView(
+  view: SnapshotStorage,
+  owner: SnapshotStorage,
+): boolean {
+  return activeTransactionViews.get(view) === owner;
+}
+
 interface WorkspaceData {
   readonly version: 1;
   snapshots: Record<string, string>;
@@ -116,10 +124,13 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
       throw error;
     }
     let temp: string | undefined;
+    let transactionSnapshots: SnapshotStorage | undefined;
     try {
       const data = await this.load();
       const before = canonicalJson(data);
-      const result = await change(data.registry, view(data));
+      transactionSnapshots = view(data);
+      activeTransactionViews.set(transactionSnapshots, this.snapshots);
+      const result = await change(data.registry, transactionSnapshots);
       if (canonicalJson(data) !== before) {
         temp = path.join(directory, `.${randomUUID()}.pending`);
         const file = await open(temp, "wx", 0o600);
@@ -142,6 +153,8 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
       }
       return result === undefined ? result : jsonCopy(result);
     } finally {
+      if (transactionSnapshots)
+        activeTransactionViews.delete(transactionSnapshots);
       if (temp) await rm(temp, { force: true });
       await rm(lock, { recursive: true, force: true });
     }

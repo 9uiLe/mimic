@@ -11,7 +11,6 @@ import {
   RunRegistry,
   type DecisionRecord,
   type RegistryState,
-  type TransactionalRegistryStorage,
 } from "./registry.js";
 import type { AtomicRegistryStorage } from "../workspace-transaction.js";
 import type { TransactionalArtifactPublisher } from "./publication.js";
@@ -163,6 +162,9 @@ function setup() {
         return true;
       },
       async verifyResolution(_id, refs) {
+        return refs.includes("evidence:verified");
+      },
+      async verifyEvidence(_proposal, _dependency, refs) {
         return refs.includes("evidence:verified");
       },
     },
@@ -744,6 +746,13 @@ describe("Run registry", () => {
       reason: "verified evidence",
     });
     expect((await registry.run("run_1")).state).toBe("active");
+    expect(
+      (await registry.snapshot()).events.findLast(
+        (e) => e.action === "set-work",
+      )?.details,
+    ).toEqual({
+      resolutions: { fact: { evidenceRefs: ["evidence:verified"] } },
+    });
   });
   test("a new exact revision and human decision can supersede an uncommitted approval", async () => {
     const { registry, storage } = setup();
@@ -816,6 +825,131 @@ describe("Run registry", () => {
     expect((await registry.snapshot()).canonical.art_a.ref).toEqual(
       updated.output!.ref,
     );
+  });
+  test("a blocked registry freshness assessment prevents committing a dependent output", async () => {
+    const { registry, storage } = setup();
+    await started(registry);
+    await proposed(registry, [b1]);
+    const original = decision("proposal_0", "decision_dep", "approved", b1);
+    const output = {
+      ...original.output!.artifact,
+      dependencies: [{ ...base, onChange: "none" }],
+    };
+    const meta = { ...output.meta };
+    delete meta.contentDigest;
+    const raw = { ...output, meta };
+    const final = {
+      ...raw,
+      meta: { ...raw.meta, contentDigest: artifactDigest(raw) },
+    };
+    const bound = {
+      ...original,
+      output: {
+        ref: {
+          artifactId: b1.artifactId,
+          revision: 2,
+          lockDigest: artifactDigest(final),
+        },
+        artifact: final,
+      },
+    };
+    await registry.decide(bound);
+    storage.state.freshness.art_a = {
+      ref: base,
+      status: "blocked",
+      reason: "upstream invalidation",
+    };
+    await expect(
+      registry.commit({
+        id: "commit_dep",
+        packetId: "packet_1",
+        approvals: [{ proposalId: "proposal_0", decisionId: bound.id }],
+        actor,
+        at,
+        reason: "dependent",
+      }),
+    ).rejects.toThrow("blocked registry freshness");
+    expect((await registry.snapshot()).canonical.art_b).toBeUndefined();
+  });
+  test("deferred decision leaves safe exploration active and needs a later human decision", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await proposed(registry);
+    await registry.decide(decision("proposal_0", "decision_defer", "deferred"));
+    expect((await registry.run("run_1")).state).toBe("active");
+    await registry.setWork({
+      runId: "run_1",
+      safeActions: [],
+      blockers: { "decision:proposal_0": "Human decision deferred" },
+      actor: agent,
+      at,
+      reason: "safe work complete",
+    });
+    await registry.refreshReadiness({ actor: agent, at });
+    expect((await registry.run("run_1")).state).toBe("blocked");
+    await expect(
+      registry.setWork({
+        runId: "run_1",
+        safeActions: [],
+        blockers: {},
+        actor: agent,
+        at,
+        reason: "silently clear",
+      }),
+    ).rejects.toThrow();
+    await registry.decide(decision("proposal_0", "decision_later"));
+    expect((await registry.run("run_1")).state).toBe("review-ready");
+  });
+  test("Linear references remain exportable data with no connector side effect", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await registry.produce({
+      runId: "run_1",
+      ref: a2,
+      inputs: [base],
+      actor: agent,
+      at,
+      reason: "draft",
+    });
+    await registry.submit({
+      runId: "run_1",
+      packetId: "packet_linear",
+      proposals: [
+        {
+          id: "proposal_linear",
+          ref: a2,
+          expectedCanonical: base,
+          alternatives: ["adopt"],
+          rationale: "review",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      externalRefs: ["https://linear.app/9uile/issue/9UI-99/example"],
+      actor: agent,
+      at,
+      reason: "review",
+    });
+    expect(
+      (await registry.snapshot()).packets.packet_linear.externalRefs,
+    ).toEqual(["https://linear.app/9uile/issue/9UI-99/example"]);
+  });
+  test("another human identity cannot replay a named approval", async () => {
+    const { registry } = setup();
+    await started(registry);
+    await proposed(registry);
+    await registry.decide(decision("proposal_0", "decision_0"));
+    await expect(
+      registry.commit({
+        id: "commit_other",
+        packetId: "packet_1",
+        approvals: [{ proposalId: "proposal_0", decisionId: "decision_0" }],
+        actor: { kind: "human", id: "other" },
+        at,
+        reason: "replay",
+      }),
+    ).rejects.toThrow();
+    expect((await registry.snapshot()).canonical.art_a.ref).toEqual(base);
   });
   test("state precedence is explicit", () => {
     const run = {

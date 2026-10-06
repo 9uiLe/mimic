@@ -5,6 +5,7 @@ import {
   artifactDigest,
   canonicalJson,
   jsonCopy,
+  type JsonValue,
 } from "../artifact-canonical.js";
 import type { ArtifactSnapshot } from "../artifact-store.js";
 import type { AtomicRegistryStorage } from "../workspace-transaction.js";
@@ -32,6 +33,7 @@ export interface DecisionRecord {
   readonly at: string;
   readonly rationale: string;
   readonly supersedesDecisionId?: string;
+  readonly externalRefs?: readonly string[];
   readonly output?: {
     readonly ref: ExactArtifactRef;
     readonly artifact: ArtifactSnapshot;
@@ -54,6 +56,7 @@ export interface Proposal {
   status: "pending" | "merged" | "rejected" | "discarded" | "superseded";
   readiness: "ready" | "stale" | "blocked";
   readinessReason?: string;
+  deferred?: boolean;
 }
 export interface DecisionPacket {
   readonly id: string;
@@ -61,6 +64,7 @@ export interface DecisionPacket {
   readonly proposalIds: readonly string[];
   readonly createdAt: string;
   readonly reason: string;
+  readonly externalRefs?: readonly string[];
 }
 export interface RunEvent {
   readonly sequence: number;
@@ -74,6 +78,7 @@ export interface RunEvent {
   readonly runAfter: Run;
   readonly canonicalAfter: RegistryState["canonical"];
   readonly freshnessAfter: RegistryState["freshness"];
+  readonly details?: JsonValue;
 }
 export interface Run {
   readonly id: string;
@@ -167,6 +172,7 @@ function event(
   reason: string,
   inputs: readonly ExactArtifactRef[] = [],
   outputs: readonly ExactArtifactRef[] = [],
+  details?: unknown,
 ): void {
   requireThat(
     actor?.id?.trim() &&
@@ -187,13 +193,16 @@ function event(
     runAfter: jsonCopy(state.runs[runId]),
     canonicalAfter: jsonCopy(state.canonical),
     freshnessAfter: jsonCopy(state.freshness),
+    ...(details === undefined
+      ? {}
+      : { details: jsonCopy(details) as JsonValue }),
   });
 }
 export function deriveRunState(run: Run): RunState {
   if (run.closed) return "closed";
   if (
     Object.values(run.proposals).some(
-      (p) => p.status === "pending" && p.readiness === "ready",
+      (p) => p.status === "pending" && p.readiness === "ready" && !p.deferred,
     )
   )
     return "review-ready";
@@ -428,6 +437,7 @@ export class RunRegistry {
     actor: Actor;
     at: string;
     reason: string;
+    externalRefs?: readonly string[];
   }): Promise<void> {
     const x = jsonCopy(input);
     requireThat(
@@ -509,6 +519,7 @@ export class RunRegistry {
         proposalIds: x.proposals.map((p) => p.id),
         createdAt: x.at,
         reason: x.reason,
+        ...(x.externalRefs ? { externalRefs: x.externalRefs } : {}),
       };
       event(
         state,
@@ -589,7 +600,7 @@ export class RunRegistry {
           !run.closed &&
           packet.proposalIds.includes(x.proposalId) &&
           proposal?.status === "pending" &&
-          proposal.readiness === "ready",
+          (proposal.readiness === "ready" || proposal.deferred),
         "Decision does not name a ready pending proposal",
         "CONFLICT",
       );
@@ -603,6 +614,23 @@ export class RunRegistry {
         "Proposal already decided",
         "CONFLICT",
       );
+      if (x.outcome !== "deferred") {
+        requireThat(
+          same(
+            state.canonical[proposal.ref.artifactId]?.ref,
+            proposal.expectedCanonical,
+          ),
+          "Decision candidate has a stale canonical base",
+          "CONFLICT",
+        );
+        const candidate = await this.checked(proposal.ref);
+        requireThat(
+          candidate.lifecycle.status === "proposed" &&
+            candidate.lifecycle.freshness === "valid",
+          "Decision candidate is no longer fresh",
+          "CONFLICT",
+        );
+      }
       this.validateOutput(x, proposal);
       if (x.supersedesDecisionId) {
         const prior = state.decisions[x.supersedesDecisionId];
@@ -627,6 +655,19 @@ export class RunRegistry {
         "UNVERIFIED",
       );
       state.decisions[x.id] = x;
+      if (x.outcome === "deferred") {
+        proposal.deferred = true;
+        proposal.readiness = "blocked";
+        proposal.readinessReason = "Human decision deferred";
+        run.blockers[`decision:${proposal.id}`] = "Human decision deferred";
+      } else {
+        proposal.deferred = false;
+        delete run.blockers[`decision:${proposal.id}`];
+        if (proposal.status === "pending") {
+          proposal.readiness = "ready";
+          delete proposal.readinessReason;
+        }
+      }
       if (x.outcome === "rejected") {
         requireThat(
           snapshots && this.publisher && x.output,
@@ -654,6 +695,7 @@ export class RunRegistry {
         x.rationale,
         [proposal.ref],
         x.output ? [x.output.ref] : [],
+        { decision: x },
       );
       closeCompleted(state, run.id, x.actor, x.at);
     };
@@ -703,6 +745,7 @@ export class RunRegistry {
             record?.proposalId === item.proposalId &&
             record.packetId === x.packetId &&
             record.outcome === "approved" &&
+            record.actor.id === x.actor.id &&
             record.output,
           "No exact named approval",
           "CONFLICT",
@@ -799,6 +842,28 @@ export class RunRegistry {
             "Dependency must be a fresh approved exact revision",
             "CONFLICT",
           );
+          const assessed = state.freshness[ref.artifactId];
+          if (assessed && same(assessed.ref, ref)) {
+            requireThat(
+              assessed.status !== "blocked",
+              "Dependency has a blocked registry freshness assessment",
+              "CONFLICT",
+            );
+            const evidence =
+              proposal.impactEvidence?.find((item) =>
+                same(item.dependency, ref),
+              )?.evidenceRefs ?? [];
+            requireThat(
+              evidence.length > 0 &&
+                (await this.authority.verifyEvidence?.(
+                  proposal,
+                  ref,
+                  evidence,
+                )),
+              "Stale dependency requires verified validation evidence",
+              "UNVERIFIED",
+            );
+          }
           const current = state.canonical[ref.artifactId]?.ref;
           const adoptedInSet = outputs.some((output) => same(output, ref));
           if (current && !same(current, ref) && !adoptedInSet) {
@@ -887,6 +952,7 @@ export class RunRegistry {
         x.reason,
         approved.map((a) => a.proposal.ref),
         outputs,
+        { commit: x },
       );
       closeCompleted(state, run.id, x.actor, x.at);
     });
@@ -901,7 +967,7 @@ export class RunRegistry {
       if (run.closed) continue;
       let changed = false;
       for (const proposal of Object.values(run.proposals)) {
-        if (proposal.status !== "pending") continue;
+        if (proposal.status !== "pending" || proposal.deferred) continue;
         let readiness: Proposal["readiness"] = "ready";
         let reason: string | undefined;
         if (
@@ -918,9 +984,23 @@ export class RunRegistry {
               proposal.ref.artifactId,
               proposal.ref.revision,
             );
+            const blockedDependency = exact.artifact.dependencies.some(
+              (dep) => {
+                const assessment = state.freshness[dep.artifactId];
+                return (
+                  assessment &&
+                  same(assessment.ref, {
+                    artifactId: dep.artifactId,
+                    revision: dep.revision,
+                    lockDigest: dep.lockDigest,
+                  })
+                );
+              },
+            );
             if (
               exact.digest !== proposal.ref.lockDigest ||
-              exact.artifact.lifecycle.freshness !== "valid"
+              exact.artifact.lifecycle.freshness !== "valid" ||
+              blockedDependency
             ) {
               readiness = "blocked";
               reason = "Exact proposal lock or freshness is invalid";
@@ -989,8 +1069,9 @@ export class RunRegistry {
       for (const blockerId of Object.keys(run.blockers)) {
         if (Object.hasOwn(x.blockers, blockerId)) continue;
         requireThat(
-          !blockerId.startsWith("proposal:"),
-          "Stale proposal requires a new exact revision",
+          !blockerId.startsWith("proposal:") &&
+            !blockerId.startsWith("decision:"),
+          "Review hold requires an explicit new decision or revision",
           "CONFLICT",
         );
         const resolution = x.resolutions?.[blockerId];
@@ -1015,7 +1096,9 @@ export class RunRegistry {
         safeActions: x.safeActions,
         blockers: x.blockers,
       };
-      event(state, x.runId, "set-work", x.actor, x.at, x.reason);
+      event(state, x.runId, "set-work", x.actor, x.at, x.reason, [], [], {
+        resolutions: x.resolutions ?? {},
+      });
       closeCompleted(state, x.runId, x.actor, x.at);
     });
   }

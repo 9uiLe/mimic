@@ -1,4 +1,5 @@
 import { canonicalJson } from "../artifact-canonical.js";
+import { isWorkspaceTransactionView } from "../workspace-transaction.js";
 import {
   ArtifactStore,
   type ArtifactSnapshot,
@@ -46,6 +47,10 @@ export class ArtifactStorePublication implements TransactionalArtifactPublisher 
     registry: RegistryState,
     artifact: ArtifactSnapshot,
   ): Promise<VerifiedSnapshot> {
+    if (!isWorkspaceTransactionView(storage, this.sourceStorage))
+      throw new Error(
+        "Approved or rejected publication requires an active shared workspace transaction",
+      );
     return this.store
       .withStorage(storage, this.verifier(registry))
       .create(artifact);
@@ -56,6 +61,7 @@ function registryVerifier(
   registry: RegistryState,
   authority: RegistryAuthority,
   fallback?: AuthorityVerifier,
+  requireCommitted = false,
 ): AuthorityVerifier {
   const find = (
     id: string,
@@ -67,6 +73,21 @@ function registryVerifier(
       packet && registry.runs[packet.runId]?.proposals[decision.proposalId];
     return proposal ? { decision, proposal } : undefined;
   };
+  const admitted = (decision: DecisionRecord): boolean =>
+    !requireCommitted ||
+    decision.outcome === "rejected" ||
+    Object.values(registry.commits).some(
+      (commit) =>
+        commit.request.approvals.some(
+          (item) =>
+            item.decisionId === decision.id &&
+            item.proposalId === decision.proposalId,
+        ) &&
+        !!decision.output &&
+        commit.outputs.some(
+          (ref) => canonicalJson(ref) === canonicalJson(decision.output!.ref),
+        ),
+    );
   return {
     verifyApproval: async (approval, artifact) => {
       const match = approval.decisionId ? find(approval.decisionId) : undefined;
@@ -76,7 +97,8 @@ function registryVerifier(
           canonicalJson(artifact) &&
         match.decision.outcome === approval.status &&
         match.decision.actor.id === approval.actorId &&
-        match.decision.at === approval.at
+        match.decision.at === approval.at &&
+        admitted(match.decision)
       )
         return authority.verify(match.decision, match.proposal);
       return fallback?.verifyApproval(approval, artifact) ?? false;
@@ -87,6 +109,7 @@ function registryVerifier(
         match?.decision.output &&
         canonicalJson(match.decision.output.artifact) ===
           canonicalJson(artifact) &&
+        admitted(match.decision) &&
         (await authority.verify(match.decision, match.proposal))
       )
         return true;
@@ -109,6 +132,7 @@ export class RegistryAuthorityVerifier implements AuthorityVerifier {
       await this.storage.read(),
       this.authority,
       this.fallback,
+      true,
     ).verifyApproval(approval, artifact);
   }
   async verifyDecision(
@@ -119,6 +143,7 @@ export class RegistryAuthorityVerifier implements AuthorityVerifier {
       await this.storage.read(),
       this.authority,
       this.fallback,
+      true,
     ).verifyDecision(id, artifact);
   }
 }

@@ -35,6 +35,13 @@ const fixturePath = path.join(
   repository,
   "fixtures/artifacts/valid/product-definition.json",
 );
+function withoutDigest(
+  meta: ArtifactSnapshot["meta"],
+): ArtifactSnapshot["meta"] {
+  const copy = { ...meta };
+  delete copy.contentDigest;
+  return copy;
+}
 function exact(artifact: ArtifactSnapshot) {
   return {
     artifactId: artifact.meta.id,
@@ -47,7 +54,7 @@ function approvedOutput(
   decisionId: string,
   status: "approved" | "rejected",
 ): ArtifactSnapshot {
-  const { contentDigest: _digest, ...meta } = candidate.meta;
+  const meta = withoutDigest(candidate.meta);
   const raw: ArtifactSnapshot = {
     ...candidate,
     meta: {
@@ -120,7 +127,7 @@ async function setup(
     meta: { ...initial.meta, contentDigest: artifactDigest(initial) },
   };
   await store.create(base);
-  const { contentDigest: _digest, ...meta } = base.meta;
+  const meta = withoutDigest(base.meta);
   const candidate: ArtifactSnapshot = {
     ...base,
     meta: { ...meta, revision: 2, supersedesRevision: 1 },
@@ -192,6 +199,7 @@ async function setup(
     root,
     backend,
     store,
+    publisher,
     registry,
     base,
     candidate,
@@ -218,8 +226,11 @@ function newCandidate(
   revision = 1,
   dependencies: ArtifactSnapshot["dependencies"] = [],
 ): ArtifactSnapshot {
-  const { contentDigest: _digest, ...meta } = source.meta;
-  const { supersedesRevision: _previous, ...withoutPrevious } = meta;
+  const withoutPrevious = Object.fromEntries(
+    Object.entries(withoutDigest(source.meta)).filter(
+      ([key]) => key !== "supersedesRevision",
+    ),
+  ) as ArtifactSnapshot["meta"];
   return {
     ...source,
     meta: {
@@ -245,7 +256,7 @@ function decideFor(
   dependencies: ArtifactSnapshot["dependencies"] = candidate.dependencies,
 ): DecisionRecord {
   const outputBase = approvedOutput(candidate, id, "approved");
-  const { contentDigest: _digest, ...meta } = outputBase.meta;
+  const meta = withoutDigest(outputBase.meta);
   const raw = { ...outputBase, meta, dependencies };
   const output: ArtifactSnapshot = {
     ...raw,
@@ -294,6 +305,21 @@ describe("shared artifact and Run transaction", () => {
         (e) => e.action === "commit-point-approve",
       ),
     ).toHaveLength(1);
+  });
+  test("an approved decision cannot authorize direct artifact publication before its commit point", async () => {
+    const { registry, store, backend, publisher, baseRef, makeDecision } =
+      await setup();
+    const decision = makeDecision("approved");
+    await registry.decide(decision);
+    await expect(store.create(decision.output!.artifact)).rejects.toThrow();
+    const state = await registry.snapshot();
+    expect(() =>
+      publisher.publish(backend.snapshots, state, decision.output!.artifact),
+    ).toThrow();
+    expect(
+      (await registry.snapshot()).canonical[baseRef.artifactId].ref,
+    ).toEqual(baseRef);
+    await expect(store.read(baseRef.artifactId, 3)).rejects.toThrow();
   });
   test("rejection publishes an immutable rejected revision and leaves canonical selection intact", async () => {
     const { registry, store, baseRef, makeDecision } = await setup();
@@ -431,6 +457,86 @@ describe("shared artifact and Run transaction", () => {
       (await store.read(downstream.meta.id, 2)).artifact.dependencies[0]
         .lockDigest,
     ).toBe(upDecision.output!.ref.lockDigest);
+  });
+  test("a late schema failure rolls back every artifact and canonical effect in the batch", async () => {
+    const { registry, store, baseRef, candidate } = await setup();
+    const first = newCandidate(candidate, "art_batch_first"),
+      second = newCandidate(candidate, "art_batch_second");
+    await store.create(first);
+    await store.create(second);
+    for (const item of [first, second])
+      await registry.produce({
+        runId: "run_real",
+        ref: exact(item),
+        inputs: [baseRef],
+        actor: agent,
+        at,
+        reason: "batch draft",
+      });
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_batch",
+      proposals: [first, second].map((item, i) => ({
+        id: `proposal_batch_${i}`,
+        ref: exact(item),
+        alternatives: ["adopt"],
+        rationale: "batch",
+        evidenceLimits: [],
+        dependents: [],
+      })),
+      actor: agent,
+      at,
+      reason: "batch review",
+    });
+    const good = decideFor(
+      "packet_batch",
+      "proposal_batch_0",
+      first,
+      "decision_batch_good",
+    );
+    const badOriginal = decideFor(
+      "packet_batch",
+      "proposal_batch_1",
+      second,
+      "decision_batch_bad",
+    );
+    const meta = withoutDigest(badOriginal.output!.artifact.meta);
+    const invalid = {
+      ...badOriginal.output!.artifact,
+      meta,
+      content: { summary: "missing required fields" },
+    };
+    const badArtifact: ArtifactSnapshot = {
+      ...invalid,
+      meta: { ...invalid.meta, contentDigest: artifactDigest(invalid) },
+    };
+    const bad: DecisionRecord = {
+      ...badOriginal,
+      output: { ref: exact(badArtifact), artifact: badArtifact },
+    };
+    await registry.decide(good);
+    await registry.decide(bad);
+    await expect(
+      registry.commit({
+        id: "commit_batch",
+        packetId: "packet_batch",
+        approvals: [
+          { proposalId: "proposal_batch_0", decisionId: good.id },
+          { proposalId: "proposal_batch_1", decisionId: bad.id },
+        ],
+        actor,
+        at,
+        reason: "all or none",
+      }),
+    ).rejects.toThrow();
+    await expect(store.read(first.meta.id, 2)).rejects.toThrow();
+    await expect(store.read(second.meta.id, 2)).rejects.toThrow();
+    const state = await registry.snapshot();
+    expect(state.canonical[first.meta.id]).toBeUndefined();
+    expect(state.canonical[second.meta.id]).toBeUndefined();
+    expect(state.runs.run_real.proposals.proposal_batch_0.status).toBe(
+      "pending",
+    );
   });
   test("later canonical commit marks a competing pending proposal stale and blocked", async () => {
     const { registry, store, baseRef, candidate, makeDecision } = await setup();
