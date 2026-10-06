@@ -85,6 +85,10 @@ export async function evaluatePropertyPolicy(
   if (rule.policy === "configurable") {
     const options = rule.allowedValues;
     const range = rule.numericRange;
+    if (options && range)
+      return blocked(
+        "Configurable options and range cannot be combined without a defined policy",
+      );
     if ((!options || options.length === 0) && !range)
       return blocked("Configurable rule has no explicit boundary");
     if (options && (!Array.isArray(options) || options.length === 0))

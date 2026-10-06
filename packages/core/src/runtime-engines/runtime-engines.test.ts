@@ -133,6 +133,47 @@ describe("dependency and freshness engines", () => {
     ]);
   });
 
+  test("rejects a wrong digest on cached lookups", async () => {
+    const graph = await DependencyGraph.load(
+      reader({ "art_a@1": snapshot("a") }),
+      [ref("a")],
+    );
+    expect(() =>
+      graph.get({ ...ref("a"), lockDigest: digest("f") }),
+    ).toThrowError(expect.objectContaining({ code: "INTEGRITY" }));
+  });
+
+  test("caller root mutation cannot change graph edges or freshness", async () => {
+    const root = { ...ref("b") };
+    const graph = await DependencyGraph.load(
+      reader({
+        "art_a@1": snapshot("a"),
+        "art_a@2": candidate("a"),
+        "art_b@1": snapshot("b", [edge("a", "invalidate")]),
+      }),
+      [root],
+    );
+    root.revision = 2;
+    root.lockDigest = digest("f");
+    const findings = await graph.assessChanges([
+      {
+        artifactId: "art_a",
+        fromRevision: 1,
+        candidateRevision: 2,
+        candidateDigest: digest("a"),
+      },
+    ]);
+    expect(
+      findings.map(({ artifact, impact, freshness }) => [
+        artifact.artifactId,
+        artifact.revision,
+        impact,
+        freshness,
+      ]),
+    ).toEqual([["art_b", 1, "invalidate", "blocked"]]);
+    expect(graph.order.at(-1)).toEqual(ref("b"));
+  });
+
   test("blocks cycles, missing locks, conflicting digests and invalid input", async () => {
     const cycle = reader({
       "art_a@1": snapshot("a", [edge("b", "validate")]),
@@ -290,6 +331,19 @@ describe("policy and audit", () => {
         baseSelection,
       ),
     ).toMatchObject({ allowed: false });
+    expect(
+      await evaluatePropertyPolicy(
+        {
+          parent,
+          path: baseRule.path,
+          policy: "configurable",
+          value: 1,
+          allowedValues: [1, 2],
+          numericRange: { minimum: 10, maximum: 20 },
+        },
+        { ...baseSelection, value: 15 },
+      ),
+    ).toMatchObject({ allowed: false, effect: "blocked" });
     expect(
       await evaluatePropertyPolicy(
         { ...baseRule, policy: "overridable" },

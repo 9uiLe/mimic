@@ -168,7 +168,7 @@ export class DependencyGraph {
         const edges = reverse.get(key(dep)) ?? [];
         edges.push({
           dependency: dep,
-          dependent: ref,
+          dependent: jsonCopy(ref),
           onChange: dependency.onChange as ChangeImpact,
         });
         reverse.set(key(dep), edges);
@@ -178,8 +178,11 @@ export class DependencyGraph {
       ordered.push(jsonCopy(ref));
     }
 
-    for (const root of roots) assertRef(root);
-    for (const root of [...roots].sort(compareRef)) await visit(root);
+    const rootCopies = roots.map((root) => {
+      assertRef(root);
+      return jsonCopy(root);
+    });
+    for (const root of rootCopies.sort(compareRef)) await visit(root);
     for (const edges of reverse.values()) edges.sort(compareEdge);
     return new DependencyGraph(reader, snapshots, ordered, reverse);
   }
@@ -191,6 +194,11 @@ export class DependencyGraph {
   get(ref: ExactArtifactRef): VerifiedSnapshot | undefined {
     assertRef(ref);
     const snapshot = this.snapshots.get(key(ref));
+    if (snapshot && snapshot.digest !== ref.lockDigest)
+      throw new RuntimeEngineError(
+        "INTEGRITY",
+        `Lock digest mismatch at ${key(ref)}`,
+      );
     return snapshot && jsonCopy(snapshot);
   }
 
@@ -198,10 +206,15 @@ export class DependencyGraph {
   directImpacts(ref: ExactArtifactRef): readonly DependencyEdge[] {
     assertRef(ref);
     const snapshot = this.snapshots.get(key(ref));
-    if (!snapshot || snapshot.digest !== ref.lockDigest)
+    if (!snapshot)
       throw new RuntimeEngineError(
         "INVALID",
         "Reference is outside this exact-lock graph",
+      );
+    if (snapshot.digest !== ref.lockDigest)
+      throw new RuntimeEngineError(
+        "INTEGRITY",
+        `Lock digest mismatch at ${key(ref)}`,
       );
     return jsonCopy(this.reverse.get(key(ref)) ?? []);
   }
@@ -229,7 +242,7 @@ export class DependencyGraph {
       { impact: number; paths: DependencyEdge[][] }
     >();
     const seen = new Set<string>();
-    const sortedChanges = [...changes].sort(
+    const sortedChanges = jsonCopy(changes).sort(
       (a, b) =>
         (a.artifactId < b.artifactId
           ? -1
