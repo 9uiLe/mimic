@@ -95,3 +95,14 @@ test("checks the PR commits when the base branch advances independently", () => 
     assert.match(result.stdout, /1 PR commit/);
   });
 });
+
+test("rejects a sign-off line outside the commit footer", () => {
+  fixture((cwd, base) => {
+    commit(
+      cwd,
+      "feature",
+      "Feature\n\nSigned-off-by: Test Author <test@example.com>\n\nMore details",
+    );
+    assert.equal(check(cwd, base).status, 1);
+  });
+});

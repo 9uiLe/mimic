@@ -24,7 +24,14 @@ for (const commit of commits) {
     ["show", "-s", "--format=%an%x00%ae%x00%B", commit],
     { encoding: "utf8" },
   ).split("\0");
-  const signoffs = message
+  const allSignoffs = message
+    .split(/\r?\n/)
+    .filter((line) => /^Signed-off-by:/i.test(line));
+  const footer = message
+    .trimEnd()
+    .split(/\r?\n\r?\n/)
+    .at(-1);
+  const signoffs = footer
     .split(/\r?\n/)
     .filter((line) => /^Signed-off-by:/i.test(line));
   const parsed = signoffs.map((line) =>
@@ -34,6 +41,7 @@ for (const commit of commits) {
   );
   if (
     signoffs.length === 0 ||
+    signoffs.length !== allSignoffs.length ||
     parsed.some((match) => match === null) ||
     !parsed.some((match) => match?.[1] === author && match?.[2] === email)
   ) {
