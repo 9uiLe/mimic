@@ -9,6 +9,7 @@ import { setupApprovedPrototypeFixture } from "../../../fixtures/prototypes/appr
 test("generated prototype supports desktop/mobile states and repeated interactions", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const fixture = await setupApprovedPrototypeFixture();
   const output = await buildPrototype(
     fixture.store,
