@@ -1,0 +1,87 @@
+{
+  "scenarios": [
+    {
+      "id": "unobserved-plan",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "UNVERIFIED",
+      "expectEvidenceRefs": [],
+      "inputType": "scenario"
+    },
+    {
+      "id": "missing-target",
+      "mode": "blocked",
+      "reason": "No identifiable exact target",
+      "expectOutputs": 0,
+      "inputType": "scenario"
+    },
+    {
+      "id": "unsupported-claim",
+      "mode": "reject-no-evidence",
+      "output": "validation",
+      "inputType": "scenario"
+    },
+    {
+      "id": "wrong-run",
+      "mode": "reject-run",
+      "output": "validation",
+      "inputType": "scenario"
+    },
+    {
+      "id": "evidence-supported",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "PASS",
+      "evidenceRefs": ["tests/observations.json#supported"],
+      "inputType": "scenario"
+    },
+    {
+      "id": "evidence-mixed",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "CONCERN",
+      "evidenceRefs": ["tests/observations.json#mixed"],
+      "inputType": "scenario"
+    },
+    {
+      "id": "evidence-unsupported",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "FAIL",
+      "evidenceRefs": ["tests/observations.json#unsupported"],
+      "inputType": "scenario"
+    },
+    {
+      "id": "journey-plan",
+      "mode": "produce",
+      "inputType": "journey",
+      "output": "validation",
+      "expectState": "UNVERIFIED",
+      "expectEvidenceRefs": []
+    },
+    {
+      "id": "direction-plan",
+      "mode": "produce",
+      "inputType": "design-direction",
+      "output": "validation",
+      "expectState": "UNVERIFIED",
+      "expectEvidenceRefs": []
+    },
+    {
+      "id": "evidence-inconsistent",
+      "mode": "produce",
+      "inputType": "scenario",
+      "output": "validation",
+      "expectState": "UNVERIFIED",
+      "evidenceRefs": ["tests/observations.json#inconsistent"]
+    },
+    {
+      "id": "evidence-wrong-target",
+      "mode": "produce",
+      "inputType": "scenario",
+      "output": "validation",
+      "expectState": "UNVERIFIED",
+      "evidenceRefs": ["tests/observations.json#wrong-target"]
+    }
+  ]
+}
