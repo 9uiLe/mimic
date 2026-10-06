@@ -6,3 +6,8 @@ export interface Status {
 export function getStatus(): Status {
   return { name: "mimic", state: "ready" };
 }
+
+export * from "./artifact-canonical.js";
+export * from "./artifact-codec.js";
+export * from "./schema-registry.js";
+export * from "./artifact-store.js";
