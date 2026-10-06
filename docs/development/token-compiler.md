@@ -14,7 +14,7 @@ Exact references are validated and copied before the first asynchronous read. Re
 - `definition.modes` may be absent or exactly `["light"]`. Other modes need a future explicit output contract. An optional `definition.references` list must name tokens present in that asset.
 - Name segments are lowercase ASCII letters and digits with interior hyphens, or a numeric scale segment. The runtime maps `primitive.color.navy` to `--mimic-primitive-color-navy`. Different paths that map to the same custom property are rejected. This narrow naming policy avoids ambiguous escaping and CSS injection.
 
-The S13 example is a **pending** proposal and uses older string color and dimension values. It illustrates reasoning output; it is not trusted compiler input under this subset. An approved, conforming revision is needed for compilation. The compiler does not choose a Design Direction or infer design intent from token values.
+The [S13 example](../../skills/s13-visual-system-builder/examples/output.json) is a **pending** proposal with typed `primitive`, `semantic`, and `component` tokens in this supported subset. Its conforming shape does not grant approval: only an exact revision published through a verified human decision and commit can become compiler input. The [S13 token integration bridge](s13-token-integration.md) exercises that handoff with a synthetic approval authority; it does not establish actual human review or design quality. The compiler does not choose a Design Direction or infer design intent from token values.
 
 ## Compatibility and reproducibility
 
