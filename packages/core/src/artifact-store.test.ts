@@ -186,6 +186,41 @@ describe("schema registry and YAML codec", () => {
       parseArtifactYaml("a: !!map { b: !!int 2 }\nc: !!seq [true]"),
     ).toEqual({ a: { b: 2 }, c: [true] });
   });
+
+  test("tag and version policy covers default, explicit 1.2 and explicit 1.1", () => {
+    const versions = [
+      { name: "default", prefix: "", supported: true },
+      { name: "explicit 1.2", prefix: "%YAML 1.2\n---\n", supported: true },
+      { name: "explicit 1.1", prefix: "%YAML 1.1\n---\n", supported: false },
+    ];
+    const nonJsonTags = [
+      "a: !!set { b: null }", // Nested mapping tag.
+      "!!set { a: null }", // Root mapping tag.
+      "a: !!omap [{ b: 1 }]", // Nested collection sequence tag.
+      "a: !!timestamp 2026-10-06", // Scalar tag outside the JSON core.
+      "a: !custom [1]", // Unresolved sequence tag.
+    ];
+    for (const version of versions) {
+      for (const source of nonJsonTags) {
+        expect(
+          () => parseArtifactYaml(version.prefix + source),
+          `${version.name}: ${source}`,
+        ).toThrow();
+      }
+      const core =
+        "a: !!str 123\nb: !!map { count: !!int 2, ok: !!bool true, ratio: !!float 1.5 }\nc: !!seq [!!null null]";
+      if (version.supported)
+        expect(parseArtifactYaml(version.prefix + core)).toEqual({
+          a: "123",
+          b: { count: 2, ok: true, ratio: 1.5 },
+          c: [null],
+        });
+      else
+        expect(() => parseArtifactYaml(version.prefix + core)).toThrow(
+          /version 1\.2/,
+        );
+    }
+  });
 });
 
 describe("canonical digest", () => {
