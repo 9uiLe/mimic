@@ -1,23 +1,48 @@
 {
   "synthetic": true,
   "warning": "Fictional observations for deterministic package bridge tests only; not empirical user research.",
-  "target": "art_target@1",
-  "method": "Task observation on a specified device and scenario",
+  "hypothesis": "The primary goal can be completed with context preserved.",
+  "method": "Synthetic simulated task observation",
   "cases": {
     "supported": {
-      "classification": "supported",
-      "condition": "Illustrative desktop task, simulated participant",
+      "target": "art_scenario_target@2",
+      "device": "desktop",
+      "goalCompleted": true,
+      "recordedOutcome": "completed",
+      "recoveryNeeded": false,
       "observation": "Primary goal completed with context preserved."
     },
     "mixed": {
-      "classification": "mixed",
-      "condition": "Illustrative mobile task, simulated participant",
-      "observation": "Primary goal completed, but return path needed an extra recovery step."
+      "target": "art_scenario_target@2",
+      "device": "mobile",
+      "goalCompleted": true,
+      "recordedOutcome": "completed",
+      "recoveryNeeded": true,
+      "observation": "Primary goal completed, but return path required recovery."
     },
     "unsupported": {
-      "classification": "unsupported",
-      "condition": "Illustrative mobile task, simulated participant",
+      "target": "art_scenario_target@2",
+      "device": "mobile",
+      "goalCompleted": false,
+      "recordedOutcome": "failed",
+      "recoveryNeeded": true,
       "observation": "Primary goal could not be completed after state loss."
+    },
+    "inconsistent": {
+      "target": "art_scenario_target@2",
+      "device": "mobile",
+      "goalCompleted": true,
+      "recordedOutcome": "failed",
+      "recoveryNeeded": false,
+      "observation": "Conflicting structured outcome fields; no supported conclusion."
+    },
+    "wrong-target": {
+      "target": "art_unrelated@2",
+      "device": "mobile",
+      "goalCompleted": true,
+      "recordedOutcome": "completed",
+      "recoveryNeeded": false,
+      "observation": "This observation concerns a different target."
     }
   }
 }

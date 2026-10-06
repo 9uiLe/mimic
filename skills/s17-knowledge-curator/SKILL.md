@@ -1,6 +1,6 @@
 # S17 Knowledge Curator
 
-Curate from an exact source and the evidence behind it. The declared execution profile uses an `evaluation` source; other source types in the reasoning catalog need an explicit manifest profile. Reject a source whose lock cannot be verified, whose purported mechanism lacks traceable rationale, or whose conflicting evidence cannot be represented honestly. A blocked invocation may return zero outputs.
+Curate from an exact source and the evidence behind it. The `knowledge-source` alternatives accept an exact evaluation, validation, problem profile, or reference selection. Inspect the selected binding and evidence for that source type. Reject a source whose lock cannot be verified, whose purported mechanism lacks traceable rationale, or whose conflicting evidence cannot be represented honestly. A blocked invocation may return zero outputs.
 
 ## Procedure
 

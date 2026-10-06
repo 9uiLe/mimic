@@ -36,6 +36,8 @@ afterEach(async () => {
 type Scenario = {
   id: string;
   mode: string;
+  inputType: string;
+  contextType?: string;
   output?: string;
   reason?: string;
   expectOutputs?: number;
@@ -61,6 +63,11 @@ const declaredCases: Record<
     "missing-target-lock": "blocked",
     "missing-empirical-evidence": "produce",
     "undeclared-output": "reject-output-type",
+    "direction-critique": "produce",
+    "journey-critique": "produce",
+    "system-choice-critique": "produce",
+    "task-model-context-critique": "produce",
+    "problem-profile-context-critique": "produce",
   },
   "s17-knowledge-curator": {
     "local-disposition": "produce",
@@ -68,6 +75,9 @@ const declaredCases: Record<
     "untraceable-source": "blocked",
     "self-approval": "reject-self-approval",
     "rejected-replay": "reject-replay",
+    "validation-source-disposition": "produce",
+    "profile-source-disposition": "produce",
+    "reference-source-disposition": "produce",
   },
   "s18-experience-validation": {
     "unobserved-plan": "produce",
@@ -77,6 +87,10 @@ const declaredCases: Record<
     "evidence-supported": "produce",
     "evidence-mixed": "produce",
     "evidence-unsupported": "produce",
+    "journey-plan": "produce",
+    "direction-plan": "produce",
+    "evidence-inconsistent": "produce",
+    "evidence-wrong-target": "produce",
   },
 };
 
@@ -118,6 +132,9 @@ async function setup(packageName: (typeof packages)[number]) {
     intent: "create",
     authority: "PROPOSE_ONLY",
     evidenceFiles: [],
+    ...(packageName === "s16-design-critic"
+      ? { humanBrief: "Bounded synthetic task and risk context" }
+      : {}),
     inputs: {
       required: skill.manifest.inputs.required.map((input) => ({ ...input })),
       optional: skill.manifest.inputs.optional.map((input) => ({ ...input })),
@@ -137,17 +154,28 @@ async function setup(packageName: (typeof packages)[number]) {
     });
   async function source(type: string, id: string) {
     const filename =
-      type === "product-ui-contract" ? "proposed-product-ui-contract" : type;
+      {
+        "product-ui-contract": "proposed-product-ui-contract",
+        "design-direction": "approved-design-direction",
+        "reference-selection": "far-reference-selection",
+      }[type] ?? type;
     const fixture = JSON.parse(
       await readFile(
         path.join(repository, "fixtures/artifacts/valid", `${filename}.json`),
         "utf8",
       ),
     ) as ArtifactSnapshot;
-    const artifact: ArtifactSnapshot = {
+    const proposed: ArtifactSnapshot = {
       ...fixture,
-      meta: { ...fixture.meta, id },
-      lifecycle: { status: "provisional", freshness: "valid" },
+      meta: {
+        id,
+        type,
+        schemaVersion: "1.0.0",
+        revision: 1,
+        title: `Fixture ${type}`,
+        createdAt: at,
+      },
+      lifecycle: { status: "proposed", freshness: "valid" },
       approval: { status: "pending" },
       origin: {
         actorKind: "skill",
@@ -156,10 +184,20 @@ async function setup(packageName: (typeof packages)[number]) {
         createdAt: at,
       },
       dependencies: [],
-    };
-    const proposed: ArtifactSnapshot = {
-      ...artifact,
-      lifecycle: { status: "proposed", freshness: "valid" },
+      provenance: [
+        {
+          path: "/content",
+          kind: "assumption",
+          rationale: "Synthetic fixture input",
+        },
+      ],
+      content:
+        type === "design-direction"
+          ? {
+              ...(fixture.content as Record<string, unknown>),
+              selectionStatus: "candidate",
+            }
+          : fixture.content,
     };
     await runtime.artifacts.create(proposed);
     await runtime.registry.produce({
@@ -188,6 +226,8 @@ async function boundInputs(
   x: Awaited<ReturnType<typeof setup>>,
   extraTypes: string[] = [],
   tasks: readonly RoutedTask[] = [x.task],
+  alternativeType?: string,
+  contextType?: string,
 ) {
   const seedTask: RoutedTask = {
     ...x.task,
@@ -207,6 +247,15 @@ async function boundInputs(
     at,
     tasks: [seedTask],
   });
+  const group = x.skill.manifest.inputs.alternatives[0];
+  const chosen = group?.oneOf.find(
+    (input) =>
+      input.kind === "artifact" &&
+      (!alternativeType || input.artifactType === alternativeType),
+  );
+  if (!chosen || chosen.kind !== "artifact")
+    throw new Error(`Unsupported alternative: ${alternativeType}`);
+  const chosenId = `art_${chosen.name.replaceAll("-", "_")}`;
   const sources: ArtifactSnapshot[] = [];
   for (const input of x.skill.manifest.inputs.required) {
     if (input.kind === "artifact")
@@ -217,6 +266,17 @@ async function boundInputs(
         ),
       );
   }
+  sources.push(await x.source(chosen.artifactType, chosenId));
+  const contextChoice = x.skill.manifest.inputs.alternatives[1]?.oneOf.find(
+    (input) => input.kind === "artifact" && input.artifactType === contextType,
+  );
+  if (contextType && (!contextChoice || contextChoice.kind !== "artifact"))
+    throw new Error(`Unsupported task context: ${contextType}`);
+  const contextId = contextChoice
+    ? `art_${contextChoice.name.replaceAll("-", "_")}`
+    : undefined;
+  if (contextChoice && contextChoice.kind === "artifact")
+    sources.push(await x.source(contextChoice.artifactType, contextId!));
   for (const type of extraTypes)
     sources.push(
       await x.source(type, `art_extra_${type.replaceAll("-", "_")}`),
@@ -275,6 +335,18 @@ async function boundInputs(
     reason: "Fixture commit",
   });
   await x.start(tasks);
+  const ref = (await x.registry.snapshot()).canonical[chosenId]?.ref;
+  if (!ref) throw new Error("Approved alternative source missing");
+  const contextRef = contextId
+    ? (await x.registry.snapshot()).canonical[contextId]?.ref
+    : undefined;
+  return {
+    name: chosen.name,
+    type: chosen.artifactType,
+    ref,
+    contextName: contextChoice?.name,
+    contextRef,
+  };
 }
 
 function candidate(
@@ -296,8 +368,28 @@ function candidate(
   };
 }
 
+type SyntheticObservation = {
+  target: string;
+  device: string;
+  goalCompleted: boolean;
+  recordedOutcome: "completed" | "failed";
+  recoveryNeeded: boolean;
+  observation: string;
+};
+function observationState(
+  observation: SyntheticObservation | undefined,
+  target: string,
+) {
+  if (!observation || observation.target !== target) return "UNVERIFIED";
+  if (observation.goalCompleted && observation.recordedOutcome === "completed")
+    return observation.recoveryNeeded ? "CONCERN" : "PASS";
+  if (!observation.goalCompleted && observation.recordedOutcome === "failed")
+    return "FAIL";
+  return "UNVERIFIED";
+}
+
 for (const packageName of packages) {
-  test(`${packageName} executes declared scenarios against the shared workspace`, async () => {
+  test(`${packageName} executes every declared alternative and productive scenario`, async () => {
     const declared = await setup(packageName);
     expect(declared.skill.instructions.length).toBeGreaterThan(500);
     expect(declared.schemas.validate(declared.output)).toEqual({
@@ -313,52 +405,38 @@ for (const packageName of packages) {
     const productive = declared.scenarios.filter(
       (scenario) => scenario.mode === "produce",
     );
+    expect(new Set(productive.map((scenario) => scenario.inputType))).toEqual(
+      new Set(
+        declared.skill.manifest.inputs.alternatives[0]!.oneOf.filter(
+          (input) => input.kind === "artifact",
+        ).map((input) => input.artifactType),
+      ),
+    );
+    if (packageName === "s16-design-critic") {
+      expect(
+        new Set(
+          productive.flatMap((scenario) =>
+            scenario.contextType ? [scenario.contextType] : [],
+          ),
+        ),
+      ).toEqual(
+        new Set(
+          declared.skill.manifest.inputs.alternatives[1]!.oneOf.filter(
+            (input) => input.kind === "artifact",
+          ).map((input) => input.artifactType),
+        ),
+      );
+      expect(productive.some((scenario) => !scenario.contextType)).toBe(true);
+    }
     for (const scenario of productive) {
       const x = await setup(packageName);
-      await boundInputs(x);
-      let content = structuredClone(x.output.content) as Record<
-        string,
-        unknown
-      >;
-      if (scenario.expectState && scenario.expectState !== "UNVERIFIED") {
-        content = {
-          ...content,
-          summary: `Synthetic ${scenario.id} fixture result; not empirical product evidence.`,
-          method: "Synthetic simulated task observation fixture",
-          state: scenario.expectState,
-          evidenceRefs: scenario.evidenceRefs,
-          limitations: [
-            "Fictional test data; cannot support a product quality claim.",
-          ],
-        };
-      }
-      const draft = candidate(
+      const selected = await boundInputs(
         x,
-        scenario.id,
-        content as ArtifactSnapshot["content"],
+        [],
+        [x.task],
+        scenario.inputType,
+        scenario.contextType,
       );
-      const output: ArtifactSnapshot =
-        scenario.expectState && scenario.expectState !== "UNVERIFIED"
-          ? {
-              ...draft,
-              provenance: [
-                {
-                  path: "/content",
-                  kind: "fact",
-                  evidenceRefs: scenario.evidenceRefs!,
-                },
-              ],
-            }
-          : draft;
-      expect(output.meta.type).toBe(scenario.output);
-      if (scenario.evidenceRefs && packageName === "s16-design-critic") {
-        expect(
-          output.provenance
-            .filter((entry) => entry.kind === "fact")
-            .flatMap((entry) => entry.evidenceRefs ?? []),
-        ).toEqual(scenario.evidenceRefs);
-      }
-      await x.artifacts.create(output);
       const work = await runSkillPackage({
         orchestrator: x.orchestrator,
         package: x.skill,
@@ -370,26 +448,29 @@ for (const packageName of packages) {
           expect(context.package.tests["tests/scenarios.json"]).toContain(
             scenario.id,
           );
-          if (scenario.id.startsWith("evidence-")) {
-            const observation = JSON.parse(
-              context.package.tests["tests/observations.json"]!,
-            ) as {
-              synthetic: boolean;
-              cases: Record<string, { classification: string }>;
-            };
-            const classification = scenario.id.replace("evidence-", "");
-            expect(observation.synthetic).toBe(true);
-            expect(observation.cases[classification]?.classification).toBe(
-              classification,
-            );
-            expect(scenario.evidenceRefs).toEqual([
-              `tests/observations.json#${classification}`,
-            ]);
-          }
           expect(context.invocation.runId).toBe("run_quality");
-          expect(context.inputs.map((input) => input.name)).toEqual(
-            x.skill.manifest.inputs.required.map((input) => input.name),
-          );
+          expect(context.inputs.map((input) => input.name)).toEqual([
+            ...x.skill.manifest.inputs.required.map((input) => input.name),
+            selected.name,
+            ...(selected.contextName ? [selected.contextName] : []),
+          ]);
+          if (packageName === "s16-design-critic") {
+            if (selected.contextRef)
+              expect(
+                context.inputs.find(
+                  (input) => input.name === selected.contextName,
+                )?.ref,
+              ).toEqual(selected.contextRef);
+            else
+              expect(context.invocation.humanBrief).toBe(
+                "Bounded synthetic task and risk context",
+              );
+          }
+          const boundTarget = context.inputs.find(
+            (input) => input.name === selected.name,
+          )!;
+          expect(boundTarget.ref).toEqual(selected.ref);
+          expect(boundTarget.artifact.meta.type).toBe(scenario.inputType);
           const first = context.inputs[0]!;
           const original = (
             await x.artifacts.read(first.ref.artifactId, first.ref.revision)
@@ -400,6 +481,82 @@ for (const packageName of packages) {
             (await x.artifacts.read(first.ref.artifactId, first.ref.revision))
               .artifact,
           ).toEqual(original);
+
+          const target = `${selected.ref.artifactId}@${selected.ref.revision}`;
+          let content = structuredClone(x.output.content) as Record<
+            string,
+            unknown
+          >;
+          let provenance = x.output.provenance.map((entry) =>
+            entry.kind === "derived"
+              ? { ...entry, inputRefs: [target] }
+              : entry,
+          );
+          if (
+            packageName === "s16-design-critic" ||
+            packageName === "s18-experience-validation"
+          )
+            content = { ...content, target };
+          if (packageName === "s17-knowledge-curator")
+            content = {
+              ...content,
+              question: `What is the disposition of ${target}?`,
+            };
+          if (packageName === "s18-experience-validation") {
+            const observations = JSON.parse(
+              context.package.tests["tests/observations.json"]!,
+            ) as {
+              synthetic: boolean;
+              method: string;
+              cases: Record<string, SyntheticObservation>;
+            };
+            expect(observations.synthetic).toBe(true);
+            const key = scenario.id.startsWith("evidence-")
+              ? scenario.id.slice("evidence-".length)
+              : undefined;
+            const record = key ? observations.cases[key] : undefined;
+            if (key && !record)
+              throw new Error(`Missing synthetic observation: ${key}`);
+            const state = observationState(record, target);
+            const evidenceRefs = key ? [`tests/observations.json#${key}`] : [];
+            content = {
+              ...content,
+              summary: `${state} for ${target} under a synthetic fixture; no product research claim.`,
+              target,
+              method: observations.method,
+              state,
+              evidenceRefs,
+              limitations: [
+                record?.observation ?? "No task observation supplied",
+                "Synthetic fixture only",
+              ],
+            };
+            provenance =
+              state === "UNVERIFIED"
+                ? [
+                    {
+                      path: "/content",
+                      kind: "unknown",
+                      rationale:
+                        "No applicable consistent empirical observation",
+                    },
+                  ]
+                : [{ path: "/content", kind: "fact", evidenceRefs }];
+          }
+          const draft = candidate(
+            x,
+            scenario.id,
+            content as ArtifactSnapshot["content"],
+          );
+          const output: ArtifactSnapshot = {
+            ...draft,
+            dependencies: context.invocation.inputRefs.map((ref) => ({
+              ...ref,
+              onChange: "validate",
+            })),
+            provenance,
+          };
+          await x.artifacts.create(output);
           return {
             result: {
               runId: context.invocation.runId,
@@ -411,45 +568,76 @@ for (const packageName of packages) {
           };
         },
       });
-      expect(work.result.outputRefs).toEqual([exact(output)]);
+      const outputRef = work.result.outputRefs[0]!;
+      const output = (
+        await x.artifacts.read(outputRef.artifactId, outputRef.revision)
+      ).artifact;
+      expect(output.meta.type).toBe(scenario.output);
+      expect(
+        output.dependencies.some(
+          (dependency) =>
+            dependency.artifactId === selected.ref.artifactId &&
+            dependency.revision === selected.ref.revision &&
+            dependency.lockDigest === selected.ref.lockDigest,
+        ),
+      ).toBe(true);
       expect(
         (await x.registry.run("run_quality")).run.artifacts,
-      ).toContainEqual(exact(output));
-      if (scenario.expectCriteria) {
+      ).toContainEqual(outputRef);
+      const expectedKeys = Object.keys(scenario).filter(
+        (key) => key.startsWith("expect") || key === "evidenceRefs",
+      );
+      const supportedExpectations: Record<string, string[]> = {
+        evaluation: ["expectCriteria", "expectStates", "evidenceRefs"],
+        decision: ["expectAlternatives", "expectOutcome"],
+        validation: ["expectState", "expectEvidenceRefs", "evidenceRefs"],
+      };
+      for (const key of expectedKeys)
+        expect(supportedExpectations[output.meta.type]).toContain(key);
+      if (scenario.expectCriteria)
+        expect(
+          (
+            output.content as { findings: Array<{ criterion: string }> }
+          ).findings.map((item) => item.criterion),
+        ).toEqual(scenario.expectCriteria);
+      if (scenario.expectStates) {
         const findings = (
           output.content as {
             findings: Array<{ criterion: string; state: string }>;
           }
         ).findings;
-        expect(findings.map((finding) => finding.criterion)).toEqual(
-          scenario.expectCriteria,
-        );
-        for (const [criterion, state] of Object.entries(
-          scenario.expectStates ?? {},
-        ))
+        for (const [criterion, state] of Object.entries(scenario.expectStates))
           expect(
             findings.find((finding) => finding.criterion === criterion)?.state,
           ).toBe(state);
       }
-      if (scenario.expectAlternatives) {
-        const decision = output.content as {
-          alternatives: string[];
-          outcome: string;
-        };
-        expect(decision.alternatives).toEqual(scenario.expectAlternatives);
-        expect(decision.outcome).toBe(scenario.expectOutcome);
-        expect(output.approval.status).toBe("pending");
-      }
-      if (scenario.expectState) {
-        const validation = output.content as {
-          state: string;
-          evidenceRefs: string[];
-        };
-        expect(validation.state).toBe(scenario.expectState);
-        expect(validation.evidenceRefs).toEqual(
-          scenario.expectEvidenceRefs ?? scenario.evidenceRefs,
+      if (scenario.expectAlternatives)
+        expect(
+          (output.content as { alternatives: string[] }).alternatives,
+        ).toEqual(scenario.expectAlternatives);
+      if (scenario.expectOutcome)
+        expect((output.content as { outcome: string }).outcome).toBe(
+          scenario.expectOutcome,
         );
+      if (scenario.expectState)
+        expect((output.content as { state: string }).state).toBe(
+          scenario.expectState,
+        );
+      if (scenario.expectEvidenceRefs)
+        expect(
+          (output.content as { evidenceRefs: string[] }).evidenceRefs,
+        ).toEqual(scenario.expectEvidenceRefs);
+      if (scenario.evidenceRefs) {
+        const actual =
+          output.meta.type === "validation"
+            ? (output.content as { evidenceRefs: string[] }).evidenceRefs
+            : output.provenance
+                .filter((entry) => entry.kind === "fact")
+                .flatMap((entry) => entry.evidenceRefs ?? []);
+        expect(actual).toEqual(scenario.evidenceRefs);
       }
+      if (output.meta.type === "decision")
+        expect(output.approval.status).toBe("pending");
     }
   });
 }

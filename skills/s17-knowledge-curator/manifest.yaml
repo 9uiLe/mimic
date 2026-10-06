@@ -1,17 +1,42 @@
 {
   "skillId": "mimic.s17-knowledge-curator",
   "manifestVersion": "1.0.0",
-  "packageVersion": "0.1.0",
+  "packageVersion": "0.2.0",
   "skillFile": "SKILL.md",
   "inputs":
     {
-      "required":
+      "required": [],
+      "alternatives":
         [
           {
-            "name": "source",
-            "kind": "artifact",
-            "artifactType": "evaluation",
-            "schemaVersion": "1.0.0",
+            "name": "knowledge-source",
+            "oneOf":
+              [
+                {
+                  "name": "evaluation-source",
+                  "kind": "artifact",
+                  "artifactType": "evaluation",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "validation-source",
+                  "kind": "artifact",
+                  "artifactType": "validation",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "problem-profile-source",
+                  "kind": "artifact",
+                  "artifactType": "problem-profile",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "reference-selection-source",
+                  "kind": "artifact",
+                  "artifactType": "reference-selection",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
           },
         ],
       "optional":
@@ -22,21 +47,8 @@
             "artifactType": "design-system-asset",
             "schemaVersion": "1.0.0",
           },
-          {
-            "name": "reference-case",
-            "kind": "artifact",
-            "artifactType": "reference-selection",
-            "schemaVersion": "1.0.0",
-          },
-          {
-            "name": "problem-profile",
-            "kind": "artifact",
-            "artifactType": "problem-profile",
-            "schemaVersion": "1.0.0",
-          },
           { "name": "source-evidence", "kind": "evidence-file" },
         ],
-      "alternatives": [],
     },
   "outputs": ["decision", "design-system-asset", "reference-selection"],
   "forbiddenResponsibilities":
@@ -57,6 +69,7 @@
       { "artifactType": "evaluation", "schemaVersion": "1.0.0" },
       { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
       { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
+      { "artifactType": "validation", "schemaVersion": "1.0.0" },
     ],
   "examples": ["examples/output.json"],
   "tests": ["tests/scenarios.json"],

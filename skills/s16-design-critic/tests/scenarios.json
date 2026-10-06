@@ -21,13 +21,15 @@
         "Information hierarchy": "CONCERN",
         "Accessibility": "UNVERIFIED"
       },
-      "evidenceRefs": []
+      "evidenceRefs": [],
+      "inputType": "scenario"
     },
     {
       "id": "missing-target-lock",
       "mode": "blocked",
       "reason": "Exact target lock is unavailable",
-      "expectOutputs": 0
+      "expectOutputs": 0,
+      "inputType": "scenario"
     },
     {
       "id": "missing-empirical-evidence",
@@ -36,12 +38,66 @@
       "expectStates": {
         "Accessibility": "UNVERIFIED"
       },
-      "evidenceRefs": []
+      "evidenceRefs": [],
+      "inputType": "scenario"
     },
     {
       "id": "undeclared-output",
       "mode": "reject-output-type",
-      "output": "brand"
+      "output": "brand",
+      "inputType": "scenario"
+    },
+    {
+      "id": "direction-critique",
+      "mode": "produce",
+      "inputType": "design-direction",
+      "output": "evaluation",
+      "expectStates": {
+        "Accessibility": "UNVERIFIED"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "id": "journey-critique",
+      "mode": "produce",
+      "inputType": "journey",
+      "output": "evaluation",
+      "expectStates": {
+        "Accessibility": "UNVERIFIED"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "id": "system-choice-critique",
+      "mode": "produce",
+      "inputType": "design-system-asset",
+      "output": "evaluation",
+      "expectStates": {
+        "Accessibility": "UNVERIFIED"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "id": "task-model-context-critique",
+      "mode": "produce",
+      "inputType": "scenario",
+      "contextType": "user-task-model",
+      "output": "evaluation",
+      "expectStates": {
+        "Task fit": "UNVERIFIED"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "id": "problem-profile-context-critique",
+      "mode": "produce",
+      "inputType": "scenario",
+      "contextType": "problem-profile",
+      "output": "evaluation",
+      "expectStates": {
+        "Task fit": "UNVERIFIED"
+      },
+      "evidenceRefs": []
     }
   ]
 }

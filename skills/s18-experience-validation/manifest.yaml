@@ -1,18 +1,12 @@
 {
   "skillId": "mimic.s18-experience-validation",
   "manifestVersion": "1.0.0",
-  "packageVersion": "0.1.0",
+  "packageVersion": "0.2.0",
   "skillFile": "SKILL.md",
   "inputs":
     {
       "required":
         [
-          {
-            "name": "target",
-            "kind": "artifact",
-            "artifactType": "scenario",
-            "schemaVersion": "1.0.0",
-          },
           {
             "name": "contract",
             "kind": "artifact",
@@ -20,14 +14,35 @@
             "schemaVersion": "1.0.0",
           },
         ],
-      "optional":
+      "alternatives":
         [
           {
-            "name": "journey",
-            "kind": "artifact",
-            "artifactType": "journey",
-            "schemaVersion": "1.0.0",
+            "name": "validation-target",
+            "oneOf":
+              [
+                {
+                  "name": "scenario-target",
+                  "kind": "artifact",
+                  "artifactType": "scenario",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "journey-target",
+                  "kind": "artifact",
+                  "artifactType": "journey",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "direction-target",
+                  "kind": "artifact",
+                  "artifactType": "design-direction",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
           },
+        ],
+      "optional":
+        [
           {
             "name": "prior-evaluation",
             "kind": "artifact",
@@ -60,7 +75,6 @@
           },
           { "name": "observation", "kind": "evidence-file" },
         ],
-      "alternatives": [],
     },
   "outputs": ["validation", "evaluation", "system-request"],
   "forbiddenResponsibilities":
@@ -76,6 +90,7 @@
     ],
   "supportedArtifactSchemas":
     [
+      { "artifactType": "design-direction", "schemaVersion": "1.0.0" },
       { "artifactType": "evaluation", "schemaVersion": "1.0.0" },
       { "artifactType": "journey", "schemaVersion": "1.0.0" },
       { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },

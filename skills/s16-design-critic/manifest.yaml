@@ -1,18 +1,12 @@
 {
   "skillId": "mimic.s16-design-critic",
   "manifestVersion": "1.0.0",
-  "packageVersion": "0.1.0",
+  "packageVersion": "0.2.0",
   "skillFile": "SKILL.md",
   "inputs":
     {
       "required":
         [
-          {
-            "name": "target",
-            "kind": "artifact",
-            "artifactType": "scenario",
-            "schemaVersion": "1.0.0",
-          },
           {
             "name": "contract",
             "kind": "artifact",
@@ -20,32 +14,60 @@
             "schemaVersion": "1.0.0",
           },
         ],
-      "optional":
+      "alternatives":
         [
           {
-            "name": "task-context",
-            "kind": "artifact",
-            "artifactType": "user-task-model",
-            "schemaVersion": "1.0.0",
+            "name": "critique-target",
+            "oneOf":
+              [
+                {
+                  "name": "scenario-target",
+                  "kind": "artifact",
+                  "artifactType": "scenario",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "direction-target",
+                  "kind": "artifact",
+                  "artifactType": "design-direction",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "journey-target",
+                  "kind": "artifact",
+                  "artifactType": "journey",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "system-choice-target",
+                  "kind": "artifact",
+                  "artifactType": "design-system-asset",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
           },
           {
-            "name": "journey",
-            "kind": "artifact",
-            "artifactType": "journey",
-            "schemaVersion": "1.0.0",
+            "name": "task-risk-context",
+            "oneOf":
+              [
+                {
+                  "name": "task-model-context",
+                  "kind": "artifact",
+                  "artifactType": "user-task-model",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "problem-profile-context",
+                  "kind": "artifact",
+                  "artifactType": "problem-profile",
+                  "schemaVersion": "1.0.0",
+                },
+                { "name": "bounded-task-brief", "kind": "human-brief" },
+              ],
           },
-          {
-            "name": "direction",
-            "kind": "artifact",
-            "artifactType": "design-direction",
-            "schemaVersion": "1.0.0",
-          },
-          {
-            "name": "system-assets",
-            "kind": "artifact",
-            "artifactType": "design-system-asset",
-            "schemaVersion": "1.0.0",
-          },
+        ],
+      "optional":
+        [
           {
             "name": "brand",
             "kind": "artifact",
@@ -59,14 +81,13 @@
             "schemaVersion": "1.0.0",
           },
           {
-            "name": "problem-profile",
+            "name": "reference-selection",
             "kind": "artifact",
-            "artifactType": "problem-profile",
+            "artifactType": "reference-selection",
             "schemaVersion": "1.0.0",
           },
           { "name": "prototype-evidence", "kind": "evidence-file" },
         ],
-      "alternatives": [],
     },
   "outputs": ["evaluation", "system-request"],
   "forbiddenResponsibilities":
@@ -89,6 +110,7 @@
       { "artifactType": "journey", "schemaVersion": "1.0.0" },
       { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
       { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
       { "artifactType": "scenario", "schemaVersion": "1.0.0" },
       { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
       { "artifactType": "system-request", "schemaVersion": "1.0.0" },

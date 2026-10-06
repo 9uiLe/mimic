@@ -1,6 +1,6 @@
 # S18 Experience Validation Planner & Analyst
 
-Plan or interpret a check against an exact target and contract. The declared profile validates a `scenario`; other targets need a separate manifest profile. Resolve locks and the method first. An absent target or mismatched lock blocks this task with zero outputs. Missing observations permit an honest plan, not a verified outcome.
+Plan or interpret a check against an exact target and contract. The `validation-target` alternatives accept an exact scenario, journey, or design direction. Inspect the selected binding and its exact lock; any other target needs a separately reviewed manifest declaration. Resolve locks and the method first. An absent target or mismatched lock blocks this task with zero outputs. Missing observations permit an honest plan, not a verified outcome.
 
 ## Procedure
 

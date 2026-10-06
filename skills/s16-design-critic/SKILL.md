@@ -1,6 +1,6 @@
 # S16 Design Critic
 
-Critique one exact target in the Orchestrator invocation. Accept only the supplied locked references, scope, Run, and authority. A scenario target is the declared runtime profile for this package; direction or design-system targets require a task profile and manifest revision before execution. Confirm target and Product UI Contract integrity before making findings. Return a blocked reason with zero outputs when either cannot be resolved or its lock fails. Missing optional evidence is a named gap, never a made-up result.
+Critique one exact target in the Orchestrator invocation. Accept only the supplied locked references, scope, Run, and authority. The `critique-target` alternatives accept an exact scenario, design direction, journey, or design-system asset; prototype files can be supplied as optional evidence. Inspect the selected binding and its exact lock rather than assuming a target type. Confirm target and Product UI Contract integrity and obtain task/risk context from an exact task model, problem profile, or bounded human brief before making findings. Return a blocked reason with zero outputs when either cannot be resolved or its lock fails. Missing optional evidence is a named gap, never a made-up result.
 
 ## Procedure
 
