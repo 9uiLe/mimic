@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +20,7 @@ import {
   type RegistryAuthority,
 } from "@mimic/core";
 import { EXIT, runCli, type CliHost } from "../src/cli.js";
+import { atomicCreateJson } from "../src/atomic-file.js";
 
 const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -117,6 +126,94 @@ describe("CLI filesystem protocol", () => {
       JSON.stringify([{ ...task, id: "other" }]),
     );
     expect((await call(args)).code).toBe(EXIT.CONFLICT);
+  });
+
+  test("preflights malformed task plans before persistent writes and accepts corrected retry", async () => {
+    const dir = await initialized();
+    const args = [
+      "run",
+      "--root",
+      dir,
+      "--tasks",
+      "tasks.json",
+      "--id",
+      "run_preflight",
+      "--json",
+    ];
+    const invalid = [
+      { ...task, skillId: "Bad Skill" },
+      { ...task, scopeOwnerId: "outside" },
+      { ...task, dependsOn: ["missing"] },
+      { ...task, dependsOn: ["task_a"] },
+      { ...task, inputs: { required: [null], optional: [], alternatives: [] } },
+      {
+        ...task,
+        inputs: { required: [], optional: [], alternatives: [{ oneOf: [] }] },
+      },
+      { ...task, targetArtifactId: "../escape" },
+      {
+        ...task,
+        uncertainties: [
+          {
+            kind: "blocking-unknown",
+            reason: "Unknown",
+            affectedTaskIds: ["missing"],
+          },
+        ],
+      },
+    ];
+    for (const malformed of invalid) {
+      await writeFile(
+        path.join(dir, "tasks.json"),
+        JSON.stringify([malformed]),
+      );
+      const result = await call(args);
+      expect(result.code).toBe(EXIT.INVALID);
+      expect(result.stdout).toEqual([]);
+      expect(result.stderr[0]).toMatch(/^MIMIC_3:/);
+      await expect(
+        access(path.join(dir, ".mimic/runs/run_preflight.json")),
+      ).rejects.toThrow();
+      await expect(
+        access(path.join(dir, ".mimic/workspace.json")),
+      ).rejects.toThrow();
+    }
+    await writeFile(path.join(dir, "tasks.json"), JSON.stringify([task]));
+    expect((await call(args)).code).toBe(EXIT.OK);
+    expect((await call(args)).code).toBe(EXIT.OK);
+    expect(
+      (await call(["status", "--root", dir, "--json"])).value?.runs,
+    ).toEqual([{ id: "run_preflight", state: "active" }]);
+  });
+
+  test("interrupted config and plan publication leaves no truncated final file", async () => {
+    const dir = await root();
+    for (const name of ["config.json", "run_atomic.json"]) {
+      const file = path.join(dir, name);
+      await expect(
+        atomicCreateJson(file, { version: 1 }, (phase) => {
+          if (phase === "before-link") throw new Error("interrupted");
+        }),
+      ).rejects.toThrow("interrupted");
+      await expect(access(file)).rejects.toThrow();
+      expect(
+        (await readdir(dir)).filter((item) => item.endsWith(".pending")),
+      ).toEqual([]);
+      expect(await atomicCreateJson(file, { version: 1 })).toBe(true);
+      expect(JSON.parse(await readFile(file, "utf8"))).toEqual({ version: 1 });
+      expect(await atomicCreateJson(file, { version: 2 })).toBe(false);
+      expect(JSON.parse(await readFile(file, "utf8"))).toEqual({ version: 1 });
+    }
+    const afterLink = path.join(dir, "after-link.json");
+    await expect(
+      atomicCreateJson(afterLink, { complete: true }, (phase) => {
+        if (phase === "after-link") throw new Error("response lost");
+      }),
+    ).rejects.toThrow("response lost");
+    expect(JSON.parse(await readFile(afterLink, "utf8"))).toEqual({
+      complete: true,
+    });
+    expect(await atomicCreateJson(afterLink, { complete: true })).toBe(false);
   });
 
   test("contains input files and reports unsupported backends honestly", async () => {

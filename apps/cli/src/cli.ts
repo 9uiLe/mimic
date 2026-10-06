@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir, realpath, lstat } from "node:fs/promises";
+import { atomicCreateJson } from "./atomic-file.js";
+import { PlanError, preflightPlan, scopeChain } from "./plan.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -126,7 +128,18 @@ function inside(root: string, target: string): boolean {
   );
 }
 async function containedFile(root: string, name: string): Promise<string> {
-  const resolved = await realpath(path.resolve(root, name));
+  let resolved: string;
+  try {
+    resolved = await realpath(path.resolve(root, name));
+  } catch (error) {
+    if (
+      ["ENOENT", "ENOTDIR"].includes(
+        (error as NodeJS.ErrnoException).code ?? "",
+      )
+    )
+      throw new CliError(EXIT.INVALID, "Input file does not exist");
+    throw error;
+  }
   if (!inside(root, resolved) || !(await lstat(resolved)).isFile())
     throw new CliError(
       EXIT.INVALID,
@@ -150,27 +163,6 @@ function object(value: unknown): Record<string, unknown> {
     throw new CliError(EXIT.INVALID, "Expected a JSON object");
   return value as Record<string, unknown>;
 }
-function tasksFrom(value: unknown): RoutedTask[] {
-  if (
-    !Array.isArray(value) ||
-    !value.every(
-      (item) =>
-        item &&
-        typeof item === "object" &&
-        typeof item.id === "string" &&
-        typeof item.skillId === "string",
-    )
-  )
-    throw new CliError(
-      EXIT.INVALID,
-      "Tasks must be a JSON array with task and skill IDs",
-    );
-  if (
-    new Set(value.map((item: { id: string }) => item.id)).size !== value.length
-  )
-    throw new CliError(EXIT.INVALID, "Duplicate task ID");
-  return value as RoutedTask[];
-}
 function configFrom(value: unknown): Config {
   const data = object(value);
   if (
@@ -193,6 +185,8 @@ function configFrom(value: unknown): Config {
       data.scopes.length
   )
     throw new CliError(EXIT.INVALID, "Invalid Mimic workspace configuration");
+  for (const scope of data.scopes as ScopeNode[])
+    scopeChain(data.scopes as ScopeNode[], scope.ownerId);
   return data as Config;
 }
 async function metadata(root: string): Promise<string> {
@@ -264,10 +258,27 @@ async function load(root: string, host: CliHost) {
   );
   return { config, schemas, runtime };
 }
-async function savedTasks(root: string, id: string): Promise<RoutedTask[]> {
-  return tasksFrom(
+async function savedTasks(
+  root: string,
+  id: string,
+  config: Config,
+  scope: string,
+): Promise<RoutedTask[]> {
+  const tasks = preflightPlan(
     await readJson(root, `.mimic/runs/${safeId(id, "run ID")}.json`),
+    config.scopes,
+    scope,
   );
+  await checkEvidenceFiles(root, tasks);
+  return tasks;
+}
+async function checkEvidenceFiles(
+  root: string,
+  tasks: readonly RoutedTask[],
+): Promise<void> {
+  for (const task of tasks)
+    for (const file of task.evidenceFiles ?? [])
+      await containedFile(root, file);
 }
 function emit(io: CliIO, value: Record<string, unknown>, json: boolean) {
   io.out(
@@ -313,13 +324,7 @@ export async function runCli(
       await mkdir(folder, { recursive: true });
       await metadata(root);
       const file = path.join(folder, "config.json");
-      try {
-        await writeFile(file, `${JSON.stringify(config, null, 2)}\n`, {
-          flag: "wx",
-          mode: 0o600,
-        });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      if (!(await atomicCreateJson(file, config))) {
         const existing = configFrom(await readJson(root, ".mimic/config.json"));
         if (JSON.stringify(existing) !== JSON.stringify(config))
           throw new CliError(
@@ -377,9 +382,7 @@ export async function runCli(
         options.id ?? `run_${randomUUID().replaceAll("-", "")}`,
         "run ID",
       );
-      const tasks = tasksFrom(
-        await readJson(root, required(options.tasks, "--tasks")),
-      );
+      const rawTasks = await readJson(root, required(options.tasks, "--tasks"));
       const mode = options.mode ?? "hybrid";
       if (
         !(["system-first", "experience-first", "hybrid"] as string[]).includes(
@@ -388,26 +391,18 @@ export async function runCli(
       )
         throw new CliError(EXIT.INVALID, "Invalid entry mode");
       const scope = options.scope ?? config.defaultScope;
-      if (!config.scopes.some((node) => node.ownerId === scope))
-        throw new CliError(EXIT.INVALID, "Unknown scope");
+      const tasks = preflightPlan(rawTasks, config.scopes, scope);
+      await checkEvidenceFiles(root, tasks);
       const folder = path.join(await metadata(root), "runs");
       await mkdir(folder, { recursive: true });
       if (!inside(root, await realpath(folder)))
         throw new CliError(EXIT.INVALID, "Run directory escapes root");
       const planFile = path.join(folder, `${id}.json`);
-      let existing = false;
-      try {
-        await writeFile(planFile, `${JSON.stringify(tasks)}\n`, {
-          flag: "wx",
-          mode: 0o600,
-        });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-        existing = true;
-      }
+      const existing = !(await atomicCreateJson(planFile, tasks));
       if (
         existing &&
-        JSON.stringify(await savedTasks(root, id)) !== JSON.stringify(tasks)
+        JSON.stringify(await savedTasks(root, id, config, scope)) !==
+          JSON.stringify(tasks)
       )
         throw new CliError(
           EXIT.CONFLICT,
@@ -440,9 +435,10 @@ export async function runCli(
       if (positionals.length !== 1)
         throw new CliError(EXIT.USAGE, "Usage: mimic next <run-id>");
       const id = safeId(positionals[0]!, "run ID");
+      const { run } = await runtime.registry.run(id);
       const plan = await runtime.orchestrator.next(
         id,
-        await savedTasks(root, id),
+        await savedTasks(root, id, config, run.scope),
       );
       emit(io, summarizeNext(plan, await outputFile(root, plan)), json);
       return EXIT.OK;
@@ -460,7 +456,8 @@ export async function runCli(
         );
       const id = safeId(positionals[0]!, "run ID");
       const taskId = required(options.task, "--task");
-      const tasks = await savedTasks(root, id);
+      const { run } = await runtime.registry.run(id);
+      const tasks = await savedTasks(root, id, config, run.scope);
       await runtime.orchestrator.invoke(
         id,
         tasks,
@@ -562,11 +559,13 @@ export async function runCli(
     const code =
       error instanceof CliError
         ? error.code
-        : error instanceof RegistryError
-          ? error.code === "CONFLICT"
-            ? EXIT.CONFLICT
-            : EXIT.INVALID
-          : EXIT.IO;
+        : error instanceof PlanError
+          ? EXIT.INVALID
+          : error instanceof RegistryError
+            ? error.code === "CONFLICT"
+              ? EXIT.CONFLICT
+              : EXIT.INVALID
+            : EXIT.IO;
     io.err(
       `MIMIC_${code}: ${error instanceof Error ? error.message : String(error)}`,
     );
