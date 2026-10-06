@@ -145,6 +145,8 @@ const equal = (a: unknown, b: unknown): boolean =>
   canonicalJson(a) === canonicalJson(b);
 const completionReason = (taskId: string): string =>
   `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`;
+const productionReason = (taskId: string, skillId: string): string =>
+  `Skill task ${JSON.stringify(taskId)} by ${JSON.stringify(skillId)} returned exact provisional output`;
 function assert(ok: unknown, message: string): asserts ok {
   if (!ok) throw new Error(message);
 }
@@ -805,8 +807,16 @@ export class Orchestrator {
       );
     }
     const state = await this.registry.snapshot();
+    const recordedRun = state.runs[invocation.runId] ?? run;
     const newOutputs: ExactArtifactRef[] = [];
     for (const output of result.outputRefs) {
+      assert(
+        !Object.values(recordedRun.proposals).some(
+          (proposal) =>
+            equal(proposal.ref, output) && proposal.status !== "pending",
+        ),
+        "Rejected or resolved output cannot be reused",
+      );
       const artifact = await this.verified(output);
       if (artifact.lifecycle.status === "approved") {
         assert(
@@ -867,20 +877,72 @@ export class Orchestrator {
         "Proposal output not returned",
       );
     }
-    const known = (await this.registry.run(invocation.runId)).run.artifacts;
-    for (const output of newOutputs)
-      if (!known.some((item) => equal(item, output)))
+    const known = recordedRun.artifacts;
+    for (const output of newOutputs) {
+      if (known.some((item) => equal(item, output))) {
+        assert(
+          state.events.some(
+            (event) =>
+              event.runId === invocation.runId &&
+              event.action === "produce-provisional" &&
+              event.reason ===
+                productionReason(invocation.taskId, invocation.skillId) &&
+              event.actor.kind === "skill" &&
+              event.actor.id === invocation.skillId &&
+              event.outputs.some((item) => equal(item, output)),
+          ),
+          "Existing output belongs to another task",
+        );
+      } else {
         await this.registry.produce({
           runId: invocation.runId,
           ref: output,
           inputs: result.inputRefs,
           actor,
           at,
-          reason: `Skill ${invocation.skillId} returned exact provisional output`,
+          reason: productionReason(invocation.taskId, invocation.skillId),
         });
+      }
+    }
     if (result.proposal) {
       const snapshot = await this.registry.snapshot();
-      if (!snapshot.packets[result.proposal.packetId])
+      const packet = snapshot.packets[result.proposal.packetId];
+      if (packet) {
+        const currentRun = snapshot.runs[invocation.runId];
+        assert(
+          packet.runId === invocation.runId &&
+            packet.reason === result.proposal.reason &&
+            equal(
+              packet.proposalIds,
+              result.proposal.items.map((item) => item.id),
+            ) &&
+            result.proposal.items.every((item) => {
+              const stored = currentRun?.proposals[item.id];
+              if (
+                !stored ||
+                stored.packetId !== packet.id ||
+                stored.status !== "pending" ||
+                stored.readiness !== "ready" ||
+                stored.deferred
+              )
+                return false;
+              const declared = Object.fromEntries(
+                Object.entries(stored).filter(
+                  ([key]) =>
+                    ![
+                      "packetId",
+                      "status",
+                      "readiness",
+                      "readinessReason",
+                      "deferred",
+                    ].includes(key),
+                ),
+              );
+              return equal(declared, item);
+            }),
+          "Result packet belongs to another task or is no longer live",
+        );
+      } else {
         await this.registry.submit({
           runId: invocation.runId,
           packetId: result.proposal.packetId,
@@ -889,8 +951,31 @@ export class Orchestrator {
           at,
           reason: result.proposal.reason,
         });
+      }
     }
     const current = (await this.registry.run(invocation.runId)).run;
+    if (result.proposal)
+      assert(
+        result.proposal.items.every((item) => {
+          const proposal = current.proposals[item.id];
+          return (
+            proposal?.status === "pending" &&
+            proposal.readiness === "ready" &&
+            !proposal.deferred
+          );
+        }),
+        "Result packet is no longer live",
+      );
+    assert(
+      result.outputRefs.every(
+        (output) =>
+          !Object.values(current.proposals).some(
+            (proposal) =>
+              equal(proposal.ref, output) && proposal.status !== "pending",
+          ),
+      ),
+      "Rejected or resolved output cannot be reused",
+    );
     await this.registry.setWork({
       runId: invocation.runId,
       safeActions: current.safeActions.filter((id) => id !== invocation.taskId),
@@ -920,10 +1005,13 @@ export class Orchestrator {
     const source = await this.verified(input.source);
     const request = await this.verified(input.request);
     assert(
-      source.lifecycle.status === "approved" &&
+      actor.kind === "skill" &&
+        source.lifecycle.status === "approved" &&
         request.meta.type === "system-request" &&
         request.lifecycle.status === "provisional" &&
         request.approval.status === "pending" &&
+        (request.origin as Record<string, unknown> | undefined)?.actorKind ===
+          "skill" &&
         (request.origin as Record<string, unknown> | undefined)?.runId ===
           input.runId &&
         (request.origin as Record<string, unknown> | undefined)?.actorId ===
@@ -943,6 +1031,42 @@ export class Orchestrator {
       ),
       "Request must lock upstream source",
     );
+    assert(
+      input.evidenceRefs.every((reference) =>
+        request.provenance.some(
+          (entry) =>
+            Array.isArray(entry.evidenceRefs) &&
+            entry.evidenceRefs.includes(reference),
+        ),
+      ),
+      "Revision request evidence is absent from artifact provenance",
+    );
+    const state = await this.registry.snapshot();
+    const run = state.runs[input.runId];
+    assert(
+      run &&
+        input.affectedLocks.every((ref) =>
+          [...run.base, ...run.artifacts].some((item) => equal(item, ref)),
+        ),
+      "Revision request affected locks are outside the Run",
+    );
+    if (run.artifacts.some((ref) => equal(ref, input.request))) {
+      assert(
+        state.events.some(
+          (event) =>
+            event.runId === input.runId &&
+            event.action === "produce-provisional" &&
+            event.actor.kind === actor.kind &&
+            event.actor.id === actor.id &&
+            event.outputs.some((ref) => equal(ref, input.request)) &&
+            input.affectedLocks.every((ref) =>
+              event.inputs.some((item) => equal(item, ref)),
+            ),
+        ),
+        "Revision request has no matching Run production",
+      );
+      return;
+    }
     await this.registry.produce({
       runId: input.runId,
       ref: input.request,
