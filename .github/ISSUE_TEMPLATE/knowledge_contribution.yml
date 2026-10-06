@@ -1,0 +1,50 @@
+name: Knowledge contribution
+description: Propose reusable design knowledge with evidence and limits
+title: "Knowledge: "
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Describe transferable design knowledge rather than copying an example UI. Cite sources and check rights before submitting third-party material.
+  - type: textarea
+    id: definition
+    attributes:
+      label: Definition
+      description: Name and define the principle, mechanism, pattern, or reference case being proposed.
+    validations:
+      required: true
+  - type: textarea
+    id: traits
+    attributes:
+      label: Applicable problem traits
+      description: Which tasks, risks, constraints, or contexts make this knowledge relevant?
+    validations:
+      required: true
+  - type: textarea
+    id: mechanism
+    attributes:
+      label: Transferable principles or mechanisms
+      description: Explain how it works and what can transfer across contexts without copying surface details.
+    validations:
+      required: true
+  - type: textarea
+    id: poor_fit
+    attributes:
+      label: Poor fit and do-not-borrow limits
+      description: In which contexts should this not be used? What details should not be copied?
+    validations:
+      required: true
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: Failure modes
+      description: How could the mechanism fail or cause harm, and under what conditions?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and sources
+      description: Link sources, distinguish observed results from inference, and identify unverified claims and licensing limits.
+    validations:
+      required: true
