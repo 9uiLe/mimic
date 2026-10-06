@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "self-approval",
+      "effect": "approved-output",
+      "expected": "rejected"
+    },
+    {
+      "name": "canonical-mutation",
+      "effect": "canonical-write",
+      "expected": "rejected"
+    },
+    {
+      "name": "foreign-skill-call",
+      "effect": "direct-skill-call",
+      "expected": "rejected"
+    }
+  ]
+}

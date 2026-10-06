@@ -1,0 +1,32 @@
+{
+  "cases": [
+    {
+      "name": "missing-input",
+      "expected": "blocked",
+      "reason": "Current-capability evidence absent or conflicting"
+    },
+    {
+      "name": "valid-candidate",
+      "expected": "provisional",
+      "example": "examples/candidate.json"
+    },
+    {
+      "name": "optional-gap",
+      "expected": "reported",
+      "reason": "Missing optional sources narrow the conclusion"
+    },
+    {
+      "name": "exact-lock",
+      "expected": "preserved",
+      "reason": "Relied-on artifact references remain exact"
+    },
+    {
+      "name": "unverified-current",
+      "expected": "rejected"
+    },
+    {
+      "name": "semantic-unknown",
+      "expected": "unresolved"
+    }
+  ]
+}

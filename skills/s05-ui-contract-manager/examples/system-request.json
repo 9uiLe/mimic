@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "id": "art_s05_ui_contract_manager_system_request",
+    "type": "system-request",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "system-request candidate",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s05.ui-contract-manager",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Illustrative proposed design change, not a verified current capability."
+    }
+  ],
+  "content": {
+    "summary": "GUI exploration reveals that review state cannot be restored.",
+    "changeType": "capability",
+    "request": "Persist and restore candidate review state by candidate ID.",
+    "rationale": "The UI Contract requires a return path and preserved state, but current system evidence does not establish persistence."
+  }
+}

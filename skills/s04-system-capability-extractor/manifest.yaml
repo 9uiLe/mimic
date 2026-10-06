@@ -1,0 +1,59 @@
+{
+  "skillId": "mimic.s04.system-capability-extractor",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required": [],
+      "optional":
+        [
+          {
+            "name": "product-context",
+            "kind": "artifact",
+            "artifactType": "product-definition",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "user-tasks",
+            "kind": "artifact",
+            "artifactType": "user-task-model",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "implementation-evidence", "kind": "evidence-file" },
+        ],
+      "alternatives":
+        [
+          {
+            "name": "system-source",
+            "oneOf":
+              [
+                { "name": "system-documentation", "kind": "evidence-file" },
+                { "name": "executable-evidence", "kind": "evidence-file" },
+                {
+                  "name": "existing-capability",
+                  "kind": "artifact",
+                  "artifactType": "system-capability",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
+          },
+        ],
+    },
+  "outputs": ["system-capability", "system-request"],
+  "forbiddenResponsibilities":
+    [
+      "Relabel proposed capability as current without evidence",
+      "Implement a system change",
+    ],
+  "humanGates": [{ "decision": "system-change", "authority": "PROPOSE_ONLY" }],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "product-definition", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-request", "schemaVersion": "1.0.0" },
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/candidate.json"],
+  "tests": ["tests/scenarios.json", "tests/negative.json"],
+}

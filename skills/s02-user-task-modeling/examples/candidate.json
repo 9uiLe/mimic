@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "id": "art_s02_user_task_modeling",
+    "type": "user-task-model",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "User & Task Modeling candidate",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s02.user-task-modeling",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Illustrative provisional candidate; no empirical research is claimed."
+    }
+  ],
+  "content": {
+    "summary": "Hypothesized review behavior pending research.",
+    "users": [
+      "Reviewer who resumes an interrupted design decision and compares evidence"
+    ],
+    "tasks": [
+      "Find a candidate, compare supporting evidence, and resume review"
+    ]
+  }
+}
