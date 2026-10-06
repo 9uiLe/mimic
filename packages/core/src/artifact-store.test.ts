@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest";
 import {
   mkdtemp,
+  mkdir,
   readdir,
   readFile,
   rename,
@@ -17,6 +18,7 @@ import {
   FileSnapshotStorage,
   type ArtifactSnapshot,
   type AuthorityVerifier,
+  type SnapshotStorage,
 } from "./artifact-store.js";
 
 const repository = path.resolve(import.meta.dirname, "../../..");
@@ -127,6 +129,13 @@ describe("schema registry and YAML codec", () => {
         meta: { ...unsupported.meta, schemaVersion: "2.0.0" },
       }).diagnostics[0]?.keyword,
     ).toBe("schemaVersion");
+    expect(
+      registry.validate(parseArtifactYaml("meta: { schemaVersion: {} }"))
+        .diagnostics[0],
+    ).toMatchObject({
+      keyword: "schemaVersion",
+      params: { actualType: "object" },
+    });
   });
 
   test("rejects duplicate and unresolved schema identities", () => {
@@ -162,12 +171,15 @@ describe("schema registry and YAML codec", () => {
       "a: .nan",
       "a: .inf",
       "a: !!binary YQ==",
+      "a: !unknown value",
+      "a: !unknown [1]",
       "a: &a [1]\nb: *a",
       "a: [1]\n---\nb: 2",
       "- a",
     ]) {
       expect(() => parseArtifactYaml(source), source).toThrow();
     }
+    expect(parseArtifactYaml("a: !!str 123")).toEqual({ a: "123" });
   });
 });
 
@@ -402,6 +414,98 @@ describe("filesystem artifact store", () => {
     ).rejects.toMatchObject({ code: "UNVERIFIED" });
   });
 
+  test("verifier callbacks cannot mutate the admitted or returned snapshot", async () => {
+    const mutate: AuthorityVerifier = {
+      async verifyApproval(approval, artifact) {
+        (approval as { actorId?: string }).actorId = "changed";
+        (artifact.content as Record<string, unknown>).summary =
+          "changed by approval";
+        return true;
+      },
+      async verifyDecision(_decisionId, artifact) {
+        (artifact.content as Record<string, unknown>).summary =
+          "changed by decision";
+        return true;
+      },
+    };
+    const { store } = await setup(mutate);
+    const first = await fixture();
+    const approved = {
+      ...first,
+      lifecycle: { status: "approved" as const, freshness: "valid" },
+      approval: {
+        status: "approved" as const,
+        decisionId: "decision_1",
+        actorId: "human_1",
+        at: "2026-10-05T18:00:00Z",
+      },
+      provenance: [
+        { path: "/content", kind: "human-decision", decisionId: "decision_1" },
+      ],
+    };
+    const signed = {
+      ...approved,
+      meta: { ...approved.meta, contentDigest: artifactDigest(approved) },
+    };
+    const saved = await store.create(signed);
+    expect(saved.artifact.content).toEqual(first.content);
+    expect(artifactDigest(saved.artifact)).toBe(saved.digest);
+    const read = await store.read(first.meta.id, 1);
+    expect(read.artifact.content).toEqual(first.content);
+    expect(artifactDigest(read.artifact)).toBe(read.digest);
+  });
+
+  test("verifier rejection and outage on read remain UNVERIFIED", async () => {
+    const { root, schemas, scopes, store } = await setup(authorized);
+    const first = await fixture();
+    const approved = {
+      ...first,
+      lifecycle: { status: "approved" as const, freshness: "valid" },
+      approval: {
+        status: "approved" as const,
+        decisionId: "decision_1",
+        actorId: "human_1",
+        at: "2026-10-05T18:00:00Z",
+      },
+    };
+    await store.create({
+      ...approved,
+      meta: { ...approved.meta, contentDigest: artifactDigest(approved) },
+    });
+    const outage: AuthorityVerifier = {
+      async verifyApproval() {
+        throw new Error("offline");
+      },
+      async verifyDecision() {
+        throw new Error("offline");
+      },
+    };
+    await expect(
+      new ArtifactStore(
+        new FileSnapshotStorage(root),
+        schemas,
+        scopes,
+        outage,
+      ).read(first.meta.id, 1),
+    ).rejects.toMatchObject({ code: "UNVERIFIED" });
+    const decision = {
+      ...first,
+      meta: { ...first.meta, id: "art_decision_reference" },
+      provenance: [
+        { path: "/content", kind: "human-decision", decisionId: "decision_1" },
+      ],
+    };
+    await store.create(decision);
+    await expect(
+      new ArtifactStore(
+        new FileSnapshotStorage(root),
+        schemas,
+        scopes,
+        outage,
+      ).read("art_decision_reference", 1),
+    ).rejects.toMatchObject({ code: "UNVERIFIED" });
+  });
+
   test("atomic publication gives one winner for concurrent conflicting writers", async () => {
     const { store } = await setup();
     const first = await fixture();
@@ -422,14 +526,46 @@ describe("filesystem artifact store", () => {
     expect(await store.history(first.meta.id)).toHaveLength(1);
   });
 
+  test("identical concurrent creates remain idempotent when publication wins before history lookup", async () => {
+    const { root, scopes, schemas } = await setup();
+    const base = new FileSnapshotStorage(root);
+    let publicationDone!: () => void;
+    const published = new Promise<void>((resolve) => {
+      publicationDone = resolve;
+    });
+    let initialReads = 0;
+    let historyCalls = 0;
+    const interleaved: SnapshotStorage = {
+      async read(id, revision) {
+        if (++initialReads <= 2) return undefined;
+        return base.read(id, revision);
+      },
+      async revisions(id) {
+        if (++historyCalls === 2) await published;
+        return base.revisions(id);
+      },
+      async writeIfAbsent(id, revision, record) {
+        const result = await base.writeIfAbsent(id, revision, record);
+        publicationDone();
+        return result;
+      },
+    };
+    const store = new ArtifactStore(interleaved, schemas, scopes);
+    const first = await fixture();
+    const results = await Promise.all([
+      store.create(first),
+      store.create(first),
+    ]);
+    expect(results[0]).toEqual(results[1]);
+    expect(await store.history(first.meta.id)).toHaveLength(1);
+  });
+
   test("an interrupted temporary write is invisible to readers and future publication", async () => {
     const { root, store } = await setup();
     const first = await fixture();
     const storage = new FileSnapshotStorage(root);
     await storage.revisions(first.meta.id);
-    await (
-      await import("node:fs/promises")
-    ).mkdir(path.join(root, first.meta.id));
+    await mkdir(path.join(root, first.meta.id));
     await writeFile(
       path.join(root, first.meta.id, ".interrupted.pending"),
       "{incomplete",

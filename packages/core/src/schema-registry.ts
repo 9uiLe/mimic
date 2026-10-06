@@ -112,8 +112,16 @@ export class SchemaRegistry {
             instancePath: "/meta/schemaVersion",
             schemaPath: "version",
             keyword: "schemaVersion",
-            message: `Unsupported artifact schema version: ${String(version)}`,
-            params: { supported: ARTIFACT_SCHEMA_VERSION },
+            message: `Unsupported artifact schema version; expected ${ARTIFACT_SCHEMA_VERSION}`,
+            params: {
+              supported: ARTIFACT_SCHEMA_VERSION,
+              actualType:
+                version === null
+                  ? "null"
+                  : Array.isArray(version)
+                    ? "array"
+                    : typeof version,
+            },
           },
         ],
       };

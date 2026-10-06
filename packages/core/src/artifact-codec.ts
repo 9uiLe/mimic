@@ -36,6 +36,10 @@ export function parseArtifactYaml(source: string): JsonValue {
   const document = documents[0]!;
   if (document.errors.length)
     throw new Error(document.errors.map((error) => error.message).join("; "));
+  if (document.warnings.length)
+    throw new Error(
+      document.warnings.map((warning) => warning.message).join("; "),
+    );
   if (!isMap(document.contents))
     throw new Error("Artifact YAML must be one mapping");
   return fromNode(document.contents);

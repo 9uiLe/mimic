@@ -285,6 +285,33 @@ export class ArtifactStore {
     return chain;
   }
 
+  private async approvalVerified(artifact: ArtifactSnapshot): Promise<boolean> {
+    if (!this.authority) return false;
+    try {
+      return await this.authority.verifyApproval(
+        jsonCopy(artifact.approval),
+        jsonCopy(artifact),
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  private async decisionVerified(
+    decisionId: string,
+    artifact: ArtifactSnapshot,
+  ): Promise<boolean> {
+    if (!this.authority) return false;
+    try {
+      return await this.authority.verifyDecision(
+        decisionId,
+        jsonCopy(artifact),
+      );
+    } catch {
+      return false;
+    }
+  }
+
   private async verify(artifact: ArtifactSnapshot): Promise<void> {
     const validation = this.schemas.validate(artifact);
     if (!validation.valid)
@@ -332,8 +359,7 @@ export class ArtifactStore {
       if (
         entry.kind === "human-decision" &&
         (!entry.decisionId ||
-          !this.authority ||
-          !(await this.authority.verifyDecision(entry.decisionId, artifact)))
+          !(await this.decisionVerified(entry.decisionId, artifact)))
       )
         throw new ArtifactStoreError(
           "UNVERIFIED",
@@ -341,10 +367,7 @@ export class ArtifactStore {
         );
     }
     if (artifact.approval.status !== "pending") {
-      if (
-        !this.authority ||
-        !(await this.authority.verifyApproval(artifact.approval, artifact))
-      )
+      if (!(await this.approvalVerified(artifact)))
         throw new ArtifactStoreError(
           "UNVERIFIED",
           "Human approval is not verified",
@@ -399,7 +422,10 @@ export class ArtifactStore {
       await this.verify(record.artifact);
       return { artifact: jsonCopy(record.artifact), digest };
     } catch (error) {
-      if (error instanceof ArtifactStoreError && error.code === "UNVERIFIED")
+      if (
+        error instanceof ArtifactStoreError &&
+        (error.code === "UNVERIFIED" || error.code === "UNAVAILABLE")
+      )
         throw error;
       throw new ArtifactStoreError(
         "CORRUPT",
@@ -458,11 +484,24 @@ export class ArtifactStore {
       (latest
         ? artifact.meta.supersedesRevision !== latest
         : artifact.meta.supersedesRevision !== undefined)
-    )
+    ) {
+      const raced = await this.storage.read(
+        artifact.meta.id,
+        artifact.meta.revision,
+      );
+      if (raced !== undefined) {
+        const winner = await this.read(
+          artifact.meta.id,
+          artifact.meta.revision,
+        );
+        if (canonicalJson(winner.artifact) === canonicalJson(artifact))
+          return winner;
+      }
       throw new ArtifactStoreError(
         "CONFLICT",
         "Revision must follow latest snapshot and supersede it",
       );
+    }
     if (latest) {
       const previous = history.at(-1)!;
       if (previous.artifact.meta.type !== artifact.meta.type)
