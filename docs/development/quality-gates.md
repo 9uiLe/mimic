@@ -6,4 +6,4 @@ The static runner checks plan/manifest identity, source locks, approved artifact
 
 These runners only inspect. They do not publish or approve an artifact. Synthetic fixture results do not establish actual user success, visual quality, full keyboard accessibility, or WCAG 2.2 AA conformance. Re-run checks after any byte changes because the bundle digest changes. Use `pnpm exec vitest run packages/core/src/quality-gates/quality-gates.test.ts` and `pnpm exec playwright test apps/demo-lab/tests/quality-gates.spec.ts --project=chromium-desktop --project=chromium-mobile` to verify the generated-output gates.
 
-The current generated fixture has multiple `<main>` landmarks across hidden states, so its `html-lint` finding is `FAIL` under the repository's recommended html-validate rules. The builder owns that markup; the gate reports it without rewriting generated files. Both runners are exported from `@mimic/core`.
+The current builder emits one document `<main>` landmark containing its generated state views. The generated fixture passes `html-lint`; a second `<main>` in the saved output produces a `no-multiple-main` failure. Both runners are exported from `@mimic/core`.

@@ -279,8 +279,11 @@ export async function runBrowserQualityGates(
           );
         const rendered =
           complete &&
+          (await page.locator("body > main").count()) === 1 &&
           (await page
-            .locator(`[data-state="${plan!.initialState}"]:not([hidden]) main`)
+            .locator(
+              `body > main > [data-state="${plan!.initialState}"]:not([hidden]) > div`,
+            )
             .count()) === 1;
         findings.push(
           finding(
@@ -324,7 +327,9 @@ export async function runBrowserQualityGates(
           try {
             await servedPage(page, base, route);
             const visible = await page
-              .locator(`[data-state="${state}"]:not([hidden]) main`)
+              .locator(
+                `body > main > [data-state="${state}"]:not([hidden]) > div`,
+              )
               .count();
             const otherVisible = await page
               .locator(`[data-state]:not([hidden])`)

@@ -74,10 +74,7 @@ test("real generated bundle records exact target and scoped static results", asy
         report.findings.find((item) => item.criterion === criterion),
       ),
     ).toBe("PASS");
-  expect(state(report.findings, "html-lint")).toBe("FAIL");
-  expect(
-    report.findings.find((item) => item.criterion === "html-lint")?.reason,
-  ).toContain("no-multiple-main");
+  expect(state(report.findings, "html-lint")).toBe("PASS");
   expect(state(report.findings, "ui-contract-consistency")).toBe("UNVERIFIED");
   expect(
     report.findings.find((item) => item.criterion === "ui-contract-consistency")
@@ -89,6 +86,29 @@ test("real generated bundle records exact target and scoped static results", asy
   });
   expect(state(wrongContract.report.findings, "ui-contract-consistency")).toBe(
     "FAIL",
+  );
+});
+
+test("generated single-main HTML passes and an extra main fails lint", async () => {
+  const { input, output } = await built();
+  const baseline = await runStaticQualityGates(input);
+  expect(state(baseline.report.findings, "html-lint")).toBe("PASS");
+  const htmlFile = path.join(output.directory, "index.html");
+  await writeFile(
+    htmlFile,
+    (await readFile(htmlFile, "utf8")).replace(
+      "</body>",
+      "<main></main></body>",
+    ),
+  );
+  const invalid = await runStaticQualityGates(input);
+  expect(state(invalid.report.findings, "html-lint")).toBe("FAIL");
+  expect(
+    invalid.report.findings.find((item) => item.criterion === "html-lint")
+      ?.reason,
+  ).toContain("no-multiple-main");
+  expect(invalid.report.target.bundleDigest).not.toBe(
+    baseline.report.target.bundleDigest,
   );
 });
 
