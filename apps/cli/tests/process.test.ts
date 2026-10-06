@@ -45,8 +45,8 @@ function invoke(...args: string[]) {
   });
 }
 function operatorInvoke(trust: unknown, ...args: string[]) {
-  const entry = pathToFileURL(path.join(repo, "apps/cli/dist/cli.js")).href;
-  const source = `import { runCli } from ${JSON.stringify(entry)}; process.exitCode = await runCli(process.argv.slice(1), undefined, { operatorTrust: JSON.parse(process.env.MIMIC_TEST_OPERATOR_PUBLIC_KEYS) });`;
+  const entry = pathToFileURL(path.join(repo, "apps/cli/dist/entry.js")).href;
+  const source = `import { dispatchCli } from ${JSON.stringify(entry)}; process.exitCode = await dispatchCli(process.argv.slice(1), async () => JSON.parse(process.env.MIMIC_TEST_OPERATOR_PUBLIC_KEYS));`;
   return spawnSync(
     process.execPath,
     ["--input-type=module", "-e", source, ...args],
@@ -320,6 +320,7 @@ test("built submit routes file work through the merged Skill harness and leaves 
   expect(submitted.status, submitted.stderr).toBe(0);
   expect(JSON.parse(submitted.stdout)).toMatchObject({
     runId: "run_submit",
+    submissionState: "accepted",
     packetIds: ["packet_submit"],
     actions: [{ action: "REQUEST_DECISION" }],
   });
@@ -362,9 +363,30 @@ test("built submit routes file work through the merged Skill harness and leaves 
     dir,
   );
   expect(changed.status, changed.stderr).toBe(5);
-  const state = JSON.parse(
-    readFileSync(path.join(dir, ".mimic/workspace.json"), "utf8"),
+  const workspaceFile = path.join(dir, ".mimic/workspace.json");
+  const acceptedBytes = readFileSync(workspaceFile, "utf8");
+  const interrupted = JSON.parse(acceptedBytes);
+  const terminal = interrupted.registry.events.pop();
+  expect(terminal.action).toBe("set-work");
+  interrupted.registry.runs.run_submit =
+    interrupted.registry.events.at(-1).runAfter;
+  writeFileSync(workspaceFile, JSON.stringify(interrupted));
+  const partial = invoke(
+    "submit",
+    "run_submit",
+    "--task",
+    routed.id,
+    "--package",
+    "skill",
+    "--work",
+    "work.json",
+    "--root",
+    dir,
   );
+  expect(partial.status, partial.stderr).toBe(5);
+  expect(partial.stderr).toMatch(/Submission partial/);
+  writeFileSync(workspaceFile, acceptedBytes);
+  const state = JSON.parse(readFileSync(workspaceFile, "utf8"));
   expect(Object.keys(state.registry.packets)).toEqual(["packet_submit"]);
   const { publicKey, privateKey } = generateKeyPairSync("ed25519");
   const trust = {
@@ -464,4 +486,115 @@ test("built submit routes file work through the merged Skill harness and leaves 
   );
   expect(replay.status).toBe(5);
   expect(replay.stderr).toMatch(/nonce replayed/);
+});
+
+test("built submit retries accepted blockers and recovers a lost response without accepting changed work", () => {
+  const dir = root();
+  expect(invoke("init", "--root", dir).status).toBe(0);
+  cpSync(
+    path.join(repo, "fixtures/skill-runtime/demo"),
+    path.join(dir, "skill"),
+    { recursive: true },
+  );
+  const routed = {
+    id: "task_blocked",
+    skillId: "mimic.runtime.demo",
+    outputType: "product-definition",
+    scopeOwnerId: "org_local",
+    intent: "create",
+    authority: "PROPOSE_ONLY",
+    humanBrief: "A brief",
+    inputs: {
+      required: [{ name: "brief", kind: "human-brief" }],
+      optional: [{ name: "research", kind: "evidence-file" }],
+      alternatives: [
+        {
+          oneOf: [
+            {
+              name: "existing-definition",
+              kind: "artifact",
+              artifactType: "product-definition",
+              schemaVersion: "1.0.0",
+            },
+            { name: "context-brief", kind: "human-brief" },
+          ],
+        },
+      ],
+    },
+  };
+  writeFileSync(path.join(dir, "tasks.json"), JSON.stringify([routed]));
+  const submitArgs = (runId: string, file = "work.json") => [
+    "submit",
+    runId,
+    "--task",
+    routed.id,
+    "--package",
+    "skill",
+    "--work",
+    file,
+    "--root",
+    dir,
+    "--json",
+  ];
+  const work = (runId: string, reason = "Need a verified source") => ({
+    artifacts: [],
+    work: {
+      result: {
+        runId,
+        taskId: routed.id,
+        skillId: routed.skillId,
+        inputRefs: [],
+        outputRefs: [],
+        blocked: { reason, affectedTaskIds: [routed.id] },
+      },
+    },
+  });
+  expect(
+    invoke("run", "--root", dir, "--tasks", "tasks.json", "--id", "run_blocked")
+      .status,
+  ).toBe(0);
+  writeFileSync(
+    path.join(dir, "work.json"),
+    JSON.stringify(work("run_blocked")),
+  );
+  const first = invoke(...submitArgs("run_blocked"));
+  expect(first.status, first.stderr).toBe(0);
+  expect(JSON.parse(first.stdout).actions).toMatchObject([
+    { taskId: routed.id, action: "BLOCK" },
+  ]);
+  expect(JSON.parse(first.stdout).submissionState).toBe("blocked");
+  const retry = invoke(...submitArgs("run_blocked"));
+  expect(retry.status, retry.stderr).toBe(0);
+
+  expect(
+    invoke("run", "--root", dir, "--tasks", "tasks.json", "--id", "run_fault")
+      .status,
+  ).toBe(0);
+  writeFileSync(path.join(dir, "work.json"), JSON.stringify(work("run_fault")));
+  const entry = pathToFileURL(path.join(repo, "apps/cli/dist/cli.js")).href;
+  const fault = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `import { runCli } from ${JSON.stringify(entry)}; process.exitCode = await runCli(process.argv.slice(1), undefined, { afterSkillAccepted() { throw new Error("simulated lost response") } });`,
+      ...submitArgs("run_fault"),
+    ],
+    { encoding: "utf8" },
+  );
+  expect(fault.status, fault.stderr).toBe(6);
+  expect(fault.stderr).toMatch(/simulated lost response/);
+  const changed = {
+    ...work("run_fault", "Different reason"),
+    work: {
+      ...work("run_fault", "Different reason").work,
+      findings: [{ claim: "Changed", evidenceRefs: [], status: "UNVERIFIED" }],
+    },
+  };
+  writeFileSync(path.join(dir, "changed.json"), JSON.stringify(changed));
+  const rejected = invoke(...submitArgs("run_fault", "changed.json"));
+  expect(rejected.status, rejected.stderr).toBe(5);
+  expect(rejected.stderr).toMatch(/Submission retry changed input/);
+  const recovered = invoke(...submitArgs("run_fault"));
+  expect(recovered.status, recovered.stderr).toBe(0);
 });

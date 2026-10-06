@@ -68,21 +68,19 @@ export class ReceiptError extends Error {
 function check(ok: unknown, message: string): asserts ok {
   if (!ok) throw new ReceiptError("INVALID", message);
 }
-function expiry(
-  payload: ReceiptPayload,
-  now: string,
-  historical: boolean,
-): boolean {
+function expiry(payload: ReceiptPayload, now: string): boolean {
   const issued = Date.parse(payload.issuedAt);
   const expires = Date.parse(payload.expiresAt);
   const at = Date.parse(now);
+  const current = Date.now();
   return (
     Number.isFinite(issued) &&
     Number.isFinite(expires) &&
     issued <= at &&
     at <= expires &&
     issued < expires &&
-    (historical || (issued <= Date.now() && Date.now() <= expires))
+    issued <= current &&
+    current <= expires
   );
 }
 function unsignedDecision(record: DecisionRecord): DecisionRecord {
@@ -122,21 +120,35 @@ function validTrust(value: unknown): value is OperatorTrust {
     new Set(root.keys.map((key) => key.id)).size === root.keys.length
   );
 }
-/** The binary has no caller-selectable trust path. Installation must be OS protected. */
-export async function loadOperatorTrustRoot(): Promise<
-  OperatorTrust | undefined
-> {
+export interface TrustFileAccess {
+  readonly stat: (file: string) => Promise<{
+    readonly uid: number;
+    readonly mode: number;
+    isSymbolicLink(): boolean;
+    isFile(): boolean;
+    isDirectory(): boolean;
+  }>;
+  readonly text: (file: string) => Promise<string>;
+}
+const operatingSystemFiles: TrustFileAccess = {
+  stat: lstat,
+  text: (file) => readFile(file, "utf8"),
+};
+/** The binary calls this without an adapter: only the fixed, OS-protected path is read. */
+export async function loadOperatorTrustRoot(
+  access: TrustFileAccess = operatingSystemFiles,
+): Promise<OperatorTrust | undefined> {
   if (!process.getuid) return undefined;
   const file =
     process.platform === "darwin"
       ? "/Library/Application Support/Mimic/trust.json"
       : "/etc/mimic/trust.json";
   let current = path.parse(file).root;
-  for (const part of path.relative(current, file).split(path.sep)) {
-    current = path.join(current, part);
+  for (const part of ["", ...path.relative(current, file).split(path.sep)]) {
+    if (part) current = path.join(current, part);
     let metadata;
     try {
-      metadata = await lstat(current);
+      metadata = await access.stat(current);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
       throw error;
@@ -152,7 +164,7 @@ export async function loadOperatorTrustRoot(): Promise<
       "Invalid operator trust path",
     );
   }
-  const value = JSON.parse(await readFile(file, "utf8")) as unknown;
+  const value = JSON.parse(await access.text(file)) as unknown;
   check(validTrust(value), "Invalid operator trust root");
   for (const key of value.keys)
     check(
@@ -273,7 +285,6 @@ export class ReceiptAuthority implements RegistryAuthority {
     record: DecisionRecord,
     proposal: Proposal,
     state: RegistryState,
-    historical: boolean,
   ): boolean {
     const payload = receipt.payload;
     const packet = state.packets[record.packetId];
@@ -296,7 +307,7 @@ export class ReceiptAuthority implements RegistryAuthority {
       same(payload.candidate, proposal.ref) &&
       same(payload.output, record.output?.ref) &&
       payload.requestDigest === digest(unsignedDecision(record)) &&
-      expiry(payload, record.at, historical)
+      expiry(payload, record.at)
     );
   }
   async prepareDecision(
@@ -315,10 +326,8 @@ export class ReceiptAuthority implements RegistryAuthority {
         receiptMarker(receipt),
       ],
     };
-    const historical =
-      !!state.decisions[record.id] && same(state.decisions[record.id], marked);
     check(
-      this.bindsDecision(receipt, marked, proposal, state, historical),
+      this.bindsDecision(receipt, marked, proposal, state),
       "Decision receipt does not authorize exact request",
     );
     await this.stored(receipt);
@@ -331,10 +340,7 @@ export class ReceiptAuthority implements RegistryAuthority {
       if (marks.length !== 1) return false;
       const receipt = await this.lookup(marks[0]!.slice(marker.length));
       const state = await this.workspace.read();
-      const historical =
-        !!state.decisions[record.id] &&
-        same(state.decisions[record.id], record);
-      return this.bindsDecision(receipt, record, proposal, state, historical);
+      return this.bindsDecision(receipt, record, proposal, state);
     } catch {
       return false;
     }
@@ -347,9 +353,6 @@ export class ReceiptAuthority implements RegistryAuthority {
     const packet = state.packets[request.packetId];
     const run = packet && state.runs[packet.runId];
     const payload = receipt.payload;
-    const historical =
-      !!state.commits[request.id] &&
-      same(state.commits[request.id].request, request);
     check(
       this.signed(receipt) &&
         payload.version === 1 &&
@@ -364,7 +367,7 @@ export class ReceiptAuthority implements RegistryAuthority {
         payload.requestId === request.id &&
         same(payload.approvals, request.approvals) &&
         payload.requestDigest === digest(request) &&
-        expiry(payload, request.at, historical),
+        expiry(payload, request.at),
       "Commit receipt does not authorize exact request",
     );
     await this.stored(receipt);

@@ -16,9 +16,12 @@ import {
 } from "@mimic/core";
 import { runCli, type CliHost } from "../src/cli.js";
 import {
+  loadOperatorTrustRoot,
+  ReceiptAuthority,
   type OperatorTrust,
   type ReceiptPayload,
   type SignedReceipt,
+  type TrustFileAccess,
 } from "../src/receipt-authority.js";
 
 const repo = path.resolve(
@@ -56,6 +59,49 @@ const trust: OperatorTrust = {
     },
   ],
 };
+test("fixed-path loader checks every path component before accepting Ed25519 keys", async () => {
+  const fixed =
+    process.platform === "darwin"
+      ? "/Library/Application Support/Mimic/trust.json"
+      : "/etc/mimic/trust.json";
+  const seen: string[] = [];
+  const access: TrustFileAccess = {
+    stat: async (file) => {
+      seen.push(file);
+      return {
+        uid: 0,
+        mode: 0o600,
+        isSymbolicLink: () => false,
+        isFile: () => file === fixed,
+        isDirectory: () => file !== fixed,
+      };
+    },
+    text: async (file) => {
+      expect(file).toBe(fixed);
+      return JSON.stringify(trust);
+    },
+  };
+  expect(await loadOperatorTrustRoot(access)).toEqual(trust);
+  expect(seen.at(-1)).toBe(fixed);
+  await expect(
+    loadOperatorTrustRoot({
+      ...access,
+      stat: async (file) => ({
+        ...(await access.stat(file)),
+        mode: 0o666,
+      }),
+    }),
+  ).rejects.toThrow(/not protected/);
+  await expect(
+    loadOperatorTrustRoot({
+      ...access,
+      stat: async (file) => ({
+        ...(await access.stat(file)),
+        isSymbolicLink: () => file === fixed,
+      }),
+    }),
+  ).rejects.toThrow(/not protected/);
+});
 function signed(payload: ReceiptPayload): SignedReceipt {
   return {
     payload,
@@ -295,6 +341,85 @@ test("signed receipts bind human, exact proposal, scope, expiry, and replay with
       })
     ).code,
   ).toBe(0);
+});
+
+test("mutable workspace history cannot revive an expired decision or commit receipt", async () => {
+  const { dir, stage } = await setup();
+  const ref = await stage("art_expiry", "packet_expiry", "proposal_expiry");
+  const now = Date.now();
+  const issuedAt = new Date(now - 240_000).toISOString();
+  const at = new Date(now - 180_000).toISOString();
+  const expiresAt = new Date(now - 120_000).toISOString();
+  const decision: DecisionRecord = {
+    id: "decision_expired",
+    packetId: "packet_expiry",
+    proposalId: "proposal_expiry",
+    outcome: "deferred",
+    actor: { kind: "human", id: "human_1" },
+    at,
+    rationale: "Past authorization",
+  };
+  const decisionReceipt = signed(
+    payload(decision, ref, "nonce_expired_decision", issuedAt, expiresAt),
+  );
+  const workspaceFile = path.join(dir, ".mimic/workspace.json");
+  const state = JSON.parse(await readFile(workspaceFile, "utf8"));
+  state.registry.decisions[decision.id] = {
+    ...decision,
+    externalRefs: [`mimic-receipt:${hash(decisionReceipt)}`],
+  };
+  await writeFile(workspaceFile, JSON.stringify(state));
+  await Promise.all([
+    writeFile(path.join(dir, "decision.json"), JSON.stringify(decision)),
+    writeFile(path.join(dir, "receipt.json"), JSON.stringify(decisionReceipt)),
+  ]);
+  const denied = await call(
+    [
+      "decide",
+      "--root",
+      dir,
+      "--file",
+      "decision.json",
+      "--receipt",
+      "receipt.json",
+    ],
+    { operatorTrust: trust },
+  );
+  expect(denied.code, denied.err.join("\n")).toBe(3);
+
+  const commit = {
+    id: "commit_expired",
+    packetId: "packet_expiry",
+    approvals: [{ proposalId: "proposal_expiry", decisionId: decision.id }],
+    actor: decision.actor,
+    at,
+    reason: "Past authorization",
+  };
+  const commitReceipt = signed({
+    version: 1,
+    keyId: "test-human-key",
+    action: "commit",
+    actorId: decision.actor.id,
+    runId: "run_receipt",
+    scopeOwnerId: "org_local",
+    packetId: commit.packetId,
+    requestId: commit.id,
+    requestDigest: hash(commit),
+    nonce: "nonce_expired_commit",
+    issuedAt,
+    expiresAt,
+    approvals: commit.approvals,
+  });
+  state.registry.commits[commit.id] = { request: commit };
+  await writeFile(workspaceFile, JSON.stringify(state));
+  const authority = new ReceiptAuthority(
+    new FileWorkspaceStorage(workspaceFile),
+    dir,
+    trust,
+  );
+  await expect(authority.prepareCommit(commit, commitReceipt)).rejects.toThrow(
+    /does not authorize exact request/,
+  );
 });
 
 test("signed decision and commit receipts publish an exact approved revision and retry without duplicate effects", async () => {

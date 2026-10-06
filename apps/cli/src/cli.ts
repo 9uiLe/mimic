@@ -39,6 +39,8 @@ export interface CliHost {
   readonly operatorTrust?: OperatorTrust;
   readonly seedAuthority?: AuthorityVerifier;
   readonly executeSkill?: (invocation: SkillInvocation) => Promise<SkillResult>;
+  /** Trusted host fault hook; useful for testing recovery after Core accepts a submission. */
+  readonly afterSkillAccepted?: () => void;
 }
 export interface CliIO {
   out(value: string): void;
@@ -244,9 +246,6 @@ async function outputFile(root: string, value: unknown): Promise<string> {
 }
 function jsonDigest(value: unknown): string {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
-}
-function same(a: unknown, b: unknown): boolean {
-  return canonicalJson(a) === canonicalJson(b);
 }
 function summarizeNext(
   plan: Awaited<
@@ -498,6 +497,7 @@ export async function runCli(
       const taskId = required(options.task, "--task");
       const { run } = await runtime.registry.run(id);
       const tasks = await savedTasks(root, id, config, run.scope);
+      let submissionState: "accepted" | "blocked" | undefined;
       if (options.package && options.work) {
         const packageDirectory = await containedDirectory(
           root,
@@ -521,6 +521,53 @@ export async function runCli(
             "Invalid file-backed Skill submission",
           );
         const work = submission.work as SkillWork;
+        if (
+          !work.result ||
+          work.result.runId !== id ||
+          work.result.taskId !== taskId ||
+          work.result.skillId !== skill.manifest.skillId ||
+          !Array.isArray(work.result.inputRefs) ||
+          !Array.isArray(work.result.outputRefs) ||
+          !work.result.outputRefs.every(
+            (ref) =>
+              ref &&
+              typeof ref.artifactId === "string" &&
+              Number.isSafeInteger(ref.revision) &&
+              typeof ref.lockDigest === "string",
+          )
+        )
+          throw new CliError(
+            EXIT.INVALID,
+            "Invalid Skill result identity or references",
+          );
+        for (const artifact of submission.artifacts as ArtifactSnapshot[]) {
+          const origin = artifact?.origin as
+            Record<string, unknown> | undefined;
+          if (
+            !schemas.validate(artifact).valid ||
+            !origin ||
+            origin.actorKind !== "skill" ||
+            origin.actorId !== skill.manifest.skillId ||
+            origin.runId !== id
+          )
+            throw new CliError(
+              EXIT.INVALID,
+              "Candidate origin does not match Skill and Run",
+            );
+          const exact = artifactDigest(artifact);
+          if (
+            !work.result.outputRefs.some(
+              (ref) =>
+                ref.artifactId === artifact.meta.id &&
+                ref.revision === artifact.meta.revision &&
+                ref.lockDigest === exact,
+            )
+          )
+            throw new CliError(
+              EXIT.INVALID,
+              "Candidate does not match an exact output reference",
+            );
+        }
         const markerFolder = path.join(await metadata(root), "submissions");
         await mkdir(markerFolder, { recursive: true });
         if (!inside(root, await realpath(markerFolder)))
@@ -529,120 +576,147 @@ export async function runCli(
           markerFolder,
           `${id}-${jsonDigest(taskId)}.json`,
         );
+        const before = await runtime.registry.snapshot();
         const binding = {
+          version: 1,
+          runId: id,
           taskId,
-          packageDigest: jsonDigest(skill.manifest),
+          packageDigest: jsonDigest(skill),
           workDigest: jsonDigest(submission),
+          baselineSequence: before.events.at(-1)?.sequence ?? 0,
         };
-        const already = await runtime.registry.snapshot();
-        const completed = already.events.some(
-          (event) =>
-            event.runId === id &&
-            event.action === "set-work" &&
-            event.actor.kind === "agent" &&
-            event.actor.id === "orchestrator" &&
-            event.reason ===
-              `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`,
-        );
-        if (completed) {
-          const result = work.result;
-          const packet =
-            result?.proposal && already.packets[result.proposal.packetId];
-          const matching =
-            result?.runId === id &&
-            result.taskId === taskId &&
-            result.skillId === skill.manifest.skillId &&
-            Array.isArray(result.outputRefs) &&
-            result.outputRefs.every((ref) =>
-              already.runs[id]?.artifacts.some((item) => same(item, ref)),
-            ) &&
-            (!result.proposal ||
-              (packet?.runId === id &&
-                packet.reason === result.proposal.reason &&
-                result.proposal.items.every((item) => {
-                  const stored = already.runs[id]?.proposals[item.id];
-                  return (
-                    stored &&
-                    stored.packetId === packet.id &&
-                    same(stored.ref, item.ref) &&
-                    same(stored.alternatives, item.alternatives) &&
-                    stored.rationale === item.rationale
-                  );
-                })));
-          if (!matching)
+        const created = await atomicCreateJson(markerFile, binding);
+        const reservation = created
+          ? binding
+          : object(await readJson(root, path.relative(root, markerFile)));
+        if (
+          reservation.version !== binding.version ||
+          reservation.runId !== binding.runId ||
+          reservation.taskId !== binding.taskId ||
+          reservation.packageDigest !== binding.packageDigest ||
+          reservation.workDigest !== binding.workDigest ||
+          !Number.isSafeInteger(reservation.baselineSequence)
+        )
+          throw new CliError(EXIT.CONFLICT, "Submission retry changed input");
+        const acceptedState = async () => {
+          const state = await runtime.registry.snapshot();
+          const terminal = state.events.find((event) => {
+            if (
+              event.sequence <= (reservation.baselineSequence as number) ||
+              event.runId !== id ||
+              event.action !== "set-work" ||
+              event.actor.kind !== "agent" ||
+              event.actor.id !== "orchestrator" ||
+              event.runAfter.safeActions.includes(taskId) ||
+              !work.result.outputRefs.every((ref) =>
+                event.runAfter.artifacts.some(
+                  (recorded) => canonicalJson(recorded) === canonicalJson(ref),
+                ),
+              )
+            )
+              return false;
+            if (work.result.proposal) {
+              const proposed = work.result.proposal.items.every((item) => {
+                const stored = event.runAfter.proposals[item.id];
+                if (
+                  !stored ||
+                  stored.packetId !== work.result.proposal?.packetId
+                )
+                  return false;
+                const declared = Object.fromEntries(
+                  Object.entries(stored).filter(
+                    ([key]) =>
+                      ![
+                        "packetId",
+                        "status",
+                        "readiness",
+                        "readinessReason",
+                        "deferred",
+                      ].includes(key),
+                  ),
+                );
+                return canonicalJson(declared) === canonicalJson(item);
+              });
+              if (!proposed) return false;
+            }
+            return work.result.blocked
+              ? event.reason ===
+                  "Skill reported a genuine affected-work blocker" &&
+                  work.result.blocked.reason === event.runAfter.blockers[taskId]
+              : event.reason ===
+                  `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`;
+          });
+          return terminal
+            ? work.result.blocked
+              ? "blocked"
+              : "accepted"
+            : undefined;
+        };
+        submissionState = await acceptedState();
+        if (!submissionState) {
+          const current = await runtime.registry.snapshot();
+          const effects = () =>
+            current.events.some(
+              (event) =>
+                event.sequence > (reservation.baselineSequence as number) &&
+                event.runId === id &&
+                (event.action === "produce-provisional" ||
+                  event.action === "submit-proposal"),
+            );
+          const nextAction = (
+            await runtime.orchestrator.next(id, tasks)
+          ).actions.find((action) => action.taskId === taskId);
+          if (
+            !nextAction?.invocation ||
+            !["GENERATE", "UPDATE"].includes(nextAction.action)
+          )
             throw new CliError(
               EXIT.CONFLICT,
-              "Completed task differs from submission",
+              `Submission ${effects() ? "partial" : "pending"}; no routable invocation for exact retry`,
             );
-          if (!(await atomicCreateJson(markerFile, binding))) {
-            const stored = await readJson(
-              root,
-              path.relative(root, markerFile),
-            );
-            if (!same(stored, binding))
+          try {
+            await runSkillPackage({
+              orchestrator: runtime.orchestrator,
+              package: skill,
+              runId: id,
+              tasks,
+              taskId,
+              at: new Date().toISOString(),
+              executor: async (context) => {
+                if (context.invocation.skillId !== skill.manifest.skillId)
+                  throw new CliError(
+                    EXIT.INVALID,
+                    "Invocation Skill differs from package",
+                  );
+                for (const artifact of submission.artifacts as ArtifactSnapshot[])
+                  await runtime.artifacts.create(artifact);
+                return work;
+              },
+            });
+          } catch (error) {
+            const latest = await runtime.registry.snapshot();
+            if (
+              latest.events.some(
+                (event) =>
+                  event.sequence > (reservation.baselineSequence as number) &&
+                  event.runId === id &&
+                  (event.action === "produce-provisional" ||
+                    event.action === "submit-proposal"),
+              )
+            )
               throw new CliError(
                 EXIT.CONFLICT,
-                "Submission retry changed input",
+                `Submission partial; retry identical files: ${error instanceof Error ? error.message : String(error)}`,
               );
+            throw error;
           }
-        } else {
-          await runSkillPackage({
-            orchestrator: runtime.orchestrator,
-            package: skill,
-            runId: id,
-            tasks,
-            taskId,
-            at: new Date().toISOString(),
-            executor: async (context) => {
-              if (
-                !work.result ||
-                !Array.isArray(work.result.outputRefs) ||
-                !work.result.outputRefs.every(
-                  (ref) =>
-                    ref &&
-                    typeof ref.artifactId === "string" &&
-                    Number.isSafeInteger(ref.revision) &&
-                    typeof ref.lockDigest === "string",
-                )
-              )
-                throw new CliError(
-                  EXIT.INVALID,
-                  "Skill work needs exact output references",
-                );
-              for (const artifact of submission.artifacts as ArtifactSnapshot[]) {
-                const origin = artifact?.origin as
-                  Record<string, unknown> | undefined;
-                if (
-                  !schemas.validate(artifact).valid ||
-                  !origin ||
-                  origin.actorKind !== "skill" ||
-                  origin.actorId !== context.invocation.skillId ||
-                  origin.runId !== id
-                )
-                  throw new CliError(
-                    EXIT.INVALID,
-                    "Candidate origin does not match invocation",
-                  );
-                const digest = artifactDigest(artifact);
-                if (
-                  !work.result.outputRefs.some(
-                    (ref) =>
-                      ref.artifactId === artifact.meta.id &&
-                      ref.revision === artifact.meta.revision &&
-                      ref.lockDigest === digest,
-                  )
-                )
-                  throw new CliError(
-                    EXIT.INVALID,
-                    "Candidate does not match an exact output reference",
-                  );
-              }
-              for (const artifact of submission.artifacts as ArtifactSnapshot[])
-                await runtime.artifacts.create(artifact);
-              return work;
-            },
-          });
-          await atomicCreateJson(markerFile, binding);
+          host.afterSkillAccepted?.();
+          submissionState = await acceptedState();
+          if (!submissionState)
+            throw new CliError(
+              EXIT.IO,
+              "Submission remains partial after Core invocation",
+            );
         }
       } else {
         await runtime.orchestrator.invoke(
@@ -654,7 +728,14 @@ export async function runCli(
         );
       }
       const plan = await runtime.orchestrator.next(id, tasks);
-      emit(io, summarizeNext(plan, await outputFile(root, plan)), json);
+      emit(
+        io,
+        {
+          ...summarizeNext(plan, await outputFile(root, plan)),
+          ...(submissionState ? { submissionState } : {}),
+        },
+        json,
+      );
       return EXIT.OK;
     }
     if (command === "decisions") {
