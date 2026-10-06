@@ -1,15 +1,26 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir, realpath, lstat } from "node:fs/promises";
 import { atomicCreateJson } from "./atomic-file.js";
 import { PlanError, preflightPlan, scopeChain } from "./plan.js";
+import {
+  ReceiptAuthority,
+  ReceiptError,
+  type OperatorTrust,
+  type SignedReceipt,
+} from "./receipt-authority.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  artifactDigest,
+  canonicalJson,
   createOrchestratorRuntime,
+  loadSkillPackage,
+  runSkillPackage,
   FileWorkspaceStorage,
   getStatus,
   loadSchemaDirectory,
   RegistryError,
+  type ArtifactSnapshot,
   type AuthorityVerifier,
   type CommitRequest,
   type DecisionRecord,
@@ -18,11 +29,14 @@ import {
   type ScopeNode,
   type SkillInvocation,
   type SkillResult,
+  type SkillWork,
 } from "@mimic/core";
 
 export interface CliHost {
   /** Supplied by a trusted embedding host; never constructed from a CLI input file. */
   readonly authority?: RegistryAuthority;
+  /** Trusted launch configuration; the standalone binary loads it only from an OS-protected fixed path. */
+  readonly operatorTrust?: OperatorTrust;
   readonly seedAuthority?: AuthorityVerifier;
   readonly executeSkill?: (invocation: SkillInvocation) => Promise<SkillResult>;
 }
@@ -105,6 +119,10 @@ function parse(argv: readonly string[]) {
           "task",
           "file",
           "commit",
+          "package",
+          "work",
+          "receipt",
+          "commit-receipt",
         ]).has(arg.slice(2))
       )
         throw new CliError(EXIT.USAGE, `Unknown option ${arg}`);
@@ -144,6 +162,15 @@ async function containedFile(root: string, name: string): Promise<string> {
     throw new CliError(
       EXIT.INVALID,
       "Input must be a regular file inside the workspace",
+    );
+  return resolved;
+}
+async function containedDirectory(root: string, name: string): Promise<string> {
+  const resolved = await realpath(path.resolve(root, name));
+  if (!inside(root, resolved) || !(await lstat(resolved)).isDirectory())
+    throw new CliError(
+      EXIT.INVALID,
+      "Package must be a directory inside the workspace",
     );
   return resolved;
 }
@@ -215,6 +242,12 @@ async function outputFile(root: string, value: unknown): Promise<string> {
   });
   return path.relative(root, file);
 }
+function jsonDigest(value: unknown): string {
+  return createHash("sha256").update(canonicalJson(value)).digest("hex");
+}
+function same(a: unknown, b: unknown): boolean {
+  return canonicalJson(a) === canonicalJson(b);
+}
 function summarizeNext(
   plan: Awaited<
     ReturnType<
@@ -244,19 +277,25 @@ async function load(root: string, host: CliHost) {
   const workspace = new FileWorkspaceStorage(
     path.join(root, ".mimic", "workspace.json"),
   );
-  const schemaDir = path.resolve(
+  const schemasRoot = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
-    "../../../schemas/artifacts",
+    "../../../schemas",
   );
-  const schemas = await loadSchemaDirectory(schemaDir);
+  const schemas = await loadSchemaDirectory(
+    path.join(schemasRoot, "artifacts"),
+  );
+  const receiptAuthority =
+    !host.authority && host.operatorTrust
+      ? new ReceiptAuthority(workspace, root, host.operatorTrust)
+      : undefined;
   const runtime = createOrchestratorRuntime(
     workspace,
     schemas,
     config.scopes,
-    host.authority ?? denyAuthority,
+    host.authority ?? receiptAuthority ?? denyAuthority,
     host.seedAuthority,
   );
-  return { config, schemas, runtime };
+  return { config, schemas, schemasRoot, runtime, receiptAuthority };
 }
 async function savedTasks(
   root: string,
@@ -349,7 +388,8 @@ export async function runCli(
       );
       return EXIT.OK;
     }
-    const { config, schemas, runtime } = await load(root, host);
+    const { config, schemas, schemasRoot, runtime, receiptAuthority } =
+      await load(root, host);
     if (command === "status") {
       if (positionals.length)
         throw new CliError(EXIT.USAGE, "status takes no positional arguments");
@@ -449,22 +489,170 @@ export async function runCli(
           EXIT.USAGE,
           "Usage: mimic submit <run-id> --task <task-id>",
         );
-      if (!host.executeSkill)
+      if (!host.executeSkill && (!options.package || !options.work))
         throw new CliError(
           EXIT.UNSUPPORTED,
-          "Skill submission requires a trusted host executor; standalone Skill transport is pending",
+          "Skill submission requires --package and --work file inputs",
         );
       const id = safeId(positionals[0]!, "run ID");
       const taskId = required(options.task, "--task");
       const { run } = await runtime.registry.run(id);
       const tasks = await savedTasks(root, id, config, run.scope);
-      await runtime.orchestrator.invoke(
-        id,
-        tasks,
-        taskId,
-        host.executeSkill,
-        new Date().toISOString(),
-      );
+      if (options.package && options.work) {
+        const packageDirectory = await containedDirectory(
+          root,
+          options.package,
+        );
+        const skill = await loadSkillPackage(packageDirectory, schemasRoot);
+        const submission = object(await readJson(root, options.work));
+        if (
+          Object.keys(submission).some(
+            (key) => !["artifacts", "work"].includes(key),
+          ) ||
+          !Array.isArray(submission.artifacts) ||
+          !submission.artifacts.every(
+            (item) => item && typeof item === "object",
+          ) ||
+          !submission.work ||
+          typeof submission.work !== "object"
+        )
+          throw new CliError(
+            EXIT.INVALID,
+            "Invalid file-backed Skill submission",
+          );
+        const work = submission.work as SkillWork;
+        const markerFolder = path.join(await metadata(root), "submissions");
+        await mkdir(markerFolder, { recursive: true });
+        if (!inside(root, await realpath(markerFolder)))
+          throw new CliError(EXIT.INVALID, "Submission directory escapes root");
+        const markerFile = path.join(
+          markerFolder,
+          `${id}-${jsonDigest(taskId)}.json`,
+        );
+        const binding = {
+          taskId,
+          packageDigest: jsonDigest(skill.manifest),
+          workDigest: jsonDigest(submission),
+        };
+        const already = await runtime.registry.snapshot();
+        const completed = already.events.some(
+          (event) =>
+            event.runId === id &&
+            event.action === "set-work" &&
+            event.actor.kind === "agent" &&
+            event.actor.id === "orchestrator" &&
+            event.reason ===
+              `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`,
+        );
+        if (completed) {
+          const result = work.result;
+          const packet =
+            result?.proposal && already.packets[result.proposal.packetId];
+          const matching =
+            result?.runId === id &&
+            result.taskId === taskId &&
+            result.skillId === skill.manifest.skillId &&
+            Array.isArray(result.outputRefs) &&
+            result.outputRefs.every((ref) =>
+              already.runs[id]?.artifacts.some((item) => same(item, ref)),
+            ) &&
+            (!result.proposal ||
+              (packet?.runId === id &&
+                packet.reason === result.proposal.reason &&
+                result.proposal.items.every((item) => {
+                  const stored = already.runs[id]?.proposals[item.id];
+                  return (
+                    stored &&
+                    stored.packetId === packet.id &&
+                    same(stored.ref, item.ref) &&
+                    same(stored.alternatives, item.alternatives) &&
+                    stored.rationale === item.rationale
+                  );
+                })));
+          if (!matching)
+            throw new CliError(
+              EXIT.CONFLICT,
+              "Completed task differs from submission",
+            );
+          if (!(await atomicCreateJson(markerFile, binding))) {
+            const stored = await readJson(
+              root,
+              path.relative(root, markerFile),
+            );
+            if (!same(stored, binding))
+              throw new CliError(
+                EXIT.CONFLICT,
+                "Submission retry changed input",
+              );
+          }
+        } else {
+          await runSkillPackage({
+            orchestrator: runtime.orchestrator,
+            package: skill,
+            runId: id,
+            tasks,
+            taskId,
+            at: new Date().toISOString(),
+            executor: async (context) => {
+              if (
+                !work.result ||
+                !Array.isArray(work.result.outputRefs) ||
+                !work.result.outputRefs.every(
+                  (ref) =>
+                    ref &&
+                    typeof ref.artifactId === "string" &&
+                    Number.isSafeInteger(ref.revision) &&
+                    typeof ref.lockDigest === "string",
+                )
+              )
+                throw new CliError(
+                  EXIT.INVALID,
+                  "Skill work needs exact output references",
+                );
+              for (const artifact of submission.artifacts as ArtifactSnapshot[]) {
+                const origin = artifact?.origin as
+                  Record<string, unknown> | undefined;
+                if (
+                  !schemas.validate(artifact).valid ||
+                  !origin ||
+                  origin.actorKind !== "skill" ||
+                  origin.actorId !== context.invocation.skillId ||
+                  origin.runId !== id
+                )
+                  throw new CliError(
+                    EXIT.INVALID,
+                    "Candidate origin does not match invocation",
+                  );
+                const digest = artifactDigest(artifact);
+                if (
+                  !work.result.outputRefs.some(
+                    (ref) =>
+                      ref.artifactId === artifact.meta.id &&
+                      ref.revision === artifact.meta.revision &&
+                      ref.lockDigest === digest,
+                  )
+                )
+                  throw new CliError(
+                    EXIT.INVALID,
+                    "Candidate does not match an exact output reference",
+                  );
+              }
+              for (const artifact of submission.artifacts as ArtifactSnapshot[])
+                await runtime.artifacts.create(artifact);
+              return work;
+            },
+          });
+          await atomicCreateJson(markerFile, binding);
+        }
+      } else {
+        await runtime.orchestrator.invoke(
+          id,
+          tasks,
+          taskId,
+          host.executeSkill!,
+          new Date().toISOString(),
+        );
+      }
       const plan = await runtime.orchestrator.next(id, tasks);
       emit(io, summarizeNext(plan, await outputFile(root, plan)), json);
       return EXIT.OK;
@@ -488,7 +676,11 @@ export async function runCli(
         io,
         {
           packets,
-          authority: host.authority ? "host-injected" : "unavailable",
+          authority: host.authority
+            ? "host-injected"
+            : receiptAuthority
+              ? "signed-receipt"
+              : "unavailable",
         },
         json,
       );
@@ -497,20 +689,41 @@ export async function runCli(
     if (command === "decide") {
       if (positionals.length)
         throw new CliError(EXIT.USAGE, "decide takes no positional arguments");
-      if (!host.authority)
+      if (!host.authority && !receiptAuthority)
         throw new CliError(
           EXIT.UNSUPPORTED,
-          "Human decisions require a trusted host authority verifier",
+          "Human decisions require an operator-protected trust root",
         );
-      const decision = (await readJson(
+      const supplied = (await readJson(
         root,
         required(options.file, "--file"),
       )) as DecisionRecord;
+      const decision = receiptAuthority
+        ? await receiptAuthority.prepareDecision(
+            supplied,
+            (await readJson(
+              root,
+              required(options.receipt, "--receipt"),
+            )) as SignedReceipt,
+          )
+        : supplied;
       await runtime.registry.decide(decision);
-      if (options.commit)
-        await runtime.registry.commit(
-          (await readJson(root, options.commit)) as CommitRequest,
-        );
+      if (options.commit) {
+        const request = (await readJson(root, options.commit)) as CommitRequest;
+        if (receiptAuthority)
+          await receiptAuthority.prepareCommit(
+            request,
+            (await readJson(
+              root,
+              required(options["commit-receipt"], "--commit-receipt"),
+            )) as SignedReceipt,
+          );
+        try {
+          await runtime.registry.commit(request);
+        } finally {
+          receiptAuthority?.clearCommit();
+        }
+      }
       emit(
         io,
         {
@@ -561,11 +774,15 @@ export async function runCli(
         ? error.code
         : error instanceof PlanError
           ? EXIT.INVALID
-          : error instanceof RegistryError
+          : error instanceof ReceiptError
             ? error.code === "CONFLICT"
               ? EXIT.CONFLICT
               : EXIT.INVALID
-            : EXIT.IO;
+            : error instanceof RegistryError
+              ? error.code === "CONFLICT"
+                ? EXIT.CONFLICT
+                : EXIT.INVALID
+              : EXIT.IO;
     io.err(
       `MIMIC_${code}: ${error instanceof Error ? error.message : String(error)}`,
     );

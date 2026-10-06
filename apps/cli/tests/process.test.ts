@@ -1,6 +1,8 @@
 import { afterEach, beforeAll, expect, test } from "vitest";
 import { spawnSync } from "node:child_process";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
+  cpSync,
   existsSync,
   mkdtempSync,
   readFileSync,
@@ -9,7 +11,12 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  artifactDigest,
+  canonicalJson,
+  type ArtifactSnapshot,
+} from "@mimic/core";
 
 const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -36,6 +43,24 @@ function invoke(...args: string[]) {
     encoding: "utf8",
     input: "untrusted stdin; never interpreted",
   });
+}
+function operatorInvoke(trust: unknown, ...args: string[]) {
+  const entry = pathToFileURL(path.join(repo, "apps/cli/dist/cli.js")).href;
+  const source = `import { runCli } from ${JSON.stringify(entry)}; process.exitCode = await runCli(process.argv.slice(1), undefined, { operatorTrust: JSON.parse(process.env.MIMIC_TEST_OPERATOR_PUBLIC_KEYS) });`;
+  return spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", source, ...args],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        MIMIC_TEST_OPERATOR_PUBLIC_KEYS: JSON.stringify(trust),
+      },
+    },
+  );
+}
+function hash(value: unknown) {
+  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
 }
 beforeAll(() => {
   for (const target of ["@mimic/core", "@mimic/cli"]) {
@@ -151,4 +176,292 @@ test("built executable rejects malformed plans before state, permits correction,
   expect(corrupt.status).toBe(6);
   expect(corrupt.stdout).toBe("");
   expect(corrupt.stderr).toMatch(/^MIMIC_6:/);
+});
+
+test("built submit routes file work through the merged Skill harness and leaves a durable decision packet", () => {
+  const dir = root();
+  expect(invoke("init", "--root", dir, "--json").status).toBe(0);
+  cpSync(
+    path.join(repo, "fixtures/skill-runtime/demo"),
+    path.join(dir, "skill"),
+    { recursive: true },
+  );
+  const routed = {
+    id: "task_submit",
+    skillId: "mimic.runtime.demo",
+    outputType: "product-definition",
+    scopeOwnerId: "org_local",
+    intent: "create",
+    authority: "PROPOSE_ONLY",
+    humanBrief: "Create a bounded product definition",
+    proposalIds: ["proposal_submit"],
+    inputs: {
+      required: [{ name: "brief", kind: "human-brief" }],
+      optional: [{ name: "research", kind: "evidence-file" }],
+      alternatives: [
+        {
+          oneOf: [
+            {
+              name: "existing-definition",
+              kind: "artifact",
+              artifactType: "product-definition",
+              schemaVersion: "1.0.0",
+            },
+            { name: "context-brief", kind: "human-brief" },
+          ],
+        },
+      ],
+    },
+  };
+  writeFileSync(path.join(dir, "tasks.json"), JSON.stringify([routed]));
+  const run = invoke(
+    "run",
+    "--root",
+    dir,
+    "--tasks",
+    "tasks.json",
+    "--id",
+    "run_submit",
+    "--json",
+  );
+  expect(run.status, run.stderr).toBe(0);
+  expect(JSON.parse(run.stdout).actions[0].action).toBe("GENERATE");
+  const fixture = JSON.parse(
+    readFileSync(
+      path.join(repo, "fixtures/artifacts/valid/product-definition.json"),
+      "utf8",
+    ),
+  ) as ArtifactSnapshot;
+  const candidate: ArtifactSnapshot = {
+    ...fixture,
+    meta: { ...fixture.meta, id: "art_cli_submit" },
+    scope: { level: "organization", ownerId: "org_local" },
+    lifecycle: { status: "proposed", freshness: "valid" },
+    origin: {
+      actorKind: "skill",
+      actorId: routed.skillId,
+      runId: "run_submit",
+      createdAt: "2026-10-06T12:00:00Z",
+    },
+  };
+  const ref = {
+    artifactId: candidate.meta.id,
+    revision: candidate.meta.revision,
+    lockDigest: artifactDigest(candidate),
+  };
+  const work = {
+    artifacts: [candidate],
+    work: {
+      result: {
+        runId: "run_submit",
+        taskId: routed.id,
+        skillId: routed.skillId,
+        inputRefs: [],
+        outputRefs: [ref],
+        proposal: {
+          packetId: "packet_submit",
+          reason: "Human review",
+          items: [
+            {
+              id: "proposal_submit",
+              ref,
+              alternatives: ["approve", "reject"],
+              rationale: "Review exact candidate",
+              evidenceLimits: [],
+              dependents: [],
+            },
+          ],
+        },
+      },
+    },
+  };
+  writeFileSync(path.join(dir, "work.json"), JSON.stringify(work));
+  expect(
+    invoke(
+      "submit",
+      "run_submit",
+      "--task",
+      routed.id,
+      "--package",
+      path.join(repo, "fixtures/skill-runtime/demo"),
+      "--work",
+      "work.json",
+      "--root",
+      dir,
+    ).status,
+  ).toBe(3);
+  expect(
+    invoke(
+      "submit",
+      "run_submit",
+      "--task",
+      routed.id,
+      "--package",
+      "skill",
+      "--work",
+      path.join(repo, "fixtures/artifacts/valid/product-definition.json"),
+      "--root",
+      dir,
+    ).status,
+  ).toBe(3);
+  const submitted = invoke(
+    "submit",
+    "run_submit",
+    "--task",
+    routed.id,
+    "--package",
+    "skill",
+    "--work",
+    "work.json",
+    "--root",
+    dir,
+    "--json",
+  );
+  expect(submitted.status, submitted.stderr).toBe(0);
+  expect(JSON.parse(submitted.stdout)).toMatchObject({
+    runId: "run_submit",
+    packetIds: ["packet_submit"],
+    actions: [{ action: "REQUEST_DECISION" }],
+  });
+  const reopened = invoke("next", "run_submit", "--root", dir, "--json");
+  expect(reopened.status, reopened.stderr).toBe(0);
+  expect(JSON.parse(reopened.stdout).packetIds).toEqual(["packet_submit"]);
+  expect(
+    JSON.parse(
+      invoke("decisions", "run_submit", "--root", dir, "--json").stdout,
+    ).packets[0].proposals[0].id,
+  ).toBe("proposal_submit");
+  const repeated = invoke(
+    "submit",
+    "run_submit",
+    "--task",
+    routed.id,
+    "--package",
+    "skill",
+    "--work",
+    "work.json",
+    "--root",
+    dir,
+    "--json",
+  );
+  expect(repeated.status, repeated.stderr).toBe(0);
+  writeFileSync(
+    path.join(dir, "changed-work.json"),
+    JSON.stringify({ ...work, work: { ...work.work, findings: ["changed"] } }),
+  );
+  const changed = invoke(
+    "submit",
+    "run_submit",
+    "--task",
+    routed.id,
+    "--package",
+    "skill",
+    "--work",
+    "changed-work.json",
+    "--root",
+    dir,
+  );
+  expect(changed.status, changed.stderr).toBe(5);
+  const state = JSON.parse(
+    readFileSync(path.join(dir, ".mimic/workspace.json"), "utf8"),
+  );
+  expect(Object.keys(state.registry.packets)).toEqual(["packet_submit"]);
+  const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+  const trust = {
+    version: 1,
+    keys: [
+      {
+        id: "test-operator-key",
+        publicKeyPem: publicKey
+          .export({ type: "spki", format: "pem" })
+          .toString(),
+      },
+    ],
+  };
+  const at = new Date().toISOString();
+  const decision = {
+    id: "decision_process",
+    packetId: "packet_submit",
+    proposalId: "proposal_submit",
+    outcome: "deferred",
+    actor: { kind: "human", id: "human_process" },
+    at,
+    rationale: "Review later",
+  };
+  const issuedAt = new Date(Date.now() - 60_000).toISOString();
+  const expiresAt = new Date(Date.now() + 600_000).toISOString();
+  const payload = {
+    version: 1,
+    keyId: "test-operator-key",
+    action: "decide",
+    actorId: "human_process",
+    runId: "run_submit",
+    scopeOwnerId: "org_local",
+    packetId: "packet_submit",
+    proposalId: "proposal_submit",
+    requestId: "decision_process",
+    outcome: "deferred",
+    candidate: ref,
+    requestDigest: hash(decision),
+    nonce: "nonce_process_0001",
+    issuedAt,
+    expiresAt,
+  };
+  const receipt = (value: typeof payload) => ({
+    payload: value,
+    signature: sign(
+      null,
+      Buffer.from(canonicalJson(value)),
+      privateKey,
+    ).toString("base64url"),
+  });
+  writeFileSync(path.join(dir, "decision.json"), JSON.stringify(decision));
+  const decideArgs = [
+    "decide",
+    "--root",
+    dir,
+    "--file",
+    "decision.json",
+    "--receipt",
+    "receipt.json",
+    "--json",
+  ];
+  const withoutTrust = invoke(...decideArgs);
+  expect(withoutTrust.status).toBe(4);
+  const tryReceipt = (value: ReturnType<typeof receipt>) => {
+    writeFileSync(path.join(dir, "receipt.json"), JSON.stringify(value));
+    return operatorInvoke(trust, ...decideArgs);
+  };
+  const valid = receipt(payload);
+  expect(
+    tryReceipt({ ...valid, signature: valid.signature.slice(0, -2) + "xx" })
+      .status,
+  ).toBe(3);
+  expect(
+    tryReceipt(receipt({ ...payload, scopeOwnerId: "other" })).status,
+  ).toBe(3);
+  expect(
+    tryReceipt(
+      receipt({
+        ...payload,
+        issuedAt: "2020-01-01T00:00:00Z",
+        expiresAt: "2020-01-02T00:00:00Z",
+      }),
+    ).status,
+  ).toBe(3);
+  const accepted = tryReceipt(valid);
+  expect(accepted.status, accepted.stderr).toBe(0);
+  expect(JSON.parse(accepted.stdout).decisionId).toBe("decision_process");
+  expect(tryReceipt(valid).status).toBe(0);
+  const replayed = { ...decision, id: "decision_replay" };
+  writeFileSync(path.join(dir, "decision.json"), JSON.stringify(replayed));
+  const replay = tryReceipt(
+    receipt({
+      ...payload,
+      requestId: "decision_replay",
+      requestDigest: hash(replayed),
+    }),
+  );
+  expect(replay.status).toBe(5);
+  expect(replay.stderr).toMatch(/nonce replayed/);
 });
