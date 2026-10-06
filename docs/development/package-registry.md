@@ -1,6 +1,6 @@
 # Package registry and design lock
 
-The local package registry module is `packages/core/src/package-registry/index.ts`. It is not yet re-exported from `@mimic/core`; the core public export is owned by 9UI-98. Consumers of this worktree can import the local barrel directly until the integration change is authorized.
+The package registry module is `packages/core/src/package-registry/index.ts` and is re-exported from `@mimic/core` through `packages/core/src/index.ts`.
 
 `PackageRegistry` depends on `PackageSource`, `PackageAuthority`, an explicit scope tree, supported schema versions, and a license policy. It does not choose a release version or publish bytes. `FilePackageSource` reads exact releases from `<root>/<package ID segments>/<MAJOR.MINOR.PATCH>/`. The root may be a normal filesystem directory or a Git checkout. Another source can implement the same interface without changing package references or locks. The backing directory and verifier are trusted infrastructure; the digest detects mismatches against a separately supplied expected digest, not a malicious replacement of both bytes and that digest.
 
