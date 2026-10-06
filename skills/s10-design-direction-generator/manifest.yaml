@@ -1,0 +1,81 @@
+{
+  "skillId": "mimic.s10.design-direction-generator",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "problem-profile",
+            "kind": "artifact",
+            "artifactType": "problem-profile",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "product-ui-contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "reference-selection",
+            "kind": "artifact",
+            "artifactType": "reference-selection",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "brand",
+            "kind": "artifact",
+            "artifactType": "brand",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "journey",
+            "kind": "artifact",
+            "artifactType": "journey",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "system-capability",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "prior-direction",
+            "kind": "artifact",
+            "artifactType": "design-direction",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "alternatives": [],
+    },
+  "outputs": ["design-direction", "decision"],
+  "forbiddenResponsibilities":
+    [
+      "Set selectionStatus to selected or approve a direction",
+      "Count visual-only variants as distinct directions",
+      "Copy a reference case directly into UI",
+      "Present proposed system capability as current",
+    ],
+  "humanGates":
+    [{ "decision": "selected-direction", "authority": "PROPOSE_ONLY" }],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
+      { "artifactType": "brand", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "design-direction", "schemaVersion": "1.0.0" },
+      { "artifactType": "decision", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/directions.json", "examples/selection-proposal.json"],
+  "tests": ["tests/scenarios.json"],
+}

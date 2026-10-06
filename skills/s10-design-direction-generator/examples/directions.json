@@ -1,0 +1,123 @@
+{
+  "candidate": {
+    "meta": {
+      "id": "art_s10_timeline",
+      "type": "design-direction",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Timeline with explicit acknowledgment",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": { "status": "provisional", "freshness": "valid" },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.s10.design-direction-generator",
+      "runId": "run_s10_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": { "status": "pending" },
+    "content": {
+      "summary": "A shared incident timeline exposes current owner and requires the next actor to acknowledge transfer.",
+      "principles": [
+        "Make current ownership and next action visible.",
+        "Confirm and explain state transitions."
+      ],
+      "mechanisms": [
+        "Incident-scoped chronological timeline with current owner at each event",
+        "Explicit handoff acknowledgment that records the next actor and return path"
+      ],
+      "selectionStatus": "candidate"
+    },
+    "provenance": [
+      {
+        "path": "/content/principles/0",
+        "kind": "derived",
+        "inputRefs": ["art_profile@1", "art_contract@1"],
+        "rationale": "Addresses accountable handoff without changing contract terminology."
+      },
+      {
+        "path": "/content/mechanisms/0",
+        "kind": "derived",
+        "inputRefs": ["art_selection@1", "art_profile@1"],
+        "rationale": "Transfers sequence visibility from the near reference; do not borrow its severity labels or escalation assumptions. This is a proposed structure, not observed usability."
+      },
+      {
+        "path": "/content/mechanisms/1",
+        "kind": "derived",
+        "inputRefs": ["art_selection@1", "art_contract@1"],
+        "rationale": "Combines acknowledgment from the far reference with incident identity and return path; rigid cue order is a failure mode."
+      }
+    ]
+  },
+  "portfolio": [
+    {
+      "id": "timeline",
+      "axes": {
+        "navigation": "incident timeline",
+        "ia": "chronological events",
+        "interaction": "explicit acknowledgment",
+        "spatial": "single stream",
+        "density": "progressive detail",
+        "temporal": "live append"
+      },
+      "mechanisms": ["owner timeline", "handoff acknowledgment"],
+      "references": ["case_near", "case_far"]
+    },
+    {
+      "id": "queue",
+      "axes": {
+        "navigation": "role queue",
+        "ia": "owner buckets",
+        "interaction": "claim and delegate",
+        "spatial": "split queue and detail",
+        "density": "compact queue",
+        "temporal": "pending-first"
+      },
+      "mechanisms": ["role queue", "claim handoff"],
+      "references": ["case_near"]
+    },
+    {
+      "id": "map",
+      "axes": {
+        "navigation": "incident map",
+        "ia": "dependency graph",
+        "interaction": "resolve node",
+        "spatial": "graph with detail rail",
+        "density": "overview first",
+        "temporal": "state snapshots"
+      },
+      "mechanisms": ["dependency map", "node resolution"],
+      "references": ["case_far"]
+    },
+    {
+      "id": "guided",
+      "axes": {
+        "navigation": "task checkpoint",
+        "ia": "step and exception",
+        "interaction": "confirm or branch",
+        "spatial": "focused step panel",
+        "density": "one task at a time",
+        "temporal": "checkpoint history"
+      },
+      "mechanisms": ["guided checkpoints", "exception branch"],
+      "references": ["case_far"]
+    }
+  ],
+  "relaxation": {
+    "removedConstraint": "Single chronological view only",
+    "discoveryGoal": "Find whether role ownership is clearer when work is grouped by recipient",
+    "result": "The queue direction exposed pending ownership; preserve the incident return path and original entity terminology before any proposal."
+  },
+  "redundantOption": {
+    "id": "timeline-blue",
+    "sameStructureAs": "timeline",
+    "visualChanges": ["color", "typography"],
+    "disposition": "merge visual notes into later visual exploration; regenerate a structural option"
+  }
+}
