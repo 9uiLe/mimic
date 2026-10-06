@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "synthetic": true,
+  "entries": [
+    {
+      "id": "candidate-review",
+      "project": {
+        "id": "product_mimic",
+        "label": "Mimic synthetic study"
+      },
+      "domain": {
+        "id": "product-wide",
+        "label": "Product-wide candidate review"
+      },
+      "direction": {
+        "id": "candidate-comparison",
+        "label": "Candidate comparison (illustrative)"
+      },
+      "scenario": {
+        "artifactId": "art_fixture_scenario",
+        "revision": 2,
+        "lockDigest": "sha256:39580f2a25d1917db7e6647f2dda04e6d3381c13fd6fc094cfdd0070d97342c1",
+        "label": "Choose a candidate"
+      },
+      "comparisonPath": "/catalog/candidate-review/comparison"
+    },
+    {
+      "id": "domain-review",
+      "project": {
+        "id": "product_mimic",
+        "label": "Mimic synthetic study"
+      },
+      "domain": {
+        "id": "domain_compare",
+        "label": "Comparison domain"
+      },
+      "direction": {
+        "id": "candidate-comparison",
+        "label": "Candidate comparison (illustrative)"
+      },
+      "scenario": {
+        "artifactId": "art_mode_domain_scenario",
+        "revision": 1,
+        "lockDigest": "sha256:ca435eef3dcc172a61dec95035a63d5e21bbe631fb832201b6c4dc652b9ce100",
+        "label": "Review a domain candidate"
+      },
+      "comparisonPath": "/catalog/domain-review/comparison"
+    },
+    {
+      "id": "rejected-change",
+      "project": {
+        "id": "product_mimic",
+        "label": "Mimic synthetic study"
+      },
+      "domain": {
+        "id": "product-wide",
+        "label": "Product-wide candidate review"
+      },
+      "direction": {
+        "id": "rejected-request",
+        "label": "Rejected comparison request (illustrative)"
+      },
+      "scenario": {
+        "artifactId": "art_fixture_scenario",
+        "revision": 2,
+        "lockDigest": "sha256:39580f2a25d1917db7e6647f2dda04e6d3381c13fd6fc094cfdd0070d97342c1",
+        "label": "Choose a candidate after rejection"
+      },
+      "comparisonPath": "/catalog/rejected-change/comparison"
+    }
+  ]
+}
