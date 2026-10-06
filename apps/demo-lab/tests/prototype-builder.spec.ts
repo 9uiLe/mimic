@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
+import { HtmlValidate } from "html-validate";
 import { buildPrototype } from "../../../packages/core/src/prototype-builder/index.js";
 import { setupApprovedPrototypeFixture } from "../../../fixtures/prototypes/approved.js";
 
@@ -16,6 +17,17 @@ test("generated prototype supports desktop/mobile states and repeated interactio
     fixture.input,
     fixture.root,
   );
+  const htmlFile = path.join(output.directory, "index.html");
+  const validator = new HtmlValidate(
+    JSON.parse(
+      await readFile(
+        new URL("../../../.htmlvalidate.json", import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
+  const htmlReport = await validator.validateFile(htmlFile);
+  expect(htmlReport.results.flatMap((result) => result.messages)).toEqual([]);
   const server = createServer(async (request, response) => {
     const name = request.url === "/" ? "index.html" : request.url?.slice(1);
     if (
@@ -43,12 +55,21 @@ test("generated prototype supports desktop/mobile states and repeated interactio
       page.getByRole("heading", { name: "Synthetic candidate comparison" }),
     ).toBeVisible();
     const assertAccessible = async () => {
+      await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(page.locator("[data-state]")).toHaveCount(
+        fixture.input.requiredStates.length,
+      );
+      await expect(page.locator("[data-state]:not([hidden])")).toHaveCount(1);
       const result = await new AxeBuilder({ page }).analyze();
       expect(result.violations).toEqual([]);
     };
     await expect(page.getByText("Loading synthetic candidates")).toBeVisible();
     await assertAccessible();
-    await page.getByRole("button", { name: "Show success" }).click();
+    await page.keyboard.press("Tab");
+    await expect(
+      page.getByRole("button", { name: "Show success" }),
+    ).toBeFocused();
+    await page.keyboard.press("Enter");
     await expect(page.getByText("Synthetic candidate ready")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Choose candidate" }),
@@ -83,7 +104,7 @@ test("generated prototype supports desktop/mobile states and repeated interactio
     ).toBeVisible();
     await page.getByRole("button", { name: "Show success" }).click();
     await expect(page.getByText("Synthetic candidate ready")).toBeVisible();
-    const cards = page.locator('[data-state="success"] main > section');
+    const cards = page.locator('[data-state="success"] > div > section');
     await expect(cards).toHaveCount(2);
     const first = await cards.nth(0).boundingBox();
     const second = await cards.nth(1).boundingBox();

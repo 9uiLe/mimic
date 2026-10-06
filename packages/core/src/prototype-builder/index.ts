@@ -422,8 +422,10 @@ function renderNode(
   if ((interactive || /^h[123]$/.test(node.tag)) && !hasText)
     revision(`${node.tag} needs a discernible text label`);
   const children = renderedChildren.map((child) => child.html).join("");
+  // The document owns one main landmark; authored state roots stay as view containers.
+  const tag = node.tag === "main" ? "div" : node.tag;
   return {
-    html: `<${node.tag}${attrs}>${value ? escapeHtml(value) : ""}${children}</${node.tag}>`,
+    html: `<${tag}${attrs}>${value ? escapeHtml(value) : ""}${children}</${tag}>`,
     hasText,
   };
 }
@@ -578,8 +580,8 @@ export async function buildPrototype(
     planDigest,
     requiredStates: plan.requiredStates,
   };
-  const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(plan.title)}</title><link rel="stylesheet" href="prototype.css"><script type="module" src="prototype.js"></script></head><body><header><p>Specification prototype · synthetic fixture data · not a production app</p><h1>${escapeHtml(plan.title)}</h1></header>${sections.join("")}<p role="status" aria-live="polite" id="prototype-status">${escapeHtml(plan.initialState)} state</p></body></html>\n`;
-  const css = `${compiled.css}\nbody { color: var(--mimic-${plan.styleTokens.foreground.replaceAll(".", "-")});${plan.styleTokens.background ? ` background: var(--mimic-${plan.styleTokens.background.replaceAll(".", "-")});` : ""} }\n[data-state][hidden] { display: none !important; }\n[data-state] main { display: grid; grid-template-columns: repeat(${plan.layout.desktopColumns}, minmax(0, 1fr)); gap: 1rem; }\n:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }\n@media (max-width: ${plan.layout.breakpointPx}px) { [data-state] main { grid-template-columns: repeat(${plan.layout.mobileColumns}, minmax(0, 1fr)); } }\n`;
+  const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${escapeHtml(plan.title)}</title><link rel="stylesheet" href="prototype.css"/><script type="module" src="prototype.js"></script></head><body><header><p>Specification prototype · synthetic fixture data · not a production app</p><h1>${escapeHtml(plan.title)}</h1></header><main>${sections.join("")}</main><p role="status" aria-live="polite" id="prototype-status">${escapeHtml(plan.initialState)} state</p></body></html>\n`;
+  const css = `${compiled.css}\nbody { color: var(--mimic-${plan.styleTokens.foreground.replaceAll(".", "-")});${plan.styleTokens.background ? ` background: var(--mimic-${plan.styleTokens.background.replaceAll(".", "-")});` : ""} }\n[data-state][hidden] { display: none !important; }\n[data-state] > div { display: grid; grid-template-columns: repeat(${plan.layout.desktopColumns}, minmax(0, 1fr)); gap: 1rem; }\n:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }\n@media (max-width: ${plan.layout.breakpointPx}px) { [data-state] > div { grid-template-columns: repeat(${plan.layout.mobileColumns}, minmax(0, 1fr)); } }\n`;
   const js = `const allowed = new Set(${JSON.stringify(plan.requiredStates)});\nfunction show(state) {\n  if (!allowed.has(state)) return;\n  for (const section of document.querySelectorAll('[data-state]')) section.hidden = section.getAttribute('data-state') !== state;\n  document.getElementById('prototype-status').textContent = state + ' state';\n}\ndocument.addEventListener('click', (event) => {\n  const button = event.target.closest('button[data-target-state]');\n  if (button) show(button.getAttribute('data-target-state'));\n});\n`;
   const files = {
     "index.html": html,
