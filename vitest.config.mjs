@@ -13,6 +13,7 @@ export default defineConfig({
     include: [
       "packages/**/*.test.ts",
       "apps/cli/tests/**/*.test.ts",
+      "apps/demo-lab/src/catalog.test.ts",
       "scripts/check-yaml.test.mjs",
     ],
   },
