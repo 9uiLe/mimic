@@ -70,6 +70,10 @@ function approvedOutput(
 async function setup(
   failpoint?: (phase: "before-rename" | "after-rename") => void,
   submitInitial = true,
+  extraSeeds?: (base: ArtifactSnapshot) => {
+    artifacts: ArtifactSnapshot[];
+    canonical: ArtifactSnapshot[];
+  },
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-atomic-"));
   roots.push(root);
@@ -155,9 +159,14 @@ async function setup(
     },
   };
   await store.create(candidate);
+  const extras = extraSeeds?.(base);
+  for (const artifact of extras?.artifacts ?? []) await store.create(artifact);
   const baseRef = exact(base),
     candidateRef = exact(candidate);
-  await registry.seedCanonical([baseRef]);
+  await registry.seedCanonical([
+    baseRef,
+    ...(extras?.canonical.map(exact) ?? []),
+  ]);
   await registry.start({
     id: "run_real",
     scope: "product_mimic",
@@ -265,6 +274,20 @@ function newCandidate(
     },
   };
 }
+function seededApproved(
+  source: ArtifactSnapshot,
+  id: string,
+  revision: number,
+  dependencies: ArtifactSnapshot["dependencies"],
+): ArtifactSnapshot {
+  const candidate = newCandidate(source, id, revision, dependencies);
+  const raw: ArtifactSnapshot = {
+    ...candidate,
+    lifecycle: { status: "approved", freshness: "valid" },
+    approval: { status: "approved", decisionId: "seed", actorId: actor.id, at },
+  };
+  return { ...raw, meta: { ...raw.meta, contentDigest: artifactDigest(raw) } };
+}
 function decideFor(
   packetId: string,
   proposalId: string,
@@ -291,6 +314,256 @@ function decideFor(
   };
 }
 describe("reviewed Run contract regressions", () => {
+  test("a newly selected output cannot conceal invalidated transitive historical locks", async () => {
+    let historical!: ArtifactSnapshot;
+    let current!: ArtifactSnapshot;
+    const { registry, store, baseRef, candidate, makeDecision } = await setup(
+      undefined,
+      false,
+      (base) => {
+        historical = seededApproved(base, "art_nested_history", 1, [
+          { ...exact(base), onChange: "invalidate" },
+        ]);
+        current = seededApproved(historical, historical.meta.id, 2, []);
+        return { artifacts: [historical, current], canonical: [current] };
+      },
+    );
+    const consumer = newCandidate(candidate, "art_nested_consumer");
+    await store.create(consumer);
+    await registry.produce({
+      runId: "run_real",
+      ref: exact(consumer),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "historical dependency",
+    });
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_real",
+      proposals: [
+        {
+          id: "proposal_real",
+          ref: exact(candidate),
+          expectedCanonical: baseRef,
+          alternatives: ["adopt"],
+          rationale: "replace upstream",
+          evidenceLimits: [],
+          dependents: [],
+        },
+        {
+          id: "proposal_consumer",
+          ref: exact(consumer),
+          alternatives: ["adopt"],
+          rationale: "use historical dependency",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "joint review",
+    });
+    const upstream = makeDecision("approved");
+    const downstream = decideFor(
+      "packet_real",
+      "proposal_consumer",
+      consumer,
+      "decision_consumer",
+      [{ ...exact(historical), onChange: "none" }],
+    );
+    await registry.decide(upstream);
+    await registry.decide(downstream);
+    await expect(
+      registry.commit({
+        id: "commit_nested",
+        packetId: "packet_real",
+        approvals: [
+          { proposalId: "proposal_real", decisionId: upstream.id },
+          { proposalId: "proposal_consumer", decisionId: downstream.id },
+        ],
+        actor,
+        at,
+        reason: "reject transitive invalidation",
+      }),
+    ).rejects.toThrow();
+    const state = await registry.snapshot();
+    expect(state.canonical[baseRef.artifactId].ref).toEqual(baseRef);
+    expect(state.canonical[current.meta.id].ref).toEqual(exact(current));
+    expect(state.canonical[consumer.meta.id]).toBeUndefined();
+    await expect(store.read(consumer.meta.id, 2)).rejects.toThrow();
+  });
+
+  test("an explicit none impact keeps a historical lock usable after canonical change", async () => {
+    let historical!: ArtifactSnapshot;
+    let current!: ArtifactSnapshot;
+    const { registry, store, baseRef, candidate, makeDecision } = await setup(
+      undefined,
+      false,
+      (base) => {
+        historical = seededApproved(base, "art_compatible_history", 1, [
+          { ...exact(base), onChange: "none" },
+        ]);
+        current = seededApproved(historical, historical.meta.id, 2, []);
+        return { artifacts: [historical, current], canonical: [current] };
+      },
+    );
+    const consumer = newCandidate(candidate, "art_compatible_consumer");
+    await store.create(consumer);
+    await registry.produce({
+      runId: "run_real",
+      ref: exact(consumer),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "compatible historical dependency",
+    });
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_real",
+      proposals: [
+        {
+          id: "proposal_real",
+          ref: exact(candidate),
+          expectedCanonical: baseRef,
+          alternatives: ["adopt"],
+          rationale: "replace upstream",
+          evidenceLimits: [],
+          dependents: [],
+        },
+        {
+          id: "proposal_consumer",
+          ref: exact(consumer),
+          alternatives: ["adopt"],
+          rationale: "use compatible history",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "joint review",
+    });
+    const upstream = makeDecision("approved");
+    const downstream = decideFor(
+      "packet_real",
+      "proposal_consumer",
+      consumer,
+      "decision_compatible",
+      [{ ...exact(historical), onChange: "none" }],
+    );
+    await registry.decide(upstream);
+    await registry.decide(downstream);
+    await registry.commit({
+      id: "commit_compatible",
+      packetId: "packet_real",
+      approvals: [
+        { proposalId: "proposal_real", decisionId: upstream.id },
+        { proposalId: "proposal_consumer", decisionId: downstream.id },
+      ],
+      actor,
+      at,
+      reason: "compatible historical lock",
+    });
+    const state = await registry.snapshot();
+    expect(state.canonical[baseRef.artifactId].ref).toEqual(
+      upstream.output!.ref,
+    );
+    expect(state.canonical[current.meta.id].ref).toEqual(exact(current));
+    expect(state.canonical[consumer.meta.id].ref).toEqual(
+      downstream.output!.ref,
+    );
+    expect(state.freshness[historical.meta.id]).toBeUndefined();
+  });
+
+  test("a later validate finding cannot downgrade an unresolved invalidation", async () => {
+    let other!: ArtifactSnapshot;
+    let dependent!: ArtifactSnapshot;
+    const { registry, store, makeDecision } = await setup(
+      undefined,
+      true,
+      (base) => {
+        other = seededApproved(base, "art_other_root", 1, []);
+        dependent = seededApproved(base, "art_dual_dependent", 1, [
+          { ...exact(base), onChange: "invalidate" },
+          { ...exact(other), onChange: "validate" },
+        ]);
+        return {
+          artifacts: [other, dependent],
+          canonical: [other, dependent],
+        };
+      },
+    );
+    const first = makeDecision("approved");
+    await registry.decide(first);
+    await registry.commit({
+      ...commit,
+      id: "commit_first_impact",
+    });
+    const firstAssessment = (await registry.snapshot()).freshness[
+      dependent.meta.id
+    ];
+    expect(firstAssessment.status).toBe("blocked");
+    const otherCandidate = newCandidate(other, other.meta.id, 2, []);
+    await store.create(otherCandidate);
+    await registry.start({
+      id: "run_other",
+      scope: "product_mimic",
+      entryMode: "hybrid",
+      base: [exact(other)],
+      reused: [],
+      safeActions: ["explore"],
+      actor: agent,
+      at,
+      reason: "other root revision",
+    });
+    await registry.produce({
+      runId: "run_other",
+      ref: exact(otherCandidate),
+      inputs: [exact(other)],
+      actor: agent,
+      at,
+      reason: "other root candidate",
+    });
+    await registry.submit({
+      runId: "run_other",
+      packetId: "packet_other",
+      proposals: [
+        {
+          id: "proposal_other",
+          ref: exact(otherCandidate),
+          expectedCanonical: exact(other),
+          alternatives: ["adopt"],
+          rationale: "other root change",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "other review",
+    });
+    const next = decideFor(
+      "packet_other",
+      "proposal_other",
+      otherCandidate,
+      "decision_other",
+    );
+    await registry.decide(next);
+    await registry.commit({
+      id: "commit_second_impact",
+      packetId: "packet_other",
+      approvals: [{ proposalId: "proposal_other", decisionId: next.id }],
+      actor,
+      at,
+      reason: "other root commit",
+    });
+    const assessment = (await registry.snapshot()).freshness[dependent.meta.id];
+    expect(assessment.status).toBe("blocked");
+    expect(assessment.reason).toContain(firstAssessment.reason);
+    expect(assessment.reason).toContain(`${other.meta.id}@1`);
+  });
+
   test("same-set output cannot keep an invalidated lock on another selected output", async () => {
     const { registry, store, baseRef, candidate, makeDecision } = await setup(
       undefined,

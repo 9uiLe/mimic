@@ -933,7 +933,7 @@ export class RunRegistry {
         );
       }
       const txReader = this.publisher!.reader(snapshots, state);
-      await DependencyGraph.load(txReader, outputs);
+      const outputGraph = await DependencyGraph.load(txReader, outputs);
       const previousRoots = Object.values(state.canonical).map(
         (selection) => selection.ref,
       );
@@ -953,10 +953,34 @@ export class RunRegistry {
         graph && changes.length ? await graph.assessChanges(changes) : [];
       for (const finding of findings) {
         if (selectedArtifactIds.has(finding.artifact.artifactId)) continue;
+        const origins = [
+          ...new Set(
+            finding.paths.map((path) => {
+              const ref = path[0]?.dependency;
+              return ref ? `${ref.artifactId}@${ref.revision}` : "";
+            }),
+          ),
+        ].filter(Boolean);
+        const reason = `${finding.reason} (${origins.join(", ")})`;
+        const previous = state.freshness[finding.artifact.artifactId];
+        if (previous && same(previous.ref, finding.artifact)) {
+          state.freshness[finding.artifact.artifactId] = {
+            ref: finding.artifact,
+            status:
+              previous.status === "blocked" || finding.freshness === "blocked"
+                ? "blocked"
+                : "stale",
+            reason:
+              previous.reason === reason
+                ? reason
+                : `${previous.reason}; ${reason}`,
+          };
+          continue;
+        }
         state.freshness[finding.artifact.artifactId] = {
           ref: finding.artifact,
           status: finding.freshness,
-          reason: finding.reason,
+          reason,
         };
       }
       const finalCanonical = { ...state.canonical };
@@ -966,45 +990,70 @@ export class RunRegistry {
           decisionId: record.id,
         };
       for (const { proposal, record } of approved) {
-        for (const dependency of record.output!.artifact.dependencies) {
-          const locked = {
-            artifactId: dependency.artifactId,
-            revision: dependency.revision,
-            lockDigest: dependency.lockDigest,
-          };
-          const final = finalCanonical[dependency.artifactId]?.ref;
-          const assessed = state.freshness[dependency.artifactId];
-          requireThat(
-            !assessed ||
-              !same(assessed.ref, locked) ||
-              assessed.status !== "blocked",
-            "Final effect depends on a blocked exact lock",
-            "CONFLICT",
+        const visited = new Set<string>();
+        const verifiedEvidence = async (
+          ref: ExactArtifactRef,
+        ): Promise<boolean> => {
+          const evidence =
+            proposal.impactEvidence?.find((item) => same(item.dependency, ref))
+              ?.evidenceRefs ?? [];
+          return !!(
+            evidence.length > 0 &&
+            (await this.authority.verifyEvidence?.(
+              jsonCopy(proposal),
+              jsonCopy(ref),
+              jsonCopy(evidence),
+            ))
           );
-          if (final && !same(final, locked)) {
-            if (dependency.onChange === "validate") {
-              const evidence =
-                proposal.impactEvidence?.find((item) =>
-                  same(item.dependency, locked),
-                )?.evidenceRefs ?? [];
-              requireThat(
-                evidence.length > 0 &&
-                  (await this.authority.verifyEvidence?.(
-                    proposal,
-                    locked,
-                    evidence,
-                  )),
-                "Final effect requires verified validation of changed lock",
-                "UNVERIFIED",
-              );
-            } else
-              requireThat(
-                dependency.onChange === "none",
-                "Final effect retains a lock requiring revision or invalidation",
-                "CONFLICT",
-              );
+        };
+        const inspect = async (ref: ExactArtifactRef): Promise<void> => {
+          const identity = canonicalJson(ref);
+          if (visited.has(identity)) return;
+          visited.add(identity);
+          const node = outputGraph.get(ref);
+          requireThat(
+            node,
+            "Final effect lock is absent from output graph",
+            "UNVERIFIED",
+          );
+          const assessed = state.freshness[ref.artifactId];
+          if (assessed && same(assessed.ref, ref)) {
+            requireThat(
+              assessed.status !== "blocked",
+              "Final effect depends on a blocked exact lock",
+              "CONFLICT",
+            );
+            requireThat(
+              await verifiedEvidence(ref),
+              "Final effect uses a stale lock without verified evidence",
+              "UNVERIFIED",
+            );
           }
-        }
+          for (const dependency of node.artifact.dependencies) {
+            const locked = {
+              artifactId: dependency.artifactId,
+              revision: dependency.revision,
+              lockDigest: dependency.lockDigest,
+            };
+            const final = finalCanonical[dependency.artifactId]?.ref;
+            if (final && !same(final, locked)) {
+              if (dependency.onChange === "validate")
+                requireThat(
+                  await verifiedEvidence(locked),
+                  "Final effect requires verified validation of changed lock",
+                  "UNVERIFIED",
+                );
+              else
+                requireThat(
+                  dependency.onChange === "none",
+                  "Final effect retains a lock requiring revision or invalidation",
+                  "CONFLICT",
+                );
+            }
+            await inspect(locked);
+          }
+        };
+        await inspect(record.output!.ref);
       }
       for (const { proposal, record } of approved) {
         delete state.freshness[proposal.ref.artifactId];
