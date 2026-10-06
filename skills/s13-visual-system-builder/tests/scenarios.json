@@ -8,7 +8,7 @@
     },
     {
       "id": "token-source",
-      "token": "color.evidence",
+      "token": "semantic.color.evidence",
       "expected": "source-only"
     },
     {
@@ -24,7 +24,7 @@
     },
     {
       "id": "locked-conflict",
-      "property": "color.evidence",
+      "property": "semantic.color.evidence",
       "expected": "blocked"
     },
     {

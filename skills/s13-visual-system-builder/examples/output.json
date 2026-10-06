@@ -90,24 +90,50 @@
         "name": "Comparison semantics",
         "definition": {
           "tokens": {
-            "color": {
-              "evidence": {
+            "primitive": {
+              "color": {
                 "$type": "color",
-                "$value": "#16324f"
+                "evidence-ink": {
+                  "$value": {
+                    "colorSpace": "srgb",
+                    "components": [0.0862745, 0.1960784, 0.3098039]
+                  }
+                },
+                "uncertainty-amber": {
+                  "$value": {
+                    "colorSpace": "srgb",
+                    "components": [0.5490196, 0.3529412, 0.0862745]
+                  }
+                }
               },
-              "uncertain": {
-                "$type": "color",
-                "$value": "#8c5a16"
+              "space": {
+                "section": {
+                  "$type": "dimension",
+                  "$value": { "value": 1, "unit": "rem" }
+                }
               }
             },
-            "space": {
-              "section": {
-                "$type": "dimension",
-                "$value": "1rem"
+            "semantic": {
+              "color": {
+                "$type": "color",
+                "evidence": { "$value": "{primitive.color.evidence-ink}" },
+                "uncertain": { "$value": "{primitive.color.uncertainty-amber}" }
+              }
+            },
+            "component": {
+              "comparison": {
+                "evidence-border": {
+                  "$type": "color",
+                  "$value": "{semantic.color.evidence}"
+                },
+                "section-gap": {
+                  "$type": "dimension",
+                  "$value": "{primitive.space.section}"
+                }
               }
             }
           },
-          "references": ["color.evidence", "space.section"],
+          "references": ["semantic.color.evidence", "primitive.space.section"],
           "modes": ["light"]
         },
         "usageRules": ["Use as source token semantics"],
