@@ -6,6 +6,7 @@ import {
   ReceiptAuthority,
   ReceiptError,
   type OperatorTrust,
+  type SignedAcceptance,
   type SignedReceipt,
 } from "./receipt-authority.js";
 import path from "node:path";
@@ -125,6 +126,7 @@ function parse(argv: readonly string[]) {
           "work",
           "receipt",
           "commit-receipt",
+          "acceptance",
         ]).has(arg.slice(2))
       )
         throw new CliError(EXIT.USAGE, `Unknown option ${arg}`);
@@ -770,6 +772,34 @@ export async function runCli(
     if (command === "decide") {
       if (positionals.length)
         throw new CliError(EXIT.USAGE, "decide takes no positional arguments");
+      if (options.acceptance) {
+        if (
+          options.file ||
+          options.receipt ||
+          options.commit ||
+          options["commit-receipt"]
+        )
+          throw new CliError(
+            EXIT.USAGE,
+            "Acceptance import takes only --acceptance",
+          );
+        if (!receiptAuthority)
+          throw new CliError(
+            EXIT.UNSUPPORTED,
+            "Acceptance needs a protected trust root",
+          );
+        const acceptance = (await readJson(
+          root,
+          options.acceptance,
+        )) as SignedAcceptance;
+        await receiptAuthority.certify(acceptance);
+        emit(
+          io,
+          { decisionId: acceptance.payload.decisionId, status: "certified" },
+          json,
+        );
+        return EXIT.OK;
+      }
       if (!host.authority && !receiptAuthority)
         throw new CliError(
           EXIT.UNSUPPORTED,

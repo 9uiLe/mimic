@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -19,6 +19,7 @@ import {
   loadOperatorTrustRoot,
   ReceiptAuthority,
   type OperatorTrust,
+  type AcceptancePayload,
   type ReceiptPayload,
   type SignedReceipt,
   type TrustFileAccess,
@@ -30,6 +31,7 @@ const repo = path.resolve(
 );
 const roots: string[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
   );
@@ -48,6 +50,8 @@ async function call(args: string[], host: CliHost = {}) {
   return { code, out, err };
 }
 const { publicKey, privateKey } = generateKeyPairSync("ed25519");
+const { publicKey: attesterPublicKey, privateKey: attesterPrivateKey } =
+  generateKeyPairSync("ed25519");
 const trust: OperatorTrust = {
   version: 1,
   keys: [
@@ -56,6 +60,14 @@ const trust: OperatorTrust = {
       publicKeyPem: publicKey
         .export({ type: "spki", format: "pem" })
         .toString(),
+      purposes: ["authorize"],
+    },
+    {
+      id: "test-attester-key",
+      publicKeyPem: attesterPublicKey
+        .export({ type: "spki", format: "pem" })
+        .toString(),
+      purposes: ["attest"],
     },
   ],
 };
@@ -102,13 +114,18 @@ test("fixed-path loader checks every path component before accepting Ed25519 key
     }),
   ).rejects.toThrow(/not protected/);
 });
-function signed(payload: ReceiptPayload): SignedReceipt {
+function signed<T extends ReceiptPayload | AcceptancePayload>(
+  payload: T,
+): {
+  payload: T;
+  signature: string;
+} {
   return {
     payload,
     signature: sign(
       null,
       Buffer.from(canonicalJson(payload)),
-      privateKey,
+      payload.action === "attest-acceptance" ? attesterPrivateKey : privateKey,
     ).toString("base64url"),
   };
 }
@@ -537,6 +554,102 @@ test("signed decision and commit receipts publish an exact approved revision and
   const stored = await runtime.registry.snapshot();
   expect(Object.keys(stored.commits)).toEqual(["commit_exact"]);
   expect(stored.canonical.art_receipt_commit.ref).toEqual(approvedRef);
+  const decisionEvent = stored.events.find(
+    (event) =>
+      event.action === "decision-approved" &&
+      event.details?.decision?.id === decision.id,
+  )!;
+  const commitEvent = stored.events.find(
+    (event) =>
+      event.action === "commit-point-approve" &&
+      event.details?.commit?.id === commit.id,
+  )!;
+  const acceptancePayload: AcceptancePayload = {
+    version: 1,
+    keyId: "test-attester-key",
+    action: "attest-acceptance",
+    actorId: decision.actor.id,
+    runId: "run_receipt",
+    scopeOwnerId: "org_local",
+    decisionId: decision.id,
+    decisionDigest: hash({
+      ...decision,
+      externalRefs: [`mimic-receipt:${hash(decisionReceipt)}`],
+    }),
+    authorizationDigest: hash(decisionReceipt),
+    certifiedAt: at,
+    decisionEvent: {
+      sequence: decisionEvent.sequence,
+      digest: hash(decisionEvent),
+    },
+    commit: {
+      id: commit.id,
+      digest: hash(commit),
+      authorizationDigest: hash(commitReceipt),
+      event: { sequence: commitEvent.sequence, digest: hash(commitEvent) },
+    },
+  };
+  const acceptanceArgs = [
+    "decide",
+    "--root",
+    dir,
+    "--acceptance",
+    "acceptance.json",
+    "--json",
+  ];
+  const validAcceptance = signed(acceptancePayload);
+  const unauthorizedAttestation = {
+    payload: { ...acceptancePayload, keyId: "test-human-key" },
+    signature: sign(
+      null,
+      Buffer.from(
+        canonicalJson({ ...acceptancePayload, keyId: "test-human-key" }),
+      ),
+      privateKey,
+    ).toString("base64url"),
+  };
+  await writeFile(
+    path.join(dir, "acceptance.json"),
+    JSON.stringify(unauthorizedAttestation),
+  );
+  expect((await call(acceptanceArgs, { operatorTrust: trust })).code).toBe(3);
+  await writeFile(
+    path.join(dir, "acceptance.json"),
+    JSON.stringify({
+      ...validAcceptance,
+      signature: validAcceptance.signature.slice(0, -2) + "xx",
+    }),
+  );
+  expect((await call(acceptanceArgs, { operatorTrust: trust })).code).toBe(3);
+  await writeFile(
+    path.join(dir, "acceptance.json"),
+    JSON.stringify(
+      signed({
+        ...acceptancePayload,
+        decisionEvent: {
+          ...acceptancePayload.decisionEvent,
+          digest: hash("other"),
+        },
+      }),
+    ),
+  );
+  expect((await call(acceptanceArgs, { operatorTrust: trust })).code).toBe(3);
+  await writeFile(
+    path.join(dir, "acceptance.json"),
+    JSON.stringify(validAcceptance),
+  );
+  vi.spyOn(Date, "now").mockReturnValue(Date.parse(expiresAt) + 60_000);
+  const verifier = new ReceiptAuthority(
+    new FileWorkspaceStorage(path.join(dir, ".mimic/workspace.json")),
+    dir,
+    trust,
+  );
+  const storedDecision = stored.decisions[decision.id]!;
+  const storedProposal =
+    stored.runs.run_receipt!.proposals[decision.proposalId]!;
+  expect(await verifier.verify(storedDecision, storedProposal)).toBe(false);
+  const certified = await call(acceptanceArgs, { operatorTrust: trust });
+  expect(certified.code, certified.err.join("\n")).toBe(0);
   const reopened = await call(["status", "--root", dir, "--json"], {
     operatorTrust: trust,
   });
@@ -544,4 +657,35 @@ test("signed decision and commit receipts publish an exact approved revision and
   expect(JSON.parse(reopened.out[0]!).canonical).toEqual([
     "art_receipt_commit@2",
   ]);
+  expect(await verifier.verify(storedDecision, storedProposal)).toBe(true);
+  await writeFile(
+    path.join(dir, "reuse-tasks.json"),
+    JSON.stringify([
+      {
+        id: "task_reuse",
+        skillId: "skill.reuse",
+        outputType: "design-system-asset",
+        scopeOwnerId: "org_local",
+        targetArtifactId: approvedRef.artifactId,
+        intent: "use",
+        authority: "AUTONOMOUS",
+        inputs: { required: [], optional: [], alternatives: [] },
+      },
+    ]),
+  );
+  const reused = await call(
+    [
+      "run",
+      "--root",
+      dir,
+      "--tasks",
+      "reuse-tasks.json",
+      "--id",
+      "run_reuse",
+      "--json",
+    ],
+    { operatorTrust: trust },
+  );
+  expect(reused.code, reused.err.join("\n")).toBe(0);
+  expect(JSON.parse(reused.out[0]!).actions[0].action).toBe("USE");
 });

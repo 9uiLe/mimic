@@ -22,6 +22,8 @@ export interface OperatorTrust {
   readonly keys: readonly {
     readonly id: string;
     readonly publicKeyPem: string;
+    /** An absent purpose list authorizes decisions only for legacy host keys. */
+    readonly purposes?: readonly ("authorize" | "attest")[];
   }[];
 }
 export interface ReceiptPayload {
@@ -47,6 +49,33 @@ export interface SignedReceipt {
   readonly payload: ReceiptPayload;
   readonly signature: string;
 }
+export interface AcceptancePayload {
+  readonly version: 1;
+  readonly keyId: string;
+  readonly action: "attest-acceptance";
+  readonly actorId: string;
+  readonly runId: string;
+  readonly scopeOwnerId: string;
+  readonly decisionId: string;
+  readonly decisionDigest: string;
+  readonly authorizationDigest: string;
+  /** The trusted signer attests it observed Core acceptance at this time. */
+  readonly certifiedAt: string;
+  readonly decisionEvent: {
+    readonly sequence: number;
+    readonly digest: string;
+  };
+  readonly commit?: {
+    readonly id: string;
+    readonly digest: string;
+    readonly authorizationDigest: string;
+    readonly event: { readonly sequence: number; readonly digest: string };
+  };
+}
+export interface SignedAcceptance {
+  readonly payload: AcceptancePayload;
+  readonly signature: string;
+}
 const marker = "mimic-receipt:";
 function digest(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
@@ -68,7 +97,11 @@ export class ReceiptError extends Error {
 function check(ok: unknown, message: string): asserts ok {
   if (!ok) throw new ReceiptError("INVALID", message);
 }
-function expiry(payload: ReceiptPayload, now: string): boolean {
+function expiry(
+  payload: ReceiptPayload,
+  now: string,
+  certifiedReadback = false,
+): boolean {
   const issued = Date.parse(payload.issuedAt);
   const expires = Date.parse(payload.expiresAt);
   const at = Date.parse(now);
@@ -79,8 +112,7 @@ function expiry(payload: ReceiptPayload, now: string): boolean {
     issued <= at &&
     at <= expires &&
     issued < expires &&
-    issued <= current &&
-    current <= expires
+    (certifiedReadback || (issued <= current && current <= expires))
   );
 }
 function unsignedDecision(record: DecisionRecord): DecisionRecord {
@@ -103,6 +135,9 @@ function nonceName(value: string): string {
   check(/^[A-Za-z0-9_-]{8,128}$/.test(value), "Invalid receipt nonce");
   return `${digest(value).slice(7)}.json`;
 }
+function acceptanceName(decisionId: string): string {
+  return `${digest(decisionId).slice(7)}.json`;
+}
 function validTrust(value: unknown): value is OperatorTrust {
   const root = value as OperatorTrust;
   return (
@@ -115,7 +150,13 @@ function validTrust(value: unknown): value is OperatorTrust {
         key &&
         typeof key.id === "string" &&
         key.id.length > 0 &&
-        typeof key.publicKeyPem === "string",
+        typeof key.publicKeyPem === "string" &&
+        (key.purposes === undefined ||
+          (Array.isArray(key.purposes) &&
+            key.purposes.length > 0 &&
+            key.purposes.every((purpose: string) =>
+              ["authorize", "attest"].includes(purpose),
+            ))),
     ) &&
     new Set(root.keys.map((key) => key.id)).size === root.keys.length
   );
@@ -233,7 +274,7 @@ export class ReceiptAuthority implements RegistryAuthority {
     );
     return JSON.parse(await readFile(file, "utf8")) as unknown;
   }
-  private signed(receipt: SignedReceipt): boolean {
+  private signed(receipt: SignedReceipt | SignedAcceptance): boolean {
     if (
       !receipt ||
       !receipt.payload ||
@@ -244,7 +285,9 @@ export class ReceiptAuthority implements RegistryAuthority {
     const key = this.trust.keys.find(
       (item) => item.id === receipt.payload.keyId,
     );
-    if (!key) return false;
+    const needed =
+      receipt.payload.action === "attest-acceptance" ? "attest" : "authorize";
+    if (!key || !(key.purposes ?? ["authorize"]).includes(needed)) return false;
     try {
       return verifySignature(
         null,
@@ -280,11 +323,151 @@ export class ReceiptAuthority implements RegistryAuthority {
     );
     return receipt;
   }
+  private async acceptance(
+    record: DecisionRecord,
+  ): Promise<SignedAcceptance | undefined> {
+    const file = path.join(
+      this.root,
+      ".mimic",
+      "acceptances",
+      acceptanceName(record.id),
+    );
+    try {
+      return (await this.readStored(file)) as SignedAcceptance;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    }
+  }
+  private async bindsAcceptance(
+    acceptance: SignedAcceptance,
+    record: DecisionRecord,
+    receipt: SignedReceipt,
+    state: RegistryState,
+  ): Promise<boolean> {
+    const proof = acceptance.payload;
+    const packet = state.packets[record.packetId];
+    const run = packet && state.runs[packet.runId];
+    const event = state.events.find(
+      (item) => item.sequence === proof.decisionEvent.sequence,
+    );
+    const certified = Date.parse(proof.certifiedAt);
+    if (
+      !this.signed(acceptance) ||
+      proof.version !== 1 ||
+      proof.action !== "attest-acceptance" ||
+      !run ||
+      !same(state.decisions[record.id], record) ||
+      proof.actorId !== record.actor.id ||
+      proof.runId !== run.id ||
+      proof.scopeOwnerId !== run.scope ||
+      proof.decisionId !== record.id ||
+      proof.decisionDigest !== digest(record) ||
+      proof.authorizationDigest !== digest(receipt) ||
+      !Number.isFinite(certified) ||
+      certified < Date.parse(receipt.payload.issuedAt) ||
+      certified > Date.parse(receipt.payload.expiresAt) ||
+      certified > Date.now() ||
+      !event ||
+      event.runId !== run.id ||
+      event.action !== `decision-${record.outcome}` ||
+      event.at !== record.at ||
+      !same(event.details, { decision: record }) ||
+      proof.decisionEvent.digest !== digest(event)
+    )
+      return false;
+    if (record.outcome !== "approved") return !proof.commit;
+    const commitProof = proof.commit;
+    const committed = commitProof && state.commits[commitProof.id];
+    const commitEvent =
+      commitProof &&
+      state.events.find((item) => item.sequence === commitProof.event.sequence);
+    if (
+      !record.output ||
+      !commitProof ||
+      !committed ||
+      !commitEvent ||
+      commitEvent.runId !== run.id ||
+      commitEvent.action !== "commit-point-approve" ||
+      commitEvent.sequence <= event.sequence ||
+      commitEvent.at !== committed.request.at ||
+      !same(commitEvent.details, { commit: committed.request }) ||
+      commitProof.digest !== digest(committed.request) ||
+      commitProof.event.digest !== digest(commitEvent) ||
+      !committed.request.approvals.some(
+        (item) =>
+          item.decisionId === record.id &&
+          item.proposalId === record.proposalId,
+      ) ||
+      !committed.outputs.some((ref) => same(ref, record.output?.ref)) ||
+      !commitEvent.outputs.some((ref) => same(ref, record.output?.ref)) ||
+      !same(
+        commitEvent.canonicalAfter[record.output.ref.artifactId]?.ref,
+        record.output.ref,
+      )
+    )
+      return false;
+    const commitReceipt = await this.lookup(commitProof.authorizationDigest);
+    return (
+      commitReceipt.payload.action === "commit" &&
+      commitReceipt.payload.requestDigest === digest(committed.request) &&
+      commitReceipt.payload.requestId === committed.request.id &&
+      commitReceipt.payload.packetId === committed.request.packetId &&
+      commitReceipt.payload.runId === run.id &&
+      commitReceipt.payload.scopeOwnerId === run.scope &&
+      commitReceipt.payload.actorId === committed.request.actor.id &&
+      same(commitReceipt.payload.approvals, committed.request.approvals) &&
+      expiry(commitReceipt.payload, committed.request.at, true) &&
+      certified <= Date.parse(commitReceipt.payload.expiresAt) &&
+      certified >= Date.parse(commitReceipt.payload.issuedAt)
+    );
+  }
+  /** Import only host-signed evidence issued after the exact Core effects exist. */
+  async certify(acceptance: SignedAcceptance): Promise<void> {
+    const id = acceptance?.payload?.decisionId;
+    check(
+      typeof id === "string" && id.length > 0,
+      "Acceptance needs a decision ID",
+    );
+    check(
+      Number.isSafeInteger(acceptance.payload.decisionEvent?.sequence) &&
+        typeof acceptance.payload.decisionEvent?.digest === "string" &&
+        (!acceptance.payload.commit ||
+          (Number.isSafeInteger(acceptance.payload.commit.event?.sequence) &&
+            typeof acceptance.payload.commit.event?.digest === "string")),
+      "Malformed acceptance event binding",
+    );
+    const state = await this.workspace.read();
+    const record = state.decisions[id];
+    check(record, "Acceptance has no recorded decision");
+    const marks =
+      record.externalRefs?.filter((ref) => ref.startsWith(marker)) ?? [];
+    check(marks.length === 1, "Decision has no exact authorization receipt");
+    const receipt = await this.lookup(marks[0]!.slice(marker.length));
+    check(
+      await this.bindsAcceptance(acceptance, record, receipt, state),
+      "Acceptance does not attest exact Core effects",
+    );
+    const folder = path.join(this.root, ".mimic", "acceptances");
+    await mkdir(folder, { recursive: true });
+    const root = await realpath(this.root);
+    check(
+      (await realpath(folder)).startsWith(`${root}${path.sep}`),
+      "Acceptance store escapes workspace",
+    );
+    const file = path.join(folder, acceptanceName(id));
+    if (!(await atomicCreateJson(file, acceptance)))
+      check(
+        same(await this.readStored(file), acceptance),
+        "Acceptance ID already has another certificate",
+      );
+  }
   private bindsDecision(
     receipt: SignedReceipt,
     record: DecisionRecord,
     proposal: Proposal,
     state: RegistryState,
+    certifiedReadback = false,
   ): boolean {
     const payload = receipt.payload;
     const packet = state.packets[record.packetId];
@@ -307,7 +490,7 @@ export class ReceiptAuthority implements RegistryAuthority {
       same(payload.candidate, proposal.ref) &&
       same(payload.output, record.output?.ref) &&
       payload.requestDigest === digest(unsignedDecision(record)) &&
-      expiry(payload, record.at)
+      expiry(payload, record.at, certifiedReadback)
     );
   }
   async prepareDecision(
@@ -340,7 +523,15 @@ export class ReceiptAuthority implements RegistryAuthority {
       if (marks.length !== 1) return false;
       const receipt = await this.lookup(marks[0]!.slice(marker.length));
       const state = await this.workspace.read();
-      return this.bindsDecision(receipt, record, proposal, state);
+      if (this.bindsDecision(receipt, record, proposal, state)) return true;
+      const validAtDecision = expiry(receipt.payload, record.at);
+      if (validAtDecision) return false;
+      const proof = await this.acceptance(record);
+      return (
+        !!proof &&
+        this.bindsDecision(receipt, record, proposal, state, true) &&
+        (await this.bindsAcceptance(proof, record, receipt, state))
+      );
     } catch {
       return false;
     }
