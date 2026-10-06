@@ -1,0 +1,66 @@
+{
+  "scenarios": [
+    {
+      "id": "reuse-fit",
+      "choice": "REUSE",
+      "need": "Compare plans",
+      "expected": "unchanged"
+    },
+    {
+      "id": "configure-boundary",
+      "choice": "CONFIGURE",
+      "property": "density",
+      "allowed": ["comfortable", "compact"],
+      "value": "compact",
+      "expected": "allowed"
+    },
+    {
+      "id": "extend-gap",
+      "choice": "EXTEND",
+      "need": "Show uncertainty",
+      "expected": "proposed"
+    },
+    {
+      "id": "create-only-gap",
+      "choice": "CREATE",
+      "need": "Entirely new interaction",
+      "expected": "proposed"
+    },
+    {
+      "id": "locked-conflict",
+      "policy": "locked",
+      "original": "visible",
+      "attempt": "none",
+      "expected": "blocked"
+    },
+    {
+      "id": "unverified-license",
+      "assetKind": "provider-binding",
+      "license": "unverified",
+      "expected": "blocked"
+    },
+    {
+      "id": "bad-lock",
+      "expected": "rejected",
+      "message": "Input exact lock mismatch"
+    },
+    {
+      "id": "rejection-repeat",
+      "rejectedRevision": 2,
+      "newRevision": 3,
+      "expected": "new-revision"
+    },
+    {
+      "id": "configure-outside-boundary",
+      "allowed": ["comfortable", "compact"],
+      "attempt": "compressed",
+      "expected": "blocked"
+    },
+    {
+      "id": "override-review",
+      "policy": "overridable",
+      "attempt": "criteria-first",
+      "expected": "proposal-only"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "scenario": {
+    "meta": {
+      "id": "art_s14_scenario",
+      "type": "scenario",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Compare two plans against shared criteria and uncertainty.",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.s14.ui-composition-planner",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content",
+        "kind": "assumption",
+        "rationale": "Synthetic reasoning example; no observed user outcome or approval."
+      }
+    ],
+    "content": {
+      "summary": "Compare two plans against shared criteria and uncertainty.",
+      "actor": "Plan owner",
+      "context": "Choosing a plan with partial evidence",
+      "steps": [
+        "Open the comparison task with two candidate plans",
+        "Read each criterion with candidate evidence and uncertainty",
+        "Inspect differences and follow an evidence link",
+        "Choose a plan or defer with uncertainty visible"
+      ],
+      "expectedOutcome": "A choice or defer action retains candidate identity and uncertainty"
+    }
+  },
+  "compositionEvidence": {
+    "task": "Compare two plans",
+    "pattern": "Candidate comparison",
+    "layout": "Criterion-by-criterion comparison",
+    "components": [
+      "Comparison row variant",
+      "Evidence link",
+      "Decision control"
+    ],
+    "selectedExactAssets": ["pattern", "layout", "component"],
+    "existingVariant": "Comparison row variant",
+    "newLocalComponent": null,
+    "rationale": "Pattern slots preserve shared criteria, uncertainty and action in reading order",
+    "capability": "provisional-mock-only",
+    "patternAntiUsage": ["Do not rank candidates with unverified evidence"]
+  }
+}

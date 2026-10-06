@@ -1,0 +1,43 @@
+{
+  "scenarios": [
+    {
+      "id": "action-set",
+      "actions": [
+        "preserve",
+        "reorder",
+        "collapse",
+        "hide",
+        "replace",
+        "split",
+        "progressive-disclose"
+      ],
+      "expected": "reasoned"
+    },
+    {
+      "id": "primary-goal-parity",
+      "goal": "Compare plans and decide or defer",
+      "expected": "preserved"
+    },
+    {
+      "id": "hide-primary",
+      "target": "Choose a plan or defer",
+      "expected": "blocked"
+    },
+    {
+      "id": "missing-viewport-evidence",
+      "status": "UNVERIFIED",
+      "expected": "unverified"
+    },
+    {
+      "id": "wrong-lock",
+      "expected": "rejected",
+      "message": "Input exact lock mismatch"
+    },
+    {
+      "id": "rejection-repeat",
+      "rejectedRevision": 2,
+      "newRevision": 3,
+      "expected": "new-revision"
+    }
+  ]
+}
