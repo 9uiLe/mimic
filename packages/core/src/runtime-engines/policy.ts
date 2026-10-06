@@ -69,19 +69,7 @@ export async function evaluatePropertyPolicy(
       "INVALID",
       "Invalid property rule or parent reference",
     );
-  // Canonicalization rejects non-JSON values before a rule is evaluated.
-  const parentValue = canonicalJson(rule.value);
-  const selectedValue = canonicalJson(selection.value);
-  if (parentValue === selectedValue)
-    return {
-      allowed: true,
-      effect: "inherit",
-      reason: "Approved parent value retained",
-    };
-  if (rule.policy === "locked")
-    return blocked("Locked parent value cannot change at child scope");
-  if (!selection.rationale?.trim())
-    return blocked("Changed value requires a rationale");
+  // Validate the rule before inheritance can bypass an ambiguous boundary.
   if (rule.policy === "configurable") {
     const options = rule.allowedValues;
     const range = rule.numericRange;
@@ -103,6 +91,23 @@ export async function evaluatePropertyPolicy(
         range.minimum > range.maximum)
     )
       throw new RuntimeEngineError("INVALID", "Invalid configurable range");
+  }
+  // Canonicalization rejects non-JSON values before a value is evaluated.
+  const parentValue = canonicalJson(rule.value);
+  const selectedValue = canonicalJson(selection.value);
+  if (parentValue === selectedValue)
+    return {
+      allowed: true,
+      effect: "inherit",
+      reason: "Approved parent value retained",
+    };
+  if (rule.policy === "locked")
+    return blocked("Locked parent value cannot change at child scope");
+  if (!selection.rationale?.trim())
+    return blocked("Changed value requires a rationale");
+  if (rule.policy === "configurable") {
+    const options = rule.allowedValues;
+    const range = rule.numericRange;
     const inOptions =
       options?.some((value) => canonicalJson(value) === selectedValue) ?? false;
     const inRange =

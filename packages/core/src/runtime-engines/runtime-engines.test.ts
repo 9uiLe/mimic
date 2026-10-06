@@ -346,6 +346,19 @@ describe("policy and audit", () => {
     ).toMatchObject({ allowed: false, effect: "blocked" });
     expect(
       await evaluatePropertyPolicy(
+        {
+          parent,
+          path: baseRule.path,
+          policy: "configurable",
+          value: 1,
+          allowedValues: [1, 2],
+          numericRange: { minimum: 10, maximum: 20 },
+        },
+        { ...baseSelection, value: 1 },
+      ),
+    ).toMatchObject({ allowed: false, effect: "blocked" });
+    expect(
+      await evaluatePropertyPolicy(
         { ...baseRule, policy: "overridable" },
         baseSelection,
       ),
