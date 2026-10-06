@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
+import { artifactDigest } from "../artifact-canonical.js";
+import { parseArtifactYaml } from "../artifact-codec.js";
 import type { ScopeNode } from "../artifact-store.js";
+import type { SchemaRegistry } from "../schema-registry.js";
 
 export type UpgradeImpact = "NONE" | "SAFE" | "REVIEW_REQUIRED" | "BREAKING";
 export type Distribution = "bundled" | "external";
@@ -27,6 +30,7 @@ export interface ArtifactEntry extends FileEntry {
   readonly artifactId: string;
   readonly revision: number;
   readonly schemaVersion: string;
+  readonly snapshotDigest: string;
 }
 export interface LockedDependency {
   readonly ref: PackageRef;
@@ -101,6 +105,7 @@ export interface PromotionRecord {
 export interface RegistryOptions {
   readonly scopes: readonly ScopeNode[];
   readonly supportedSchemaVersions: readonly string[];
+  readonly artifactSchemas?: SchemaRegistry;
   readonly authority: PackageAuthority;
   readonly licenseAllowed: (
     license: string,
@@ -236,11 +241,13 @@ function artifactEntry(value: unknown): asserts value is ArtifactEntry {
     "artifactId",
     "revision",
     "schemaVersion",
+    "snapshotDigest",
     "path",
     "digest",
   ]);
   filePath(entry.path);
   digest(entry.digest);
+  digest(entry.snapshotDigest);
   semver(entry.schemaVersion);
   assert(
     typeof entry.artifactId === "string" &&
@@ -513,10 +520,12 @@ function copySnapshot(snapshot: PackageSnapshot): PackageSnapshot {
   };
 }
 function compareVersion(a: string, b: string): number {
-  const left = a.split(".").map(Number),
-    right = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++)
-    if (left[i] !== right[i]) return left[i]! - right[i]!;
+  const left = a.split(".").map(BigInt),
+    right = b.split(".").map(BigInt);
+  for (let i = 0; i < 3; i++) {
+    if (left[i]! < right[i]!) return -1;
+    if (left[i]! > right[i]!) return 1;
+  }
   return 0;
 }
 export function assessUpgrade(
@@ -726,11 +735,45 @@ export class PackageRegistry {
           sha256(snapshot.files[entry.path]!) === entry.digest,
           `File digest mismatch: ${entry.path}`,
         );
-      for (const artifact of manifest.artifacts)
+      for (const artifact of manifest.artifacts) {
         assert(
           this.options.supportedSchemaVersions.includes(artifact.schemaVersion),
           "Incompatible artifact schema",
         );
+        if (!this.options.artifactSchemas)
+          throw new PackageRegistryError(
+            "UNVERIFIED",
+            "Artifact schema registry unavailable",
+          );
+        const parsed = parseArtifactYaml(
+          decoder.decode(snapshot.files[artifact.path]!),
+        );
+        const document = object(parsed);
+        const meta = object(document.meta);
+        assert(
+          meta.id === artifact.artifactId &&
+            meta.revision === artifact.revision &&
+            meta.schemaVersion === artifact.schemaVersion,
+          "Artifact identity or schema mismatch",
+        );
+        const snapshotDigest = artifactDigest(parsed);
+        assert(
+          snapshotDigest === artifact.snapshotDigest &&
+            (meta.contentDigest === undefined ||
+              meta.contentDigest === snapshotDigest),
+          "Artifact snapshot digest mismatch",
+        );
+        scope(document.scope);
+        this.verifyScope(document.scope);
+        assert(
+          this.ancestors(manifest.scope).includes(document.scope.ownerId),
+          "Artifact is out of package scope",
+        );
+        assert(
+          this.options.artifactSchemas.validate(parsed).valid,
+          "Artifact schema validation failed",
+        );
+      }
       assert(
         same(lock.assets, manifest.assets) &&
           same(lock.artifacts, manifest.artifacts),

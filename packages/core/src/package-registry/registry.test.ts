@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { artifactDigest } from "../artifact-canonical.js";
+import {
+  loadSchemaDirectory,
+  type SchemaRegistry,
+} from "../schema-registry.js";
 import {
   FilePackageSource,
   PackageRegistry,
@@ -131,10 +136,15 @@ function memory(entries: readonly PackageSnapshot[]): PackageSource {
     },
   };
 }
-function registry(source: PackageSource, supportedSchemaVersions = ["1.0.0"]) {
+function registry(
+  source: PackageSource,
+  supportedSchemaVersions = ["1.0.0"],
+  artifactSchemas?: SchemaRegistry,
+) {
   return new PackageRegistry(source, {
     scopes,
     supportedSchemaVersions,
+    artifactSchemas,
     authority: {
       async verifyRelease(manifest) {
         return manifest.approval.actorId === "human-1";
@@ -281,6 +291,12 @@ describe("package registry", () => {
       assessUpgrade(ref("org/tokens"), ref("org/tokens", "2.0.0"), "SAFE"),
     ).toBe("BREAKING");
     expect(assessUpgrade(ref("org/tokens"), ref("org/tokens"))).toBe("NONE");
+    expect(
+      assessUpgrade(
+        ref("org/tokens", "1.9007199254740992.0"),
+        ref("org/tokens", "1.9007199254740993.0"),
+      ),
+    ).toBe("REVIEW_REQUIRED");
     expect(packageDigest(old)).not.toBe(packageDigest(next));
   });
 
@@ -341,6 +357,26 @@ describe("package registry", () => {
 
   test("asset SemVer and artifact integer revision resolve as separate exact identities", async () => {
     const base = release(ref("product/app", "1.2.0"), product);
+    const repository = path.resolve(import.meta.dirname, "../../../../");
+    const artifactBody = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/product-definition.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    artifactBody.scope = product;
+    const artifactMeta = artifactBody.meta as {
+      id: string;
+      revision: number;
+      schemaVersion: string;
+    };
+    const artifactBytes = bytes(JSON.stringify(artifactBody));
+    const schemas = await loadSchemaDirectory(
+      path.join(repository, "schemas/artifacts"),
+    );
     const manifest = JSON.parse(
       new TextDecoder().decode(base.manifestBytes),
     ) as PackageManifest;
@@ -352,11 +388,12 @@ describe("package registry", () => {
       digest: sha256(bytes("button")),
     };
     const artifact = {
-      artifactId: "art_button",
-      revision: 4,
-      schemaVersion: "1.0.0",
+      artifactId: artifactMeta.id,
+      revision: artifactMeta.revision,
+      schemaVersion: artifactMeta.schemaVersion,
+      snapshotDigest: artifactDigest(artifactBody),
       path: "artifact.json",
-      digest: sha256(bytes("artifact")),
+      digest: sha256(artifactBytes),
     };
     const snapshot = {
       ...base,
@@ -373,10 +410,10 @@ describe("package registry", () => {
       files: {
         ...base.files,
         "button.json": bytes("button"),
-        "artifact.json": bytes("artifact"),
+        "artifact.json": artifactBytes,
       },
     };
-    const active = registry(memory([snapshot]));
+    const active = registry(memory([snapshot]), ["1.0.0"], schemas);
     const locked = packageDigest(snapshot);
     expect(
       new TextDecoder().decode(
@@ -396,21 +433,44 @@ describe("package registry", () => {
             manifest.ref,
             locked,
             manifest.ref,
-            "art_button",
-            4,
+            artifactMeta.id,
+            artifactMeta.revision,
           )
         ).bytes,
       ),
-    ).toBe("artifact");
+    ).toBe(new TextDecoder().decode(artifactBytes));
     await expect(
       active.resolveArtifact(
         manifest.ref,
         locked,
         manifest.ref,
-        "art_button",
-        5,
+        artifactMeta.id,
+        artifactMeta.revision + 1,
       ),
     ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    await expect(
+      registry(memory([snapshot])).resolve(manifest.ref, locked),
+    ).rejects.toMatchObject({ code: "UNVERIFIED" });
+    const wrong = { ...artifact, snapshotDigest: sha256(bytes("wrong")) };
+    const changed = {
+      ...snapshot,
+      manifestBytes: serializePackageDocument({
+        ...manifest,
+        assets: [asset],
+        artifacts: [wrong],
+      }),
+      lockBytes: serializePackageDocument({
+        ...lock,
+        assets: [asset],
+        artifacts: [wrong],
+      }),
+    };
+    await expect(
+      registry(memory([changed]), ["1.0.0"], schemas).resolve(
+        manifest.ref,
+        packageDigest(changed),
+      ),
+    ).rejects.toMatchObject({ code: "CORRUPT" });
   });
 
   test("filesystem source reads an exact release from a local or Git checkout", async () => {
