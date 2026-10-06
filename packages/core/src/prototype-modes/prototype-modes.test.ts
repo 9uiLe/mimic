@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "vitest";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { buildPrototype } from "../prototype-builder/index.js";
 import {
   buildPrototypeModes,
   PrototypeModeError,
@@ -62,6 +63,38 @@ test("same scenario builds deterministically with exact System Request provenanc
       "utf8",
     ),
   ).toBe(proposed);
+});
+test("domain scenario consumes exact parent-product contract and assets", async () => {
+  const value = await fixture({ domainScenario: true });
+  const standalone = await buildPrototype(
+    value.store,
+    {
+      ...value.modePlan.current,
+      outputPath: "standalone",
+    },
+    value.root,
+  );
+  expect(
+    await readFile(path.join(standalone.directory, "index.html"), "utf8"),
+  ).toContain("Synthetic candidate comparison");
+  const modes = await buildPrototypeModes(
+    value.store,
+    value.modePlan,
+    value.root,
+  );
+  expect(modes.proposed).toBeDefined();
+  expect(modes.current.directory).toContain("/comparison/current");
+});
+test("exact per-field UI Contract provenance is accepted", async () => {
+  const value = await fixture({
+    contractProvenancePath: "/content/entityContext/0",
+  });
+  const result = await buildPrototypeModes(
+    value.store,
+    value.modePlan,
+    value.root,
+  );
+  expect(result.proposed).toBeDefined();
 });
 test("required choice needs approved request and proposed capability", async () => {
   const missing = await fixture({ choiceStatus: "required" });
@@ -148,7 +181,7 @@ test("rejects wrong, stale, or mismatched exact references before output", async
       }),
       value.root,
     ),
-  ).rejects.toMatchObject({ code: "UNAPPROVED" });
+  ).rejects.toMatchObject({ code: "INVALID" });
   await expect(
     buildPrototypeModes(
       value.store,
@@ -245,6 +278,91 @@ test("rejects Proposed plans that remove bound Current functionality", async () 
       { ...value.modePlan, proposed },
       value.root,
     ),
+  ).rejects.toMatchObject({ code: "INVALID" });
+});
+test("rejects swapping action targets between unchanged Current button labels", async () => {
+  const value = await fixture();
+  const proposed = structuredClone(value.modePlan.proposed);
+  const success = proposed.states.find((state) => state.name === "success")!;
+  type MutableNode = {
+    text?: string;
+    targetState?: string;
+    children?: MutableNode[];
+  };
+  const buttons: MutableNode[] = [];
+  const walk = (node: MutableNode) => {
+    if (node.targetState) buttons.push(node);
+    node.children?.forEach(walk);
+  };
+  walk(success.root as MutableNode);
+  const choose = buttons.find((node) => node.text === "Choose candidate")!;
+  const showError = buttons.find((node) => node.text === "Show error")!;
+  choose.targetState = "error";
+  showError.targetState = "disabled";
+  await expect(
+    buildPrototypeModes(
+      value.store,
+      { ...value.modePlan, proposed },
+      value.root,
+    ),
+  ).rejects.toMatchObject({ code: "INVALID" });
+});
+test("keeps nested button labels bound to their own transitions", async () => {
+  const value = await fixture();
+  const plan = structuredClone(value.modePlan);
+  type MutableNode = {
+    tag: string;
+    text?: string;
+    targetState?: string;
+    children?: MutableNode[];
+  };
+  for (const mode of ["current", "proposed"] as const) {
+    const success = plan[mode].states.find(
+      (state) => state.name === "success",
+    )!;
+    const bindings = plan.bindings[mode] as unknown as {
+      state: string;
+      nodePath: number[];
+      field: string;
+    }[];
+    const walk = (node: MutableNode, nodePath: number[]) => {
+      if (
+        node.tag === "button" &&
+        ["Choose candidate", "Show error"].includes(node.text ?? "")
+      ) {
+        const binding = bindings.find(
+          (item) =>
+            item.state === "success" &&
+            item.field === "text" &&
+            JSON.stringify(item.nodePath) === JSON.stringify(nodePath),
+        )!;
+        binding.nodePath = [...nodePath, 0];
+        node.children = [{ tag: "span", text: node.text }];
+        delete node.text;
+      }
+      node.children?.forEach((child, index) =>
+        walk(child, [...nodePath, index]),
+      );
+    };
+    walk(success.root as MutableNode, []);
+  }
+  const proposedSuccess = plan.proposed.states.find(
+    (state) => state.name === "success",
+  )!;
+  const buttons: MutableNode[] = [];
+  const collect = (node: MutableNode) => {
+    if (node.tag === "button") buttons.push(node);
+    node.children?.forEach(collect);
+  };
+  collect(proposedSuccess.root as MutableNode);
+  buttons.find(
+    (node) => node.children?.[0]?.text === "Choose candidate",
+  )!.targetState = "error";
+  buttons.find(
+    (node) => node.children?.[0]?.text === "Show error",
+  )!.targetState = "disabled";
+  await expect(
+    buildPrototypeModes(value.store, plan, value.root),
   ).rejects.toMatchObject({ code: "INVALID" });
 });
 test("invalid comparison path leaves no published mode bundles", async () => {

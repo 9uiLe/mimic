@@ -38,6 +38,8 @@ export async function setupPrototypeModesFixture(
     staleContract?: boolean;
     requestChangeType?: "capability" | "token";
     laterRejectedDecision?: boolean;
+    domainScenario?: boolean;
+    contractProvenancePath?: "/content/summary" | "/content/entityContext/0";
   } = {},
 ) {
   const base = await setupApprovedPrototypeFixture();
@@ -51,6 +53,7 @@ export async function setupPrototypeModesFixture(
       { level: "organization", ownerId: "org_9uile" },
       { level: "product", ownerId: "product_mimic", parentId: "org_9uile" },
       { level: "product", ownerId: "product_other", parentId: "org_9uile" },
+      { level: "domain", ownerId: "domain_compare", parentId: "product_mimic" },
     ],
     {
       async verifyApproval(value) {
@@ -181,7 +184,7 @@ export async function setupPrototypeModesFixture(
     scenario.scope,
     [
       {
-        path: "/content/summary",
+        path: options.contractProvenancePath ?? "/content/summary",
         kind: "derived",
         inputRefs: [
           `${current.artifactId}@${current.revision}#${current.lockDigest}`,
@@ -300,11 +303,37 @@ export async function setupPrototypeModesFixture(
       contentDigest: artifactDigest(revisedScenario),
     },
   });
-  const scenarioRef = {
+  let scenarioRef: ExactArtifactRef = {
     artifactId: scenario.meta.id,
     revision: 2,
     lockDigest: revised.digest,
-  } satisfies ExactArtifactRef;
+  };
+  if (options.domainScenario) {
+    const { supersedesRevision: _supersedes, ...domainMeta } =
+      revisedScenario.meta;
+    void _supersedes;
+    const domainScenario: ArtifactSnapshot = {
+      ...revisedScenario,
+      meta: { ...domainMeta, id: "art_mode_domain_scenario", revision: 1 },
+      scope: {
+        level: "domain",
+        ownerId: "domain_compare",
+        parentId: "product_mimic",
+      },
+    };
+    const created = await store.create({
+      ...domainScenario,
+      meta: {
+        ...domainScenario.meta,
+        contentDigest: artifactDigest(domainScenario),
+      },
+    });
+    scenarioRef = {
+      artifactId: domainScenario.meta.id,
+      revision: 1,
+      lockDigest: created.digest,
+    };
+  }
   const currentRender = {
     ...base.input,
     scenario: scenarioRef,

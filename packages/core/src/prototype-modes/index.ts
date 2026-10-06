@@ -149,22 +149,17 @@ function approved(value: ArtifactSnapshot): boolean {
 function locks(artifact: ArtifactSnapshot, exact: ExactArtifactRef): boolean {
   return artifact.dependencies.some((dependency) => same(dependency, exact));
 }
-function sameProductScope(a: ArtifactSnapshot, b: ArtifactSnapshot): boolean {
-  return (
-    a.scope.level === "product" &&
-    b.scope.level === "product" &&
-    a.scope.ownerId === b.scope.ownerId
-  );
-}
 function inputProvenance(
   artifact: ArtifactSnapshot,
-  claimPath: string,
+  claimPath: string | undefined,
   exact: ExactArtifactRef,
 ): boolean {
   const identity = `${exact.artifactId}@${exact.revision}#${exact.lockDigest}`;
   return artifact.provenance.some(
     (entry) =>
-      entry.path === claimPath &&
+      (claimPath
+        ? entry.path === claimPath
+        : entry.path.startsWith("/content/")) &&
       entry.kind === "derived" &&
       Array.isArray(entry.inputRefs) &&
       entry.inputRefs.includes(identity),
@@ -216,7 +211,8 @@ function boundValues(
       value: string;
       field: ModeBindingField;
       state: PrototypeState;
-      choiceId?: string;
+      tag: PrototypeNode["tag"];
+      componentId?: string;
     }
   >();
   const fixtureUses = new Set<string>();
@@ -234,7 +230,13 @@ function boundValues(
           signature = canonicalJson([value, fixture]);
           fixtureUses.add(`${state.name}/${value}`);
         }
-        actual.set(key, { value: signature, field, state: state.name });
+        actual.set(key, {
+          value: signature,
+          field,
+          state: state.name,
+          tag: node.tag,
+          componentId: node.componentId,
+        });
       }
       node.children?.forEach((child, index) =>
         visit(child, [...nodePath, index]),
@@ -253,6 +255,14 @@ function boundValues(
   const seen = new Set<string>();
   const signatures = new Map<string, number>();
   const usedChoices = new Set<string>();
+  type NodeGroup = {
+    choiceId: string;
+    state: PrototypeState;
+    tag: PrototypeNode["tag"];
+    componentId?: string;
+    fields: Partial<Record<ModeBindingField, string>>;
+  };
+  const nodes = new Map<string, NodeGroup>();
   for (const binding of bindings) {
     if (!binding || typeof binding !== "object" || Array.isArray(binding))
       fail("INVALID", `Invalid ${mode} binding`);
@@ -281,13 +291,72 @@ function boundValues(
       );
     seen.add(key);
     usedChoices.add(binding.choiceId);
+    const nodeKey = `${binding.state}/${binding.nodePath.join("/")}`;
+    const existing = nodes.get(nodeKey);
+    if (existing && existing.choiceId !== binding.choiceId)
+      fail("INVALID", `${mode} assigns one control to different capabilities`);
+    const group: NodeGroup = existing ?? {
+      choiceId: binding.choiceId,
+      state: entry.state,
+      tag: entry.tag,
+      componentId: entry.componentId,
+      fields: {},
+    };
+    group.fields[entry.field] = entry.value;
+    nodes.set(nodeKey, group);
+  }
+  for (const group of nodes.values()) {
     const signature = canonicalJson([
-      binding.choiceId,
-      entry.state,
-      entry.field,
-      entry.value,
+      group.choiceId,
+      group.state,
+      group.tag,
+      group.componentId ?? null,
+      group.fields,
     ]);
     signatures.set(signature, (signatures.get(signature) ?? 0) + 1);
+  }
+  for (const state of render.states) {
+    const visit = (node: PrototypeNode, nodePath: number[]) => {
+      if (node.tag === "button" || node.tag === "a") {
+        const action = nodes.get(`${state.name}/${nodePath.join("/")}`);
+        if (!action)
+          fail("INVALID", `${mode} action has no capability binding`);
+        const parts: unknown[] = [];
+        const collect = (child: PrototypeNode, relativePath: number[]) => {
+          const bound = nodes.get(
+            `${state.name}/${[...nodePath, ...relativePath].join("/")}`,
+          );
+          if (bound) {
+            if (bound.choiceId !== action.choiceId)
+              fail(
+                "INVALID",
+                `${mode} action label and behavior claim different capabilities`,
+              );
+            parts.push([
+              relativePath,
+              bound.tag,
+              bound.componentId ?? null,
+              bound.fields,
+            ]);
+          }
+          child.children?.forEach((descendant, index) =>
+            collect(descendant, [...relativePath, index]),
+          );
+        };
+        collect(node, []);
+        const signature = canonicalJson([
+          "action",
+          state.name,
+          action.choiceId,
+          parts,
+        ]);
+        signatures.set(signature, (signatures.get(signature) ?? 0) + 1);
+      }
+      node.children?.forEach((child, index) =>
+        visit(child, [...nodePath, index]),
+      );
+    };
+    visit(state.root, []);
   }
   if (seen.size !== actual.size)
     fail("INVALID", `${mode} has unbound text, fixture data, or actions`);
@@ -465,14 +534,10 @@ export async function buildPrototypeModes(
   const contract = await read(store, plan.contract, "product-ui-contract");
   if (!approved(contract)) fail("UNAPPROVED", "UI contract must be approved");
   const scenario = await read(store, plan.current.scenario, "scenario");
-  if (
-    !approved(scenario) ||
-    !sameProductScope(scenario, contract) ||
-    !locks(scenario, plan.contract)
-  )
+  if (!approved(scenario) || !locks(scenario, plan.contract))
     fail(
       "UNAPPROVED",
-      "Scenario must approve and lock the exact Product UI Contract in the same product",
+      "Scenario must approve and lock the exact Product UI Contract",
     );
   const chosen = plan.choices.filter(
     (choice) =>
@@ -500,14 +565,16 @@ export async function buildPrototypeModes(
     );
     const availability = (capability.content as { availability?: string })
       .availability;
-    if (!sameProductScope(capability, contract))
-      fail("INVALID", `Capability belongs to another product: ${choice.id}`);
     if (choice.status === "current") {
+      if (!locks(contract, choice.capability))
+        fail(
+          "INVALID",
+          `Current capability is not locked by the UI Contract: ${choice.id}`,
+        );
       if (
         availability !== "current" ||
         !approved(capability) ||
-        !locks(contract, choice.capability) ||
-        !inputProvenance(contract, "/content/summary", choice.capability) ||
+        !inputProvenance(contract, undefined, choice.capability) ||
         !currentEvidence(capability)
       )
         fail(
@@ -521,7 +588,6 @@ export async function buildPrototypeModes(
         "system-request",
       );
       if (
-        !sameProductScope(request, contract) ||
         !locks(request, plan.contract) ||
         !locks(capability, choice.systemRequest!) ||
         !inputProvenance(request, "/content/request", plan.contract) ||
@@ -556,10 +622,10 @@ export async function buildPrototypeModes(
               `Missing current exact decision context for ${choice.id}`,
             );
           const context = await read(store, contexts[0]!, "system-request");
-          if (!sameProductScope(context, contract))
+          if (!locks(context, plan.contract))
             fail(
               "INVALID",
-              `Decision context belongs to another product: ${choice.id}`,
+              `Decision context is not locked to the UI Contract: ${choice.id}`,
             );
           if (
             context.lifecycle.status === "rejected" ||
