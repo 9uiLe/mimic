@@ -73,6 +73,47 @@
       "id": "no-case-to-pattern",
       "expected": "error",
       "message": "Invalid edge: case -> pattern"
+    },
+    {
+      "id": "rejected-graph-context",
+      "expected": "excluded",
+      "caseId": "case_near",
+      "risk": "Users cannot identify next actor",
+      "failureId": "failure_hidden",
+      "evidenceRef": "fixture://knowledge/link/principle_ownership/failure_hidden"
+    },
+    {
+      "id": "conflicting-duplicate",
+      "expected": "excluded",
+      "caseId": "case_near",
+      "reason": "duplicate-assessment"
+    },
+    {
+      "id": "portfolio-limit",
+      "expected": "excluded",
+      "caseId": "case_near",
+      "reason": "portfolio-limit"
+    },
+    {
+      "id": "contract-relevance",
+      "expected": "excluded",
+      "caseId": "case_near",
+      "reason": "role-fit-mismatch"
+    },
+    {
+      "id": "blocked-runtime",
+      "expected": "blocked",
+      "reason": "no-defensible-candidate",
+      "outputCount": 0
+    },
+    {
+      "id": "selected-edge-evidence",
+      "expected": "present",
+      "caseId": "case_near",
+      "evidenceRefs": [
+        "fixture://knowledge/link/principle_ownership/pattern_handoff",
+        "fixture://knowledge/link/principle_ownership/failure_hidden"
+      ]
     }
   ]
 }

@@ -56,6 +56,12 @@ const inventory: Record<(typeof directories)[number], string[]> = {
     "profile-map",
     "usage-order",
     "no-case-to-pattern",
+    "rejected-graph-context",
+    "conflicting-duplicate",
+    "portfolio-limit",
+    "contract-relevance",
+    "blocked-runtime",
+    "selected-edge-evidence",
     "exact-lock",
   ],
 };
@@ -98,6 +104,21 @@ const request: RetrievalRequest = {
   traitIds: ["trait_handoff", "trait_sequence"],
   assessments,
 };
+/** A fixture-specific contract comparison; it is not a universal fit model. */
+function boundedAssessments(contract: ArtifactSnapshot): CaseAssessment[] {
+  const entityContext = (contract.content as { entityContext: string[] })
+    .entityContext;
+  return entityContext.includes("Product ID")
+    ? assessments
+    : assessments.map((item) =>
+        item.caseId === "case_near"
+          ? { ...item, structuralFit: "low" as const }
+          : item,
+      );
+}
+const exactInput = (item: { ref: ReturnType<typeof ref> }) =>
+  `${item.ref.artifactId}@${item.ref.revision}#${item.ref.lockDigest}`;
+
 function fixture<T>(source: string): T {
   return JSON.parse(source) as T;
 }
@@ -230,6 +251,11 @@ test("S09 executes every graph scenario against independent expectations", async
       firstCaseId?: string;
       gap?: string;
       traitIds?: string[];
+      risk?: string;
+      failureId?: string;
+      evidenceRef?: string;
+      outputCount?: number;
+      evidenceRefs?: string[];
     }[];
   }>(skill.tests["tests/scenarios.json"]!).scenarios;
   for (const item of cases) {
@@ -482,6 +508,130 @@ test("S09 executes every graph scenario against independent expectations", async
           ),
         ).toThrow(item.message);
         break;
+      case "rejected-graph-context": {
+        const result = retrieveDesignReferences(graph, {
+          ...request,
+          history: [
+            {
+              caseId: item.caseId!,
+              usageCount: 1,
+              rejected: true,
+              reason: "Owner rejected this transfer",
+            },
+          ],
+        });
+        const rejected = result.exclusions.find(
+          (entry) => entry.caseId === item.caseId,
+        );
+        expect(item.expected).toBe("excluded");
+        expect(rejected?.risks).toContain(item.risk);
+        expect(rejected?.failureIds).toContain(item.failureId);
+        expect(rejected?.evidenceRefs).toContain(item.evidenceRef);
+        const projected = referenceSelectionFromRetrieval(result);
+        expect(projected.provenance.at(-1)?.rationale).toContain(
+          item.failureId,
+        );
+        expect(projected.provenance.at(-1)?.evidenceRefs).toContain(
+          item.evidenceRef,
+        );
+        break;
+      }
+      case "conflicting-duplicate": {
+        const high = assessments[0]!;
+        const low = {
+          ...high,
+          structuralFit: "low" as const,
+          rationale: "Conflicting low fit judgment",
+        };
+        const first = retrieveDesignReferences(graph, {
+          traitIds: request.traitIds,
+          assessments: [high, low],
+        });
+        const reversed = retrieveDesignReferences(graph, {
+          traitIds: request.traitIds,
+          assessments: [low, high],
+        });
+        expect(first).toEqual(reversed);
+        expect(first.status).toBe("blocked");
+        expect(first.selected).toEqual([]);
+        expect(first.exclusions).toEqual([
+          expect.objectContaining({ caseId: item.caseId, reason: item.reason }),
+        ]);
+        break;
+      }
+      case "portfolio-limit": {
+        const result = retrieveDesignReferences(graph, {
+          traitIds: request.traitIds,
+          assessments: [assessments[0]!, assessments[2]!],
+          limit: 1,
+        });
+        expect(result.status).toBe("ready");
+        expect(result.selected).toHaveLength(1);
+        const accounted = [
+          ...result.selected.map((candidate) => candidate.caseId),
+          ...result.exclusions.map((entry) => entry.caseId),
+        ].sort();
+        expect(accounted).toEqual(["case_far", "case_near"]);
+        const omitted = result.exclusions.find(
+          (entry) => entry.reason === item.reason,
+        );
+        expect(omitted?.caseId).toBe(item.caseId);
+        expect(omitted?.detail).toContain("Eligible but omitted at limit 1");
+        break;
+      }
+      case "contract-relevance": {
+        const contract = parseArtifactYaml(
+          await readFile(
+            path.join(
+              repository,
+              "fixtures/artifacts/valid/proposed-product-ui-contract.yaml",
+            ),
+            "utf8",
+          ),
+        ) as ArtifactSnapshot;
+        const changed = {
+          ...contract,
+          content: {
+            ...(contract.content as object),
+            entityContext: ["Unrelated ephemeral note"],
+          },
+        };
+        expect(
+          retrieveDesignReferences(graph, {
+            ...request,
+            assessments: boundedAssessments(contract),
+          }).selected.some((candidate) => candidate.caseId === item.caseId),
+        ).toBe(true);
+        const result = retrieveDesignReferences(graph, {
+          ...request,
+          assessments: boundedAssessments(changed),
+        });
+        expect(item.expected).toBe("excluded");
+        expect(result.exclusions).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              caseId: item.caseId,
+              reason: item.reason,
+            }),
+          ]),
+        );
+        break;
+      }
+      case "blocked-runtime":
+        expect(item.expected).toBe("blocked");
+        expect(item.reason).toBe("no-defensible-candidate");
+        expect(item.outputCount).toBe(0);
+        break;
+      case "selected-edge-evidence": {
+        const result = retrieveDesignReferences(graph, request);
+        const near = result.selected.find(
+          (candidate) => candidate.caseId === item.caseId,
+        );
+        expect(item.expected).toBe("present");
+        for (const source of item.evidenceRefs ?? [])
+          expect(near?.evidenceRefs).toContain(source);
+        break;
+      }
       case "exact-lock":
         expect(item.expected).toBe("preserved");
         expect(skill.instructions).toContain("silently change a lock");
@@ -520,6 +670,8 @@ for (const slug of directories)
     const artifactNeeds = skill.manifest.inputs.required.filter(
       (item) => item.kind === "artifact",
     );
+    const blockedTask =
+      slug === directories[1] ? { ...target, id: "blocked" } : undefined;
     const tasks: RoutedTask[] = [
       ...artifactNeeds.map((item) => ({
         id: `seed-${item.name}`,
@@ -531,6 +683,7 @@ for (const slug of directories)
         inputs: { required: [], optional: [], alternatives: [] },
       })),
       target,
+      ...(blockedTask ? [blockedTask] : []),
     ];
     const runId = `run_${slug.slice(0, 3)}`;
     await runtime.orchestrator.start({
@@ -604,7 +757,7 @@ for (const slug of directories)
     }
     await runtime.registry.setWork({
       runId,
-      safeActions: ["target"],
+      safeActions: blockedTask ? ["target", "blocked"] : ["target"],
       blockers: {},
       actor: { kind: "agent", id: "agent_1" },
       at,
@@ -646,11 +799,48 @@ for (const slug of directories)
                 (profile.content as { traits: string[] }).traits,
               )
             : [];
-        const projection = graph
-          ? referenceSelectionFromRetrieval(
-              retrieveDesignReferences(graph, { ...request, traitIds }),
-            )
-          : undefined;
+        const contract = inputs.find(
+          (input) => input.artifact.meta.type === "product-ui-contract",
+        )?.artifact;
+        const projection =
+          graph && contract
+            ? referenceSelectionFromRetrieval(
+                retrieveDesignReferences(graph, {
+                  ...request,
+                  traitIds,
+                  assessments: boundedAssessments(contract),
+                }),
+              )
+            : undefined;
+        const sourceRefs = new Map([
+          [
+            "art_user_task@1",
+            inputs.find((input) => input.name === "user-task-model"),
+          ],
+          [
+            "art_ui_contract@1",
+            inputs.find((input) => input.name === "product-ui-contract"),
+          ],
+          [
+            "art_domain@1",
+            inputs.find((input) => input.name === "experience-domain"),
+          ],
+        ]);
+        const profileProvenance = projection
+          ? example.provenance
+          : example.provenance.map((entry) =>
+              entry.kind === "derived"
+                ? {
+                    ...entry,
+                    inputRefs: (entry.inputRefs as string[]).map((label) => {
+                      const input = sourceRefs.get(label);
+                      if (!input)
+                        throw new Error(`Unbound profile provenance: ${label}`);
+                      return exactInput(input);
+                    }),
+                  }
+                : entry,
+            );
         const output: ArtifactSnapshot = {
           ...example,
           meta: { ...example.meta, id: `art_output_${slug.slice(0, 3)}` },
@@ -666,7 +856,7 @@ for (const slug of directories)
           })),
           ...(projection
             ? { content: projection.content, provenance: projection.provenance }
-            : {}),
+            : { provenance: profileProvenance }),
         };
         await runtime.artifacts.create(output);
         return {
@@ -698,6 +888,71 @@ for (const slug of directories)
     expect((await runtime.registry.run(runId)).run.artifacts).toContainEqual(
       work.result.outputRefs[0],
     );
+    if (slug === directories[0]) {
+      const exactSources = new Set(
+        seeded.map(
+          (artifact) =>
+            `${artifact.meta.id}@${artifact.meta.revision}#${ref(artifact).lockDigest}`,
+        ),
+      );
+      for (const entry of stored.artifact.provenance.filter(
+        (entry) => entry.kind === "derived",
+      )) {
+        const refs = entry.inputRefs as string[];
+        expect(refs.length).toBeGreaterThan(0);
+        for (const source of refs) expect(exactSources.has(source)).toBe(true);
+      }
+    }
+    if (blockedTask && graph) {
+      const artifactCountBefore = (await runtime.registry.run(runId)).run
+        .artifacts.length;
+      const blocked = await runSkillPackage({
+        orchestrator: runtime.orchestrator,
+        package: skill,
+        runId,
+        tasks,
+        taskId: "blocked",
+        at,
+        executor: async ({ invocation, inputs }) => {
+          const profile = inputs.find(
+            (input) => input.name === "problem-profile",
+          )!.artifact;
+          const result = retrieveDesignReferences(graph, {
+            traitIds: profileTraitIds(
+              graph,
+              (profile.content as { traits: string[] }).traits,
+            ),
+            assessments: assessments.map((item) => ({
+              ...item,
+              structuralFit: "low" as const,
+              role: "far" as const,
+            })),
+          });
+          if (result.status !== "blocked")
+            throw new Error("Expected blocked graph retrieval");
+          return {
+            result: {
+              runId: invocation.runId,
+              taskId: invocation.taskId,
+              skillId: invocation.skillId,
+              inputRefs: invocation.inputRefs,
+              outputRefs: [],
+              blocked: {
+                reason: result.reason,
+                affectedTaskIds: [invocation.taskId],
+              },
+            },
+          };
+        },
+      });
+      expect(blocked.result.outputRefs).toEqual([]);
+      expect((await runtime.registry.run(runId)).run.artifacts).toHaveLength(
+        artifactCountBefore,
+      );
+      expect((await runtime.registry.run(runId)).run.blockers.blocked).toBe(
+        "no-defensible-candidate",
+      );
+    }
     const wrong = {
       ...stored.artifact,
       meta: { ...stored.artifact.meta, id: `art_bad_${slug.slice(0, 3)}` },

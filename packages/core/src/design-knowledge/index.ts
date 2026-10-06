@@ -71,13 +71,16 @@ export interface Exclusion {
   readonly evidenceRefs: readonly string[];
   readonly doNotBorrow: readonly string[];
   readonly risks: readonly string[];
+  readonly mechanismIds: readonly string[];
+  readonly failureIds: readonly string[];
   readonly detail: string;
   readonly reason:
     | "duplicate-assessment"
     | "unknown-case"
     | "previously-rejected"
     | "no-trait-principle-space-mechanism-path"
-    | "role-fit-mismatch";
+    | "role-fit-mismatch"
+    | "portfolio-limit";
 }
 export type RetrievalResult =
   | {
@@ -209,39 +212,130 @@ export function retrieveDesignReferences(
     history.set(entry.caseId, entry);
   }
   const exclusions: Exclusion[] = [],
-    eligible: Candidate[] = [],
-    seen = new Set<string>();
+    eligible: Candidate[] = [];
   const relevantPrinciples = new Set(
     request.traitIds.flatMap((id) =>
       next(id, "principle").map((edge) => edge.to),
     ),
   );
-  for (const a of [...request.assessments].sort((x, y) =>
-    x.caseId.localeCompare(y.caseId),
-  )) {
-    const caseNode = nodes.get(a.caseId);
+  const groups = new Map<string, CaseAssessment[]>();
+  for (const assessment of request.assessments)
+    groups.set(assessment.caseId, [
+      ...(groups.get(assessment.caseId) ?? []),
+      assessment,
+    ]);
+  for (const caseId of [...groups.keys()].sort()) {
+    const variants = groups.get(caseId)!;
+    const a = variants[0]!;
+    const caseNode = nodes.get(caseId);
+    const paths: {
+      principle: string;
+      space: string;
+      mechanism: string;
+      evidence: string[];
+    }[] = [];
+    if (caseNode?.kind === "case")
+      for (const traitId of request.traitIds)
+        for (const tp of next(traitId, "principle"))
+          for (const ps of next(tp.to, "space"))
+            for (const sc of next(ps.to, "case")) {
+              if (sc.to !== caseId) continue;
+              for (const cm of next(caseId, "mechanism"))
+                for (const mp of next(cm.to, "principle")) {
+                  if (mp.to !== tp.to) continue;
+                  paths.push({
+                    principle: tp.to,
+                    space: ps.to,
+                    mechanism: cm.to,
+                    evidence: [traitId, tp.to, ps.to, caseId, cm.to]
+                      .flatMap((id) => nodes.get(id)!.evidenceRefs)
+                      .concat(
+                        tp.evidenceRefs,
+                        ps.evidenceRefs,
+                        sc.evidenceRefs,
+                        cm.evidenceRefs,
+                        mp.evidenceRefs,
+                      ),
+                  });
+                }
+            }
+    // Even a rejected case keeps its graph-linked transfer limits and failures.
+    const mechanismEdges = next(caseId, "mechanism");
+    const mechanismIds = sorted(
+      paths.length
+        ? paths.map((p) => p.mechanism)
+        : mechanismEdges.map((edge) => edge.to),
+    );
+    const relevantMechanismEdges = paths.length
+      ? mechanismEdges.filter((edge) => mechanismIds.includes(edge.to))
+      : mechanismEdges;
+    const principleIds = sorted(
+      paths.length
+        ? paths.map((p) => p.principle)
+        : mechanismIds.flatMap((id) =>
+            next(id, "principle").map((edge) => edge.to),
+          ),
+    );
+    const relatedEdges = principleIds.flatMap((id) => [
+      ...next(id, "pattern"),
+      ...next(id, "failure"),
+    ]);
+    const patternIds = sorted(
+      relatedEdges
+        .filter((edge) => nodes.get(edge.to)?.kind === "pattern")
+        .map((edge) => edge.to),
+    );
+    const failureIds = sorted(
+      relatedEdges
+        .filter((edge) => nodes.get(edge.to)?.kind === "failure")
+        .map((edge) => edge.to),
+    );
+    const associated = [
+      caseNode,
+      ...mechanismIds.map((id) => nodes.get(id)),
+      ...patternIds.map((id) => nodes.get(id)),
+      ...failureIds.map((id) => nodes.get(id)),
+    ].filter((node): node is KnowledgeNode => node !== undefined);
+    const context = {
+      mechanismIds,
+      failureIds,
+      doNotBorrow: sorted(associated.flatMap((node) => node.doNotBorrow ?? [])),
+      risks: sorted(associated.flatMap((node) => node.risks ?? [])),
+      evidenceRefs: sorted([
+        ...variants.flatMap((item) => item.evidenceRefs),
+        ...paths.flatMap((p) => p.evidence),
+        ...associated.flatMap((node) => node.evidenceRefs),
+        ...relatedEdges.flatMap((edge) => edge.evidenceRefs),
+        ...relevantMechanismEdges.flatMap((edge) => edge.evidenceRefs),
+        ...mechanismIds.flatMap((id) =>
+          next(id, "principle")
+            .filter((edge) => principleIds.includes(edge.to))
+            .flatMap((edge) => edge.evidenceRefs),
+        ),
+      ]),
+    };
     const exclude = (reason: Exclusion["reason"]) =>
       exclusions.push({
-        caseId: a.caseId,
+        caseId,
         reason,
-        evidenceRefs: sorted([
-          ...a.evidenceRefs,
-          ...(caseNode?.evidenceRefs ?? []),
-        ]),
-        doNotBorrow: sorted(caseNode?.doNotBorrow ?? []),
-        risks: sorted(caseNode?.risks ?? []),
-        detail: history.get(a.caseId)?.reason ?? a.rationale,
+        ...context,
+        detail:
+          reason === "duplicate-assessment"
+            ? `Repeated assessments: ${sorted(variants.map((item) => `${item.role}/${item.structuralFit}/${item.contextDistance}: ${item.rationale}`)).join("; ")}`
+            : (history.get(caseId)?.reason ?? a.rationale),
       });
-    if (seen.has(a.caseId)) {
+    if (variants.length > 1) {
       exclude("duplicate-assessment");
       continue;
     }
-    seen.add(a.caseId);
     if (caseNode?.kind !== "case") {
       exclude("unknown-case");
       continue;
     }
-    if (history.get(a.caseId)?.rejected) {
+    nonempty(a.rationale, `assessment rationale ${caseId}`);
+    if (!a.evidenceRefs.length)
+      throw new Error(`Missing assessment evidence: ${caseId}`);
+    if (history.get(caseId)?.rejected) {
       exclude("previously-rejected");
       continue;
     }
@@ -249,72 +343,26 @@ export function retrieveDesignReferences(
       exclude("role-fit-mismatch");
       continue;
     }
-    nonempty(a.rationale, `assessment rationale ${a.caseId}`);
-    if (!a.evidenceRefs.length)
-      throw new Error(`Missing assessment evidence: ${a.caseId}`);
-    const paths: {
-      principle: string;
-      space: string;
-      mechanism: string;
-      evidence: string[];
-    }[] = [];
-    for (const traitId of request.traitIds)
-      for (const tp of next(traitId, "principle"))
-        for (const ps of next(tp.to, "space"))
-          for (const sc of next(ps.to, "case")) {
-            if (sc.to !== a.caseId) continue;
-            for (const cm of next(a.caseId, "mechanism"))
-              for (const mp of next(cm.to, "principle")) {
-                if (mp.to !== tp.to) continue;
-                paths.push({
-                  principle: tp.to,
-                  space: ps.to,
-                  mechanism: cm.to,
-                  evidence: [traitId, tp.to, ps.to, a.caseId, cm.to]
-                    .flatMap((id) => nodes.get(id)!.evidenceRefs)
-                    .concat(
-                      tp.evidenceRefs,
-                      ps.evidenceRefs,
-                      sc.evidenceRefs,
-                      cm.evidenceRefs,
-                      mp.evidenceRefs,
-                    ),
-                });
-              }
-          }
     if (!paths.length) {
       exclude("no-trait-principle-space-mechanism-path");
       continue;
     }
-    const principles = sorted(paths.map((p) => p.principle));
-    const related = (kind: NodeKind) =>
-      sorted(principles.flatMap((id) => next(id, kind).map((edge) => edge.to)));
-    const associated = [
-      caseNode,
-      ...paths.map((p) => nodes.get(p.mechanism)!),
-      ...related("pattern").map((id) => nodes.get(id)!),
-      ...related("failure").map((id) => nodes.get(id)!),
-    ];
     eligible.push({
-      caseId: a.caseId,
+      caseId,
       role: a.role,
       structuralFit: a.structuralFit,
       contextDistance: a.contextDistance,
-      principleIds: principles,
+      principleIds,
       spaceIds: sorted(paths.map((p) => p.space)),
-      mechanismIds: sorted(paths.map((p) => p.mechanism)),
-      patternIds: related("pattern"),
-      failureIds: related("failure"),
-      doNotBorrow: sorted(associated.flatMap((node) => node.doNotBorrow ?? [])),
-      risks: sorted(associated.flatMap((node) => node.risks ?? [])),
-      evidenceRefs: sorted([
-        ...a.evidenceRefs,
-        ...paths.flatMap((p) => p.evidence),
-        ...associated.flatMap((node) => node.evidenceRefs),
-      ]),
+      mechanismIds,
+      patternIds,
+      failureIds,
+      doNotBorrow: context.doNotBorrow,
+      risks: context.risks,
+      evidenceRefs: context.evidenceRefs,
       rationale: a.rationale,
       maturity: caseNode.maturity,
-      usageCount: history.get(a.caseId)?.usageCount ?? 0,
+      usageCount: history.get(caseId)?.usageCount ?? 0,
     });
   }
   const selected: Candidate[] = [],
@@ -340,6 +388,19 @@ export function retrieveDesignReferences(
     candidate.principleIds.forEach((id) => coveredPrinciples.add(id));
     candidate.mechanismIds.forEach((id) => coveredMechanisms.add(id));
   }
+  for (const candidate of remaining.sort((a, b) =>
+    a.caseId.localeCompare(b.caseId),
+  ))
+    exclusions.push({
+      caseId: candidate.caseId,
+      reason: "portfolio-limit",
+      evidenceRefs: candidate.evidenceRefs,
+      doNotBorrow: candidate.doNotBorrow,
+      risks: candidate.risks,
+      mechanismIds: candidate.mechanismIds,
+      failureIds: candidate.failureIds,
+      detail: `Eligible but omitted at limit ${maxSelections}; principles ${candidate.principleIds.join(", ")}; mechanisms ${candidate.mechanismIds.join(", ")}; covered principles ${sorted(coveredPrinciples).join(", ") || "none"}; covered mechanisms ${sorted(coveredMechanisms).join(", ") || "none"}.`,
+    });
   const gaps = [
     ...sorted(
       [...relevantPrinciples].filter((id) => !coveredPrinciples.has(id)),
@@ -406,7 +467,7 @@ export function referenceSelectionFromRetrieval(result: RetrievalResult): {
           ...result.selected.flatMap((candidate) => candidate.evidenceRefs),
           ...result.exclusions.flatMap((item) => item.evidenceRefs),
         ]),
-        rationale: `Gaps: ${result.gaps.join("; ") || "none"}. Exclusions: ${result.exclusions.map((item) => `${item.caseId}:${item.reason} (${item.detail}); do not borrow: ${item.doNotBorrow.join(", ") || "none identified"}; risks: ${item.risks.join(", ") || "none identified"}`).join("; ") || "none"}.`,
+        rationale: `Gaps: ${result.gaps.join("; ") || "none"}. Exclusions: ${result.exclusions.map((item) => `${item.caseId}:${item.reason} (${item.detail}); do not borrow: ${item.doNotBorrow.join(", ") || "none identified"}; risks: ${item.risks.join(", ") || "none identified"}; mechanisms: ${item.mechanismIds.join(", ") || "none linked"}; failure modes: ${item.failureIds.join(", ") || "none linked"}`).join("; ") || "none"}.`,
       },
     ],
   };
