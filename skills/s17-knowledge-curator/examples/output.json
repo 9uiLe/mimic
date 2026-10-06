@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "id": "art_example_decision",
+    "type": "decision",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Illustrative decision",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s17-knowledge-curator",
+    "runId": "run_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [
+    {
+      "artifactId": "art_target",
+      "revision": 1,
+      "lockDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "onChange": "validate"
+    }
+  ],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "derived",
+      "inputRefs": ["art_target@1"]
+    }
+  ],
+  "content": {
+    "summary": "Illustrative product promotion proposal, not an approved promotion.",
+    "question": "Should the case mechanism be promoted to product scope from art_target@1?",
+    "alternatives": [
+      "KEEP_LOCAL",
+      "PROMOTE_TO_PRODUCT",
+      "PROPOSE_TO_ORGANIZATION",
+      "DEPRECATE",
+      "MERGE"
+    ],
+    "outcome": "proposed",
+    "chosenAlternative": "PROMOTE_TO_PRODUCT",
+    "rationale": "Illustrative transferable mechanism with bounded context; human review is required."
+  }
+}

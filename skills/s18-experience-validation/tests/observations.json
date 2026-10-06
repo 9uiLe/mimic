@@ -1,0 +1,48 @@
+{
+  "synthetic": true,
+  "warning": "Fictional observations for deterministic package bridge tests only; not empirical user research.",
+  "hypothesis": "The primary goal can be completed with context preserved.",
+  "method": "Synthetic simulated task observation",
+  "cases": {
+    "supported": {
+      "target": "art_scenario_target@2",
+      "device": "desktop",
+      "goalCompleted": true,
+      "recordedOutcome": "completed",
+      "recoveryNeeded": false,
+      "observation": "Primary goal completed with context preserved."
+    },
+    "mixed": {
+      "target": "art_scenario_target@2",
+      "device": "mobile",
+      "goalCompleted": true,
+      "recordedOutcome": "completed",
+      "recoveryNeeded": true,
+      "observation": "Primary goal completed, but return path required recovery."
+    },
+    "unsupported": {
+      "target": "art_scenario_target@2",
+      "device": "mobile",
+      "goalCompleted": false,
+      "recordedOutcome": "failed",
+      "recoveryNeeded": true,
+      "observation": "Primary goal could not be completed after state loss."
+    },
+    "inconsistent": {
+      "target": "art_scenario_target@2",
+      "device": "mobile",
+      "goalCompleted": true,
+      "recordedOutcome": "failed",
+      "recoveryNeeded": false,
+      "observation": "Conflicting structured outcome fields; no supported conclusion."
+    },
+    "wrong-target": {
+      "target": "art_unrelated@2",
+      "device": "mobile",
+      "goalCompleted": true,
+      "recordedOutcome": "completed",
+      "recoveryNeeded": false,
+      "observation": "This observation concerns a different target."
+    }
+  }
+}

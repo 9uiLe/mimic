@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "id": "art_example_validation",
+    "type": "validation",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Illustrative validation",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s18-experience-validation",
+    "runId": "run_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [
+    {
+      "artifactId": "art_target",
+      "revision": 1,
+      "lockDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "onChange": "validate"
+    }
+  ],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "hypothesis",
+      "rationale": "A planned check is not a measured result."
+    }
+  ],
+  "content": {
+    "summary": "Illustrative plan: test whether a first-time user can recover task context after returning from a secondary domain. No participant observations supplied.",
+    "target": "art_target@1",
+    "method": "Observe a representative task on mobile and desktop; record participant role, device, steps, outcome, and recovery attempts. High risk because state loss could prevent completion.",
+    "state": "UNVERIFIED",
+    "evidenceRefs": [],
+    "limitations": [
+      "No participant or human observation has been supplied; task success remains unverified."
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "scenarios": [
+    {
+      "id": "local-disposition",
+      "mode": "produce",
+      "output": "decision",
+      "expectAlternatives": [
+        "KEEP_LOCAL",
+        "PROMOTE_TO_PRODUCT",
+        "PROPOSE_TO_ORGANIZATION",
+        "DEPRECATE",
+        "MERGE"
+      ],
+      "expectOutcome": "proposed",
+      "inputType": "evaluation"
+    },
+    {
+      "id": "approved-reuse",
+      "mode": "reuse-approved",
+      "output": "design-system-asset",
+      "inputType": "evaluation"
+    },
+    {
+      "id": "untraceable-source",
+      "mode": "blocked",
+      "reason": "No traceable source or rationale",
+      "expectOutputs": 0,
+      "inputType": "evaluation"
+    },
+    {
+      "id": "self-approval",
+      "mode": "reject-self-approval",
+      "output": "decision",
+      "inputType": "evaluation"
+    },
+    {
+      "id": "rejected-replay",
+      "mode": "reject-replay",
+      "output": "decision",
+      "inputType": "evaluation"
+    },
+    {
+      "id": "validation-source-disposition",
+      "mode": "produce",
+      "inputType": "validation",
+      "output": "decision",
+      "expectAlternatives": [
+        "KEEP_LOCAL",
+        "PROMOTE_TO_PRODUCT",
+        "PROPOSE_TO_ORGANIZATION",
+        "DEPRECATE",
+        "MERGE"
+      ],
+      "expectOutcome": "proposed"
+    },
+    {
+      "id": "profile-source-disposition",
+      "mode": "produce",
+      "inputType": "problem-profile",
+      "output": "decision",
+      "expectAlternatives": [
+        "KEEP_LOCAL",
+        "PROMOTE_TO_PRODUCT",
+        "PROPOSE_TO_ORGANIZATION",
+        "DEPRECATE",
+        "MERGE"
+      ],
+      "expectOutcome": "proposed"
+    },
+    {
+      "id": "reference-source-disposition",
+      "mode": "produce",
+      "inputType": "reference-selection",
+      "output": "decision",
+      "expectAlternatives": [
+        "KEEP_LOCAL",
+        "PROMOTE_TO_PRODUCT",
+        "PROPOSE_TO_ORGANIZATION",
+        "DEPRECATE",
+        "MERGE"
+      ],
+      "expectOutcome": "proposed"
+    }
+  ]
+}
