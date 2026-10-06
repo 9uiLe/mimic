@@ -1,0 +1,24 @@
+name: Dev Container verification
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  devcontainer:
+    name: Dev Container Linux verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Build, start and verify repository Dev Container
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
+        with:
+          imageName: mimic-devcontainer-ci
+          push: never
+          runCmd: bash ci/devcontainer-smoke.sh

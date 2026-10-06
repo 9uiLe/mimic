@@ -10,17 +10,19 @@
     "check:docs": "prettier --check \"**/*.md\" \"**/*.json\" && markdownlint-cli2 \"**/*.md\"",
     "check:schemas": "node scripts/check-schemas.mjs",
     "test:ci": "node --test scripts/check-schemas.test.mjs",
+    "test:dco": "node --test scripts/check-dco.test.mjs",
     "check:ci": "pnpm run test:ci && pnpm run check:docs && pnpm run check:schemas",
     "dev": "pnpm --filter @mimic/demo-lab dev",
     "build": "pnpm --filter @mimic/core build && pnpm --filter @mimic/cli build && pnpm --filter @mimic/demo-lab build",
-    "format": "prettier --write package.json pnpm-workspace.yaml .devcontainer apps packages scripts docs/development eslint.config.mjs playwright.config.mjs vitest.config.mjs tsconfig.json tsconfig.base.json tsconfig.typecheck.json .stylelintrc.json .htmlvalidate.json",
-    "format:check": "prettier --check package.json pnpm-workspace.yaml .devcontainer apps packages scripts docs/development eslint.config.mjs playwright.config.mjs vitest.config.mjs tsconfig.json tsconfig.base.json tsconfig.typecheck.json .stylelintrc.json .htmlvalidate.json",
+    "format": "prettier --write package.json pnpm-workspace.yaml .devcontainer .github/dependabot.yml .github/workflows ci/README.md apps packages scripts docs/development eslint.config.mjs playwright.config.mjs vitest.config.mjs tsconfig.json tsconfig.base.json tsconfig.typecheck.json .stylelintrc.json .htmlvalidate.json",
+    "format:check": "prettier --check package.json pnpm-workspace.yaml .devcontainer .github/dependabot.yml .github/workflows ci/README.md apps packages scripts docs/development eslint.config.mjs playwright.config.mjs vitest.config.mjs tsconfig.json tsconfig.base.json tsconfig.typecheck.json .stylelintrc.json .htmlvalidate.json",
     "lint": "eslint apps packages scripts *.config.mjs && stylelint \"apps/demo-lab/src/**/*.css\" && html-validate apps/demo-lab/index.html && markdownlint-cli2 \"**/*.md\"",
     "typecheck": "tsc -p tsconfig.typecheck.json",
     "validate": "pnpm run check:schemas && node scripts/check-yaml.mjs",
     "test": "vitest run",
     "test:browser": "playwright test",
-    "check": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run validate && pnpm run build && pnpm run test && pnpm run check:ci"
+    "check:quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run validate && pnpm run build && pnpm run check:ci && pnpm run test:dco",
+    "check": "pnpm run check:quality && pnpm run test"
   },
   "devDependencies": {
     "ajv": "8.20.0",
