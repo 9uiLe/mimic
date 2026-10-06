@@ -46,7 +46,14 @@ async function setup() {
   const example = JSON.parse(skill.examples["examples/output.json"]!) as {
     assets: ArtifactSnapshot[];
   };
-  const decisions = new Set<string>();
+  const seedDigests = new Map<string, string>();
+  const isExactSeed = (artifact: ArtifactSnapshot) =>
+    artifact.meta.revision === 1 &&
+    artifact.approval.status === "approved" &&
+    artifact.approval.decisionId === "seed_s13" &&
+    artifact.approval.actorId === human.id &&
+    artifact.approval.at === at &&
+    seedDigests.get(artifact.meta.id) === artifactDigest(artifact);
   const runtime = createOrchestratorRuntime(
     new FileWorkspaceStorage(path.join(root, "workspace.json")),
     schemas,
@@ -66,15 +73,11 @@ async function setup() {
       },
     },
     {
-      async verifyApproval(approval) {
-        return (
-          approval.actorId === human.id &&
-          (approval.decisionId === "seed_s13" ||
-            decisions.has(approval.decisionId!))
-        );
+      async verifyApproval(approval, artifact) {
+        return approval.decisionId === "seed_s13" && isExactSeed(artifact);
       },
-      async verifyDecision(id) {
-        return id === "seed_s13" || decisions.has(id);
+      async verifyDecision(id, artifact) {
+        return id === "seed_s13" && isExactSeed(artifact);
       },
     },
   );
@@ -128,6 +131,7 @@ async function setup() {
       meta: { ...bare.meta, contentDigest: artifactDigest(bare) },
     };
   });
+  for (const seed of seeds) seedDigests.set(seed.meta.id, artifactDigest(seed));
   for (const seed of seeds) await runtime.artifacts.create(seed);
   await runtime.registry.seedCanonical(seeds.map(ref));
   const task: RoutedTask = {
@@ -173,7 +177,6 @@ async function setup() {
     retryTask,
     tasks,
     seeds,
-    decisions,
   };
 }
 
@@ -277,6 +280,7 @@ async function review(
   outcome: "approved" | "rejected",
   suffix = "first",
   priorRejectionId?: string,
+  commitApproved = true,
 ) {
   const packetId = `packet_s13_${suffix}`;
   const proposalId = `proposal_s13_${suffix}`;
@@ -311,8 +315,7 @@ async function review(
       "Test fixture simulates explicit human decision; no actual human review",
     output: { ref: ref(envelope), artifact: envelope },
   });
-  if (outcome === "approved") {
-    x.decisions.add(decisionId);
+  if (outcome === "approved" && commitApproved) {
     await x.registry.commit({
       id: `commit_s13_${suffix}`,
       packetId,
@@ -333,8 +336,40 @@ test("S13 package candidate compiles only its committed exact revision to CSS", 
   await expect(
     compileApprovedTokenAssets(x.artifacts, [ref(proposal)]),
   ).rejects.toThrow();
-  const approved = await review(x, proposal, "approved");
+  const approved = await review(
+    x,
+    proposal,
+    "approved",
+    "first",
+    undefined,
+    false,
+  );
   const approvedRef = ref(approved);
+  expect(
+    (await x.registry.snapshot()).decisions.decision_s13_first?.outcome,
+  ).toBe("approved");
+  expect(
+    (await x.registry.snapshot()).commits.commit_s13_first,
+  ).toBeUndefined();
+  await expect(x.artifacts.create(approved)).rejects.toThrow(
+    /approval|authority/i,
+  );
+  await expect(
+    compileApprovedTokenAssets(x.artifacts, [approvedRef]),
+  ).rejects.toThrow();
+  expect(
+    (await x.registry.snapshot()).canonical[approvedRef.artifactId],
+  ).toBeUndefined();
+  await x.registry.commit({
+    id: "commit_s13_first",
+    packetId: "packet_s13_first",
+    approvals: [
+      { proposalId: "proposal_s13_first", decisionId: "decision_s13_first" },
+    ],
+    actor: human,
+    at,
+    reason: "Test fixture simulates explicit human commit",
+  });
   const stored = await x.artifacts.read(
     approvedRef.artifactId,
     approvedRef.revision,
