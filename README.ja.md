@@ -40,4 +40,4 @@ Mimic は **プレアルファ** です。リポジトリにはローカル CLI�
 
 ## 貢献とライセンス
 
-対象を絞った issue やプルリクエストを歓迎します。[貢献ガイド](CONTRIBUTING.md)、[開発環境](docs/development/README.md)、[行動規範](CODE_OF_CONDUCT.md)、[セキュリティ報告方針](SECURITY.md)を参照してください。コミットには DCO の署名文が必要です。Mimic のリポジトリ内のコンテンツには[Apache License 2.0](LICENSE)が適用されますが、第三者の素材には別途定められた条件があります。別の所有者が持つ Design Package に、このリポジトリのライセンスが自動適用されることはありません。
+外部からのバグ報告、機能の提案、ナレッジの提案は、対象を絞った issue で歓迎します。ドッグフーディングが完了するまで外部からのプルリクエストは受け付けません。完了後にメンテナーが受付方針を再検討します。[貢献ガイド](CONTRIBUTING.md)、[開発環境](docs/development/README.md)、[行動規範](CODE_OF_CONDUCT.md)、[セキュリティ報告方針](SECURITY.md)を参照してください。プルリクエストのコミットには DCO の署名文が必要です。Mimic のリポジトリ内のコンテンツには[Apache License 2.0](LICENSE)が適用されますが、第三者の素材には別途定められた条件があります。別の所有者が持つ Design Package に、このリポジトリのライセンスが自動適用されることはありません。
