@@ -13,6 +13,7 @@ import {
 import {
   RunRegistry,
   type Actor,
+  type CommitRequest,
   type Proposal,
   type RegistryAuthority,
   type Run,
@@ -34,11 +35,14 @@ export type RouteAction =
 export type InputNeed =
   | {
       readonly kind: "artifact";
+      readonly name: string;
       readonly artifactType: string;
       readonly schemaVersion?: string;
+      /** Explicit exact bindings when a task needs named or multiple assets. */
+      readonly refs?: readonly ExactArtifactRef[];
     }
-  | { readonly kind: "human-brief" }
-  | { readonly kind: "evidence-file" };
+  | { readonly kind: "human-brief"; readonly name: string }
+  | { readonly kind: "evidence-file"; readonly name: string };
 export interface InputGroups {
   readonly required: readonly InputNeed[];
   readonly optional: readonly InputNeed[];
@@ -75,6 +79,10 @@ export interface SkillInvocation {
   readonly intent: RoutedTask["intent"];
   readonly scopeOwnerId: string;
   readonly inputRefs: readonly ExactArtifactRef[];
+  readonly inputBindings: readonly {
+    readonly name: string;
+    readonly refs: readonly ExactArtifactRef[];
+  }[];
   readonly humanBrief?: string;
   readonly evidenceFiles: readonly string[];
   readonly assumptions: readonly string[];
@@ -87,6 +95,7 @@ export interface RoutedAction {
   readonly ref?: ExactArtifactRef;
   readonly invocation?: SkillInvocation;
   readonly gaps?: readonly string[];
+  readonly blockKind?: "transient" | "durable";
 }
 export interface NextActions {
   readonly runId: string;
@@ -159,14 +168,21 @@ const modeOrder: Record<Run["entryMode"], readonly string[]> = {
 };
 
 export class Orchestrator {
+  private readonly scopeNodes: readonly ScopeNode[];
   constructor(
     readonly registry: RunRegistry,
     readonly artifacts: ArtifactStore,
-    readonly scopes: readonly ScopeNode[],
-  ) {}
+    scopes: readonly ScopeNode[],
+  ) {
+    this.scopeNodes = Object.freeze(
+      jsonCopy(scopes).map((scope) => Object.freeze(scope)),
+    );
+  }
 
   private scopeChain(ownerId: string): readonly string[] {
-    const byId = new Map(this.scopes.map((scope) => [scope.ownerId, scope]));
+    const byId = new Map(
+      this.scopeNodes.map((scope) => [scope.ownerId, scope]),
+    );
     const chain: string[] = [];
     let node = byId.get(ownerId);
     while (node) {
@@ -176,7 +192,7 @@ export class Orchestrator {
     }
     assert(
       chain.length > 0 &&
-        this.scopes.find((scope) => scope.ownerId === chain[0])?.level ===
+        this.scopeNodes.find((scope) => scope.ownerId === chain[0])?.level ===
           "organization",
       "Invalid scope",
     );
@@ -239,7 +255,10 @@ export class Orchestrator {
     const plan = await this.next(input.id, input.tasks);
     const blocked = Object.fromEntries(
       plan.actions
-        .filter((action) => action.action === "BLOCK")
+        .filter(
+          (action) =>
+            action.action === "BLOCK" && action.blockKind === "durable",
+        )
         .map((action) => [action.taskId, action.reason]),
     );
     if (Object.keys(blocked).length) {
@@ -273,7 +292,7 @@ export class Orchestrator {
     return resolveApprovedPolicy(
       this.artifacts,
       await this.registry.snapshot(),
-      this.scopes,
+      this.scopeNodes,
       check,
       authority,
     );
@@ -358,7 +377,12 @@ export class Orchestrator {
       }
       const blocker = run.blockers[task.id];
       if (blocker) {
-        actions.push({ taskId: task.id, action: "BLOCK", reason: blocker });
+        actions.push({
+          taskId: task.id,
+          action: "BLOCK",
+          reason: blocker,
+          blockKind: "durable",
+        });
         continue;
       }
       if (!run.safeActions.includes(task.id)) {
@@ -379,16 +403,14 @@ export class Orchestrator {
           taskId: task.id,
           action: "BLOCK",
           reason: unknown.reason,
+          blockKind: "durable",
         });
         continue;
       }
       if (
         (task.dependsOn ?? []).some((id) => {
-          const upstream = byId.get(id)!;
           return (
-            !run.artifacts.some(
-              (item) => item.artifactId === upstream.targetArtifactId,
-            ) &&
+            run.safeActions.includes(id) &&
             actions.find((action) => action.taskId === id)?.action !== "USE"
           );
         })
@@ -397,6 +419,7 @@ export class Orchestrator {
           taskId: task.id,
           action: "BLOCK",
           reason: "Required upstream task is not available yet",
+          blockKind: "transient",
         });
         continue;
       }
@@ -440,68 +463,123 @@ export class Orchestrator {
         continue;
       }
       const inputs: ExactArtifactRef[] = [];
+      const inputBindings: { name: string; refs: ExactArtifactRef[] }[] = [];
       let includeBrief = false;
       let includeEvidence = false;
       const gaps: string[] = [];
-      const resolveNeed = (need: InputNeed): ExactArtifactRef | boolean => {
+      let hardMissing = false;
+      const isEligible = (
+        item: ExactArtifactRef,
+        need: Extract<InputNeed, { kind: "artifact" }>,
+      ): boolean => {
+        const artifact = artifacts.get(`${item.artifactId}@${item.revision}`);
+        const proposal = Object.values(run.proposals).find((candidate) =>
+          equal(candidate.ref, item),
+        );
+        return (
+          !!artifact &&
+          artifact.meta.type === need.artifactType &&
+          (!need.schemaVersion ||
+            artifact.meta.schemaVersion === need.schemaVersion) &&
+          chain.includes(artifact.scope.ownerId) &&
+          artifact.lifecycle.freshness === "valid" &&
+          !state.freshness[item.artifactId] &&
+          ["approved", "provisional", "proposed"].includes(
+            artifact.lifecycle.status,
+          ) &&
+          !["rejected", "superseded", "discarded", "merged"].includes(
+            proposal?.status ?? "",
+          )
+        );
+      };
+      const resolveNeed = (
+        need: InputNeed,
+      ): readonly ExactArtifactRef[] | boolean => {
         if (need.kind === "human-brief") return !!task.humanBrief?.trim();
         if (need.kind === "evidence-file") return !!task.evidenceFiles?.length;
-        const candidates = available.filter((item) => {
-          const artifact = artifacts.get(`${item.artifactId}@${item.revision}`);
-          return (
-            artifact?.meta.type === need.artifactType &&
-            (!need.schemaVersion ||
-              artifact.meta.schemaVersion === need.schemaVersion) &&
-            chain.includes(artifact.scope.ownerId) &&
-            artifact.lifecycle.freshness === "valid" &&
-            !state.freshness[item.artifactId] &&
-            (artifact.lifecycle.status === "approved" ||
-              artifact.lifecycle.status === "provisional" ||
-              artifact.lifecycle.status === "proposed")
-          );
-        });
-        candidates.sort((a, b) => {
-          const left = artifacts.get(`${a.artifactId}@${a.revision}`)!;
-          const right = artifacts.get(`${b.artifactId}@${b.revision}`)!;
-          return (
-            chain.indexOf(right.scope.ownerId) -
-              chain.indexOf(left.scope.ownerId) || b.revision - a.revision
-          );
-        });
-        return candidates[0] ?? false;
+        if (need.refs) {
+          if (
+            !need.refs.length ||
+            new Set(need.refs.map((item) => item.artifactId)).size !==
+              need.refs.length
+          )
+            return false;
+          return need.refs.every(
+            (item) =>
+              available.some((candidate) => equal(candidate, item)) &&
+              isEligible(item, need),
+          )
+            ? need.refs
+            : false;
+        }
+        const candidates = available.filter((item) => isEligible(item, need));
+        if (!candidates.length) return false;
+        const depth = Math.max(
+          ...candidates.map((item) =>
+            chain.indexOf(
+              artifacts.get(`${item.artifactId}@${item.revision}`)!.scope
+                .ownerId,
+            ),
+          ),
+        );
+        const closest = candidates.filter(
+          (item) =>
+            chain.indexOf(
+              artifacts.get(`${item.artifactId}@${item.revision}`)!.scope
+                .ownerId,
+            ) === depth,
+        );
+        return closest.length === 1 ? closest : false;
       };
       const consume = (
         need: InputNeed,
-        chosen: ExactArtifactRef | boolean,
+        chosen: readonly ExactArtifactRef[] | boolean,
       ): void => {
-        if (
-          need.kind === "artifact" &&
-          typeof chosen === "object" &&
-          !inputs.some((item) => equal(item, chosen))
-        )
-          inputs.push(chosen);
+        if (need.kind === "artifact" && Array.isArray(chosen)) {
+          inputBindings.push({ name: need.name, refs: [...chosen] });
+          for (const item of chosen)
+            if (!inputs.some((current) => equal(current, item)))
+              inputs.push(item);
+        }
         if (need.kind === "human-brief") includeBrief = true;
         if (need.kind === "evidence-file") includeEvidence = true;
       };
       const label = (need: InputNeed): string =>
-        need.kind === "artifact" ? need.artifactType : need.kind;
+        need.kind === "artifact"
+          ? `${need.name} (${need.artifactType})`
+          : need.name;
+      const producerExists = (need: InputNeed): boolean =>
+        need.kind === "artifact" &&
+        tasks.some(
+          (candidate) =>
+            candidate.id !== task.id &&
+            run.safeActions.includes(candidate.id) &&
+            candidate.outputType === need.artifactType,
+        );
       for (const need of task.inputs.required) {
         const chosen = resolveNeed(need);
         if (chosen) consume(need, chosen);
-        else gaps.push(`Missing required ${label(need)}`);
+        else {
+          gaps.push(`Missing required ${label(need)}`);
+          if (!producerExists(need)) hardMissing = true;
+        }
       }
       for (const group of task.inputs.alternatives) {
         const choice = group.oneOf
           .map((need) => ({ need, chosen: resolveNeed(need) }))
           .find(({ chosen }) => !!chosen);
         if (choice) consume(choice.need, choice.chosen);
-        else gaps.push(`Missing one of ${group.oneOf.map(label).join(", ")}`);
+        else {
+          gaps.push(`Missing one of ${group.oneOf.map(label).join(", ")}`);
+          if (!group.oneOf.some(producerExists)) hardMissing = true;
+        }
       }
       if (gaps.length) {
         actions.push({
           taskId: task.id,
           action: "BLOCK",
           reason: gaps.join("; "),
+          blockKind: hardMissing ? "durable" : "transient",
         });
         continue;
       }
@@ -524,12 +602,23 @@ export class Orchestrator {
         intent: task.intent,
         scopeOwnerId: task.scopeOwnerId,
         inputRefs: inputs,
+        inputBindings,
         evidenceFiles: includeEvidence ? (task.evidenceFiles ?? []) : [],
         assumptions: [
           ...(task.assumptions ?? []),
           ...(task.uncertainties ?? [])
             .filter((item) => item.kind !== "blocking-unknown")
             .map((item) => `${item.kind}: ${item.reason}`),
+          ...inputs
+            .filter(
+              (item) =>
+                artifacts.get(`${item.artifactId}@${item.revision}`)?.lifecycle
+                  .status !== "approved",
+            )
+            .map(
+              (item) =>
+                `Provisional input ${item.artifactId}@${item.revision} is not approved canonical state`,
+            ),
         ],
         authority: task.authority,
         ...(includeBrief ? { humanBrief: task.humanBrief } : {}),
@@ -653,9 +742,45 @@ export class Orchestrator {
       !run.closed && run.safeActions.includes(invocation.taskId),
       "Task is not active",
     );
-    for (const input of result.inputRefs) await this.verified(input);
+    assert(
+      result.outputRefs.length > 0 || result.blocked,
+      "Skill result has no output or blocker",
+    );
+    if (result.blocked)
+      assert(
+        result.blocked.reason.trim() &&
+          result.blocked.affectedTaskIds.length === 1 &&
+          result.blocked.affectedTaskIds[0] === invocation.taskId,
+        "Invalid blocked reason",
+      );
+    for (const input of result.inputRefs) {
+      await this.verified(input);
+      const fate = Object.values(run.proposals).find((proposal) =>
+        equal(proposal.ref, input),
+      )?.status;
+      assert(
+        !["rejected", "superseded", "discarded", "merged"].includes(fate ?? ""),
+        "Rejected or resolved proposal cannot be an input",
+      );
+    }
+    const state = await this.registry.snapshot();
+    const newOutputs: ExactArtifactRef[] = [];
     for (const output of result.outputRefs) {
       const artifact = await this.verified(output);
+      if (artifact.lifecycle.status === "approved") {
+        assert(
+          artifact.approval.status === "approved" &&
+            this.scopeChain(run.scope).includes(artifact.scope.ownerId) &&
+            invocation.allowedOutputTypes.includes(artifact.meta.type) &&
+            run.base.some((item) => equal(item, output)) &&
+            !!state.canonical[output.artifactId] &&
+            equal(state.canonical[output.artifactId]?.ref, output) &&
+            !state.freshness[output.artifactId] &&
+            result.inputRefs.some((item) => equal(item, output)),
+          "Unchanged output is not verified approved Run context",
+        );
+        continue;
+      }
       const origin = artifact.origin as Record<string, unknown> | undefined;
       assert(
         origin?.actorKind === "skill" &&
@@ -687,6 +812,7 @@ export class Orchestrator {
         "Output dependency outside minimal context",
       );
       await assessProvenance(artifact);
+      newOutputs.push(output);
     }
     if (result.proposal) {
       assert(
@@ -695,13 +821,13 @@ export class Orchestrator {
       );
       assert(
         result.proposal.items.every((item) =>
-          result.outputRefs.some((output) => equal(output, item.ref)),
+          newOutputs.some((output) => equal(output, item.ref)),
         ),
         "Proposal output not returned",
       );
     }
     const known = (await this.registry.run(invocation.runId)).run.artifacts;
-    for (const output of result.outputRefs)
+    for (const output of newOutputs)
       if (!known.some((item) => equal(item, output)))
         await this.registry.produce({
           runId: invocation.runId,
@@ -723,33 +849,19 @@ export class Orchestrator {
           reason: result.proposal.reason,
         });
     }
-    if (result.blocked) {
-      assert(
-        result.blocked.reason.trim() &&
-          result.blocked.affectedTaskIds.length === 1 &&
-          result.blocked.affectedTaskIds[0] === invocation.taskId,
-        "Invalid blocked reason",
-      );
-      const current = (await this.registry.run(invocation.runId)).run;
-      await this.registry.setWork({
-        runId: invocation.runId,
-        safeActions: current.safeActions.filter(
-          (id) => !result.blocked!.affectedTaskIds.includes(id),
-        ),
-        blockers: {
-          ...current.blockers,
-          ...Object.fromEntries(
-            result.blocked.affectedTaskIds.map((id) => [
-              id,
-              result.blocked!.reason,
-            ]),
-          ),
-        },
-        actor: { kind: "agent", id: "orchestrator" },
-        at,
-        reason: "Skill reported a genuine affected-work blocker",
-      });
-    }
+    const current = (await this.registry.run(invocation.runId)).run;
+    await this.registry.setWork({
+      runId: invocation.runId,
+      safeActions: current.safeActions.filter((id) => id !== invocation.taskId),
+      blockers: result.blocked
+        ? { ...current.blockers, [invocation.taskId]: result.blocked.reason }
+        : current.blockers,
+      actor: { kind: "agent", id: "orchestrator" },
+      at,
+      reason: result.blocked
+        ? "Skill reported a genuine affected-work blocker"
+        : "Skill task completed with verified exact outputs",
+    });
   }
 
   async requestUpstream(
@@ -815,26 +927,32 @@ export function createOrchestratorRuntime(
   artifacts: ArtifactStore;
   governedAuthority: GovernedRegistryAuthority;
 } {
+  const scopeNodes = jsonCopy(scopes);
   const governedAuthority = new GovernedRegistryAuthority(
     authority,
-    scopes,
+    scopeNodes,
     policyAuthority,
   );
   const artifacts = new ArtifactStore(
     workspace.snapshots,
     schemas,
-    scopes,
+    scopeNodes,
     new RegistryAuthorityVerifier(workspace, governedAuthority, seedAuthority),
   );
   governedAuthority.bind(artifacts);
-  const registry = new RunRegistry(
+  class RuntimeRegistry extends RunRegistry {
+    override commit(input: CommitRequest): Promise<void> {
+      return governedAuthority.withCommit(input, () => super.commit(input));
+    }
+  }
+  const registry = new RuntimeRegistry(
     workspace,
     artifacts,
     governedAuthority,
     new ArtifactStorePublication(artifacts, governedAuthority),
   );
   return {
-    orchestrator: new Orchestrator(registry, artifacts, scopes),
+    orchestrator: new Orchestrator(registry, artifacts, scopeNodes),
     registry,
     artifacts,
     governedAuthority,

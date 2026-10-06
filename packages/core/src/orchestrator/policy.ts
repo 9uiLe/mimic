@@ -1,4 +1,9 @@
-import { canonicalJson, type JsonValue } from "../artifact-canonical.js";
+import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  canonicalJson,
+  jsonCopy,
+  type JsonValue,
+} from "../artifact-canonical.js";
 import type {
   ArtifactSnapshot,
   ArtifactStore,
@@ -14,6 +19,7 @@ import {
   type ExactArtifactRef,
 } from "../runtime-engines/dependency.js";
 import type {
+  CommitRequest,
   DecisionRecord,
   Proposal,
   RegistryAuthority,
@@ -155,15 +161,19 @@ function pointer(root: unknown, path: string): unknown {
 }
 
 /** Never accepts a caller's rule as authority: exact approved canonical ancestry is the source. */
-export async function resolveApprovedPolicy(
+async function resolvePolicy(
   store: ArtifactStore,
   state: Readonly<RegistryState>,
   scopes: readonly ScopeNode[],
   check: PolicyCheck,
   authority?: PolicyAuthority,
+  excludeArtifactId?: string,
 ): Promise<ResolvedPolicy> {
   let chain: ScopeNode[];
   try {
+    state = jsonCopy(state);
+    scopes = jsonCopy(scopes);
+    check = structuredClone(check);
     if (
       !check ||
       typeof check.targetAssetKind !== "string" ||
@@ -187,6 +197,7 @@ export async function resolveApprovedPolicy(
   try {
     for (const selected of Object.values(state.canonical)) {
       const ref = selected.ref;
+      if (ref.artifactId === excludeArtifactId) continue;
       const snapshot = await store.read(ref.artifactId, ref.revision);
       if (snapshot.digest !== ref.lockDigest)
         return deny("Canonical lock mismatch");
@@ -276,14 +287,33 @@ export async function resolveApprovedPolicy(
   };
 }
 
+export function resolveApprovedPolicy(
+  store: ArtifactStore,
+  state: Readonly<RegistryState>,
+  scopes: readonly ScopeNode[],
+  check: PolicyCheck,
+  authority?: PolicyAuthority,
+): Promise<ResolvedPolicy> {
+  return resolvePolicy(store, state, scopes, check, authority);
+}
+
 /** Wrap the authority passed to BOTH RunRegistry and ArtifactStorePublication. */
 export class GovernedRegistryAuthority implements RegistryAuthority {
   private store?: ArtifactStore;
+  private readonly scopeNodes: readonly ScopeNode[];
+  private readonly commitContext = new AsyncLocalStorage<CommitRequest>();
   constructor(
     private readonly delegate: RegistryAuthority,
-    private readonly scopes: readonly ScopeNode[],
+    scopes: readonly ScopeNode[],
     private readonly policyAuthority?: PolicyAuthority,
-  ) {}
+  ) {
+    this.scopeNodes = Object.freeze(
+      jsonCopy(scopes).map((scope) => Object.freeze(scope)),
+    );
+  }
+  withCommit<T>(request: CommitRequest, effect: () => Promise<T>): Promise<T> {
+    return this.commitContext.run(jsonCopy(request), effect);
+  }
   bind(store: ArtifactStore): void {
     if (this.store) throw new Error("Already bound");
     this.store = store;
@@ -316,13 +346,69 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
     proposal: Proposal,
     state: Readonly<RegistryState>,
   ): Promise<boolean> {
+    const request = this.commitContext.getStore();
     if (
       !this.store ||
+      !request ||
+      request.packetId !== record.packetId ||
+      !request.approvals.some(
+        (item) =>
+          item.decisionId === record.id && item.proposalId === proposal.id,
+      ) ||
       !record.output ||
       !(await this.delegate.allowCommit(record, proposal, state))
     )
       return false;
     const artifact = record.output.artifact;
+    const named = request.approvals.map(
+      (item) => state.decisions[item.decisionId],
+    );
+    if (
+      named.some(
+        (decision) =>
+          !decision?.output ||
+          decision.packetId !== request.packetId ||
+          decision.outcome !== "approved",
+      )
+    )
+      return false;
+    const namedGovernance = named.filter(
+      (decision) =>
+        object(decision.output!.artifact.content)?.assetKind === "governance",
+    );
+    try {
+      for (let i = 0; i < namedGovernance.length; i++)
+        for (let j = i + 1; j < namedGovernance.length; j++) {
+          const a = namedGovernance[i].output!.artifact;
+          const b = namedGovernance[j].output!.artifact;
+          const aRules = rules(a) ?? [];
+          const bRules = rules(b) ?? [];
+          const aChain = ancestors(this.scopeNodes, a.scope.ownerId).map(
+            (scope) => scope.ownerId,
+          );
+          const bChain = ancestors(this.scopeNodes, b.scope.ownerId).map(
+            (scope) => scope.ownerId,
+          );
+          for (const left of aRules)
+            for (const right of bRules) {
+              if (
+                left.targetAssetKind !== right.targetAssetKind ||
+                left.path !== right.path ||
+                (left.targetName !== undefined &&
+                  right.targetName !== undefined &&
+                  left.targetName !== right.targetName)
+              )
+                continue;
+              if (a.scope.ownerId === b.scope.ownerId) return false;
+              if (bChain.includes(a.scope.ownerId) && !narrows(left, right))
+                return false;
+              if (aChain.includes(b.scope.ownerId) && !narrows(right, left))
+                return false;
+            }
+        }
+    } catch {
+      return false;
+    }
     if (artifact.meta.type !== "design-system-asset") return true;
     const content = object(artifact.content);
     if (
@@ -334,13 +420,18 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
     try {
       if (
         content.assetKind !== "governance" &&
-        Object.values(state.decisions).some(
-          (decision) =>
-            decision.id !== record.id &&
-            decision.packetId === record.packetId &&
-            decision.outcome === "approved" &&
-            object(decision.output?.artifact.content)?.assetKind ===
-              "governance",
+        namedGovernance.some((decision) =>
+          (rules(decision.output!.artifact) ?? []).some(
+            (rule) =>
+              rule.targetAssetKind === content.assetKind &&
+              (rule.targetName === undefined ||
+                rule.targetName === content.name) &&
+              pointer(artifact, rule.path) !== undefined &&
+              ancestors(this.scopeNodes, artifact.scope.ownerId).some(
+                (scope) =>
+                  scope.ownerId === decision.output!.artifact.scope.ownerId,
+              ),
+          ),
         )
       )
         return false;
@@ -375,7 +466,7 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
       };
       const paths = new Set(annotations.keys());
       const ancestorsForTarget = ancestors(
-        this.scopes,
+        this.scopeNodes,
         target.scopeOwnerId,
       ).map((scope) => scope.ownerId);
       const inherited: { rule: GovernanceRule; depth: number }[] = [];
@@ -413,10 +504,10 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
         );
         if (parents.some((item) => !narrows(item.rule, rule))) return false;
         if (parents.length) {
-          const checked = await resolveApprovedPolicy(
+          const checked = await resolvePolicy(
             this.store,
             state,
-            this.scopes,
+            this.scopeNodes,
             {
               scopeOwnerId: artifact.scope.ownerId,
               targetAssetKind: rule.targetAssetKind,
@@ -435,6 +526,7 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
                 ((await this.policyAuthority?.verifyApproval(id, selection)) ??
                   true),
             },
+            artifact.meta.id,
           );
           if (!checked.allowed || !checked.sources.every(locksSource))
             return false;
@@ -449,10 +541,10 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
           note.approvalDecisionId !== record.id
         )
           return false;
-        const result = await resolveApprovedPolicy(
+        const result = await resolvePolicy(
           this.store,
           state,
-          this.scopes,
+          this.scopeNodes,
           {
             ...target,
             path,

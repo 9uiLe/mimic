@@ -116,7 +116,7 @@ const route = (
   authority: "AUTONOMOUS",
 });
 
-async function setup() {
+async function setup(runtimeScopes: readonly ScopeNode[] = scopes) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-orchestrator-"));
   roots.push(root);
   let failBeforeRename = false;
@@ -163,7 +163,7 @@ async function setup() {
   const runtime = createOrchestratorRuntime(
     workspace,
     schemas,
-    scopes,
+    runtimeScopes,
     authority,
     seedAuthority,
   );
@@ -185,12 +185,76 @@ async function setup() {
   };
 }
 
+async function stagePacket(
+  x: Awaited<ReturnType<typeof setup>>,
+  runId: string,
+  packetId: string,
+  candidates: readonly ArtifactSnapshot[],
+) {
+  await x.orchestrator.start({
+    id: runId,
+    scopeOwnerId: "product_mimic",
+    entryMode: "hybrid",
+    actor: agent,
+    at: now,
+    tasks: [route("review", "design-system-asset")],
+  });
+  for (const candidate of candidates) {
+    await x.artifacts.create(candidate);
+    await x.registry.produce({
+      runId,
+      ref: reference(candidate),
+      inputs: [],
+      actor: agent,
+      at: now,
+      reason: "Stage human review",
+    });
+  }
+  await x.registry.submit({
+    runId,
+    packetId,
+    proposals: candidates.map((candidate, index) => ({
+      id: `${packetId}_proposal_${index}`,
+      ref: reference(candidate),
+      alternatives: ["approve", "reject"],
+      rationale: "Review exact candidate",
+      evidenceLimits: [],
+      dependents: [],
+    })),
+    actor: agent,
+    at: now,
+    reason: "Named human commit point",
+  });
+  const approvals = [];
+  for (const [index, candidate] of candidates.entries()) {
+    const proposalId = `${packetId}_proposal_${index}`;
+    const decisionId = `${packetId}_decision_${index}`;
+    const output = approved(candidate, decisionId);
+    await x.registry.decide({
+      id: decisionId,
+      packetId,
+      proposalId,
+      outcome: "approved",
+      actor: human,
+      at: now,
+      rationale: "Approve exact candidate",
+      output: { ref: reference(output), artifact: output },
+    });
+    approvals.push({ proposalId, decisionId });
+  }
+  return approvals;
+}
+
 describe("orchestrator over shared workspace", () => {
   test("routes independent work while a required contract is blocked and batches named review", async () => {
     const x = await setup();
     const tasks = [
       route("profile", "problem-profile", [
-        { kind: "artifact", artifactType: "product-ui-contract" },
+        {
+          kind: "artifact",
+          name: "contract",
+          artifactType: "product-ui-contract",
+        },
       ]),
       route("capability", "system-capability"),
     ];
@@ -226,6 +290,389 @@ describe("orchestrator over shared workspace", () => {
     );
   });
 
+  test("a produced prerequisite unblocks dependent work and completes its own route", async () => {
+    const x = await setup();
+    const contract: RoutedTask = {
+      ...route("contract", "product-ui-contract"),
+      targetArtifactId: "art_dynamic_contract",
+    };
+    const profile: RoutedTask = {
+      ...route("profile", "problem-profile", [
+        {
+          kind: "artifact",
+          name: "contract",
+          artifactType: "product-ui-contract",
+        },
+      ]),
+      dependsOn: ["contract"],
+    };
+    const tasks = [contract, profile];
+    await x.orchestrator.start({
+      id: "run_dynamic",
+      scopeOwnerId: "product_mimic",
+      entryMode: "hybrid",
+      actor: agent,
+      at: now,
+      tasks,
+    });
+    const before = await x.orchestrator.next("run_dynamic", tasks);
+    expect(
+      before.actions.find((item) => item.taskId === "profile")?.blockKind,
+    ).toBe("transient");
+    expect(
+      (await x.registry.run("run_dynamic")).run.blockers.profile,
+    ).toBeUndefined();
+    const fixture = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/proposed-product-ui-contract.json",
+        ),
+        "utf8",
+      ),
+    ) as ArtifactSnapshot;
+    const output: ArtifactSnapshot = {
+      ...fixture,
+      meta: { ...fixture.meta, id: "art_dynamic_contract" },
+      lifecycle: { status: "provisional", freshness: "valid" },
+      origin: {
+        actorKind: "skill",
+        actorId: contract.skillId,
+        runId: "run_dynamic",
+        createdAt: now,
+      },
+    };
+    await x.artifacts.create(output);
+    const invocation = before.actions.find(
+      (item) => item.taskId === "contract",
+    )!.invocation!;
+    await x.orchestrator.accept(
+      invocation,
+      {
+        runId: "run_dynamic",
+        taskId: "contract",
+        skillId: contract.skillId,
+        inputRefs: [],
+        outputRefs: [reference(output)],
+      },
+      { kind: "skill", id: contract.skillId },
+      now,
+    );
+    const after = await x.orchestrator.next("run_dynamic", tasks);
+    expect(
+      after.actions.find((item) => item.taskId === "contract")?.action,
+    ).toBe("IGNORE");
+    const downstream = after.actions.find((item) => item.taskId === "profile")!;
+    expect(downstream.action).toBe("GENERATE");
+    expect(downstream.invocation?.inputBindings).toEqual([
+      { name: "contract", refs: [reference(output)] },
+    ]);
+    expect(downstream.invocation?.assumptions).toContain(
+      `Provisional input ${output.meta.id}@1 is not approved canonical state`,
+    );
+  });
+
+  test("rejected proposed directions are excluded from later Skill context", async () => {
+    const x = await setup();
+    const direction: RoutedTask = {
+      ...route("direction", "design-direction"),
+      authority: "PROPOSE_ONLY",
+      targetArtifactId: "art_rejected_direction",
+    };
+    const critique: RoutedTask = {
+      ...route("critique", "evaluation", [
+        {
+          kind: "artifact",
+          name: "direction",
+          artifactType: "design-direction",
+        },
+      ]),
+      dependsOn: ["direction"],
+    };
+    const tasks = [direction, critique];
+    await x.orchestrator.start({
+      id: "run_rejected_route",
+      scopeOwnerId: "product_mimic",
+      entryMode: "experience-first",
+      actor: agent,
+      at: now,
+      tasks,
+    });
+    const fixture = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/approved-design-direction.json",
+        ),
+        "utf8",
+      ),
+    ) as ArtifactSnapshot;
+    const meta = { ...fixture.meta, id: "art_rejected_direction" };
+    delete meta.contentDigest;
+    const candidate: ArtifactSnapshot = {
+      ...fixture,
+      meta,
+      lifecycle: { status: "proposed", freshness: "valid" },
+      approval: { status: "pending" },
+      origin: {
+        actorKind: "skill",
+        actorId: direction.skillId,
+        runId: "run_rejected_route",
+        createdAt: now,
+      },
+      provenance: [
+        {
+          path: "/content",
+          kind: "assumption",
+          rationale: "Candidate direction",
+        },
+      ],
+      content: {
+        ...(fixture.content as Record<string, unknown>),
+        selectionStatus: "candidate",
+      } as ArtifactSnapshot["content"],
+    };
+    await x.artifacts.create(candidate);
+    const invocation = (
+      await x.orchestrator.next("run_rejected_route", tasks)
+    ).actions.find((item) => item.taskId === "direction")!.invocation!;
+    await x.orchestrator.accept(
+      invocation,
+      {
+        runId: "run_rejected_route",
+        taskId: "direction",
+        skillId: direction.skillId,
+        inputRefs: [],
+        outputRefs: [reference(candidate)],
+        proposal: {
+          packetId: "packet_direction",
+          items: [
+            {
+              id: "proposal_direction",
+              ref: reference(candidate),
+              alternatives: ["use", "reject"],
+              rationale: "Choose direction",
+              evidenceLimits: [],
+              dependents: [],
+            },
+          ],
+          reason: "Review direction",
+        },
+      },
+      { kind: "skill", id: direction.skillId },
+      now,
+    );
+    const before = await x.orchestrator.next("run_rejected_route", tasks);
+    expect(
+      before.actions.find((item) => item.taskId === "critique")?.invocation
+        ?.inputRefs,
+    ).toEqual([reference(candidate)]);
+    expect(
+      before.actions.find((item) => item.taskId === "critique")?.invocation
+        ?.assumptions,
+    ).toContain(
+      `Provisional input ${candidate.meta.id}@1 is not approved canonical state`,
+    );
+    const rejected = approved(
+      candidate,
+      "decision_rejected_direction",
+      "rejected",
+    );
+    await x.registry.decide({
+      id: "decision_rejected_direction",
+      packetId: "packet_direction",
+      proposalId: "proposal_direction",
+      outcome: "rejected",
+      actor: human,
+      at: now,
+      rationale: "Reject direction",
+      output: { ref: reference(rejected), artifact: rejected },
+    });
+    const after = await x.orchestrator.next("run_rejected_route", tasks);
+    expect(
+      after.actions.find((item) => item.taskId === "critique")?.action,
+    ).toBe("BLOCK");
+    expect(
+      after.actions.find((item) => item.taskId === "critique")?.invocation,
+    ).toBeUndefined();
+  });
+
+  test("named exact bindings include all requested directions and distinct design-system assets; approved reuse stays unchanged", async () => {
+    const x = await setup();
+    const directionFixture = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/approved-design-direction.json",
+        ),
+        "utf8",
+      ),
+    ) as ArtifactSnapshot;
+    const direction = (id: string): ArtifactSnapshot => {
+      const meta = { ...directionFixture.meta, id };
+      delete meta.contentDigest;
+      const raw: ArtifactSnapshot = {
+        ...directionFixture,
+        meta,
+        approval: {
+          status: "approved",
+          decisionId: "seed",
+          actorId: human.id,
+          at: now,
+        },
+        provenance: [
+          {
+            path: "/content/selectionStatus",
+            kind: "human-decision",
+            decisionId: "seed",
+          },
+        ],
+      };
+      return {
+        ...raw,
+        meta: { ...raw.meta, contentDigest: artifactDigest(raw) },
+      };
+    };
+    const directions = [
+      direction("art_direction_a"),
+      direction("art_direction_b"),
+    ];
+    const assets = [
+      asset(
+        x.template,
+        "art_pattern",
+        scopes[1],
+        content("pattern", "Pattern", { intent: "Compare" }),
+      ),
+      asset(
+        x.template,
+        "art_layout",
+        scopes[1],
+        content("layout", "Layout", { intent: "Grid" }),
+      ),
+      asset(
+        x.template,
+        "art_component",
+        scopes[1],
+        content("component", "Component", { intent: "Button" }),
+      ),
+      asset(
+        x.template,
+        "art_rules",
+        scopes[1],
+        content("governance", "Rules", {
+          rules: [
+            {
+              targetAssetKind: "component",
+              path: pathDensity,
+              policy: "locked",
+              value: "comfortable",
+            },
+          ],
+        }),
+      ),
+    ];
+    const refs = [];
+    for (const item of [...directions, ...assets])
+      refs.push(await x.seed(item));
+    await x.registry.seedCanonical(refs);
+    const compare = route("compare", "evaluation", [
+      {
+        kind: "artifact",
+        name: "directions",
+        artifactType: "design-direction",
+        refs: refs.slice(0, 2),
+      },
+    ]);
+    const ambiguous = route("ambiguous", "evaluation", [
+      { kind: "artifact", name: "direction", artifactType: "design-direction" },
+    ]);
+    const compose = route("compose", "scenario", [
+      {
+        kind: "artifact",
+        name: "pattern",
+        artifactType: "design-system-asset",
+        refs: [refs[2]],
+      },
+      {
+        kind: "artifact",
+        name: "layout",
+        artifactType: "design-system-asset",
+        refs: [refs[3]],
+      },
+      {
+        kind: "artifact",
+        name: "component",
+        artifactType: "design-system-asset",
+        refs: [refs[4]],
+      },
+      {
+        kind: "artifact",
+        name: "governance",
+        artifactType: "design-system-asset",
+        refs: [refs[5]],
+      },
+    ]);
+    const reuse = route("reuse", "design-system-asset", [
+      {
+        kind: "artifact",
+        name: "pattern",
+        artifactType: "design-system-asset",
+        refs: [refs[2]],
+      },
+    ]);
+    const tasks = [compare, ambiguous, compose, reuse];
+    await x.orchestrator.start({
+      id: "run_bindings",
+      scopeOwnerId: "product_mimic",
+      entryMode: "hybrid",
+      actor: agent,
+      at: now,
+      tasks,
+    });
+    const plan = await x.orchestrator.next("run_bindings", tasks);
+    expect(
+      plan.actions.find((item) => item.taskId === "compare")?.invocation
+        ?.inputBindings,
+    ).toEqual([{ name: "directions", refs: refs.slice(0, 2) }]);
+    expect(
+      plan.actions.find((item) => item.taskId === "compose")?.invocation
+        ?.inputBindings,
+    ).toEqual([
+      { name: "pattern", refs: [refs[2]] },
+      { name: "layout", refs: [refs[3]] },
+      { name: "component", refs: [refs[4]] },
+      { name: "governance", refs: [refs[5]] },
+    ]);
+    expect(
+      plan.actions.find((item) => item.taskId === "ambiguous")?.action,
+    ).toBe("BLOCK");
+    const invocation = plan.actions.find(
+      (item) => item.taskId === "reuse",
+    )!.invocation!;
+    const before = await x.registry.snapshot();
+    await x.orchestrator.accept(
+      invocation,
+      {
+        runId: "run_bindings",
+        taskId: "reuse",
+        skillId: reuse.skillId,
+        inputRefs: invocation.inputRefs,
+        outputRefs: [refs[2]],
+      },
+      { kind: "skill", id: reuse.skillId },
+      now,
+    );
+    const after = await x.registry.snapshot();
+    expect(after.canonical[refs[2].artifactId]).toEqual(
+      before.canonical[refs[2].artifactId],
+    );
+    expect(after.runs.run_bindings.artifacts).toEqual([]);
+    expect(
+      after.events.filter((event) => event.action === "produce-provisional"),
+    ).toEqual([]);
+  });
+
   test("one-of inputs choose only the supplied brief and optional gaps remain explicit", async () => {
     const x = await setup();
     const task: RoutedTask = {
@@ -233,12 +680,16 @@ describe("orchestrator over shared workspace", () => {
       humanBrief: "A compact comparison tool",
       inputs: {
         required: [],
-        optional: [{ kind: "evidence-file" }],
+        optional: [{ kind: "evidence-file", name: "research" }],
         alternatives: [
           {
             oneOf: [
-              { kind: "artifact", artifactType: "product-definition" },
-              { kind: "human-brief" },
+              {
+                kind: "artifact",
+                name: "definition",
+                artifactType: "product-definition",
+              },
+              { kind: "human-brief", name: "intent" },
             ],
           },
         ],
@@ -256,7 +707,7 @@ describe("orchestrator over shared workspace", () => {
     expect(action.action).toBe("GENERATE");
     expect(action.invocation?.inputRefs).toEqual([]);
     expect(action.invocation?.humanBrief).toBe("A compact comparison tool");
-    expect(action.gaps).toContain("Optional evidence-file unavailable");
+    expect(action.gaps).toContain("Optional research unavailable");
   });
 
   test("copies Skill result before asynchronous validation and refuses direct invocation", async () => {
@@ -298,28 +749,6 @@ describe("orchestrator over shared workspace", () => {
       inputRefs: [],
       outputRefs: [output],
     };
-    const read = x.artifacts.read.bind(x.artifacts);
-    let resume!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      resume = resolve;
-    });
-    x.artifacts.read = async (id, revision) => {
-      await gate;
-      return read(id, revision);
-    };
-    const accepting = x.orchestrator.accept(
-      invocation,
-      result,
-      { kind: "skill", id: task.skillId },
-      now,
-    );
-    result.outputRefs[0] = {
-      ...output,
-      lockDigest: `sha256:${"0".repeat(64)}`,
-    };
-    resume();
-    await accepting;
-    expect((await x.registry.run("run_copy")).run.artifacts).toEqual([output]);
     await expect(
       x.orchestrator.accept(
         invocation,
@@ -346,11 +775,33 @@ describe("orchestrator over shared workspace", () => {
     await expect(
       x.orchestrator.accept(
         { ...invocation, targetArtifactId: "art_other" },
-        { ...result, outputRefs: [output] },
+        result,
         { kind: "skill", id: task.skillId },
         now,
       ),
     ).rejects.toThrow(/Skill output cannot be durable/);
+    const read = x.artifacts.read.bind(x.artifacts);
+    let resume!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    x.artifacts.read = async (id, revision) => {
+      await gate;
+      return read(id, revision);
+    };
+    const accepting = x.orchestrator.accept(
+      invocation,
+      result,
+      { kind: "skill", id: task.skillId },
+      now,
+    );
+    result.outputRefs[0] = {
+      ...output,
+      lockDigest: `sha256:${"0".repeat(64)}`,
+    };
+    resume();
+    await accepting;
+    expect((await x.registry.run("run_copy")).run.artifacts).toEqual([output]);
   });
 
   test("approved ancestor provenance, inherited locks, freshness and exact refs govern selection", async () => {
@@ -856,5 +1307,267 @@ describe("orchestrator over shared workspace", () => {
     expect(
       await x.workspace.snapshots.read(weakerRule.meta.id, 2),
     ).toBeUndefined();
+  });
+
+  test("a child governance revision keeps its ancestor while excluding its own prior revision", async () => {
+    const x = await setup();
+    const parent = asset(
+      x.template,
+      "art_parent_rule",
+      scopes[0],
+      content("governance", "Parent", {
+        rules: [
+          {
+            targetAssetKind: "component",
+            targetName: "Button",
+            path: pathDensity,
+            policy: "configurable",
+            value: "comfortable",
+            allowedValues: ["comfortable", "compact"],
+          },
+        ],
+      }),
+    );
+    const child = asset(
+      x.template,
+      "art_child_rule",
+      scopes[1],
+      content("governance", "Child", {
+        rules: [
+          {
+            targetAssetKind: "component",
+            targetName: "Button",
+            path: pathDensity,
+            policy: "configurable",
+            value: "comfortable",
+            allowedValues: ["comfortable", "compact"],
+          },
+        ],
+      }),
+    );
+    await x.seed(parent);
+    await x.seed(child);
+    await x.registry.seedCanonical([reference(parent), reference(child)]);
+    const revised = asset(
+      x.template,
+      child.meta.id,
+      scopes[1],
+      content("governance", "Child", {
+        rules: [
+          {
+            targetAssetKind: "component",
+            targetName: "Button",
+            path: pathDensity,
+            policy: "locked",
+            value: "comfortable",
+          },
+        ],
+      }),
+      "proposed",
+      2,
+      [{ ...reference(parent), onChange: "invalidate" }],
+    );
+    await x.orchestrator.start({
+      id: "run_child",
+      scopeOwnerId: "product_mimic",
+      entryMode: "hybrid",
+      actor: agent,
+      at: now,
+      tasks: [route("review", "design-system-asset")],
+    });
+    await x.artifacts.create(revised);
+    await x.registry.produce({
+      runId: "run_child",
+      ref: reference(revised),
+      inputs: [reference(parent)],
+      actor: agent,
+      at: now,
+      reason: "Narrow child rule",
+    });
+    await x.registry.submit({
+      runId: "run_child",
+      packetId: "packet_child",
+      proposals: [
+        {
+          id: "proposal_child",
+          ref: reference(revised),
+          expectedCanonical: reference(child),
+          alternatives: ["narrow", "retain"],
+          rationale: "Narrow rule",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at: now,
+      reason: "Review child rule",
+    });
+    const output = approved(revised, "decision_child");
+    await x.registry.decide({
+      id: "decision_child",
+      packetId: "packet_child",
+      proposalId: "proposal_child",
+      outcome: "approved",
+      actor: human,
+      at: now,
+      rationale: "Approve narrower rule",
+      output: { ref: reference(output), artifact: output },
+    });
+    await x.registry.commit({
+      id: "commit_child",
+      packetId: "packet_child",
+      approvals: [
+        { proposalId: "proposal_child", decisionId: "decision_child" },
+      ],
+      actor: human,
+      at: now,
+      reason: "Commit narrower child rule",
+    });
+    expect((await x.registry.snapshot()).canonical[child.meta.id].ref).toEqual(
+      reference(output),
+    );
+  });
+
+  test("a partial commit ignores an unrelated approved governance proposal", async () => {
+    const x = await setup();
+    const rule = asset(
+      x.template,
+      "art_unrelated_rule",
+      scopes[0],
+      content("governance", "Unrelated rule", {
+        rules: [
+          {
+            targetAssetKind: "component",
+            path: pathDensity,
+            policy: "locked",
+            value: "comfortable",
+          },
+        ],
+      }),
+      "proposed",
+    );
+    const foundation = asset(
+      x.template,
+      "art_independent_foundation",
+      scopes[1],
+      content("foundation", "Foundation", { intent: "Useful" }),
+      "proposed",
+    );
+    const approvals = await stagePacket(x, "run_partial", "packet_partial", [
+      rule,
+      foundation,
+    ]);
+    await x.registry.commit({
+      id: "commit_partial",
+      packetId: "packet_partial",
+      approvals: [approvals[1]],
+      actor: human,
+      at: now,
+      reason: "Commit only independent foundation",
+    });
+    const state = await x.registry.snapshot();
+    expect(state.canonical[foundation.meta.id]).toBeDefined();
+    expect(state.canonical[rule.meta.id]).toBeUndefined();
+    expect(
+      state.runs.run_partial.proposals[approvals[0].proposalId].status,
+    ).toBe("pending");
+  });
+
+  test("one named commit cannot publish conflicting new governance rules", async () => {
+    const x = await setup();
+    const makeRule = (id: string, value: string) =>
+      asset(
+        x.template,
+        id,
+        scopes[0],
+        content("governance", id, {
+          rules: [
+            {
+              targetAssetKind: "component",
+              targetName: "Button",
+              path: pathDensity,
+              policy: "locked",
+              value,
+            },
+          ],
+        }),
+        "proposed",
+      );
+    const candidates = [
+      makeRule("art_conflict_a", "comfortable"),
+      makeRule("art_conflict_b", "compact"),
+    ];
+    const approvals = await stagePacket(
+      x,
+      "run_conflict",
+      "packet_conflict",
+      candidates,
+    );
+    await expect(
+      x.registry.commit({
+        id: "commit_conflict",
+        packetId: "packet_conflict",
+        approvals,
+        actor: human,
+        at: now,
+        reason: "Try contradictory org rules",
+      }),
+    ).rejects.toThrow(/policy|authority/i);
+    const state = await x.registry.snapshot();
+    for (const candidate of candidates) {
+      expect(state.canonical[candidate.meta.id]).toBeUndefined();
+      expect(
+        await x.workspace.snapshots.read(candidate.meta.id, 2),
+      ).toBeUndefined();
+    }
+  });
+
+  test("scope ancestry is copied before caller mutation", async () => {
+    const mutable = structuredClone(scopes) as {
+      level: ScopeNode["level"];
+      ownerId: string;
+      parentId?: string;
+    }[];
+    const x = await setup(mutable);
+    const rule = asset(
+      x.template,
+      "art_scope_rule",
+      scopes[0],
+      content("governance", "Org rule", {
+        rules: [
+          {
+            targetAssetKind: "component",
+            targetName: "Button",
+            path: pathDensity,
+            policy: "locked",
+            value: "comfortable",
+          },
+        ],
+      }),
+    );
+    await x.seed(rule);
+    await x.registry.seedCanonical([reference(rule)]);
+    mutable[1].parentId = "missing";
+    mutable[2].parentId = "missing";
+    await x.orchestrator.start({
+      id: "run_scope_copy",
+      scopeOwnerId: "product_mimic",
+      entryMode: "hybrid",
+      actor: agent,
+      at: now,
+      tasks: [],
+    });
+    expect(
+      (
+        await x.orchestrator.policy("run_scope_copy", {
+          scopeOwnerId: "product_mimic",
+          targetAssetKind: "component",
+          targetName: "Button",
+          path: pathDensity,
+          value: "comfortable",
+          intent: "commit",
+        })
+      ).allowed,
+    ).toBe(true);
   });
 });
