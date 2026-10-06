@@ -167,6 +167,8 @@ async function renderPreview() {
   const sequence = ++requestNumber;
   const entry = entries.find((item) => item.id === active.scenario);
   updateButtons();
+  frame?.remove();
+  frame = null;
   standalone.hidden = true;
   provenance.replaceChildren();
   status.textContent = "";
@@ -265,7 +267,7 @@ async function renderPreview() {
         { once: true },
       );
     });
-    frame.replaceWith(nextFrame);
+    deviceFrame.append(nextFrame);
     frame = nextFrame;
     await frameLoaded;
     if (sequence !== requestNumber) return;

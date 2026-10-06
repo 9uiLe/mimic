@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { verifyCatalog } from "../src/catalog-generator.js";
 
 const catalog = path.resolve(import.meta.dirname, "../public/catalog");
 
@@ -16,17 +17,16 @@ async function ready(page: import("@playwright/test").Page) {
   ).toBeVisible();
 }
 
+test("committed catalog matches the genuine mode builder bytes", async () => {
+  test.setTimeout(60_000);
+  await verifyCatalog(false);
+});
+
 test("review shell renders genuine generated modes at desktop and mobile sizes", async ({
   page,
 }) => {
   await page.goto("/");
   await ready(page);
-  await page.locator(".skip-link").focus();
-  await expect(page.locator(".skip-link")).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(/#preview-heading$/);
-  await page.getByLabel("Experience Domain").focus();
-  await expect(page.getByLabel("Experience Domain")).toBeFocused();
   await expect(page.getByLabel("Project")).toHaveValue("product_mimic");
   await expect(page.getByLabel("Experience Domain")).toHaveValue(
     "product-wide",
@@ -85,6 +85,12 @@ test("review shell renders genuine generated modes at desktop and mobile sizes",
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await page.locator(".skip-link").focus();
+  await expect(page.locator(".skip-link")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#preview-heading$/);
+  await page.getByLabel("Experience Domain").focus();
+  await expect(page.getByLabel("Experience Domain")).toBeFocused();
   const axe = await new AxeBuilder({ page })
     .exclude("#prototype-frame")
     .analyze();
@@ -156,6 +162,60 @@ test("dependent selection, history, and rejected Proposed fallback stay on exact
   await expect(page.getByText(/Current mode is based/)).toBeVisible();
   await page.getByRole("button", { name: "Proposed", exact: true }).click();
   await expect(page.getByText(/Current fallback/).first()).toBeVisible();
+});
+
+test("failed and rapidly superseded selections never leave stale controls active", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await ready(page);
+  await page.getByRole("button", { name: "Proposed", exact: true }).click();
+  await page
+    .frameLocator("#prototype-frame")
+    .getByRole("button", { name: "Show success" })
+    .click();
+  await expect(
+    page
+      .frameLocator("#prototype-frame")
+      .getByRole("button", { name: "Compare candidates" }),
+  ).toBeVisible();
+  await page.route(
+    "**/catalog/domain-review/comparison/comparison.json",
+    (route) => route.fulfill({ status: 503, body: "" }),
+  );
+  await page.getByLabel("Experience Domain").selectOption("domain_compare");
+  await expect(
+    page.getByText(/Unable to load this generated prototype/),
+  ).toBeVisible();
+  await expect(page.locator("#prototype-frame")).toHaveCount(0);
+  await page.route(
+    "**/catalog/candidate-review/comparison/comparison.json",
+    async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await route.continue();
+    },
+  );
+  await page.getByLabel("Experience Domain").selectOption("product-wide");
+  await page
+    .getByLabel("Direction / architecture")
+    .selectOption("rejected-request");
+  await expect(
+    page.getByText(/Proposed unavailable: rejected-system-request/),
+  ).toBeVisible();
+  await expect(page.locator("#scenario")).toHaveValue("rejected-change");
+  await expect(
+    page.getByText("Current fallback (Proposed requested)"),
+  ).toBeVisible();
+  await page.waitForTimeout(700);
+  await expect(
+    page.getByText("Current fallback (Proposed requested)"),
+  ).toBeVisible();
+  await expect(page.locator("#prototype-frame")).toHaveCount(1);
+  await expect(
+    page
+      .frameLocator("#prototype-frame")
+      .getByText(/Proposed, not implemented/),
+  ).toHaveCount(0);
 });
 
 test("local sandbox and empty or missing catalog states are explicit", async ({
