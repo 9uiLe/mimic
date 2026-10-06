@@ -363,7 +363,7 @@ function renderNode(
   if (interactiveAncestor && interactive)
     revision("Nested interactive controls are unsupported");
   if (node.id !== undefined) {
-    if (!ID.test(node.id) || ids.has(node.id))
+    if (typeof node.id !== "string" || !ID.test(node.id) || ids.has(node.id))
       fail("INVALID", `Unsafe or duplicate DOM id: ${node.id}`);
     ids.add(node.id);
   }
@@ -376,10 +376,9 @@ function renderNode(
   if (node.text !== undefined) assertText(node.text, "node text");
   let value = node.text;
   if (node.fixtureKey !== undefined) {
-    if (
-      !ID.test(node.fixtureKey) ||
-      !Object.hasOwn(fixtures[state]!, node.fixtureKey)
-    )
+    if (typeof node.fixtureKey !== "string" || !ID.test(node.fixtureKey))
+      fail("INVALID", "Fixture key must be a safe string");
+    if (!Object.hasOwn(fixtures[state]!, node.fixtureKey))
       revision(`Missing synthetic fixture ${state}.${node.fixtureKey}`);
     value = fixtures[state]![node.fixtureKey];
   }
@@ -390,7 +389,9 @@ function renderNode(
     fail("INVALID", "Only buttons may use supported state transitions");
   if (
     node.href !== undefined &&
-    (node.tag !== "a" || !/^#[A-Za-z][A-Za-z0-9_-]*$/.test(node.href))
+    (node.tag !== "a" ||
+      typeof node.href !== "string" ||
+      !/^#[A-Za-z][A-Za-z0-9_-]*$/.test(node.href))
   )
     fail("INVALID", "Only local fragment URLs are allowed");
   if (node.tag === "a" && !node.href)

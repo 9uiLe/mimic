@@ -276,3 +276,62 @@ test("rejects nested interactive controls and empty descendant labels", async ()
     code: "UPSTREAM_REVISION_REQUIRED",
   });
 });
+
+test("requires actual strings for authored DOM IDs and text attributes", async () => {
+  const { root, store, input } = await setup();
+  for (const invalid of [
+    ["prototype-status"],
+    { value: "prototype-status" },
+    123,
+  ]) {
+    const plan = change(input);
+    (
+      plan.states[0]!.root.children![0]!.children![0] as unknown as {
+        id: unknown;
+      }
+    ).id = invalid;
+    await expect(buildPrototype(store, plan, root)).rejects.toMatchObject({
+      code: "INVALID",
+    });
+  }
+  const fixtureKey = change(input);
+  (
+    fixtureKey.states[0]!.root.children![0]!.children![1] as unknown as {
+      fixtureKey: unknown;
+    }
+  ).fixtureKey = ["message"];
+  await expect(buildPrototype(store, fixtureKey, root)).rejects.toMatchObject({
+    code: "INVALID",
+  });
+  const unsafeHref = change(input);
+  (
+    unsafeHref.states[0]!.root.children![0]!.children![0] as { id?: string }
+  ).id = "valid-heading";
+  (
+    unsafeHref.states[0]!.root.children![0]!.children![1] as unknown as {
+      tag: string;
+      fixtureKey?: string;
+      href: unknown;
+      text: string;
+    }
+  ).tag = "a";
+  const link = unsafeHref.states[0]!.root.children![0]!
+    .children![1] as unknown as {
+    fixtureKey?: string;
+    href: unknown;
+    text: string;
+  };
+  delete link.fixtureKey;
+  link.text = "Open heading";
+  link.href = ["#valid-heading"];
+  await expect(buildPrototype(store, unsafeHref, root)).rejects.toMatchObject({
+    code: "INVALID",
+  });
+  const valid = change(input);
+  (valid.states[0]!.root.children![0]!.children![0] as { id?: string }).id =
+    "valid-heading";
+  const result = await buildPrototype(store, valid, root);
+  expect(
+    await readFile(path.join(result.directory, "index.html"), "utf8"),
+  ).toContain('id="valid-heading"');
+});
