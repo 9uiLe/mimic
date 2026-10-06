@@ -37,6 +37,11 @@
       "rejectedRevision": 2,
       "newRevision": 3,
       "expected": "new-revision"
+    },
+    {
+      "id": "license-fixture-review",
+      "fixture": "examples/license-reviewed.json",
+      "expected": "provisional-binding"
     }
   ]
 }

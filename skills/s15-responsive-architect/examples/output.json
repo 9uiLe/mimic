@@ -83,7 +83,8 @@
           "mobile": "Compare plans and decide or defer",
           "status": "UNVERIFIED"
         },
-        "failureModes": ["Hidden candidate identity or uncertainty"]
+        "failureModes": ["Hidden candidate identity or uncertainty"],
+        "primaryAction": "Choose a plan or defer"
       },
       "usageRules": [
         "Use when side-by-side comparison cannot fit without lost meaning"
@@ -136,6 +137,54 @@
         "Open comparison with candidate identity visible",
         "Read each criterion with candidate evidence and uncertainty in sequence",
         "Expand secondary evidence as needed",
+        "Choose a plan or defer with uncertainty visible"
+      ],
+      "expectedOutcome": "A choice or defer action retains candidate identity and uncertainty"
+    }
+  },
+  "sourceScenario": {
+    "meta": {
+      "id": "art_s15_source_scenario",
+      "type": "scenario",
+      "schemaVersion": "1.0.0",
+      "revision": 1,
+      "title": "Source comparison scenario",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "scope": {
+      "level": "product",
+      "ownerId": "product_mimic",
+      "parentId": "org_9uile"
+    },
+    "lifecycle": {
+      "status": "proposed",
+      "freshness": "valid"
+    },
+    "origin": {
+      "actorKind": "skill",
+      "actorId": "mimic.fixture",
+      "runId": "run_example",
+      "createdAt": "2026-10-06T12:00:00Z"
+    },
+    "dependencies": [],
+    "approval": {
+      "status": "pending"
+    },
+    "provenance": [
+      {
+        "path": "/content",
+        "kind": "assumption",
+        "rationale": "Synthetic source scenario, not an observed task result."
+      }
+    ],
+    "content": {
+      "summary": "Compare two plans against shared criteria and uncertainty.",
+      "actor": "Plan owner",
+      "context": "Choosing a plan with partial evidence",
+      "steps": [
+        "Open the comparison task with two candidate plans",
+        "Read each criterion with candidate evidence and uncertainty",
+        "Inspect differences and follow an evidence link",
         "Choose a plan or defer with uncertainty visible"
       ],
       "expectedOutcome": "A choice or defer action retains candidate identity and uncertainty"

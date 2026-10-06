@@ -40,6 +40,7 @@
             "artifactType": "reference-selection",
             "schemaVersion": "1.0.0",
           },
+          { "name": "provider-license-evidence", "kind": "evidence-file" },
         ],
       "alternatives": [],
     },
@@ -64,6 +65,11 @@
       { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
       { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
     ],
-  "examples": ["examples/output.json"],
+  "examples":
+    [
+      "examples/output.json",
+      "examples/license-reviewed.json",
+      "examples/license-unverified.json",
+    ],
   "tests": ["tests/scenarios.json"],
 }
