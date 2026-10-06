@@ -90,6 +90,45 @@ function release(
     bundled,
   };
 }
+function withArtifacts(
+  snapshot: PackageSnapshot,
+  documents: readonly Record<string, unknown>[],
+): PackageSnapshot {
+  const manifest = JSON.parse(
+    new TextDecoder().decode(snapshot.manifestBytes),
+  ) as PackageManifest;
+  const lock = parseDesignLock(snapshot.lockBytes);
+  const artifacts = documents.map((document, index) => {
+    const meta = document.meta as {
+      id: string;
+      revision: number;
+      schemaVersion: string;
+    };
+    const contents = bytes(JSON.stringify(document));
+    return {
+      artifactId: meta.id,
+      revision: meta.revision,
+      schemaVersion: meta.schemaVersion,
+      snapshotDigest: artifactDigest(document),
+      path: `artifact-${index}.json`,
+      digest: sha256(contents),
+    };
+  });
+  return {
+    ...snapshot,
+    manifestBytes: serializePackageDocument({ ...manifest, artifacts }),
+    lockBytes: serializePackageDocument({ ...lock, artifacts }),
+    files: {
+      ...snapshot.files,
+      ...Object.fromEntries(
+        documents.map((document, index) => [
+          `artifact-${index}.json`,
+          bytes(JSON.stringify(document)),
+        ]),
+      ),
+    },
+  };
+}
 function node(
   snapshot: PackageSnapshot,
   source = "cache:acquired",
@@ -204,6 +243,69 @@ describe("package registry", () => {
         packageDigest(changed),
       ),
     ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  test("portable root rejects a transitive external edge inside a bundled reference package", async () => {
+    const leaf = release(ref("org/leaf"), org);
+    const leafExternal = node(leaf);
+    const middle = release(
+      ref("org/middle"),
+      org,
+      [leafExternal],
+      [leafExternal],
+    );
+    const middleBundled = node(middle, "bundle:middle", "bundled");
+    const app = release(
+      ref("product/app"),
+      product,
+      [middleBundled],
+      [middleBundled, leafExternal],
+      {
+        "org%2Fmiddle@1.0.0": middle,
+      },
+    );
+    const digest = packageDigest(app);
+    await expect(
+      registry(memory([app, leaf])).resolve(ref("product/app"), digest),
+    ).rejects.toMatchObject({ code: "INVALID" });
+    await expect(
+      registry(memory([app])).resolve(ref("product/app"), digest),
+    ).rejects.toMatchObject({ code: "INVALID" });
+
+    const leafBundled = node(leaf, "bundle:leaf", "bundled");
+    const middleWithLeaf = release(
+      ref("org/middle"),
+      org,
+      [leafBundled],
+      [leafBundled],
+      { "org%2Fleaf@1.0.0": leaf },
+    );
+    const middleManifest = JSON.parse(
+      new TextDecoder().decode(middleWithLeaf.manifestBytes),
+    ) as PackageManifest;
+    const referenceMiddle = {
+      ...middleWithLeaf,
+      manifestBytes: serializePackageDocument({
+        ...middleManifest,
+        mode: "reference",
+      }),
+    };
+    const referenceNode = node(referenceMiddle, "bundle:middle", "bundled");
+    const portable = release(
+      ref("product/app"),
+      product,
+      [referenceNode],
+      [referenceNode, leafBundled],
+      { "org%2Fmiddle@1.0.0": referenceMiddle },
+    );
+    expect(
+      (
+        await registry(memory([portable])).resolve(
+          ref("product/app"),
+          packageDigest(portable),
+        )
+      ).map((item) => item.ref.packageId),
+    ).toEqual(["product/app", "org/middle", "org/leaf"]);
   });
 
   test("rejects tampering, missing exact releases, incompatible schemas, and forbidden scope", async () => {
@@ -551,5 +653,153 @@ describe("package registry", () => {
         packageDigest(restricted),
       ),
     ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  test("schema-valid artifact locks require an exact acquired artifact dependency closure", async () => {
+    const repository = path.resolve(import.meta.dirname, "../../../../");
+    const schemas = await loadSchemaDirectory(
+      path.join(repository, "schemas/artifacts"),
+    );
+    const stale = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/stale-locked-dependency.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    stale.scope = product;
+    expect(schemas.validate(stale).valid).toBe(true);
+    const missing = withArtifacts(release(ref("product/app"), product), [
+      stale,
+    ]);
+    await expect(
+      registry(memory([missing]), ["1.0.0"], schemas).reconstruct(
+        ref("product/app"),
+        packageDigest(missing),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
+
+    const tokens = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/product-definition.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    tokens.scope = product;
+    tokens.meta = {
+      ...(tokens.meta as object),
+      id: "art_tokens_01",
+      revision: 3,
+      supersedesRevision: 2,
+    };
+    expect(schemas.validate(tokens).valid).toBe(true);
+    const mismatched = withArtifacts(release(ref("product/app"), product), [
+      stale,
+      tokens,
+    ]);
+    await expect(
+      registry(memory([mismatched]), ["1.0.0"], schemas).reconstruct(
+        ref("product/app"),
+        packageDigest(mismatched),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
+
+    const exact = structuredClone(stale);
+    exact.dependencies = [
+      {
+        ...(stale.dependencies as Record<string, unknown>[])[0],
+        lockDigest: artifactDigest(tokens),
+      },
+    ];
+    const complete = withArtifacts(release(ref("product/app"), product), [
+      exact,
+      tokens,
+    ]);
+    expect(
+      (
+        await registry(memory([complete]), ["1.0.0"], schemas).reconstruct(
+          ref("product/app"),
+          packageDigest(complete),
+        )
+      )[0]?.manifest.artifacts,
+    ).toHaveLength(2);
+  });
+
+  test("conflicting cross-package artifact revisions fail closed", async () => {
+    const repository = path.resolve(import.meta.dirname, "../../../../");
+    const schemas = await loadSchemaDirectory(
+      path.join(repository, "schemas/artifacts"),
+    );
+    const original = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/product-definition.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    const productArtifact = { ...original, scope: product };
+    const orgArtifact = {
+      ...original,
+      scope: org,
+      content: {
+        ...(original.content as object),
+        summary: "Conflicting revision",
+      },
+    };
+    const leaf = withArtifacts(release(ref("org/leaf"), org), [orgArtifact]);
+    const leafNode = node(leaf);
+    const app = withArtifacts(
+      release(ref("product/app"), product, [leafNode], [leafNode]),
+      [productArtifact],
+    );
+    await expect(
+      registry(memory([app, leaf]), ["1.0.0"], schemas).reconstruct(
+        ref("product/app"),
+        packageDigest(app),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  test("authority callbacks and caller scope changes cannot mutate verified registry data", async () => {
+    const mutableOrg = { level: "organization" as const, ownerId: "org" };
+    const mutableProduct = {
+      level: "product" as const,
+      ownerId: "product",
+      parentId: "org",
+    };
+    const snapshot = release(ref("product/app"), product);
+    const authority = {
+      async verifyRelease(manifest: PackageManifest) {
+        (
+          manifest as unknown as { schemaVersion: string; mode: string }
+        ).schemaVersion = "999.0.0";
+        (manifest as unknown as { mode: string }).mode = "unverified";
+        return true;
+      },
+      async verifyPromotion() {
+        return true;
+      },
+    };
+    const active = new PackageRegistry(memory([snapshot]), {
+      scopes: [mutableOrg, mutableProduct],
+      supportedSchemaVersions: ["1.0.0"],
+      authority,
+      licenseAllowed: () => true,
+    });
+    mutableProduct.parentId = "other";
+    const reconstructed = await active.reconstruct(
+      ref("product/app"),
+      packageDigest(snapshot),
+    );
+    expect(reconstructed[0]?.manifest.schemaVersion).toBe("1.0.0");
+    expect(reconstructed[0]?.manifest.mode).toBe("reference");
+    expect(reconstructed[0]?.manifest.scope).toEqual(product);
   });
 });

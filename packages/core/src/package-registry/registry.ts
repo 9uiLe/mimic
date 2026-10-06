@@ -3,7 +3,7 @@ import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { artifactDigest } from "../artifact-canonical.js";
 import { parseArtifactYaml } from "../artifact-codec.js";
-import type { ScopeNode } from "../artifact-store.js";
+import type { ArtifactSnapshot, ScopeNode } from "../artifact-store.js";
 import type { SchemaRegistry } from "../schema-registry.js";
 
 export type UpgradeImpact = "NONE" | "SAFE" | "REVIEW_REQUIRED" | "BREAKING";
@@ -649,16 +649,26 @@ async function readRegular(file: string, base: string): Promise<Uint8Array> {
 
 export class PackageRegistry {
   private readonly scopes = new Map<string, ScopeNode>();
+  private readonly options: RegistryOptions;
   constructor(
     readonly source: PackageSource,
-    readonly options: RegistryOptions,
+    options: RegistryOptions,
   ) {
-    for (const node of options.scopes) {
+    this.options = Object.freeze({
+      ...options,
+      scopes: Object.freeze(
+        options.scopes.map((node) => Object.freeze({ ...node })),
+      ),
+      supportedSchemaVersions: Object.freeze([
+        ...options.supportedSchemaVersions,
+      ]),
+    });
+    for (const node of this.options.scopes) {
       scope(node);
       assert(!this.scopes.has(node.ownerId), "Duplicate scope owner");
       this.scopes.set(node.ownerId, node);
     }
-    for (const node of options.scopes) this.ancestors(node);
+    for (const node of this.options.scopes) this.ancestors(node);
   }
   private ancestors(node: ScopeNode): string[] {
     const levels = ["organization", "product", "domain", "local"];
@@ -796,7 +806,9 @@ export class PackageRegistry {
       );
       let trusted = false;
       try {
-        trusted = await this.options.authority.verifyRelease(manifest);
+        trusted = await this.options.authority.verifyRelease(
+          structuredClone(manifest),
+        );
       } catch {
         /* unavailable authority fails closed */
       }
@@ -820,6 +832,7 @@ export class PackageRegistry {
     expectedDigest: string,
   ): Promise<readonly ResolvedPackage[]> {
     const root = await this.acquire(ref, expectedDigest);
+    const portableClosure = root.manifest.mode === "portable";
     const nodes = new Map(
       root.lock.packages.map((node) => [key(node.ref), node]),
     );
@@ -861,7 +874,7 @@ export class PackageRegistry {
           /* unavailable policy fails closed */
         }
         assert(allowed, `License prohibits dependency: ${id}`);
-        if (current.mode === "portable")
+        if (portableClosure || current.mode === "portable")
           assert(
             edge.distribution === "bundled",
             `Portable package has external dependency: ${id}`,
@@ -933,11 +946,68 @@ export class PackageRegistry {
         `Nested lock closure mismatch: ${id}`,
       );
     }
+    this.verifyArtifactClosure(found, snapshots);
     return [...found].map(([id, manifest]) => ({
       manifest,
       snapshot: snapshots.get(id)!,
       digest: id === key(ref) ? expectedDigest : nodes.get(id)!.digest,
     }));
+  }
+  private verifyArtifactClosure(
+    manifests: ReadonlyMap<string, PackageManifest>,
+    snapshots: ReadonlyMap<string, PackageSnapshot>,
+  ): void {
+    const selected = new Map<
+      string,
+      { artifact: ArtifactSnapshot; digest: string }
+    >();
+    for (const [packageKey, manifest] of manifests) {
+      const packageBytes = snapshots.get(packageKey)!;
+      for (const entry of manifest.artifacts) {
+        const artifact = parseArtifactYaml(
+          decoder.decode(packageBytes.files[entry.path]!),
+        ) as unknown as ArtifactSnapshot;
+        const identity = `${entry.artifactId}@${entry.revision}`;
+        const prior = selected.get(identity);
+        assert(
+          !prior || prior.digest === entry.snapshotDigest,
+          `Conflicting artifact revision: ${identity}`,
+        );
+        if (!prior)
+          selected.set(identity, { artifact, digest: entry.snapshotDigest });
+      }
+    }
+    for (const [identity, selectedArtifact] of selected) {
+      for (const edge of selectedArtifact.artifact.dependencies) {
+        const target = selected.get(`${edge.artifactId}@${edge.revision}`);
+        assert(
+          target,
+          `Artifact dependency absent from lock: ${identity} -> ${edge.artifactId}@${edge.revision}`,
+        );
+        assert(
+          target.digest === edge.lockDigest,
+          `Artifact dependency digest mismatch: ${identity} -> ${edge.artifactId}@${edge.revision}`,
+        );
+        assert(
+          this.ancestors(selectedArtifact.artifact.scope).includes(
+            target.artifact.scope.ownerId,
+          ),
+          `Artifact dependency out of scope: ${identity} -> ${edge.artifactId}@${edge.revision}`,
+        );
+      }
+    }
+    const active = new Set<string>(),
+      completed = new Set<string>();
+    const visit = (identity: string): void => {
+      if (completed.has(identity)) return;
+      assert(!active.has(identity), `Artifact dependency cycle: ${identity}`);
+      active.add(identity);
+      for (const edge of selected.get(identity)!.artifact.dependencies)
+        visit(`${edge.artifactId}@${edge.revision}`);
+      active.delete(identity);
+      completed.add(identity);
+    };
+    for (const identity of selected.keys()) visit(identity);
   }
   async resolve(
     ref: PackageRef,
@@ -1066,7 +1136,9 @@ export class PackageRegistry {
     text(record.approval.at);
     let trusted = false;
     try {
-      trusted = await this.options.authority.verifyPromotion(record);
+      trusted = await this.options.authority.verifyPromotion(
+        structuredClone(record),
+      );
     } catch {
       /* unavailable authority fails closed */
     }
