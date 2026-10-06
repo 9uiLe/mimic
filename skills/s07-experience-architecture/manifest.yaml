@@ -67,6 +67,17 @@
       { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
       { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
     ],
-  "examples": ["examples/candidate.json", "examples/journey.json"],
-  "tests": ["tests/scenarios.json", "tests/negative.json"],
+  "examples":
+    [
+      "examples/candidate.json",
+      "examples/journey.json",
+      "examples/exploration-domain.json",
+    ],
+  "tests":
+    [
+      "tests/scenarios.json",
+      "tests/negative.json",
+      "tests/domain-surfaces.json",
+      "tests/journey-context.json",
+    ],
 }

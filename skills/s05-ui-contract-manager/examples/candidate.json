@@ -28,16 +28,52 @@
   },
   "provenance": [
     {
-      "path": "/content",
+      "path": "/content/entityContext/0",
+      "kind": "fact",
+      "evidenceRefs": [
+        "skills/s04-system-capability-extractor/evidence/system-response.json"
+      ]
+    },
+    {
+      "path": "/content/navigation/0",
       "kind": "assumption",
-      "rationale": "Illustrative provisional candidate; no empirical research is claimed."
+      "rationale": "Task-driven requirement; requires human product review."
+    },
+    {
+      "path": "/content/terminology/0",
+      "kind": "assumption",
+      "rationale": "Task wording proposed for review."
+    },
+    {
+      "path": "/content/terminology/1",
+      "kind": "assumption",
+      "rationale": "Task wording proposed for review."
+    },
+    {
+      "path": "/content/entityContext/1",
+      "kind": "hypothesis",
+      "rationale": "Persistence is a proposed change, not current system behavior."
+    },
+    {
+      "path": "/content/entityContext/2",
+      "kind": "unknown",
+      "rationale": "No supplied evidence defines review_state approval semantics."
     }
   ],
   "content": {
-    "summary": "Shared UI Contract. Current behavior requires verified system evidence; required task and accessibility commitments remain explicit; proposed GUI behavior awaits system change; unresolved semantics are recorded as unknowns.",
-    "navigation": ["Return to candidate review with context"],
-    "terminology": ["Candidate", "Evidence"],
-    "entityContext": ["Preserve candidate ID and review state"],
+    "summary": "One shared contract for candidate review across entry modes.",
+    "navigation": [
+      "Required: return to candidate review with candidate ID and a visible return path."
+    ],
+    "terminology": [
+      "Required: use Candidate for the reviewed entity.",
+      "Required: use Evidence for supporting material."
+    ],
+    "entityContext": [
+      "Current: response contains review_state key for a requested review.",
+      "Proposed: restore candidate review state across sessions.",
+      "Unresolved: approval semantics of review_state are unknown."
+    ],
     "accessibilityBaseline": "WCAG 2.2 AA"
   }
 }

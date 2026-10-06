@@ -54,6 +54,11 @@
       { "artifactType": "system-request", "schemaVersion": "1.0.0" },
       { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
     ],
-  "examples": ["examples/candidate.json"],
-  "tests": ["tests/scenarios.json", "tests/negative.json"],
+  "examples": ["examples/candidate.json", "examples/evidenced-fact.json"],
+  "tests":
+    [
+      "tests/scenarios.json",
+      "tests/negative.json",
+      "evidence/system-response.json",
+    ],
 }

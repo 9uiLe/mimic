@@ -13,6 +13,7 @@ import {
   loadSkillPackage,
   runSkillPackage,
   type SkillManifest,
+  type SkillPackage,
 } from "../skill-runtime/index.js";
 import { FileWorkspaceStorage } from "../workspace-transaction.js";
 
@@ -56,30 +57,254 @@ const taskInputs = (manifest: SkillManifest): RoutedTask["inputs"] => ({
 const fixtureName = (type: string) =>
   type === "product-ui-contract" ? "proposed-product-ui-contract" : type;
 
+type ScenarioCase = {
+  name: string;
+  expected: string;
+  reason?: string;
+  example?: string;
+  errorContains?: string;
+  source?: string;
+  factKey?: string;
+  factText?: string;
+  unknownText?: string;
+  forbiddenClaim?: string;
+  claims?: readonly {
+    state: string;
+    path: string;
+    kind: string;
+    text: string;
+    source?: string;
+    request?: string;
+  }[];
+  contract?: string;
+  missingBehavior?: string;
+  expectedChangeType?: string;
+  modes?: readonly string[];
+  fixture?: string;
+  exploration?: string;
+  review?: string;
+  claimPath?: string;
+  claimState?: string;
+  claimKind?: string;
+  field?: string;
+};
+type NegativeCase = { effect: string; expected: string; errorContains: string };
+function required<T>(value: T | undefined, label: string): T {
+  if (value === undefined) throw new Error(`Missing scenario field: ${label}`);
+  return value;
+}
+function atPointer(value: unknown, pointer: string): unknown {
+  return pointer
+    .split("/")
+    .slice(1)
+    .reduce<unknown>((node, key) => {
+      if (!node || typeof node !== "object")
+        throw new Error(`Unresolved pointer: ${pointer}`);
+      return (node as Record<string, unknown>)[key];
+    }, value);
+}
+async function rejected(action: () => Promise<unknown>): Promise<string> {
+  try {
+    await action();
+  } catch (error) {
+    return String(error);
+  }
+  throw new Error("Expected rejection, but action succeeded");
+}
+function assertNoInventedMeaning(
+  artifact: ArtifactSnapshot,
+  forbiddenClaim: string,
+): void {
+  const description = String(
+    (artifact.content as { description: string }).description,
+  );
+  const semanticUnknown = artifact.provenance.some(
+    (item) =>
+      item.kind === "unknown" && item.rationale?.includes("approval semantics"),
+  );
+  if (semanticUnknown && description.includes(forbiddenClaim))
+    throw new Error("Semantic meaning lacks evidence");
+}
+function assertClaimStatus(
+  artifact: ArtifactSnapshot,
+  pointer: string,
+  state: string,
+  kind: string,
+): void {
+  const text = atPointer(artifact, pointer);
+  const provenance = artifact.provenance.find((item) => item.path === pointer);
+  if (
+    typeof text !== "string" ||
+    !text.toLowerCase().startsWith(`${state}:`) ||
+    provenance?.kind !== kind
+  )
+    throw new Error("Claim status/provenance mismatch");
+}
+function assertPreservedContext(fixture: {
+  from: Record<string, string>;
+  to: Record<string, string>;
+  keys: Record<string, string>;
+}): void {
+  for (const [context, key] of Object.entries(fixture.keys)) {
+    if (!fixture.from[key] || fixture.to[key] !== fixture.from[key])
+      throw new Error(`Cross-domain context lost: ${context}`);
+  }
+}
+async function modeContract(
+  mode: "system-first" | "experience-first",
+  skill: SkillPackage,
+  example: ArtifactSnapshot,
+) {
+  const root = await mkdtemp(path.join(os.tmpdir(), `mimic-contract-${mode}-`));
+  temporary.push(root);
+  const runtime = createOrchestratorRuntime(
+    new FileWorkspaceStorage(path.join(root, "workspace.json")),
+    await loadSchemaDirectory(path.join(schemasRoot, "artifacts")),
+    scopes,
+    {
+      async verify() {
+        return false;
+      },
+      async allowCommit() {
+        return false;
+      },
+    },
+  );
+  const types = skill.manifest.inputs.required
+    .filter((item) => item.kind === "artifact")
+    .map((item) => item.artifactType);
+  const target: RoutedTask = {
+    id: "contract",
+    skillId: skill.manifest.skillId,
+    outputType: "product-ui-contract",
+    additionalOutputTypes: ["system-request"],
+    scopeOwnerId: "product_mimic",
+    intent: "create",
+    authority: "PROPOSE_ONLY",
+    inputs: taskInputs(skill.manifest),
+  };
+  const tasks: RoutedTask[] = [
+    ...types.map((type) => ({
+      id: `seed-${type}`,
+      skillId: "mimic.fixture.producer",
+      outputType: type,
+      scopeOwnerId: "product_mimic",
+      intent: "create" as const,
+      authority: "AUTONOMOUS" as const,
+      inputs: { required: [], optional: [], alternatives: [] },
+    })),
+    target,
+  ];
+  const runId = `run_${mode.replaceAll("-", "_")}`;
+  await runtime.orchestrator.start({
+    id: runId,
+    scopeOwnerId: "product_mimic",
+    entryMode: mode,
+    actor: { kind: "agent", id: "agent_1" },
+    at: now,
+    tasks,
+  });
+  const seeded: ArtifactSnapshot[] = [];
+  for (const type of types) {
+    const source = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid",
+          `${fixtureName(type)}.json`,
+        ),
+        "utf8",
+      ),
+    ) as ArtifactSnapshot;
+    const artifact: ArtifactSnapshot = {
+      ...source,
+      meta: {
+        ...source.meta,
+        id: `art_${mode.replaceAll("-", "_")}_${type.replaceAll("-", "_")}`,
+      },
+      lifecycle: { status: "provisional", freshness: "valid" },
+      approval: { status: "pending" },
+      origin: {
+        actorKind: "skill",
+        actorId: "mimic.fixture.producer",
+        runId,
+        createdAt: now,
+      },
+    };
+    await runtime.artifacts.create(artifact);
+    await runtime.registry.produce({
+      runId,
+      ref: ref(artifact),
+      inputs: [],
+      actor: { kind: "skill", id: "mimic.fixture.producer" },
+      at: now,
+      reason: "Mode input",
+    });
+    seeded.push(artifact);
+  }
+  await runtime.registry.setWork({
+    runId,
+    safeActions: ["contract"],
+    blockers: {},
+    actor: { kind: "agent", id: "agent_1" },
+    at: now,
+    reason: "Inputs available",
+  });
+  const candidate: ArtifactSnapshot = {
+    ...example,
+    meta: { ...example.meta, id: `art_contract_${mode.replaceAll("-", "_")}` },
+    origin: {
+      actorKind: "skill",
+      actorId: skill.manifest.skillId,
+      runId,
+      createdAt: now,
+    },
+    dependencies: seeded.map((item) => ({
+      ...ref(item),
+      onChange: "validate",
+    })),
+  };
+  await runtime.artifacts.create(candidate);
+  const work = await runSkillPackage({
+    orchestrator: runtime.orchestrator,
+    package: skill,
+    runId,
+    tasks,
+    taskId: "contract",
+    at: now,
+    executor: async ({ invocation }) => ({
+      result: {
+        runId,
+        taskId: "contract",
+        skillId: skill.manifest.skillId,
+        inputRefs: invocation.inputRefs,
+        outputRefs: [ref(candidate)],
+      },
+    }),
+  });
+  expect(work.result.outputRefs).toEqual([ref(candidate)]);
+  return {
+    content: candidate.content,
+    inputTypes: types,
+    dependencyTypes: seeded.map((item) => item.meta.type),
+  };
+}
+
 for (const slug of packages)
   test(`${slug}: package, scenarios, runtime routing and boundary`, async () => {
     const directory = path.join(repository, "skills", slug);
     const skill = await loadSkillPackage(directory, schemasRoot);
     const scenarios = JSON.parse(skill.tests["tests/scenarios.json"]!) as {
-      cases: { name: string; expected: string }[];
+      cases: ScenarioCase[];
     };
     const negative = JSON.parse(skill.tests["tests/negative.json"]!) as {
-      cases: { effect: string; expected: string }[];
+      cases: NegativeCase[];
     };
-    expect(scenarios.cases.map((item) => item.name)).toEqual(
-      expect.arrayContaining([
-        "missing-input",
-        "valid-candidate",
-        "optional-gap",
-        "exact-lock",
-      ]),
+    expect(new Set(scenarios.cases.map((item) => item.name)).size).toBe(
+      scenarios.cases.length,
     );
-    expect(negative.cases.map((item) => item.effect)).toEqual(
-      expect.arrayContaining([
-        "approved-output",
-        "canonical-write",
-        "direct-skill-call",
-      ]),
+    expect(new Set(negative.cases.map((item) => item.effect)).size).toBe(
+      negative.cases.length,
     );
     expect(skill.instructions).toContain("Orchestrator");
     expect(skill.instructions).toContain("approved");
@@ -93,46 +318,6 @@ for (const slug of packages)
     );
     expect(example.lifecycle.status).toBe("provisional");
     expect(example.approval.status).toBe("pending");
-    if (slug === "s02-user-task-modeling") {
-      expect(
-        example.provenance.some((item) => item.kind === "assumption"),
-      ).toBe(true);
-      expect(skill.instructions).toMatch(/behavior|Behavior/);
-    }
-    if (slug === "s03-brand-builder") {
-      expect(
-        skill.manifest.inputs.alternatives[0]?.oneOf.some(
-          (item) => item.kind === "artifact" && item.artifactType === "brand",
-        ),
-      ).toBe(true);
-      expect(skill.instructions).toContain(
-        "Reuse an inherited brand unchanged",
-      );
-    }
-    if (slug === "s05-ui-contract-manager") {
-      for (const state of ["current", "required", "proposed", "unresolved"])
-        expect(
-          (example.content as { summary: string }).summary.toLowerCase(),
-        ).toContain(state);
-      expect(
-        JSON.parse(skill.examples["examples/system-request.json"]!).content
-          .changeType,
-      ).toBe("capability");
-    }
-    if (slug === "s07-experience-architecture") {
-      expect(
-        JSON.parse(skill.examples["examples/journey.json"]!).content
-          .preservedContext,
-      ).toEqual([
-        "entity",
-        "terminology",
-        "navigation",
-        "return-path",
-        "state",
-      ]);
-      expect(skill.instructions).toContain("never merely for a URL");
-    }
-
     const root = await mkdtemp(path.join(os.tmpdir(), "mimic-s01-s07-"));
     temporary.push(root);
     const runtime = createOrchestratorRuntime(
@@ -156,14 +341,6 @@ for (const slug of packages)
         (await runtime.artifacts.read(sample.meta.id, sample.meta.revision))
           .artifact,
       ).toEqual(sample);
-    }
-    if (slug === "s04-system-capability-extractor") {
-      const unevidenced: ArtifactSnapshot = {
-        ...example,
-        meta: { ...example.meta, id: "art_unevidenced_current" },
-        content: { ...(example.content as object), availability: "current" },
-      };
-      await expect(runtime.artifacts.create(unevidenced)).rejects.toThrow();
     }
     const requiredTypes = skill.manifest.inputs.required
       .filter((item) => item.kind === "artifact")
@@ -205,10 +382,9 @@ for (const slug of packages)
       at: now,
       tasks: [missing],
     });
-    expect(
-      (await runtime.orchestrator.next("run_missing", [missing])).actions[0]
-        ?.action,
-    ).toBe("BLOCK");
+    const missingAction = (
+      await runtime.orchestrator.next("run_missing", [missing])
+    ).actions[0];
     await runtime.orchestrator.start({
       id: "run_catalog",
       scopeOwnerId: "product_mimic",
@@ -298,10 +474,11 @@ for (const slug of packages)
       ...fakeBare,
       meta: { ...fakeBare.meta, contentDigest: artifactDigest(fakeBare) },
     };
-    await expect(runtime.artifacts.create(fakeApproval)).rejects.toThrow(
-      /Human approval is not verified/,
+    const failures: Record<string, string> = {};
+    failures["approved-output"] = await rejected(() =>
+      runtime.artifacts.create(fakeApproval),
     );
-    await expect(
+    failures["mismatched-input-lock"] = await rejected(() =>
       runSkillPackage({
         orchestrator: runtime.orchestrator,
         package: skill,
@@ -325,8 +502,8 @@ for (const slug of packages)
           },
         }),
       }),
-    ).rejects.toThrow(/Result does not match invocation/);
-    await expect(
+    );
+    failures["canonical-write"] = await rejected(() =>
       runSkillPackage({
         orchestrator: runtime.orchestrator,
         package: skill,
@@ -345,10 +522,8 @@ for (const slug of packages)
           } as never,
         }),
       }),
-    ).rejects.toThrow(
-      /Unexpected Skill result effect|Unexpected Skill work effect/,
     );
-    await expect(
+    failures["direct-skill-call"] = await rejected(() =>
       runSkillPackage({
         orchestrator: runtime.orchestrator,
         package: skill,
@@ -367,7 +542,8 @@ for (const slug of packages)
           } as never,
         }),
       }),
-    ).rejects.toThrow(/Direct Skill invocation/);
+    );
+    let observedGaps: readonly string[] = [];
     const valid = await runSkillPackage({
       orchestrator: runtime.orchestrator,
       package: skill,
@@ -377,15 +553,7 @@ for (const slug of packages)
       at: now,
       executor: async ({ invocation, inputs, gaps }) => {
         expect(inputs.map((item) => item.ref)).toEqual(invocation.inputRefs);
-        expect(gaps).toEqual(
-          skill.manifest.inputs.optional
-            .filter(
-              (item) =>
-                item.kind === "artifact" &&
-                !requiredTypes.includes(item.artifactType),
-            )
-            .map((item) => item.name),
-        );
+        observedGaps = gaps;
         return {
           result: {
             runId: invocation.runId,
@@ -401,9 +569,455 @@ for (const slug of packages)
     expect(
       (await runtime.registry.run("run_catalog")).run.artifacts,
     ).toContainEqual(ref(candidate));
+    const expectedGaps = skill.manifest.inputs.optional
+      .filter(
+        (item) =>
+          item.kind === "artifact" &&
+          !requiredTypes.includes(item.artifactType),
+      )
+      .map((item) => item.name);
+    for (const caseData of scenarios.cases) {
+      switch (caseData.name) {
+        case "missing-input":
+          expect(caseData.expected).toBe("blocked");
+          expect(missingAction?.action).toBe("BLOCK");
+          expect(skill.instructions).toContain(
+            required(caseData.reason, "reason"),
+          );
+          break;
+        case "valid-candidate": {
+          const sample = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          expect(candidate.content).toEqual(sample.content);
+          expect(candidate.lifecycle.status).toBe(caseData.expected);
+          expect(valid.result.outputRefs).toEqual([ref(candidate)]);
+          break;
+        }
+        case "optional-gap":
+          expect(caseData.expected).toBe("reported");
+          expect(observedGaps).toEqual(expectedGaps);
+          expect(skill.instructions).toContain(
+            required(caseData.reason, "reason"),
+          );
+          break;
+        case "exact-lock":
+          expect(caseData.expected).toBe("preserved");
+          expect(skill.instructions).toContain(
+            required(caseData.reason, "reason"),
+          );
+          expect(
+            candidate.dependencies.map(
+              ({ artifactId, revision, lockDigest }) => ({
+                artifactId,
+                revision,
+                lockDigest,
+              }),
+            ),
+          ).toEqual(seeded.map(ref));
+          break;
+        case "mismatched-input-lock":
+          expect(caseData.expected).toBe("rejected");
+          expect(failures[caseData.name]).toContain(
+            required(caseData.errorContains, "errorContains"),
+          );
+          break;
+        case "inherited-brand": {
+          expect(caseData.expected).toBe("reuse-exact-approved-ref");
+          const inherited = await exerciseInheritedBrand();
+          expect(inherited.outputRefs).toEqual([inherited.approvedRef]);
+          expect(inherited.newArtifacts).not.toContainEqual(
+            inherited.approvedRef,
+          );
+          break;
+        }
+        case "unverified-current": {
+          expect(caseData.expected).toBe("rejected");
+          const source = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const unevidenced: ArtifactSnapshot = {
+            ...source,
+            meta: { ...source.meta, id: "art_unevidenced_current" },
+            content: { ...(source.content as object), availability: "current" },
+          };
+          const failure = await rejected(() =>
+            runtime.artifacts.create(unevidenced),
+          );
+          expect(failure).toContain(
+            required(caseData.errorContains, "errorContains"),
+          );
+          break;
+        }
+        case "semantic-unknown": {
+          expect(caseData.expected).toBe("unresolved");
+          const known = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const source = JSON.parse(
+            required(
+              skill.tests[required(caseData.source, "source")],
+              "source fixture",
+            ),
+          ) as { response: Record<string, unknown> };
+          const factKey = required(caseData.factKey, "factKey");
+          expect(source.response).toHaveProperty(factKey);
+          const content = known.content as {
+            availability: string;
+            description: string;
+            supportingEvidence: string[];
+          };
+          expect(content.availability).toBe("current");
+          expect(content.supportingEvidence).toContain(caseData.source);
+          expect(content.description).toContain(
+            required(caseData.factText, "factText"),
+          );
+          const fact = known.provenance.find((item) => item.kind === "fact");
+          expect(fact?.evidenceRefs).toContain(caseData.source);
+          const unknown = known.provenance.find(
+            (item) => item.kind === "unknown",
+          );
+          expect(unknown?.rationale).toContain(
+            required(caseData.unknownText, "unknownText"),
+          );
+          expect(content.description).not.toContain(
+            required(caseData.forbiddenClaim, "forbiddenClaim"),
+          );
+          assertNoInventedMeaning(
+            known,
+            required(caseData.forbiddenClaim, "forbiddenClaim"),
+          );
+          break;
+        }
+        case "current-required-proposed-unresolved": {
+          expect(caseData.expected).toBe("separated");
+          const contract = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const claims = required(caseData.claims, "claims");
+          expect(claims.map((item) => item.state)).toEqual([
+            "current",
+            "required",
+            "proposed",
+            "unresolved",
+          ]);
+          for (const claim of claims) {
+            const value = atPointer(contract, claim.path);
+            expect(value).toEqual(expect.any(String));
+            expect(String(value).toLowerCase()).toContain(`${claim.state}:`);
+            expect(String(value).toLowerCase()).toContain(
+              claim.text.toLowerCase(),
+            );
+            assertClaimStatus(contract, claim.path, claim.state, claim.kind);
+            const provenance = contract.provenance.find(
+              (item) => item.path === claim.path,
+            );
+            expect(provenance?.kind).toBe(claim.kind);
+            if (claim.state === "current") {
+              const system = JSON.parse(
+                await readFile(
+                  path.join(repository, required(claim.source, "source")),
+                  "utf8",
+                ),
+              ) as ArtifactSnapshot;
+              expect(
+                (system.content as { availability: string }).availability,
+              ).toBe("current");
+              const support = (
+                system.content as { supportingEvidence: string[] }
+              ).supportingEvidence;
+              const packageRoot = required(claim.source, "source")
+                .split("/")
+                .slice(0, -2)
+                .join("/");
+              expect(provenance?.evidenceRefs).toContain(
+                `${packageRoot}/${support[0]}`,
+              );
+            } else if (claim.state === "required") {
+              const users = JSON.parse(
+                await readFile(
+                  path.join(repository, required(claim.source, "source")),
+                  "utf8",
+                ),
+              ) as ArtifactSnapshot;
+              expect(
+                (users.content as { tasks: string[] }).tasks.join(" "),
+              ).toContain("resume review");
+            } else if (claim.state === "proposed") {
+              const request = JSON.parse(
+                required(
+                  skill.examples[required(claim.request, "request")],
+                  "request source",
+                ),
+              ) as ArtifactSnapshot;
+              expect(
+                (request.content as { request: string }).request.toLowerCase(),
+              ).toContain(claim.text.toLowerCase());
+            } else if (claim.state === "unresolved") {
+              const system = JSON.parse(
+                await readFile(
+                  path.join(repository, required(claim.source, "source")),
+                  "utf8",
+                ),
+              ) as ArtifactSnapshot;
+              expect(
+                system.provenance.some(
+                  (item) =>
+                    item.kind === "unknown" &&
+                    item.rationale?.includes(claim.text),
+                ),
+              ).toBe(true);
+            } else throw new Error(`Unhandled claim state: ${claim.state}`);
+          }
+          break;
+        }
+        case "gui-feedback": {
+          expect(caseData.expected).toBe("system-request");
+          const request = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const contract = JSON.parse(
+            required(
+              skill.examples[required(caseData.contract, "contract")],
+              "contract source",
+            ),
+          ) as ArtifactSnapshot;
+          const need = required(caseData.missingBehavior, "missingBehavior");
+          expect(JSON.stringify(contract.content).toLowerCase()).toContain(
+            need.toLowerCase(),
+          );
+          expect((request.content as { changeType: string }).changeType).toBe(
+            required(caseData.expectedChangeType, "expectedChangeType"),
+          );
+          expect(
+            (request.content as { request: string }).request.toLowerCase(),
+          ).toContain(need.toLowerCase());
+          expect(request.lifecycle.status).toBe("provisional");
+          break;
+        }
+        case "mode-convergence": {
+          expect(caseData.expected).toBe("equivalent-contract");
+          const modes = required(caseData.modes, "modes");
+          expect(modes).toEqual(["system-first", "experience-first"]);
+          const source = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const results = await Promise.all(
+            modes.map((mode) =>
+              modeContract(
+                mode as "system-first" | "experience-first",
+                skill,
+                source,
+              ),
+            ),
+          );
+          expect(results[0]?.content).toEqual(results[1]?.content);
+          expect(results[0]?.inputTypes).toEqual(results[1]?.inputTypes);
+          expect(results[0]?.dependencyTypes).toEqual(
+            results[1]?.dependencyTypes,
+          );
+          break;
+        }
+        case "same-interaction-different-url": {
+          expect(caseData.expected).toBe("same-domain");
+          const fixture = JSON.parse(
+            required(
+              skill.tests[required(caseData.fixture, "fixture")],
+              "fixture source",
+            ),
+          ) as {
+            surfaces: {
+              url: string;
+              domain: string;
+              primaryGoal: string;
+              interactionModel: string;
+              riskModel: string;
+            }[];
+            sameDomain: string[];
+            differentDomain: string[];
+          };
+          const exploration = JSON.parse(
+            required(
+              skill.examples[required(caseData.exploration, "exploration")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const review = JSON.parse(
+            required(
+              skill.examples[required(caseData.review, "review")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const signature = (item: {
+            primaryGoal: string;
+            interactionModel: string;
+            riskModel: string;
+          }) => [item.primaryGoal, item.interactionModel, item.riskModel];
+          for (const surface of fixture.surfaces) {
+            const domain =
+              surface.domain === "exploration"
+                ? exploration
+                : surface.domain === "review"
+                  ? review
+                  : undefined;
+            if (!domain) throw new Error(`Unknown domain: ${surface.domain}`);
+            expect(signature(surface)).toEqual(
+              signature(domain.content as typeof surface),
+            );
+          }
+          const byUrl = (url: string) =>
+            required(
+              fixture.surfaces.find((item) => item.url === url),
+              `surface ${url}`,
+            );
+          const [left, right] = fixture.sameDomain.map(byUrl);
+          expect(left?.url).not.toBe(right?.url);
+          expect(left?.domain).toBe(right?.domain);
+          expect(signature(left!)).toEqual(signature(right!));
+          const [otherLeft, otherRight] = fixture.differentDomain.map(byUrl);
+          expect(otherLeft?.domain).not.toBe(otherRight?.domain);
+          expect(signature(otherLeft!)).not.toEqual(signature(otherRight!));
+          break;
+        }
+        case "cross-domain-context": {
+          expect(caseData.expected).toBe("preserved");
+          const fixture = JSON.parse(
+            required(
+              skill.tests[required(caseData.fixture, "fixture")],
+              "fixture source",
+            ),
+          ) as {
+            from: Record<string, string>;
+            to: Record<string, string>;
+            expectedDomains: string[];
+            expectedSteps: string[];
+            keys: Record<string, string>;
+          };
+          const journey = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const content = journey.content as {
+            domains: string[];
+            steps: string[];
+            preservedContext: string[];
+          };
+          expect(content.domains).toEqual(fixture.expectedDomains);
+          expect(content.steps).toEqual(fixture.expectedSteps);
+          expect(content.preservedContext).toEqual(Object.keys(fixture.keys));
+          expect(fixture.from.domain).toBe(content.domains[0]);
+          expect(fixture.to.domain).toBe(content.domains[1]);
+          assertPreservedContext(fixture);
+          for (const [context, key] of Object.entries(fixture.keys)) {
+            expect(content.preservedContext).toContain(context);
+            expect(fixture.from[key]).toBeTruthy();
+            expect(fixture.to[key]).toBe(fixture.from[key]);
+          }
+          break;
+        }
+        case "invented-semantic-meaning": {
+          expect(caseData.expected).toBe("rejected");
+          const known = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const forbidden = required(caseData.forbiddenClaim, "forbiddenClaim");
+          const altered: ArtifactSnapshot = {
+            ...known,
+            content: { ...(known.content as object), description: forbidden },
+          };
+          expect(() => assertNoInventedMeaning(altered, forbidden)).toThrow(
+            required(caseData.errorContains, "errorContains"),
+          );
+          break;
+        }
+        case "proposed-as-current": {
+          expect(caseData.expected).toBe("rejected");
+          const contract = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const pointer = required(caseData.claimPath, "claimPath");
+          const original = String(atPointer(contract, pointer));
+          const content = structuredClone(contract.content) as {
+            entityContext: string[];
+          };
+          content.entityContext[1] = original.replace(/^Proposed:/, "Current:");
+          const altered: ArtifactSnapshot = { ...contract, content };
+          expect(() =>
+            assertClaimStatus(
+              altered,
+              pointer,
+              required(caseData.claimState, "claimState"),
+              required(caseData.claimKind, "claimKind"),
+            ),
+          ).toThrow(required(caseData.errorContains, "errorContains"));
+          break;
+        }
+        case "lost-cross-domain-state": {
+          expect(caseData.expected).toBe("rejected");
+          const fixture = JSON.parse(
+            required(
+              skill.tests[required(caseData.fixture, "fixture")],
+              "fixture source",
+            ),
+          ) as {
+            from: Record<string, string>;
+            to: Record<string, string>;
+            keys: Record<string, string>;
+          };
+          const field = required(caseData.field, "field");
+          expect(fixture.keys).toHaveProperty(field);
+          const altered = structuredClone(fixture);
+          altered.to[required(fixture.keys[field], "context key")] = "lost";
+          expect(() => assertPreservedContext(altered)).toThrow(
+            required(caseData.errorContains, "errorContains"),
+          );
+          break;
+        }
+        default:
+          throw new Error(`Unhandled scenario: ${caseData.name}`);
+      }
+    }
+    for (const caseData of negative.cases) {
+      switch (caseData.effect) {
+        case "approved-output":
+        case "canonical-write":
+        case "direct-skill-call":
+          expect(caseData.expected).toBe("rejected");
+          expect(failures[caseData.effect]).toContain(caseData.errorContains);
+          break;
+        default:
+          throw new Error(`Unhandled negative effect: ${caseData.effect}`);
+      }
+    }
   });
 
-test("S03 reuses an approved organization Brand by exact lock without creating a duplicate", async () => {
+async function exerciseInheritedBrand() {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-brand-inherit-"));
   temporary.push(root);
   const authority = {
@@ -556,8 +1170,10 @@ test("S03 reuses an approved organization Brand by exact lock without creating a
       };
     },
   });
-  expect(result.result.outputRefs).toEqual([ref(approved)]);
-  expect(
-    (await runtime.registry.run("run_brand_inherit")).run.artifacts,
-  ).not.toContainEqual(ref(approved));
-});
+  return {
+    outputRefs: result.result.outputRefs,
+    approvedRef: ref(approved),
+    newArtifacts: (await runtime.registry.run("run_brand_inherit")).run
+      .artifacts,
+  };
+}

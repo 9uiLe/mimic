@@ -3,17 +3,20 @@
     {
       "name": "self-approval",
       "effect": "approved-output",
-      "expected": "rejected"
+      "expected": "rejected",
+      "errorContains": "Human approval is not verified"
     },
     {
       "name": "canonical-mutation",
       "effect": "canonical-write",
-      "expected": "rejected"
+      "expected": "rejected",
+      "errorContains": "Unexpected Skill result effect"
     },
     {
       "name": "foreign-skill-call",
       "effect": "direct-skill-call",
-      "expected": "rejected"
+      "expected": "rejected",
+      "errorContains": "Direct Skill invocation"
     }
   ]
 }

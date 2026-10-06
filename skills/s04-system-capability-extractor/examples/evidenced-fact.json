@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "id": "art_s04_evidenced_interface_fact",
+    "type": "system-capability",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Synthetic interface fact",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s04.system-capability-extractor",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content/description",
+      "kind": "fact",
+      "evidenceRefs": ["evidence/system-response.json"]
+    },
+    {
+      "path": "/content/summary",
+      "kind": "unknown",
+      "rationale": "approval semantics unresolved; R1 meaning is not established by the response."
+    }
+  ],
+  "content": {
+    "summary": "Response contains review_state; approval semantics unresolved.",
+    "capabilityId": "cap_review_state_field",
+    "availability": "current",
+    "description": "Response contains review_state key for a requested review.",
+    "supportingEvidence": ["evidence/system-response.json"]
+  }
+}

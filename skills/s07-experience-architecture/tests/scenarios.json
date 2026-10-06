@@ -13,20 +13,37 @@
     {
       "name": "optional-gap",
       "expected": "reported",
-      "reason": "Missing optional sources narrow the conclusion"
+      "reason": "Missing optional inputs narrow the conclusion"
     },
     {
       "name": "exact-lock",
       "expected": "preserved",
-      "reason": "Relied-on artifact references remain exact"
+      "reason": "exact input references and locks"
     },
     {
       "name": "same-interaction-different-url",
-      "expected": "same-domain"
+      "expected": "same-domain",
+      "fixture": "tests/domain-surfaces.json",
+      "exploration": "examples/exploration-domain.json",
+      "review": "examples/candidate.json"
     },
     {
       "name": "cross-domain-context",
-      "expected": "preserved"
+      "expected": "preserved",
+      "fixture": "tests/journey-context.json",
+      "example": "examples/journey.json"
+    },
+    {
+      "name": "mismatched-input-lock",
+      "expected": "rejected",
+      "errorContains": "Result does not match invocation"
+    },
+    {
+      "name": "lost-cross-domain-state",
+      "expected": "rejected",
+      "fixture": "tests/journey-context.json",
+      "field": "state",
+      "errorContains": "Cross-domain context lost: state"
     }
   ]
 }

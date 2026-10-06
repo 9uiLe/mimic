@@ -13,20 +13,40 @@
     {
       "name": "optional-gap",
       "expected": "reported",
-      "reason": "Missing optional sources narrow the conclusion"
+      "reason": "Missing optional inputs narrow the conclusion"
     },
     {
       "name": "exact-lock",
       "expected": "preserved",
-      "reason": "Relied-on artifact references remain exact"
+      "reason": "exact input references and locks"
     },
     {
       "name": "unverified-current",
-      "expected": "rejected"
+      "expected": "rejected",
+      "example": "examples/candidate.json",
+      "errorContains": "Schema validation failed"
     },
     {
       "name": "semantic-unknown",
-      "expected": "unresolved"
+      "expected": "unresolved",
+      "example": "examples/evidenced-fact.json",
+      "source": "evidence/system-response.json",
+      "factKey": "review_state",
+      "factText": "Response contains review_state key",
+      "unknownText": "approval semantics unresolved",
+      "forbiddenClaim": "review_state means approved"
+    },
+    {
+      "name": "mismatched-input-lock",
+      "expected": "rejected",
+      "errorContains": "Result does not match invocation"
+    },
+    {
+      "name": "invented-semantic-meaning",
+      "expected": "rejected",
+      "example": "examples/evidenced-fact.json",
+      "forbiddenClaim": "review_state means approved",
+      "errorContains": "Semantic meaning lacks evidence"
     }
   ]
 }

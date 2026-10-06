@@ -13,16 +13,21 @@
     {
       "name": "optional-gap",
       "expected": "reported",
-      "reason": "Missing optional sources narrow the conclusion"
+      "reason": "Missing optional inputs narrow the conclusion"
     },
     {
       "name": "exact-lock",
       "expected": "preserved",
-      "reason": "Relied-on artifact references remain exact"
+      "reason": "exact input references and locks"
     },
     {
       "name": "inherited-brand",
       "expected": "reuse-exact-approved-ref"
+    },
+    {
+      "name": "mismatched-input-lock",
+      "expected": "rejected",
+      "errorContains": "Result does not match invocation"
     }
   ]
 }
