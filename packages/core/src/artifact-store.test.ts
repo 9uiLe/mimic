@@ -171,6 +171,8 @@ describe("schema registry and YAML codec", () => {
       "a: .nan",
       "a: .inf",
       "a: !!binary YQ==",
+      "a: !!set { b: null }",
+      "!!set { a: null }",
       "a: !unknown value",
       "a: !unknown [1]",
       "a: &a [1]\nb: *a",
@@ -180,6 +182,9 @@ describe("schema registry and YAML codec", () => {
       expect(() => parseArtifactYaml(source), source).toThrow();
     }
     expect(parseArtifactYaml("a: !!str 123")).toEqual({ a: "123" });
+    expect(
+      parseArtifactYaml("a: !!map { b: !!int 2 }\nc: !!seq [true]"),
+    ).toEqual({ a: { b: 2 }, c: [true] });
   });
 });
 

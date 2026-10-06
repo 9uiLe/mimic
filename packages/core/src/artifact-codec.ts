@@ -30,6 +30,7 @@ export function parseArtifactYaml(source: string): JsonValue {
   const documents = YAML.parseAllDocuments(source, {
     uniqueKeys: true,
     version: "1.2",
+    resolveKnownTags: false,
   });
   if (documents.length !== 1)
     throw new Error("Artifact YAML must contain one document");
