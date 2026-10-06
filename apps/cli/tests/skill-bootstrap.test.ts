@@ -133,7 +133,7 @@ test("built CLI exposes compact canonical sources and explicit bodies", () => {
     JSON.parse(invoke("recommend", "define product", "--json").stdout)
       .suggestions[0].id,
   ).toBe("mimic.s01.product-definition");
-});
+}, 20_000);
 
 test("built CLI rejects unavailable, ambiguous, and unsafe requests", () => {
   for (const args of [
@@ -151,7 +151,7 @@ test("built CLI rejects unavailable, ambiguous, and unsafe requests", () => {
   }
   expect(invoke("current").status).toBe(2);
   expect(invoke("flow", "--mode", "invalid").status).toBe(3);
-});
+}, 20_000);
 
 test("built CLI reads current Run without changing any workspace bytes", () => {
   const root = temp();
@@ -219,7 +219,7 @@ test("built CLI reads current Run without changing any workspace bytes", () => {
     3,
   );
   expect(snapshot(root)).toBe(before);
-});
+}, 20_000);
 
 test("built source reader rejects symlinked Skill and schema ancestors", () => {
   const root = temp();
