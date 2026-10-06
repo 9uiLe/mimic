@@ -308,6 +308,63 @@ describe("package registry", () => {
     ).toEqual(["product/app", "org/middle", "org/leaf"]);
   });
 
+  test("portable ancestry survives a reference root and a previously visited shared package", async () => {
+    const leaf = release(ref("org/leaf"), org);
+    const leafExternal = node(leaf);
+    const shared = release(
+      ref("org/shared"),
+      org,
+      [leafExternal],
+      [leafExternal],
+    );
+    const sharedBundled = node(shared, "bundle:shared", "bundled");
+    const portable = release(
+      ref("org/portable"),
+      org,
+      [sharedBundled],
+      [sharedBundled, leafExternal],
+      { "org%2Fshared@1.0.0": shared },
+    );
+    const portableExternal = node(portable, "cache:portable", "external");
+
+    const root = release(
+      ref("product/app"),
+      product,
+      [portableExternal],
+      [portableExternal, sharedBundled, leafExternal],
+    );
+    await expect(
+      registry(memory([root, portable, leaf])).resolve(
+        ref("product/app"),
+        packageDigest(root),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
+
+    const rootWithShared = release(
+      ref("product/app"),
+      product,
+      [sharedBundled, portableExternal],
+      [sharedBundled, portableExternal, leafExternal],
+      { "org%2Fshared@1.0.0": shared },
+    );
+    const rootManifest = JSON.parse(
+      new TextDecoder().decode(rootWithShared.manifestBytes),
+    ) as PackageManifest;
+    const referenceRoot = {
+      ...rootWithShared,
+      manifestBytes: serializePackageDocument({
+        ...rootManifest,
+        mode: "reference",
+      }),
+    };
+    await expect(
+      registry(memory([referenceRoot, portable, leaf])).resolve(
+        ref("product/app"),
+        packageDigest(referenceRoot),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  });
+
   test("rejects tampering, missing exact releases, incompatible schemas, and forbidden scope", async () => {
     const token = release(ref("org/tokens"), org);
     const edge = node(token);

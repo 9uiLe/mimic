@@ -832,7 +832,6 @@ export class PackageRegistry {
     expectedDigest: string,
   ): Promise<readonly ResolvedPackage[]> {
     const root = await this.acquire(ref, expectedDigest);
-    const portableClosure = root.manifest.mode === "portable";
     const nodes = new Map(
       root.lock.packages.map((node) => [key(node.ref), node]),
     );
@@ -841,8 +840,15 @@ export class PackageRegistry {
       [key(ref), root.snapshot],
     ]);
     const visiting = new Set<string>();
-    const walk = async (current: PackageManifest): Promise<void> => {
+    const checked = new Map<string, boolean>();
+    const walk = async (
+      current: PackageManifest,
+      inheritedPortable: boolean,
+    ): Promise<void> => {
       const currentKey = key(current.ref);
+      const portableClosure = inheritedPortable || current.mode === "portable";
+      const prior = checked.get(currentKey);
+      if (prior === true || (prior === false && !portableClosure)) return;
       assert(!visiting.has(currentKey), "Dependency cycle");
       visiting.add(currentKey);
       for (const edge of current.dependencies) {
@@ -874,7 +880,7 @@ export class PackageRegistry {
           /* unavailable policy fails closed */
         }
         assert(allowed, `License prohibits dependency: ${id}`);
-        if (portableClosure || current.mode === "portable")
+        if (portableClosure)
           assert(
             edge.distribution === "bundled",
             `Portable package has external dependency: ${id}`,
@@ -917,12 +923,13 @@ export class PackageRegistry {
           );
           found.set(id, manifest);
           snapshots.set(id, acquired.snapshot);
-          await walk(manifest);
         }
+        await walk(found.get(id)!, portableClosure);
       }
       visiting.delete(currentKey);
+      checked.set(currentKey, portableClosure);
     };
-    await walk(root.manifest);
+    await walk(root.manifest, false);
     assert(found.size === nodes.size + 1, "Lock contains unreachable package");
     for (const [id, manifest] of found) {
       if (id === key(ref)) continue;
