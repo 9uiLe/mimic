@@ -218,6 +218,16 @@ export async function runBrowserQualityGates(
         const axe: string[] = [];
         const overflow: string[] = [];
         const keyboard: string[] = [];
+        const unverified = new Map<string, string[]>();
+        const recordUnknown = (
+          criterion: string,
+          state: string,
+          error: unknown,
+        ) => {
+          const messages = unverified.get(criterion) ?? [];
+          messages.push(`${state}: ${String(error)}`);
+          unverified.set(criterion, messages);
+        };
         let completed = 0;
         for (const state of plan.requiredStates) {
           const route = routes.get(state);
@@ -257,39 +267,51 @@ export async function runBrowserQualityGates(
                   `${state}: broken or nonlocal link ${link.href}`,
                 );
             }
-            const result = await new AxeBuilder({ page }).analyze();
-            axe.push(
-              ...result.violations.map(
-                (violation) =>
-                  `${state}:${violation.id}:${violation.nodes.map((node) => node.target.join(" ")).join(",")}`,
-              ),
-            );
-            const size = await page.evaluate(() => ({
-              width: document.documentElement.scrollWidth,
-              viewport: document.documentElement.clientWidth,
-            }));
-            if (size.width > size.viewport + 1)
-              overflow.push(`${state}: ${size.width}px > ${size.viewport}px`);
-            const expected = await page
-              .locator(
-                `[data-state="${state}"] button, [data-state="${state}"] a[href]`,
-              )
-              .count();
-            if (expected) {
-              await page.keyboard.press("Tab");
-              const focus = await page.evaluate(() => {
-                const active = document.activeElement;
-                return (
-                  !!active &&
-                  active !== document.body &&
-                  !!active.closest("[data-state]:not([hidden])") &&
-                  getComputedStyle(active).outlineStyle !== "none"
-                );
-              });
-              if (!focus)
-                keyboard.push(
-                  `${state}: Tab did not visibly focus an active control`,
-                );
+            try {
+              const result = await new AxeBuilder({ page }).analyze();
+              axe.push(
+                ...result.violations.map(
+                  (violation) =>
+                    `${state}:${violation.id}:${violation.nodes.map((node) => node.target.join(" ")).join(",")}`,
+                ),
+              );
+            } catch (error) {
+              recordUnknown("axe", state, error);
+            }
+            try {
+              const size = await page.evaluate(() => ({
+                width: document.documentElement.scrollWidth,
+                viewport: document.documentElement.clientWidth,
+              }));
+              if (size.width > size.viewport + 1)
+                overflow.push(`${state}: ${size.width}px > ${size.viewport}px`);
+            } catch (error) {
+              recordUnknown("viewport-overflow", state, error);
+            }
+            try {
+              const expected = await page
+                .locator(
+                  `[data-state="${state}"] button, [data-state="${state}"] a[href]`,
+                )
+                .count();
+              if (expected) {
+                await page.keyboard.press("Tab");
+                const focus = await page.evaluate(() => {
+                  const active = document.activeElement;
+                  return (
+                    !!active &&
+                    active !== document.body &&
+                    !!active.closest("[data-state]:not([hidden])") &&
+                    getComputedStyle(active).outlineStyle !== "none"
+                  );
+                });
+                if (!focus)
+                  keyboard.push(
+                    `${state}: Tab did not visibly focus an active control`,
+                  );
+              }
+            } catch (error) {
+              recordUnknown("keyboard-focus", state, error);
             }
             completed++;
           } catch (error) {
@@ -327,13 +349,15 @@ export async function runBrowserQualityGates(
               criterion,
               failures.length
                 ? "FAIL"
-                : completed < plan.requiredStates.length
+                : completed < plan.requiredStates.length ||
+                    unverified.has(criterion)
                   ? "UNVERIFIED"
                   : "PASS",
               severity,
               failures.join("; ") ||
-                (completed < plan.requiredStates.length
-                  ? `Only ${completed}/${plan.requiredStates.length} states were reached`
+                (completed < plan.requiredStates.length ||
+                unverified.has(criterion)
+                  ? `Only ${completed}/${plan.requiredStates.length} states were reached; ${unverified.get(criterion)?.join("; ") ?? ""}`
                   : `${criterion} passed in ${completed} declared states`),
               ["index.html", "prototype.css", "prototype.js", "plan.json"],
               conditions,
