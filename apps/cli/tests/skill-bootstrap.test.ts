@@ -86,9 +86,25 @@ test("built CLI exposes compact canonical sources and explicit bodies", () => {
       (item: { id: string }) => item.id === "mimic.s01.product-definition",
     ),
   ).toBe(true);
-  expect(
-    list.skills.some((item: { id: string }) => item.id.includes("s08")),
-  ).toBe(false);
+  for (const [shortId, id, skill] of [
+    [
+      "s08",
+      "mimic.s08.design-problem-profiler",
+      "skills/s08-design-problem-profiler/SKILL.md",
+    ],
+    [
+      "s09",
+      "mimic.s09.design-space-explorer",
+      "skills/s09-design-space-explorer/SKILL.md",
+    ],
+  ]) {
+    expect(list.skills.some((item: { id: string }) => item.id === id)).toBe(
+      true,
+    );
+    const result = invoke("show", shortId, "--json");
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).skill).toBe(skill);
+  }
   const shown = JSON.parse(invoke("show", "s01", "--json").stdout);
   expect(shown.skill).toBe("skills/s01-product-definition/SKILL.md");
   expect(shown).not.toHaveProperty("body");
@@ -137,7 +153,6 @@ test("built CLI exposes compact canonical sources and explicit bodies", () => {
 
 test("built CLI rejects unavailable, ambiguous, and unsafe requests", () => {
   for (const args of [
-    ["show", "s08"],
     ["show", "mimic.s"],
     ["show", "../s01"],
     ["schema", "../../secrets"],
@@ -152,6 +167,35 @@ test("built CLI rejects unavailable, ambiguous, and unsafe requests", () => {
   expect(invoke("current").status).toBe(2);
   expect(invoke("flow", "--mode", "invalid").status).toBe(3);
 }, 20_000);
+
+test("a fixture catalog rejects valid Skills that are not installed there", () => {
+  const root = temp();
+  mkdirSync(path.join(root, "skills"));
+  cpSync(path.join(repo, "schemas"), path.join(root, "schemas"), {
+    recursive: true,
+  });
+  cpSync(
+    path.join(repo, "skills/s01-product-definition"),
+    path.join(root, "skills/s01-product-definition"),
+    { recursive: true },
+  );
+  const list = fixtureInvoke(root, "list", "--json");
+  expect(list.status, list.stderr).toBe(0);
+  expect(
+    JSON.parse(list.stdout).skills.map((item: { id: string }) => item.id),
+  ).toEqual(["mimic.s01.product-definition"]);
+  for (const id of [
+    "s08",
+    "mimic.s08.design-problem-profiler",
+    "s09",
+    "mimic.s09.design-space-explorer",
+  ]) {
+    const result = fixtureInvoke(root, "show", id);
+    expect(result.status, `${id}: ${result.stderr}`).toBe(3);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toMatch(/^MIMIC_3:/);
+  }
+});
 
 test("built CLI reads current Run without changing any workspace bytes", () => {
   const root = temp();
