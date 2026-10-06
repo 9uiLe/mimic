@@ -42,6 +42,11 @@
       "id": "license-fixture-review",
       "fixture": "examples/license-reviewed.json",
       "expected": "provisional-binding"
+    },
+    {
+      "id": "wrong-icon-reference",
+      "wrongArtifactId": "art_s13_icon",
+      "expected": "blocked"
     }
   ]
 }

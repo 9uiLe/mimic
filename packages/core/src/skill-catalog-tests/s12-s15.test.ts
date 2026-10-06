@@ -53,6 +53,7 @@ const expectedFields: Record<Name, Record<string, string[]>> = {
     "semantic-separation": ["meaning", "glyph", "expected"],
     "license-unverified": ["state", "expected"],
     "license-fixture-review": ["fixture", "expected"],
+    "wrong-icon-reference": ["wrongArtifactId", "expected"],
     "locked-conflict": ["property", "expected"],
     "wrong-lock": ["expected", "message"],
     "rejection-repeat": ["rejectedRevision", "newRevision", "expected"],
@@ -900,6 +901,7 @@ async function integrated(
     name === "s13-visual-system-builder" && mode === "produce" && !change
       ? [
           { ...baseTask, id: "license-blocked" },
+          { ...baseTask, id: "wrong-icon" },
           { ...baseTask, id: "binding" },
         ]
       : [];
@@ -1238,8 +1240,9 @@ test("S13 rejects a sibling binding in one invocation, then stages it against th
     }
   ).definition;
   async function invokeBinding(
-    taskId: "license-blocked" | "binding",
+    taskId: "license-blocked" | "wrong-icon" | "binding",
     file: string,
+    requestedIconId = iconRef.artifactId,
   ) {
     const bindingTask: RoutedTask = {
       ...task,
@@ -1297,6 +1300,30 @@ test("S13 rejects a sibling binding in one invocation, then stages it against th
               input.ref.lockDigest === iconRef.lockDigest,
           ),
         ).toBe(true);
+        const content = {
+          ...(bindingExample.content as Record<string, unknown>),
+          definition: {
+            ...(
+              bindingExample.content as { definition: Record<string, unknown> }
+            ).definition,
+            semanticIconArtifactId: requestedIconId,
+          },
+        };
+        if (requestedIconId !== iconRef.artifactId)
+          return {
+            result: {
+              runId,
+              taskId,
+              skillId: x.skill.manifest.skillId,
+              inputRefs: invocation.inputRefs,
+              outputRefs: [],
+              blocked: {
+                reason:
+                  "Provider binding semantic icon ID differs from exact input lock",
+                affectedTaskIds: [taskId],
+              },
+            },
+          };
         const candidate: ArtifactSnapshot = {
           ...bindingExample,
           meta: {
@@ -1314,6 +1341,7 @@ test("S13 rejects a sibling binding in one invocation, then stages it against th
             ...input.ref,
             onChange: "validate",
           })),
+          content,
           provenance: [
             {
               path: "/content/definition",
@@ -1351,6 +1379,20 @@ test("S13 rejects a sibling binding in one invocation, then stages it against th
   expect((await x.registry.run(runId)).run.blockers["license-blocked"]).toBe(
     rejected.result.blocked?.reason,
   );
+  const wrongIcon = get(x.scenarios, "wrong-icon-reference");
+  const wrong = await invokeBinding(
+    "wrong-icon",
+    get(x.scenarios, "license-fixture-review").fixture as string,
+    wrongIcon.wrongArtifactId as string,
+  );
+  expect(wrongIcon.expected).toBe("blocked");
+  expect(wrong.result.outputRefs).toHaveLength(0);
+  expect(wrong.result.blocked?.reason).toBe(
+    "Provider binding semantic icon ID differs from exact input lock",
+  );
+  expect((await x.registry.run(runId)).run.blockers["wrong-icon"]).toBe(
+    wrong.result.blocked?.reason,
+  );
   const produced = await invokeBinding(
     "binding",
     get(x.scenarios, "license-fixture-review").fixture as string,
@@ -1367,6 +1409,13 @@ test("S13 rejects a sibling binding in one invocation, then stages it against th
     ...iconRef,
     onChange: "validate",
   });
+  expect(
+    (
+      binding.artifact.content as {
+        definition: { semanticIconArtifactId: string };
+      }
+    ).definition.semanticIconArtifactId,
+  ).toBe(iconRef.artifactId);
   expect(
     new Set([
       ...result.result.outputRefs.map((output) => output.artifactId),
