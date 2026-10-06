@@ -21,6 +21,6 @@
   "supportedArtifactSchemas": [
     { "artifactType": "imaginary-artifact", "schemaVersion": "1.0.0" }
   ],
-  "examples": ["example.json"],
-  "tests": ["test.json"]
+  "examples": ["examples/intent.json"],
+  "tests": ["tests/contract-case.json"]
 }

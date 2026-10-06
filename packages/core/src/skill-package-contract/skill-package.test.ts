@@ -63,10 +63,9 @@ async function manifestFiles(kind: "valid" | "invalid"): Promise<string[]> {
       if (entry.isDirectory()) await walk(location);
       else if (
         entry.isFile() &&
-        (entry.name === "manifest.json" ||
-          entry.name === "manifest.yaml" ||
-          kind === "invalid") &&
-        /\.(json|yaml)$/.test(entry.name)
+        (kind === "valid"
+          ? /^manifest\.(json|yaml)$/.test(entry.name)
+          : /\.invalid\.(json|yaml)$/.test(entry.name))
       )
         files.push(location);
     }
@@ -177,6 +176,10 @@ async function checkStatic(manifest: Manifest, root: string): Promise<void> {
   ];
   if (path.basename(manifest.skillFile) !== "SKILL.md")
     throw new Error("skillFile must reference SKILL.md");
+  for (const reference of references) {
+    if (path.posix.normalize(reference) !== reference)
+      throw new Error(`Non-canonical package path: ${reference}`);
+  }
   if (new Set(references).size !== references.length)
     throw new Error("Duplicate package file reference");
   for (const reference of references) await packageFile(root, reference);
@@ -197,13 +200,38 @@ test("strict Draft 2020-12 schema accepts every valid JSON and YAML package", as
 
 test("every invalid JSON and YAML fixture fails conformance", async () => {
   const files = await manifestFiles("invalid");
+  const expected = new Map([
+    [
+      "duplicate-keys.invalid.yaml",
+      /Map keys must be unique|Duplicate YAML mapping key/,
+    ],
+    ["traversal.invalid.yaml", /skillFile|Path escapes package/],
+    ["unknown-artifact.invalid.json", /Unsupported artifact type\/version/],
+  ]);
+  expect(files.map((file) => path.basename(file))).toEqual(
+    [...expected.keys()].sort(),
+  );
   expect(files.some((file) => file.endsWith(".json"))).toBe(true);
   expect(files.some((file) => file.endsWith(".yaml"))).toBe(true);
   for (const file of files) {
+    const source = await readFile(file, "utf8");
     await expect(async () => {
-      const value = parseManifest(await readFile(file, "utf8"));
+      const value = parseManifest(source);
       await checkStatic(value, path.dirname(file));
-    }, file).rejects.toThrow();
+    }, file).rejects.toThrow(expected.get(path.basename(file)));
+
+    const repaired = path.basename(file).startsWith("duplicate-keys")
+      ? source.replace(
+          "skillId: mimic.invalid.duplicate-keys\nskillId: mimic.invalid.duplicate-keys",
+          "skillId: mimic.invalid.duplicate-keys",
+        )
+      : path.basename(file).startsWith("traversal")
+        ? source.replace("../SKILL.md", "SKILL.md")
+        : source.replaceAll("imaginary-artifact", "product-definition");
+    await expect(
+      checkStatic(parseManifest(repaired), path.dirname(file)),
+      `repairing only the intended defect must make ${file} valid`,
+    ).resolves.toBeUndefined();
   }
 });
 
@@ -240,6 +268,12 @@ test("cross-field declarations and package references cannot contradict", async 
   const escape = changed();
   escape.examples = ["../s04/SKILL.md"];
   await expect(checkStatic(escape, root)).rejects.toThrow();
+
+  const alias = changed();
+  alias.examples.push("examples//intent.json");
+  await expect(checkStatic(alias, root)).rejects.toThrow(
+    /Non-canonical package path/,
+  );
 });
 
 test("strict schema rejects runtime grants and ambiguous metadata", async () => {
