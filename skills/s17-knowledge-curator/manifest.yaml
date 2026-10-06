@@ -1,0 +1,76 @@
+{
+  "skillId": "mimic.s17-knowledge-curator",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.2.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required": [],
+      "alternatives":
+        [
+          {
+            "name": "knowledge-source",
+            "oneOf":
+              [
+                {
+                  "name": "evaluation-source",
+                  "kind": "artifact",
+                  "artifactType": "evaluation",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "validation-source",
+                  "kind": "artifact",
+                  "artifactType": "validation",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "problem-profile-source",
+                  "kind": "artifact",
+                  "artifactType": "problem-profile",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "reference-selection-source",
+                  "kind": "artifact",
+                  "artifactType": "reference-selection",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "existing-asset",
+            "kind": "artifact",
+            "artifactType": "design-system-asset",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "source-evidence", "kind": "evidence-file" },
+        ],
+    },
+  "outputs": ["decision", "design-system-asset", "reference-selection"],
+  "forbiddenResponsibilities":
+    [
+      "Promote knowledge without human approval",
+      "Create unsupported knowledge-graph artifact types",
+      "Erase rejection limits or rewrite approved snapshots",
+    ],
+  "humanGates":
+    [
+      { "decision": "organization-promotion", "authority": "PROPOSE_ONLY" },
+      { "decision": "system-change", "authority": "PROPOSE_ONLY" },
+    ],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "decision", "schemaVersion": "1.0.0" },
+      { "artifactType": "design-system-asset", "schemaVersion": "1.0.0" },
+      { "artifactType": "evaluation", "schemaVersion": "1.0.0" },
+      { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
+      { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
+      { "artifactType": "validation", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/output.json"],
+  "tests": ["tests/scenarios.json"],
+}

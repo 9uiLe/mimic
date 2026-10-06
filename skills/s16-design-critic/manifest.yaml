@@ -1,0 +1,121 @@
+{
+  "skillId": "mimic.s16-design-critic",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.2.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "alternatives":
+        [
+          {
+            "name": "critique-target",
+            "oneOf":
+              [
+                {
+                  "name": "scenario-target",
+                  "kind": "artifact",
+                  "artifactType": "scenario",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "direction-target",
+                  "kind": "artifact",
+                  "artifactType": "design-direction",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "journey-target",
+                  "kind": "artifact",
+                  "artifactType": "journey",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "system-choice-target",
+                  "kind": "artifact",
+                  "artifactType": "design-system-asset",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
+          },
+          {
+            "name": "task-risk-context",
+            "oneOf":
+              [
+                {
+                  "name": "task-model-context",
+                  "kind": "artifact",
+                  "artifactType": "user-task-model",
+                  "schemaVersion": "1.0.0",
+                },
+                {
+                  "name": "problem-profile-context",
+                  "kind": "artifact",
+                  "artifactType": "problem-profile",
+                  "schemaVersion": "1.0.0",
+                },
+                { "name": "bounded-task-brief", "kind": "human-brief" },
+              ],
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "brand",
+            "kind": "artifact",
+            "artifactType": "brand",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "system-capability",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "reference-selection",
+            "kind": "artifact",
+            "artifactType": "reference-selection",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "prototype-evidence", "kind": "evidence-file" },
+        ],
+    },
+  "outputs": ["evaluation", "system-request"],
+  "forbiddenResponsibilities":
+    [
+      "Approve or edit approved upstream assets",
+      "Assert full WCAG 2.2 AA compliance from automated checks",
+      "Replace separate findings with an aggregate score",
+    ],
+  "humanGates":
+    [
+      { "decision": "system-change", "authority": "PROPOSE_ONLY" },
+      { "decision": "selected-direction", "authority": "PROPOSE_ONLY" },
+    ],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "brand", "schemaVersion": "1.0.0" },
+      { "artifactType": "design-direction", "schemaVersion": "1.0.0" },
+      { "artifactType": "design-system-asset", "schemaVersion": "1.0.0" },
+      { "artifactType": "evaluation", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
+      { "artifactType": "scenario", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-request", "schemaVersion": "1.0.0" },
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/output.json"],
+  "tests": ["tests/scenarios.json"],
+}
