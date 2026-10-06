@@ -1,0 +1,45 @@
+{
+  "meta": {
+    "id": "art_s07_experience_architecture",
+    "type": "experience-domain",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Experience Architecture candidate",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s07.experience-architecture",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Illustrative provisional candidate; no empirical research is claimed."
+    }
+  ],
+  "content": {
+    "summary": "Review is a distinct interaction domain because it makes durable choices.",
+    "primaryGoal": "Decide whether a candidate is acceptable",
+    "interactionModel": "Compare evidence and record an explicit choice",
+    "informationStructure": "Candidate, criteria, evidence and decision history",
+    "temporalBehavior": "Resume and revisit across sessions",
+    "riskModel": "Prevent accidental approval of provisional work",
+    "sessionModel": "Review can pause and resume"
+  }
+}

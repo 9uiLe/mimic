@@ -1,0 +1,83 @@
+{
+  "skillId": "mimic.s07.experience-architecture",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "product-ui-contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "user-task-model",
+            "kind": "artifact",
+            "artifactType": "user-task-model",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "product-definition",
+            "kind": "artifact",
+            "artifactType": "product-definition",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "system-capability",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "existing-domain",
+            "kind": "artifact",
+            "artifactType": "experience-domain",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "existing-journey",
+            "kind": "artifact",
+            "artifactType": "journey",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "alternatives": [],
+    },
+  "outputs": ["experience-domain", "journey", "decision"],
+  "forbiddenResponsibilities":
+    [
+      "Declare a proposed boundary approved",
+      "Lose entity, terminology, navigation, return path, or state across domains",
+    ],
+  "humanGates":
+    [{ "decision": "experience-domain-boundary", "authority": "PROPOSE_ONLY" }],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "decision", "schemaVersion": "1.0.0" },
+      { "artifactType": "experience-domain", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-definition", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+    ],
+  "examples":
+    [
+      "examples/candidate.json",
+      "examples/journey.json",
+      "examples/exploration-domain.json",
+    ],
+  "tests":
+    [
+      "tests/scenarios.json",
+      "tests/negative.json",
+      "tests/domain-surfaces.json",
+      "tests/journey-context.json",
+    ],
+}

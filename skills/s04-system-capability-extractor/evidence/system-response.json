@@ -1,0 +1,9 @@
+{
+  "kind": "synthetic-system-response",
+  "request": "GET /reviews/review-42",
+  "response": {
+    "review_id": "review-42",
+    "review_state": "R1"
+  },
+  "scope": "Fixture only; neither the code nor the meaning of R1 is a production assertion."
+}

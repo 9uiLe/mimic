@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "id": "art_s03_brand_builder",
+    "type": "brand",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Brand Builder candidate",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s03.brand-builder",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Illustrative provisional candidate; no empirical research is claimed."
+    }
+  ],
+  "content": {
+    "summary": "A provisional brand expression for the product.",
+    "attributes": ["Clear", "Calm"],
+    "voice": "Direct, specific, and respectful",
+    "visualIntent": "Strong reading hierarchy and restrained emphasis"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "skillId": "mimic.s02.user-task-modeling",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required": [],
+      "optional":
+        [
+          {
+            "name": "system-context",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "existing-model",
+            "kind": "artifact",
+            "artifactType": "user-task-model",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "research", "kind": "evidence-file" },
+        ],
+      "alternatives":
+        [
+          {
+            "name": "product-context",
+            "oneOf":
+              [
+                {
+                  "name": "product-definition",
+                  "kind": "artifact",
+                  "artifactType": "product-definition",
+                  "schemaVersion": "1.0.0",
+                },
+                { "name": "bounded-product-brief", "kind": "human-brief" },
+              ],
+          },
+          {
+            "name": "task-basis",
+            "oneOf":
+              [
+                { "name": "task-evidence", "kind": "evidence-file" },
+                { "name": "explicit-task-assumptions", "kind": "human-brief" },
+              ],
+          },
+        ],
+    },
+  "outputs": ["user-task-model"],
+  "forbiddenResponsibilities":
+    [
+      "Invent interviews, measurements or validated personas",
+      "Treat demographic labels as behavioral evidence",
+    ],
+  "humanGates": [],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "product-definition", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/candidate.json"],
+  "tests": ["tests/scenarios.json", "tests/negative.json"],
+}

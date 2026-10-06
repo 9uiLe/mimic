@@ -1,0 +1,42 @@
+{
+  "meta": {
+    "id": "art_s04_system_capability_extractor",
+    "type": "system-capability",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "System Capability Extractor candidate",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s04.system-capability-extractor",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Illustrative provisional candidate; no empirical research is claimed."
+    }
+  ],
+  "content": {
+    "summary": "Candidate capability awaiting system verification.",
+    "capabilityId": "cap_resume_review",
+    "availability": "proposed",
+    "description": "Resume review with preserved candidate context."
+  }
+}
