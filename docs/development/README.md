@@ -12,10 +12,10 @@ Use Node.js `24.21.0` and pnpm `12.9.1`. The Dev Container pins Node `24.21.0`, 
 | `pnpm typecheck`    | Check all TypeScript projects without emitting.                                                                    |
 | `pnpm validate`     | Check JSON schemas/fixtures and native YAML fixtures.                                                              |
 | `pnpm test`         | Run Vitest unit tests.                                                                                             |
-| `pnpm test:browser` | Run Chromium Playwright and axe checks separately.                                                                 |
+| `pnpm test:browser` | Run Playwright and axe across configured Chromium, Firefox, and WebKit desktop/mobile emulations.                  |
 | `pnpm check`        | Non-mutating local gate: formatting, lint, typecheck, validation, build, unit tests, and the preserved `check:ci`. |
 
-The pull request workflow keeps `pnpm check:ci` for initial specifications and also runs `pnpm check`, Chromium/axe smoke, and a built CLI startup assertion. The full remote CI and security rollout are tracked by 9UI-120. Run `pnpm exec playwright install chromium` before the browser check. Automated axe findings do not prove WCAG compliance.
+The pull request workflows preserve the initial specification checks and run stable `quality`, `unit`, `browser`, and `dco` jobs. The PR browser job covers Chromium desktop and mobile emulation; the separate Firefox/WebKit matrix runs on PRs, after merge, or on schedule. Run `pnpm exec playwright install chromium firefox webkit` before the full local browser check. The [CI guide](../../ci/README.md) describes commands, the Dev Container verification job, and settings that need separate owner action. Automated axe findings do not prove WCAG compliance.
 
 `packages/core` exposes a public ESM entry point; `apps/cli` consumes it using a workspace dependency. Run `node apps/cli/dist/main.js` after a build for an ESM smoke test. `apps/demo-lab` is a vanilla Vite preview, not a prototype export pipeline. Durable artifact behavior is not implemented by these bootstrap entry points.
 
