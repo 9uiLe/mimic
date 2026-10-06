@@ -328,6 +328,29 @@ describe("orchestrator over shared workspace", () => {
         now,
       ),
     ).rejects.toThrow(/direct Skill/i);
+    await expect(
+      x.orchestrator.accept(
+        invocation,
+        {
+          ...result,
+          outputRefs: [],
+          blocked: {
+            reason: "A missing fact",
+            affectedTaskIds: [task.id, "unrelated"],
+          },
+        },
+        { kind: "skill", id: task.skillId },
+        now,
+      ),
+    ).rejects.toThrow(/blocked reason/i);
+    await expect(
+      x.orchestrator.accept(
+        { ...invocation, targetArtifactId: "art_other" },
+        { ...result, outputRefs: [output] },
+        { kind: "skill", id: task.skillId },
+        now,
+      ),
+    ).rejects.toThrow(/Skill output cannot be durable/);
   });
 
   test("approved ancestor provenance, inherited locks, freshness and exact refs govern selection", async () => {

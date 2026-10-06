@@ -71,6 +71,7 @@ export interface SkillInvocation {
   readonly taskId: string;
   readonly skillId: string;
   readonly allowedOutputTypes: readonly string[];
+  readonly targetArtifactId?: string;
   readonly intent: RoutedTask["intent"];
   readonly scopeOwnerId: string;
   readonly inputRefs: readonly ExactArtifactRef[];
@@ -517,6 +518,9 @@ export class Orchestrator {
           task.outputType,
           ...(task.additionalOutputTypes ?? []),
         ],
+        ...(task.targetArtifactId
+          ? { targetArtifactId: task.targetArtifactId }
+          : {}),
         intent: task.intent,
         scopeOwnerId: task.scopeOwnerId,
         inputRefs: inputs,
@@ -662,6 +666,9 @@ export class Orchestrator {
       assert(
         artifact.scope.ownerId === invocation.scopeOwnerId &&
           invocation.allowedOutputTypes.includes(artifact.meta.type) &&
+          (artifact.meta.type !== invocation.allowedOutputTypes[0] ||
+            !invocation.targetArtifactId ||
+            artifact.meta.id === invocation.targetArtifactId) &&
           ["provisional", "proposed"].includes(artifact.lifecycle.status) &&
           (artifact.lifecycle.status !== "proposed" ||
             invocation.authority === "PROPOSE_ONLY") &&
@@ -719,7 +726,8 @@ export class Orchestrator {
     if (result.blocked) {
       assert(
         result.blocked.reason.trim() &&
-          result.blocked.affectedTaskIds.includes(invocation.taskId),
+          result.blocked.affectedTaskIds.length === 1 &&
+          result.blocked.affectedTaskIds[0] === invocation.taskId,
         "Invalid blocked reason",
       );
       const current = (await this.registry.run(invocation.runId)).run;
@@ -762,7 +770,11 @@ export class Orchestrator {
       source.lifecycle.status === "approved" &&
         request.meta.type === "system-request" &&
         request.lifecycle.status === "provisional" &&
-        request.approval.status === "pending",
+        request.approval.status === "pending" &&
+        (request.origin as Record<string, unknown> | undefined)?.runId ===
+          input.runId &&
+        (request.origin as Record<string, unknown> | undefined)?.actorId ===
+          actor.id,
       "Revision request cannot mutate approved source",
     );
     assert(
