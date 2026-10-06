@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { readFile, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   buildPrototypeModes,
@@ -196,4 +196,192 @@ test("snapshots the authored mode plan before asynchronous reads", async () => {
     ),
   );
   expect(saved.choices[1].id).toBe("candidateCompare");
+});
+test("rejects undeclared Current fixture data and actions", async () => {
+  const value = await fixture();
+  const current = structuredClone(value.modePlan.current);
+  const state = current.states.find((entry) => entry.name === "success")!;
+  (state.root.children as unknown as object[]).push({
+    tag: "section",
+    children: [
+      { tag: "p", fixtureKey: "comparisonScore" },
+      {
+        tag: "button",
+        componentId: value.refs.component.artifactId,
+        text: "Compare candidates",
+        targetState: "disabled",
+      },
+    ],
+  });
+  (current.fixtures.success as Record<string, string>).comparisonScore = "98";
+  await expect(
+    buildPrototypeModes(
+      value.store,
+      { ...value.modePlan, current },
+      value.root,
+    ),
+  ).rejects.toMatchObject({ code: "INVALID" });
+});
+test("rejects Proposed plans that remove bound Current functionality", async () => {
+  const value = await fixture();
+  const proposed = {
+    ...value.modePlan.proposed,
+    states: value.modePlan.proposed.states.map((state) => ({
+      ...state,
+      root: {
+        tag: "main" as const,
+        children: [
+          {
+            tag: "section" as const,
+            children: [{ tag: "h2" as const, text: "Proposed only" }],
+          },
+        ],
+      },
+    })),
+  };
+  await expect(
+    buildPrototypeModes(
+      value.store,
+      { ...value.modePlan, proposed },
+      value.root,
+    ),
+  ).rejects.toMatchObject({ code: "INVALID" });
+});
+test("invalid comparison path leaves no published mode bundles", async () => {
+  const value = await fixture();
+  await expect(
+    buildPrototypeModes(
+      value.store,
+      { ...value.modePlan, comparisonPath: "../escape" },
+      value.root,
+    ),
+  ).rejects.toMatchObject({ code: "PATH" });
+  await expect(
+    readFile(path.join(value.root, "current", "index.html")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+  await expect(
+    readFile(path.join(value.root, "proposed", "index.html")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+});
+test("occupied comparison is never reused or deleted on rejected fallback", async () => {
+  const value = await fixture({ requestStatus: "rejected" });
+  const stale = path.join(value.root, "comparison", "proposed", "index.html");
+  await mkdir(path.dirname(stale), { recursive: true });
+  await writeFile(stale, "STALE PROPOSED");
+  await expect(
+    buildPrototypeModes(value.store, value.modePlan, value.root),
+  ).rejects.toMatchObject({ code: "PATH" });
+  expect(await readFile(stale, "utf8")).toBe("STALE PROPOSED");
+  await expect(
+    readFile(path.join(value.root, "comparison", "current", "index.html")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+});
+test("fallback publishes a fresh comparison without exposing unrelated stale Proposed output", async () => {
+  const value = await fixture({ requestStatus: "rejected" });
+  const stale = path.join(value.root, "proposed", "index.html");
+  await mkdir(path.dirname(stale), { recursive: true });
+  await writeFile(stale, "STALE PROPOSED");
+  const result = await buildPrototypeModes(
+    value.store,
+    value.modePlan,
+    value.root,
+  );
+  expect(result.fallback).toBe("rejected-system-request");
+  expect(result.proposed).toBeUndefined();
+  expect(await readFile(stale, "utf8")).toBe("STALE PROPOSED");
+  await expect(
+    readFile(path.join(result.comparisonDirectory, "proposed", "index.html")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+  expect(
+    await readFile(path.join(result.current.directory, "index.html"), "utf8"),
+  ).toContain("Specification prototype");
+});
+test("rejects sibling-product capability and unrelated token request", async () => {
+  const other = await fixture();
+  await expect(
+    buildPrototypeModes(
+      other.store,
+      {
+        ...other.modePlan,
+        choices: [
+          {
+            ...other.modePlan.choices[0]!,
+            capability: other.modeRefs.otherProduct,
+          },
+          other.modePlan.choices[1]!,
+        ],
+      },
+      other.root,
+    ),
+  ).rejects.toMatchObject({ code: "INVALID" });
+  const wrongLink = await fixture();
+  await expect(
+    buildPrototypeModes(
+      wrongLink.store,
+      {
+        ...wrongLink.modePlan,
+        choices: [
+          wrongLink.modePlan.choices[0]!,
+          {
+            ...wrongLink.modePlan.choices[1]!,
+            systemRequest: wrongLink.modeRefs.unlinkedRequest,
+          },
+        ],
+        decisionContext: {
+          kind: "live",
+          requests: [wrongLink.modeRefs.unlinkedRequest],
+        },
+      },
+      wrongLink.root,
+    ),
+  ).rejects.toMatchObject({ code: "INVALID" });
+  const unrelated = await fixture({
+    choiceStatus: "required",
+    requestStatus: "approved",
+    capabilityStatus: "approved",
+    requestChangeType: "token",
+  });
+  await expect(
+    buildPrototypeModes(unrelated.store, unrelated.modePlan, unrelated.root),
+  ).rejects.toMatchObject({ code: "INVALID" });
+});
+test("live exact rejected decision context falls back; historical replay is labeled", async () => {
+  const live = await fixture({
+    choiceStatus: "required",
+    requestStatus: "approved",
+    capabilityStatus: "approved",
+    laterRejectedDecision: true,
+  });
+  const result = await buildPrototypeModes(
+    live.store,
+    live.modePlan,
+    live.root,
+  );
+  expect(result.fallback).toBe("rejected-system-request");
+  expect(result.proposed).toBeUndefined();
+  const historical = await fixture({
+    choiceStatus: "required",
+    requestStatus: "approved",
+    capabilityStatus: "approved",
+    laterRejectedDecision: true,
+  });
+  const replay = await buildPrototypeModes(
+    historical.store,
+    {
+      ...historical.modePlan,
+      decisionContext: { kind: "historical", requests: [] },
+    },
+    historical.root,
+  );
+  expect(replay.proposed).toBeDefined();
+  expect(
+    await readFile(path.join(replay.proposed!.directory, "index.html"), "utf8"),
+  ).toContain("Proposed historical replay");
+  const manifest = JSON.parse(
+    await readFile(
+      path.join(replay.comparisonDirectory, "comparison.json"),
+      "utf8",
+    ),
+  );
+  expect(manifest.decisionContext.kind).toBe("historical");
 });

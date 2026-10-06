@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
 import {
+  lstat,
+  mkdtemp,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import path from "node:path";
+import {
   canonicalJson,
   jsonCopy,
   type JsonValue,
@@ -10,11 +19,10 @@ import {
   buildPrototype,
   type PrototypeBuilderInput,
   type PrototypeBuildResult,
+  type PrototypeNode,
+  type PrototypeState,
+  type PrototypeStatePlan,
 } from "../prototype-builder/index.js";
-import {
-  publishPrototypeBundle,
-  PrototypeOutputError,
-} from "../prototype-builder/output.js";
 
 export type ModeChoiceStatus =
   "current" | "required" | "proposed" | "unresolved";
@@ -24,12 +32,29 @@ export interface ModeChoice {
   readonly capability: ExactArtifactRef;
   readonly systemRequest?: ExactArtifactRef;
 }
+export type ModeBindingField = "text" | "fixtureKey" | "targetState" | "href";
+/** One authored claim tying an actual render-plan value or action to a capability. */
+export interface ModeBinding {
+  readonly state: PrototypeState;
+  readonly nodePath: readonly number[];
+  readonly field: ModeBindingField;
+  readonly choiceId: string;
+}
 /** Authored comparison input. Its digest records intent, not human approval. */
 export interface PrototypeModePlan {
   readonly contract: ExactArtifactRef;
   readonly choices: readonly ModeChoice[];
   readonly currentUses: readonly string[];
   readonly proposedUses: readonly string[];
+  readonly bindings: {
+    readonly current: readonly ModeBinding[];
+    readonly proposed: readonly ModeBinding[];
+  };
+  readonly decisionContext: {
+    /** Live callers supply exact authoritative System Request revisions; historical replay is labeled. */
+    readonly kind: "live" | "historical";
+    readonly requests: readonly ExactArtifactRef[];
+  };
   readonly current: PrototypeBuilderInput;
   readonly proposed: PrototypeBuilderInput;
   readonly comparisonPath: string;
@@ -59,6 +84,12 @@ const STATUSES: readonly ModeChoiceStatus[] = [
   "required",
   "proposed",
   "unresolved",
+];
+const BINDING_FIELDS: readonly ModeBindingField[] = [
+  "text",
+  "fixtureKey",
+  "targetState",
+  "href",
 ];
 function fail(code: PrototypeModeError["code"], message: string): never {
   throw new PrototypeModeError(code, message);
@@ -115,10 +146,160 @@ function approved(value: ArtifactSnapshot): boolean {
     value.approval.status === "approved"
   );
 }
-/** Add exact request provenance and status as escaped text to every proposed state. */
+function locks(artifact: ArtifactSnapshot, exact: ExactArtifactRef): boolean {
+  return artifact.dependencies.some((dependency) => same(dependency, exact));
+}
+function sameProductScope(a: ArtifactSnapshot, b: ArtifactSnapshot): boolean {
+  return (
+    a.scope.level === "product" &&
+    b.scope.level === "product" &&
+    a.scope.ownerId === b.scope.ownerId
+  );
+}
+function inputProvenance(
+  artifact: ArtifactSnapshot,
+  claimPath: string,
+  exact: ExactArtifactRef,
+): boolean {
+  const identity = `${exact.artifactId}@${exact.revision}#${exact.lockDigest}`;
+  return artifact.provenance.some(
+    (entry) =>
+      entry.path === claimPath &&
+      entry.kind === "derived" &&
+      Array.isArray(entry.inputRefs) &&
+      entry.inputRefs.includes(identity),
+  );
+}
+function currentEvidence(capability: ArtifactSnapshot): boolean {
+  const supporting = (capability.content as { supportingEvidence?: unknown })
+    .supportingEvidence;
+  return (
+    Array.isArray(supporting) &&
+    supporting.length > 0 &&
+    capability.provenance.some((entry) => {
+      const refs = entry.evidenceRefs;
+      return (
+        entry.path === "/content/description" &&
+        entry.kind === "fact" &&
+        Array.isArray(refs) &&
+        supporting.every((evidence) => refs.includes(evidence))
+      );
+    })
+  );
+}
+function bindingKey(
+  state: string,
+  nodePath: readonly number[],
+  field: ModeBindingField,
+): string {
+  return `${state}/${nodePath.join("/")}/${field}`;
+}
+function boundValues(
+  render: PrototypeBuilderInput,
+  bindings: readonly ModeBinding[],
+  uses: readonly string[],
+  mode: "current" | "proposed",
+  choices: readonly ModeChoice[],
+): Map<string, number> {
+  if (!Array.isArray(bindings))
+    fail("INVALID", `${mode} bindings must be an array`);
+  if (
+    !Array.isArray(render.states) ||
+    !render.fixtures ||
+    typeof render.fixtures !== "object" ||
+    Array.isArray(render.fixtures)
+  )
+    fail("INVALID", `${mode} needs authored states and fixtures`);
+  const actual = new Map<
+    string,
+    {
+      value: string;
+      field: ModeBindingField;
+      state: PrototypeState;
+      choiceId?: string;
+    }
+  >();
+  const fixtureUses = new Set<string>();
+  for (const state of render.states as readonly PrototypeStatePlan[]) {
+    const visit = (node: PrototypeNode, nodePath: number[]) => {
+      for (const field of BINDING_FIELDS) {
+        const value = node[field];
+        if (value === undefined) continue;
+        const key = bindingKey(state.name, nodePath, field);
+        let signature = canonicalJson(value);
+        if (field === "fixtureKey") {
+          const fixture = render.fixtures[state.name]?.[value as string];
+          if (fixture === undefined)
+            fail("INVALID", `Missing fixture for ${key}`);
+          signature = canonicalJson([value, fixture]);
+          fixtureUses.add(`${state.name}/${value}`);
+        }
+        actual.set(key, { value: signature, field, state: state.name });
+      }
+      node.children?.forEach((child, index) =>
+        visit(child, [...nodePath, index]),
+      );
+    };
+    visit(state.root, []);
+  }
+  for (const [state, fixtures] of Object.entries(render.fixtures)) {
+    for (const key of Object.keys(fixtures ?? {}))
+      if (!fixtureUses.has(`${state}/${key}`))
+        fail(
+          "INVALID",
+          `${mode} contains unbound synthetic fixture ${state}.${key}`,
+        );
+  }
+  const seen = new Set<string>();
+  const signatures = new Map<string, number>();
+  const usedChoices = new Set<string>();
+  for (const binding of bindings) {
+    if (!binding || typeof binding !== "object" || Array.isArray(binding))
+      fail("INVALID", `Invalid ${mode} binding`);
+    keys(binding, ["state", "nodePath", "field", "choiceId"], "binding");
+    if (
+      !Array.isArray(binding.nodePath) ||
+      binding.nodePath.some(
+        (index: number) => !Number.isSafeInteger(index) || index < 0,
+      ) ||
+      !BINDING_FIELDS.includes(binding.field) ||
+      typeof binding.choiceId !== "string" ||
+      !uses.includes(binding.choiceId)
+    )
+      fail("INVALID", `Invalid ${mode} binding target or choice`);
+    const choice = choices.find(
+      (candidate) => candidate.id === binding.choiceId,
+    );
+    if (!choice || (mode === "current" && choice.status !== "current"))
+      fail("INVALID", `${mode} binding claims unsupported capability`);
+    const key = bindingKey(binding.state, binding.nodePath, binding.field);
+    const entry = actual.get(key);
+    if (!entry || seen.has(key))
+      fail(
+        "INVALID",
+        `${mode} binding does not uniquely name an authored value: ${key}`,
+      );
+    seen.add(key);
+    usedChoices.add(binding.choiceId);
+    const signature = canonicalJson([
+      binding.choiceId,
+      entry.state,
+      entry.field,
+      entry.value,
+    ]);
+    signatures.set(signature, (signatures.get(signature) ?? 0) + 1);
+  }
+  if (seen.size !== actual.size)
+    fail("INVALID", `${mode} has unbound text, fixture data, or actions`);
+  if (uses.some((id) => !usedChoices.has(id)))
+    fail("INVALID", `${mode} declares a choice without a bound rendered value`);
+  return signatures;
+}
+/** Add status chrome to every proposed state; the manifest retains full exact locks. */
 function markedPlan(
   plan: PrototypeBuilderInput,
   choices: readonly ModeChoice[],
+  historical: boolean,
 ): PrototypeBuilderInput {
   const notices = choices
     .filter((choice) => choice.status !== "current")
@@ -128,7 +309,7 @@ function markedPlan(
         choice.status === "required"
           ? "Approved requirement, not implemented"
           : "Proposed, not implemented";
-      return `${status}: ${choice.id}; System Request ${request.artifactId}@${request.revision}#${request.lockDigest}`;
+      return `${status}: ${choice.id}; System Request ${request.artifactId}@${request.revision}; digest ${request.lockDigest.slice(0, 19)}…`;
     });
   return {
     ...plan,
@@ -137,14 +318,20 @@ function markedPlan(
       root: {
         ...state.root,
         children: [
+          ...(state.root.children ?? []),
           {
-            tag: "section",
+            tag: "header",
+            id: `mode-notice-${state.name}`,
             children: [
-              { tag: "h2", text: "System mode: Proposed" },
+              {
+                tag: "h2",
+                text: historical
+                  ? "System mode: Proposed historical replay"
+                  : "System mode: Proposed",
+              },
               ...notices.map((text) => ({ tag: "p" as const, text })),
             ],
           },
-          ...(state.root.children ?? []),
         ],
       },
     })),
@@ -169,6 +356,8 @@ export async function buildPrototypeModes(
       "choices",
       "currentUses",
       "proposedUses",
+      "bindings",
+      "decisionContext",
       "current",
       "proposed",
       "comparisonPath",
@@ -180,13 +369,36 @@ export async function buildPrototypeModes(
     !Array.isArray(plan.choices) ||
     !Array.isArray(plan.currentUses) ||
     !Array.isArray(plan.proposedUses) ||
+    !plan.bindings ||
+    typeof plan.bindings !== "object" ||
+    Array.isArray(plan.bindings) ||
+    !plan.decisionContext ||
+    typeof plan.decisionContext !== "object" ||
+    Array.isArray(plan.decisionContext) ||
     !plan.current ||
     !plan.proposed ||
     typeof plan.comparisonPath !== "string"
   )
     fail("INVALID", "Incomplete mode plan");
+  keys(plan.bindings, ["current", "proposed"], "bindings");
+  keys(plan.decisionContext, ["kind", "requests"], "decision context");
+  if (
+    !["live", "historical"].includes(plan.decisionContext.kind) ||
+    !Array.isArray(plan.decisionContext.requests) ||
+    (plan.decisionContext.kind === "historical" &&
+      plan.decisionContext.requests.length)
+  )
+    fail("INVALID", "Invalid exact decision context");
+  plan.decisionContext.requests.forEach(ref);
   if (!same(ref(plan.current.scenario), ref(plan.proposed.scenario)))
     fail("INVALID", "Both modes must use the same exact scenario");
+  for (const [name, relative] of [
+    ["current", plan.current.outputPath],
+    ["proposed", plan.proposed.outputPath],
+    ["comparison", plan.comparisonPath],
+  ] as const)
+    if (typeof relative !== "string" || !ID.test(relative))
+      fail("PATH", `${name} path must be one safe directory name`);
   if (
     new Set([
       plan.current.outputPath,
@@ -233,13 +445,52 @@ export async function buildPrototypeModes(
     fail("INVALID", "Proposed mode must retain current choices");
   if (!plan.proposedUses.some((id) => !plan.currentUses.includes(id)))
     fail("INVALID", "Proposed mode must declare a noncurrent choice");
+  const currentSignatures = boundValues(
+    plan.current,
+    plan.bindings.current,
+    plan.currentUses,
+    "current",
+    plan.choices,
+  );
+  const proposedSignatures = boundValues(
+    plan.proposed,
+    plan.bindings.proposed,
+    plan.proposedUses,
+    "proposed",
+    plan.choices,
+  );
+  for (const [signature, count] of currentSignatures)
+    if ((proposedSignatures.get(signature) ?? 0) < count)
+      fail("INVALID", "Proposed mode removes bound Current content or actions");
   const contract = await read(store, plan.contract, "product-ui-contract");
   if (!approved(contract)) fail("UNAPPROVED", "UI contract must be approved");
+  const scenario = await read(store, plan.current.scenario, "scenario");
+  if (
+    !approved(scenario) ||
+    !sameProductScope(scenario, contract) ||
+    !locks(scenario, plan.contract)
+  )
+    fail(
+      "UNAPPROVED",
+      "Scenario must approve and lock the exact Product UI Contract in the same product",
+    );
   const chosen = plan.choices.filter(
     (choice) =>
       plan.currentUses.includes(choice.id) ||
       plan.proposedUses.includes(choice.id),
   );
+  const requestIds = new Set(
+    chosen
+      .filter((choice) => choice.status !== "current")
+      .map((choice) => choice.systemRequest!.artifactId),
+  );
+  if (
+    plan.decisionContext.kind === "live" &&
+    plan.decisionContext.requests.some(
+      (exact) => !requestIds.has(exact.artifactId),
+    )
+  )
+    fail("INVALID", "Decision context includes an unrelated System Request");
   let fallback: PrototypeModeResult["fallback"];
   for (const choice of chosen) {
     const capability = await read(
@@ -249,14 +500,15 @@ export async function buildPrototypeModes(
     );
     const availability = (capability.content as { availability?: string })
       .availability;
+    if (!sameProductScope(capability, contract))
+      fail("INVALID", `Capability belongs to another product: ${choice.id}`);
     if (choice.status === "current") {
       if (
         availability !== "current" ||
         !approved(capability) ||
-        !Array.isArray(
-          (capability.content as { supportingEvidence?: unknown })
-            .supportingEvidence,
-        )
+        !locks(contract, choice.capability) ||
+        !inputProvenance(contract, "/content/summary", choice.capability) ||
+        !currentEvidence(capability)
       )
         fail(
           "UNAPPROVED",
@@ -268,12 +520,58 @@ export async function buildPrototypeModes(
         choice.systemRequest!,
         "system-request",
       );
+      if (
+        !sameProductScope(request, contract) ||
+        !locks(request, plan.contract) ||
+        !locks(capability, choice.systemRequest!) ||
+        !inputProvenance(request, "/content/request", plan.contract) ||
+        !inputProvenance(
+          capability,
+          "/content/description",
+          choice.systemRequest!,
+        ) ||
+        (request.content as { changeType?: string }).changeType !== "capability"
+      )
+        fail(
+          "INVALID",
+          `System Request is not exactly linked to this product and capability: ${choice.id}`,
+        );
       if (availability !== "proposed")
         fail(
           "INVALID",
           `Noncurrent choice must reference proposed capability: ${choice.id}`,
         );
       if (plan.proposedUses.includes(choice.id)) {
+        if (plan.decisionContext.kind === "live") {
+          const contexts = plan.decisionContext.requests.filter(
+            (candidate) =>
+              candidate.artifactId === choice.systemRequest!.artifactId,
+          );
+          if (
+            contexts.length !== 1 ||
+            contexts[0]!.revision < choice.systemRequest!.revision
+          )
+            fail(
+              "INVALID",
+              `Missing current exact decision context for ${choice.id}`,
+            );
+          const context = await read(store, contexts[0]!, "system-request");
+          if (!sameProductScope(context, contract))
+            fail(
+              "INVALID",
+              `Decision context belongs to another product: ${choice.id}`,
+            );
+          if (
+            context.lifecycle.status === "rejected" ||
+            context.approval.status === "rejected"
+          )
+            fallback = "rejected-system-request";
+          else if (!same(contexts[0]!, choice.systemRequest!))
+            fail(
+              "UNAPPROVED",
+              `Proposed choice must adopt the current exact request revision: ${choice.id}`,
+            );
+        }
         if (choice.status === "unresolved") fallback = "unresolved-choice";
         if (
           request.lifecycle.status === "rejected" ||
@@ -306,51 +604,84 @@ export async function buildPrototypeModes(
     }
   }
   const digest = `sha256:${createHash("sha256").update(canonicalJson(plan)).digest("hex")}`;
-  const current = await buildPrototype(store, plan.current, outputRoot);
-  let proposed: PrototypeBuildResult | undefined;
-  if (!fallback) {
-    const used = chosen.filter((choice) =>
-      plan.proposedUses.includes(choice.id),
-    );
-    proposed = await buildPrototype(
-      store,
-      markedPlan(plan.proposed, used),
-      outputRoot,
-    );
-  }
-  const comparison = {
-    kind: "mimic-prototype-mode-comparison",
-    productionReady: false,
-    modePlanDigest: digest,
-    contract: plan.contract,
-    scenario: plan.current.scenario,
-    choices: chosen,
-    current: { path: plan.current.outputPath, planDigest: current.planDigest },
-    proposed: proposed
-      ? { path: plan.proposed.outputPath, planDigest: proposed.planDigest }
-      : null,
-    fallback: fallback ?? null,
-    review:
-      "Authored mode and render plans are not approved by referenced artifact approvals",
+  const base = await realpath(outputRoot);
+  const comparisonDirectory = path.join(base, plan.comparisonPath);
+  const assertVacant = async () => {
+    try {
+      await lstat(comparisonDirectory);
+      fail("PATH", "Comparison destination already exists");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
   };
-  let comparisonDirectory: string;
+  await assertVacant();
+  const staging = await mkdtemp(path.join(base, ".mimic-modes-"));
+  let published = false;
+  let current: PrototypeBuildResult;
+  let proposed: PrototypeBuildResult | undefined;
   try {
-    comparisonDirectory = await publishPrototypeBundle(
-      outputRoot,
-      plan.comparisonPath,
-      {
-        "mode-plan.json": `${canonicalJson(plan)}\n`,
-        "comparison.json": `${canonicalJson(comparison)}\n`,
+    current = await buildPrototype(store, plan.current, staging);
+    if (!fallback) {
+      const used = chosen.filter((choice) =>
+        plan.proposedUses.includes(choice.id),
+      );
+      proposed = await buildPrototype(
+        store,
+        markedPlan(
+          plan.proposed,
+          used,
+          plan.decisionContext.kind === "historical",
+        ),
+        staging,
+      );
+    }
+    const comparison = {
+      kind: "mimic-prototype-mode-comparison",
+      productionReady: false,
+      modePlanDigest: digest,
+      contract: plan.contract,
+      scenario: plan.current.scenario,
+      choices: chosen,
+      decisionContext: plan.decisionContext,
+      current: {
+        path: plan.current.outputPath,
+        planDigest: current.planDigest,
       },
+      proposed: proposed
+        ? { path: plan.proposed.outputPath, planDigest: proposed.planDigest }
+        : null,
+      fallback: fallback ?? null,
+      review:
+        "Authored mode and render plans are not approved by referenced artifact approvals",
+    };
+    await writeFile(
+      path.join(staging, "mode-plan.json"),
+      `${canonicalJson(plan)}\n`,
+      { flag: "wx" },
     );
-  } catch (error) {
-    if (error instanceof PrototypeOutputError) fail("PATH", error.message);
-    throw error;
+    await writeFile(
+      path.join(staging, "comparison.json"),
+      `${canonicalJson(comparison)}\n`,
+      { flag: "wx" },
+    );
+    await assertVacant();
+    await rename(staging, comparisonDirectory);
+    published = true;
+  } finally {
+    if (!published) await rm(staging, { recursive: true, force: true });
   }
   return {
     modePlanDigest: digest,
-    current,
-    proposed,
+    current: {
+      ...current,
+      directory: path.join(comparisonDirectory, plan.current.outputPath),
+    },
+    proposed: proposed
+      ? {
+          ...proposed,
+          directory: path.join(comparisonDirectory, plan.proposed.outputPath),
+        }
+      : undefined,
     fallback,
     comparisonDirectory,
   };

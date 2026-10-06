@@ -34,7 +34,9 @@ test("generated Current and Proposed modes preserve scenario and repeated deskto
           ? "text/javascript"
           : "text/html",
     });
-    response.end(await readFile(path.join(fixture.root, mode!, name)));
+    response.end(
+      await readFile(path.join(result.comparisonDirectory, mode!, name)),
+    );
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   try {
@@ -57,6 +59,13 @@ test("generated Current and Proposed modes preserve scenario and repeated deskto
             .locator('[data-state="loading"]')
             .getByText(new RegExp(fixture.modeRefs.request.artifactId)),
         ).toBeVisible();
+        await expect(
+          page
+            .locator('[data-state="loading"]')
+            .getByText(
+              new RegExp(fixture.modeRefs.request.lockDigest.slice(0, 19)),
+            ),
+        ).toBeVisible();
       } else {
         await expect(page.getByText(/Proposed, not implemented/)).toHaveCount(
           0,
@@ -65,6 +74,16 @@ test("generated Current and Proposed modes preserve scenario and repeated deskto
       for (let i = 0; i < 2; i++) {
         await page.getByRole("button", { name: "Show success" }).click();
         await expect(page.getByText("Synthetic candidate ready")).toBeVisible();
+        if (mode === "proposed") {
+          await expect(page.locator("#mode-notice-success")).toBeVisible();
+          await page
+            .getByRole("button", { name: "Compare candidates" })
+            .click();
+          await expect(
+            page.getByText("Synthetic candidate selected; action disabled"),
+          ).toBeVisible();
+          await page.getByRole("button", { name: "Show success" }).click();
+        }
         await page.getByRole("button", { name: "Choose candidate" }).click();
         await expect(
           page.getByText("Synthetic candidate selected; action disabled"),
@@ -74,6 +93,14 @@ test("generated Current and Proposed modes preserve scenario and repeated deskto
       expect(axe.violations).toEqual([]);
       await page.getByRole("button", { name: "Show success" }).click();
       const cards = page.locator('[data-state="success"] main > section');
+      await expect(cards).toHaveCount(mode === "proposed" ? 3 : 2);
+      if (mode === "proposed")
+        await expect(page.locator("#mode-notice-success")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
       const first = await cards.nth(0).boundingBox();
       const second = await cards.nth(1).boundingBox();
       if (!first || !second)
