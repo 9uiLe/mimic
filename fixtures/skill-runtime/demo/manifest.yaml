@@ -21,6 +21,7 @@ inputs:
 outputs:
   - product-definition
   - decision
+  - system-request
 forbiddenResponsibilities:
   - Approve product definition
 humanGates:
@@ -30,6 +31,8 @@ supportedArtifactSchemas:
   - artifactType: product-definition
     schemaVersion: 1.0.0
   - artifactType: decision
+    schemaVersion: 1.0.0
+  - artifactType: system-request
     schemaVersion: 1.0.0
 examples:
   - examples/intent.json

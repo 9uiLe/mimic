@@ -215,6 +215,90 @@ async function execute(
   });
 }
 
+async function seedApprovedDefinition(
+  x: Awaited<ReturnType<typeof setup>>,
+): Promise<ArtifactSnapshot> {
+  const seedTask = { ...x.task, id: "seed" };
+  await x.orchestrator.start({
+    id: "run_seed",
+    scopeOwnerId: "product_mimic",
+    entryMode: "hybrid",
+    actor: { kind: "agent", id: "agent_1" },
+    at: now,
+    tasks: [seedTask],
+  });
+  const proposed = {
+    ...x.candidate("art_approved_reuse"),
+    lifecycle: { status: "proposed" as const, freshness: "valid" },
+    origin: {
+      actorKind: "skill",
+      actorId: x.task.skillId,
+      runId: "run_seed",
+      createdAt: now,
+    },
+  } as ArtifactSnapshot;
+  await x.artifacts.create(proposed);
+  await x.registry.produce({
+    runId: "run_seed",
+    ref: x.ref(proposed),
+    inputs: [],
+    actor: { kind: "skill", id: x.task.skillId },
+    at: now,
+    reason: "Propose definition",
+  });
+  await x.registry.submit({
+    runId: "run_seed",
+    packetId: "packet_reuse",
+    proposals: [
+      {
+        id: "proposal_reuse",
+        ref: x.ref(proposed),
+        alternatives: ["approve", "reject"],
+        rationale: "Review product scope",
+        evidenceLimits: [],
+        dependents: [],
+      },
+    ],
+    actor: { kind: "agent", id: "agent_1" },
+    at: now,
+    reason: "Human review",
+  });
+  const approvedBare: ArtifactSnapshot = {
+    ...proposed,
+    meta: { ...proposed.meta, revision: 2, supersedesRevision: 1 },
+    lifecycle: { status: "approved", freshness: "valid" },
+    approval: {
+      status: "approved",
+      decisionId: "decision_reuse",
+      actorId: "human_1",
+      at: now,
+    },
+  };
+  const approved: ArtifactSnapshot = {
+    ...approvedBare,
+    meta: { ...approvedBare.meta, contentDigest: artifactDigest(approvedBare) },
+  };
+  await x.registry.decide({
+    id: "decision_reuse",
+    packetId: "packet_reuse",
+    proposalId: "proposal_reuse",
+    outcome: "approved",
+    actor: { kind: "human", id: "human_1" },
+    at: now,
+    rationale: "Approve exact scope",
+    output: { ref: x.ref(approved), artifact: approved },
+  });
+  await x.registry.commit({
+    id: "commit_reuse",
+    packetId: "packet_reuse",
+    approvals: [{ proposalId: "proposal_reuse", decisionId: "decision_reuse" }],
+    actor: { kind: "human", id: "human_1" },
+    at: now,
+    reason: "Human commit",
+  });
+  return approved;
+}
+
 test("recovers a partial produce/submit failure without duplicate ownership", async () => {
   const x = await setup();
   await x.start();
@@ -453,84 +537,7 @@ test("missing required intent blocks only its task; optional evidence is an expl
 
 test("reuses an unchanged approved exact output from the Run base", async () => {
   const x = await setup();
-  const seedTask = { ...x.task, id: "seed" };
-  await x.orchestrator.start({
-    id: "run_seed",
-    scopeOwnerId: "product_mimic",
-    entryMode: "hybrid",
-    actor: { kind: "agent", id: "agent_1" },
-    at: now,
-    tasks: [seedTask],
-  });
-  const proposed = {
-    ...x.candidate("art_approved_reuse"),
-    lifecycle: { status: "proposed" as const, freshness: "valid" },
-    origin: {
-      actorKind: "skill",
-      actorId: x.task.skillId,
-      runId: "run_seed",
-      createdAt: now,
-    },
-  } as ArtifactSnapshot;
-  await x.artifacts.create(proposed);
-  await x.registry.produce({
-    runId: "run_seed",
-    ref: x.ref(proposed),
-    inputs: [],
-    actor: { kind: "skill", id: x.task.skillId },
-    at: now,
-    reason: "Propose definition",
-  });
-  await x.registry.submit({
-    runId: "run_seed",
-    packetId: "packet_reuse",
-    proposals: [
-      {
-        id: "proposal_reuse",
-        ref: x.ref(proposed),
-        alternatives: ["approve", "reject"],
-        rationale: "Review product scope",
-        evidenceLimits: [],
-        dependents: [],
-      },
-    ],
-    actor: { kind: "agent", id: "agent_1" },
-    at: now,
-    reason: "Human review",
-  });
-  const approvedBare: ArtifactSnapshot = {
-    ...proposed,
-    meta: { ...proposed.meta, revision: 2, supersedesRevision: 1 },
-    lifecycle: { status: "approved", freshness: "valid" },
-    approval: {
-      status: "approved",
-      decisionId: "decision_reuse",
-      actorId: "human_1",
-      at: now,
-    },
-  };
-  const approved: ArtifactSnapshot = {
-    ...approvedBare,
-    meta: { ...approvedBare.meta, contentDigest: artifactDigest(approvedBare) },
-  };
-  await x.registry.decide({
-    id: "decision_reuse",
-    packetId: "packet_reuse",
-    proposalId: "proposal_reuse",
-    outcome: "approved",
-    actor: { kind: "human", id: "human_1" },
-    at: now,
-    rationale: "Approve exact scope",
-    output: { ref: x.ref(approved), artifact: approved },
-  });
-  await x.registry.commit({
-    id: "commit_reuse",
-    packetId: "packet_reuse",
-    approvals: [{ proposalId: "proposal_reuse", decisionId: "decision_reuse" }],
-    actor: { kind: "human", id: "human_1" },
-    at: now,
-    reason: "Human commit",
-  });
+  const approved = await seedApprovedDefinition(x);
   const task = {
     ...x.task,
     intent: "revise" as const,
@@ -570,9 +577,11 @@ test("reuses an unchanged approved exact output from the Run base", async () => 
   ).toEqual(x.ref(approved));
 });
 
-test("routes a proposal to human review and preserves rejected fate without canonical selection", async () => {
+test("rejects replay of another task’s rejected candidate and packet", async () => {
   const x = await setup();
-  await x.start();
+  const second = { ...x.task, id: "second" };
+  const tasks = [x.task, second];
+  await x.start(tasks);
   const candidate = {
     ...x.candidate("art_rejected_candidate"),
     lifecycle: { status: "proposed" as const, freshness: "valid" },
@@ -582,7 +591,7 @@ test("routes a proposal to human review and preserves rejected fate without cano
     orchestrator: x.orchestrator,
     package: x.skill,
     runId: "run_skill",
-    tasks: [x.task],
+    tasks,
     taskId: "demo",
     at: now,
     executor: async () => ({
@@ -612,6 +621,25 @@ test("routes a proposal to human review and preserves rejected fate without cano
   expect(
     (await x.registry.run("run_skill")).run.proposals.proposal_reject.status,
   ).toBe("pending");
+  await expect(
+    runSkillPackage({
+      orchestrator: x.orchestrator,
+      package: x.skill,
+      runId: "run_skill",
+      tasks,
+      taskId: "second",
+      at: now,
+      executor: async ({ invocation }) => ({
+        result: {
+          runId: "run_skill",
+          taskId: "second",
+          skillId: second.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [x.ref(candidate)],
+        },
+      }),
+    }),
+  ).rejects.toThrow(/Existing output belongs to another task/);
   const rejectedBare: ArtifactSnapshot = {
     ...candidate,
     meta: { ...candidate.meta, revision: 2, supersedesRevision: 1 },
@@ -646,4 +674,232 @@ test("routes a proposal to human review and preserves rejected fate without cano
   expect(
     (await x.artifacts.read(candidate.meta.id, 2)).artifact.lifecycle.status,
   ).toBe("rejected");
+  await expect(
+    runSkillPackage({
+      orchestrator: x.orchestrator,
+      package: x.skill,
+      runId: "run_skill",
+      tasks,
+      taskId: "second",
+      at: now,
+      executor: async ({ invocation }) => ({
+        result: {
+          runId: "run_skill",
+          taskId: "second",
+          skillId: second.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [x.ref(candidate)],
+          proposal: {
+            packetId: "packet_reject",
+            items: [
+              {
+                id: "proposal_reject",
+                ref: x.ref(candidate),
+                alternatives: ["approve", "reject"],
+                rationale: "Review the product definition",
+                evidenceLimits: [],
+                dependents: [],
+              },
+            ],
+            reason: "Human choice",
+          },
+        },
+      }),
+    }),
+  ).rejects.toThrow(
+    /Rejected or resolved output|Result packet belongs to another task/,
+  );
+  expect((await x.registry.run("run_skill")).run.safeActions).toContain(
+    "second",
+  );
+});
+
+test("routes an accepted upstream revision request once after the harness closes its task", async () => {
+  const x = await setup();
+  const source = await seedApprovedDefinition(x);
+  const task: RoutedTask = {
+    ...x.task,
+    outputType: "system-request",
+    intent: "create",
+  };
+  await x.orchestrator.start({
+    id: "run_skill",
+    scopeOwnerId: "product_mimic",
+    entryMode: "hybrid",
+    actor: { kind: "agent", id: "agent_1" },
+    at: now,
+    tasks: [task],
+  });
+  const systemTemplate = JSON.parse(
+    await readFile(
+      path.join(repository, "fixtures/artifacts/valid/system-request.json"),
+      "utf8",
+    ),
+  ) as ArtifactSnapshot;
+  const request: ArtifactSnapshot = {
+    ...systemTemplate,
+    meta: { ...systemTemplate.meta, id: "art_upstream_request" },
+    origin: {
+      actorKind: "skill",
+      actorId: task.skillId,
+      runId: "run_skill",
+      createdAt: now,
+    },
+    dependencies: [{ ...x.ref(source), onChange: "validate" }],
+    provenance: [
+      {
+        path: "/content",
+        kind: "assumption",
+        rationale: "Request based on observed design constraint",
+        evidenceRefs: ["evidence://constraint"],
+      },
+    ],
+  };
+  await x.artifacts.create(request);
+  const revisionRequest = {
+    runId: "run_skill",
+    source: x.ref(source),
+    request: x.ref(request),
+    affectedLocks: [x.ref(source)],
+    evidenceRefs: ["evidence://constraint"],
+    reason: "Revise upstream product scope",
+  };
+  const work = await runSkillPackage({
+    orchestrator: x.orchestrator,
+    package: x.skill,
+    runId: "run_skill",
+    tasks: [task],
+    taskId: "demo",
+    at: now,
+    executor: async ({ invocation }) => ({
+      result: {
+        runId: "run_skill",
+        taskId: "demo",
+        skillId: task.skillId,
+        inputRefs: invocation.inputRefs,
+        outputRefs: [x.ref(request)],
+      },
+      revisionRequests: [revisionRequest],
+    }),
+  });
+  expect(work.revisionRequests).toEqual([revisionRequest]);
+  expect((await x.registry.run("run_skill")).run.closed).toBeDefined();
+  await expect(
+    x.orchestrator.requestUpstream(
+      revisionRequest,
+      { kind: "skill", id: task.skillId },
+      now,
+    ),
+  ).resolves.toBeUndefined();
+  expect((await x.registry.run("run_skill")).run.artifacts).toEqual([
+    x.ref(request),
+  ]);
+  await expect(
+    x.orchestrator.requestUpstream(
+      revisionRequest,
+      { kind: "skill", id: task.skillId },
+      now,
+    ),
+  ).resolves.toBeUndefined();
+  await expect(
+    x.orchestrator.requestUpstream(
+      { ...revisionRequest, evidenceRefs: ["evidence://invented"] },
+      { kind: "skill", id: task.skillId },
+      now,
+    ),
+  ).rejects.toThrow(/evidence is absent/);
+  await expect(
+    x.orchestrator.requestUpstream(
+      revisionRequest,
+      { kind: "agent", id: task.skillId },
+      now,
+    ),
+  ).rejects.toThrow(/cannot mutate approved source/);
+  expect((await x.registry.run("run_skill")).run.artifacts).toEqual([
+    x.ref(request),
+  ]);
+  const lateRequest: ArtifactSnapshot = {
+    ...request,
+    meta: { ...request.meta, id: "art_late_request" },
+  };
+  await x.artifacts.create(lateRequest);
+  await expect(
+    x.orchestrator.requestUpstream(
+      { ...revisionRequest, request: x.ref(lateRequest) },
+      { kind: "skill", id: task.skillId },
+      now,
+    ),
+  ).rejects.toThrow(/Run cannot produce provisional work/);
+  expect((await x.registry.run("run_skill")).run.artifacts).toEqual([
+    x.ref(request),
+  ]);
+});
+
+test("retries only the same live packet after an accepted proposal loses its response", async () => {
+  const x = await setup();
+  await x.start();
+  const candidate = {
+    ...x.candidate("art_packet_retry"),
+    lifecycle: { status: "proposed" as const, freshness: "valid" },
+  };
+  await x.artifacts.create(candidate);
+  const proposal = {
+    packetId: "packet_retry",
+    items: [
+      {
+        id: "proposal_retry",
+        ref: x.ref(candidate),
+        alternatives: ["approve", "reject"],
+        rationale: "Review exact definition",
+        evidenceLimits: [],
+        dependents: [],
+      },
+    ],
+    reason: "Human review",
+  };
+  const originalSetWork = x.registry.setWork.bind(x.registry);
+  let fail = true;
+  x.registry.setWork = async (input) => {
+    if (fail) {
+      fail = false;
+      throw new Error("lost acceptance response");
+    }
+    return originalSetWork(input);
+  };
+  const attempt = (rationale = proposal.items[0]!.rationale) =>
+    runSkillPackage({
+      orchestrator: x.orchestrator,
+      package: x.skill,
+      runId: "run_skill",
+      tasks: [x.task],
+      taskId: "demo",
+      at: now,
+      executor: async ({ invocation }) => ({
+        result: {
+          runId: "run_skill",
+          taskId: "demo",
+          skillId: x.task.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [x.ref(candidate)],
+          proposal: {
+            ...proposal,
+            items: [{ ...proposal.items[0]!, rationale }],
+          },
+        },
+      }),
+    });
+  await expect(attempt()).rejects.toThrow(/lost acceptance response/);
+  expect(
+    (await x.registry.run("run_skill")).run.proposals.proposal_retry.status,
+  ).toBe("pending");
+  await expect(attempt("Different packet rationale")).rejects.toThrow(
+    /no longer live/,
+  );
+  await expect(attempt()).resolves.toBeDefined();
+  expect((await x.registry.run("run_skill")).run.artifacts).toEqual([
+    x.ref(candidate),
+  ]);
+  expect((await x.registry.run("run_skill")).run.safeActions).not.toContain(
+    "demo",
+  );
 });
