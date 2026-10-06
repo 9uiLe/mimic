@@ -19,3 +19,4 @@ export * from "./orchestrator/index.js";
 export * from "./skill-runtime/index.js";
 
 export * from "./design-knowledge/index.js";
+export * from "./token-compiler/index.js";
