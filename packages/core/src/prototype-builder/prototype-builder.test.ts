@@ -11,6 +11,7 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { HtmlValidate } from "html-validate";
 import { buildPrototype } from "./index.js";
 import { publishPrototypeBundle } from "./output.js";
 import { setupApprovedPrototypeFixture } from "../../../../fixtures/prototypes/approved.js";
@@ -60,6 +61,26 @@ test("generates deterministic semantic prototype with exact provenance and synth
     expect(await readFile(path.join(first.directory, file))).toEqual(
       await readFile(path.join(second.directory, file)),
     );
+});
+
+test("generated document has one valid main landmark for every authored state", async () => {
+  const { root, store, input } = await setup();
+  const result = await buildPrototype(store, input, root);
+  const filename = path.join(result.directory, "index.html");
+  const html = await readFile(filename, "utf8");
+  const validator = new HtmlValidate(
+    JSON.parse(
+      await readFile(
+        new URL("../../../../.htmlvalidate.json", import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
+  const report = await validator.validateFile(filename);
+  expect(report.results.flatMap((result) => result.messages)).toEqual([]);
+  expect(html.match(/<main(?:\s|>)/g)).toHaveLength(1);
+  for (const state of input.requiredStates)
+    expect(html).toContain(`data-state="${state}"`);
 });
 
 test("rejects unsafe markup, URLs, scripts and output escapes", async () => {
