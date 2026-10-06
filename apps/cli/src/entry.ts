@@ -10,8 +10,7 @@ export async function dispatchCli(
   loadTrust: () => Promise<OperatorTrust | undefined> = loadOperatorTrustRoot,
 ): Promise<number> {
   try {
-    const operatorTrust = argv.length ? await loadTrust() : undefined;
-    return await runCli(argv, undefined, { operatorTrust });
+    return await runCli(argv, undefined, { loadOperatorTrust: loadTrust });
   } catch (error) {
     console.error(
       `MIMIC_4: ${error instanceof Error ? error.message : String(error)}`,

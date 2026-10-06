@@ -1,6 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, writeFile, mkdir, realpath, lstat } from "node:fs/promises";
 import { atomicCreateJson } from "./atomic-file.js";
+import {
+  LOCAL_MARKER,
+  SIGNED_MARKER,
+  LocalConfirmationAuthority,
+  LocalConfirmationError,
+  type LocalConfirmation,
+} from "./local-confirmation-authority.js";
 import { runSkillCli } from "./skill/index.js";
 import { PlanError, preflightPlan, scopeChain } from "./plan.js";
 import {
@@ -39,6 +46,8 @@ export interface CliHost {
   readonly authority?: RegistryAuthority;
   /** Trusted launch configuration; the standalone binary loads it only from an OS-protected fixed path. */
   readonly operatorTrust?: OperatorTrust;
+  /** Standalone binary calls this only for explicit signed actions or signed history. */
+  readonly loadOperatorTrust?: () => Promise<OperatorTrust | undefined>;
   readonly seedAuthority?: AuthorityVerifier;
   readonly executeSkill?: (invocation: SkillInvocation) => Promise<SkillResult>;
   /** Trusted host fault hook; useful for testing recovery after Core accepts a submission. */
@@ -56,14 +65,6 @@ export const EXIT = {
   CONFLICT: 5,
   IO: 6,
 } as const;
-const denyAuthority: RegistryAuthority = {
-  async verify() {
-    return false;
-  },
-  async allowCommit() {
-    return false;
-  },
-};
 const commands = new Set([
   "init",
   "status",
@@ -127,6 +128,8 @@ function parse(argv: readonly string[]) {
           "work",
           "receipt",
           "commit-receipt",
+          "confirmation",
+          "commit-confirmation",
           "acceptance",
         ]).has(arg.slice(2))
       )
@@ -286,18 +289,68 @@ async function load(root: string, host: CliHost) {
   const schemas = await loadSchemaDirectory(
     path.join(schemasRoot, "artifacts"),
   );
-  const receiptAuthority =
-    !host.authority && host.operatorTrust
-      ? new ReceiptAuthority(workspace, root, host.operatorTrust)
-      : undefined;
+  const localAuthority = new LocalConfirmationAuthority(workspace, root);
+  let receiptAuthority: ReceiptAuthority | undefined;
+  const signedAuthority = async (): Promise<ReceiptAuthority | undefined> => {
+    if (receiptAuthority) return receiptAuthority;
+    const trust = host.operatorTrust ?? (await host.loadOperatorTrust?.());
+    if (!trust) return undefined;
+    receiptAuthority = new ReceiptAuthority(workspace, root, trust);
+    return receiptAuthority;
+  };
+  const authority: RegistryAuthority = host.authority ?? {
+    async verify(record, proposal) {
+      const marks =
+        record.externalRefs?.filter(
+          (ref) =>
+            ref.startsWith(LOCAL_MARKER) || ref.startsWith(SIGNED_MARKER),
+        ) ?? [];
+      if (marks.length !== 1) return false;
+      if (marks[0]!.startsWith(LOCAL_MARKER))
+        return localAuthority.verify(record, proposal);
+      try {
+        return (
+          (await (await signedAuthority())?.verify(record, proposal)) ?? false
+        );
+      } catch {
+        return false;
+      }
+    },
+    async allowCommit(record, proposal, state) {
+      const marks =
+        record.externalRefs?.filter(
+          (ref) =>
+            ref.startsWith(LOCAL_MARKER) || ref.startsWith(SIGNED_MARKER),
+        ) ?? [];
+      if (marks.length !== 1) return false;
+      if (marks[0]!.startsWith(LOCAL_MARKER))
+        return localAuthority.allowCommit(record, proposal, state);
+      try {
+        return (
+          (await (
+            await signedAuthority()
+          )?.allowCommit(record, proposal, state)) ?? false
+        );
+      } catch {
+        return false;
+      }
+    },
+  };
   const runtime = createOrchestratorRuntime(
     workspace,
     schemas,
     config.scopes,
-    host.authority ?? receiptAuthority ?? denyAuthority,
+    authority,
     host.seedAuthority,
   );
-  return { config, schemas, schemasRoot, runtime, receiptAuthority };
+  return {
+    config,
+    schemas,
+    schemasRoot,
+    runtime,
+    localAuthority,
+    signedAuthority,
+  };
 }
 async function savedTasks(
   root: string,
@@ -391,8 +444,14 @@ export async function runCli(
       );
       return EXIT.OK;
     }
-    const { config, schemas, schemasRoot, runtime, receiptAuthority } =
-      await load(root, host);
+    const {
+      config,
+      schemas,
+      schemasRoot,
+      runtime,
+      localAuthority,
+      signedAuthority,
+    } = await load(root, host);
     if (command === "status") {
       if (positionals.length)
         throw new CliError(EXIT.USAGE, "status takes no positional arguments");
@@ -761,11 +820,7 @@ export async function runCli(
         io,
         {
           packets,
-          authority: host.authority
-            ? "host-injected"
-            : receiptAuthority
-              ? "signed-receipt"
-              : "unavailable",
+          authority: host.authority ? "host-injected" : "local-confirmation",
         },
         json,
       );
@@ -778,13 +833,16 @@ export async function runCli(
         if (
           options.file ||
           options.receipt ||
+          options.confirmation ||
           options.commit ||
-          options["commit-receipt"]
+          options["commit-receipt"] ||
+          options["commit-confirmation"]
         )
           throw new CliError(
             EXIT.USAGE,
             "Acceptance import takes only --acceptance",
           );
+        const receiptAuthority = !host.authority && (await signedAuthority());
         if (!receiptAuthority)
           throw new CliError(
             EXIT.UNSUPPORTED,
@@ -802,10 +860,45 @@ export async function runCli(
         );
         return EXIT.OK;
       }
-      if (!host.authority && !receiptAuthority)
+      const signed = !!(options.receipt || options["commit-receipt"]);
+      const local = !!(options.confirmation || options["commit-confirmation"]);
+      if (host.authority && (signed || local))
+        throw new CliError(
+          EXIT.USAGE,
+          "Host-injected authority cannot be mixed with CLI evidence",
+        );
+      if (signed && local)
+        throw new CliError(
+          EXIT.USAGE,
+          "Signed and local confirmations cannot be mixed",
+        );
+      if (!host.authority && !signed && !local)
+        throw new CliError(EXIT.USAGE, "Missing --confirmation or --receipt");
+      if (
+        options.commit &&
+        !host.authority &&
+        signed &&
+        !options["commit-receipt"]
+      )
+        throw new CliError(EXIT.USAGE, "Missing --commit-receipt");
+      if (
+        options.commit &&
+        !host.authority &&
+        local &&
+        !options["commit-confirmation"]
+      )
+        throw new CliError(EXIT.USAGE, "Missing --commit-confirmation");
+      if (
+        !options.commit &&
+        (options["commit-receipt"] || options["commit-confirmation"])
+      )
+        throw new CliError(EXIT.USAGE, "Commit confirmation needs --commit");
+      const receiptAuthority =
+        signed && !host.authority ? await signedAuthority() : undefined;
+      if (signed && !host.authority && !receiptAuthority)
         throw new CliError(
           EXIT.UNSUPPORTED,
-          "Human decisions require an operator-protected trust root",
+          "Signed receipt needs a protected trust root",
         );
       const supplied = (await readJson(
         root,
@@ -819,7 +912,15 @@ export async function runCli(
               required(options.receipt, "--receipt"),
             )) as SignedReceipt,
           )
-        : supplied;
+        : local && !host.authority
+          ? await localAuthority.prepareDecision(
+              supplied,
+              (await readJson(
+                root,
+                required(options.confirmation, "--confirmation"),
+              )) as LocalConfirmation,
+            )
+          : supplied;
       await runtime.registry.decide(decision);
       if (options.commit) {
         const request = (await readJson(root, options.commit)) as CommitRequest;
@@ -831,10 +932,19 @@ export async function runCli(
               required(options["commit-receipt"], "--commit-receipt"),
             )) as SignedReceipt,
           );
+        if (local && !host.authority)
+          await localAuthority.prepareCommit(
+            request,
+            (await readJson(
+              root,
+              required(options["commit-confirmation"], "--commit-confirmation"),
+            )) as LocalConfirmation,
+          );
         try {
           await runtime.registry.commit(request);
         } finally {
           receiptAuthority?.clearCommit();
+          localAuthority.clearCommit();
         }
       }
       emit(
@@ -887,7 +997,8 @@ export async function runCli(
         ? error.code
         : error instanceof PlanError
           ? EXIT.INVALID
-          : error instanceof ReceiptError
+          : error instanceof ReceiptError ||
+              error instanceof LocalConfirmationError
             ? error.code === "CONFLICT"
               ? EXIT.CONFLICT
               : EXIT.INVALID

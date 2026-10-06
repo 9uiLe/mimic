@@ -16,6 +16,10 @@ import {
   type RegistryState,
 } from "@mimic/core";
 import { atomicCreateJson } from "./atomic-file.js";
+import {
+  LOCAL_MARKER,
+  assertNoReservedRefs,
+} from "./local-confirmation-authority.js";
 
 export interface OperatorTrust {
   readonly version: 1;
@@ -118,7 +122,7 @@ function expiry(
 function unsignedDecision(record: DecisionRecord): DecisionRecord {
   const copy = { ...record };
   const externalRefs = record.externalRefs?.filter(
-    (ref) => !ref.startsWith(marker),
+    (ref) => !ref.startsWith(marker) && !ref.startsWith(LOCAL_MARKER),
   );
   if (externalRefs?.length) return { ...copy, externalRefs };
   delete (copy as { externalRefs?: readonly string[] }).externalRefs;
@@ -441,7 +445,9 @@ export class ReceiptAuthority implements RegistryAuthority {
     const record = state.decisions[id];
     check(record, "Acceptance has no recorded decision");
     const marks =
-      record.externalRefs?.filter((ref) => ref.startsWith(marker)) ?? [];
+      record.externalRefs?.filter(
+        (ref) => ref.startsWith(marker) || ref.startsWith(LOCAL_MARKER),
+      ) ?? [];
     check(marks.length === 1, "Decision has no exact authorization receipt");
     const receipt = await this.lookup(marks[0]!.slice(marker.length));
     check(
@@ -497,6 +503,7 @@ export class ReceiptAuthority implements RegistryAuthority {
     record: DecisionRecord,
     receipt: SignedReceipt,
   ): Promise<DecisionRecord> {
+    assertNoReservedRefs(record);
     const state = await this.workspace.read();
     const packet = state.packets[record.packetId];
     const proposal =
@@ -519,7 +526,9 @@ export class ReceiptAuthority implements RegistryAuthority {
   async verify(record: DecisionRecord, proposal: Proposal): Promise<boolean> {
     try {
       const marks =
-        record.externalRefs?.filter((ref) => ref.startsWith(marker)) ?? [];
+        record.externalRefs?.filter(
+          (ref) => ref.startsWith(marker) || ref.startsWith(LOCAL_MARKER),
+        ) ?? [];
       if (marks.length !== 1) return false;
       const receipt = await this.lookup(marks[0]!.slice(marker.length));
       const state = await this.workspace.read();

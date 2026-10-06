@@ -270,7 +270,7 @@ describe("CLI filesystem protocol", () => {
     expect(
       (await call(["decide", "--file", "tasks.json", "--root", dir, "--json"]))
         .code,
-    ).toBe(EXIT.UNSUPPORTED);
+    ).toBe(EXIT.USAGE);
   });
 
   test("schema validation reports its boundary with file-backed diagnostics", async () => {
@@ -295,7 +295,7 @@ describe("CLI filesystem protocol", () => {
     ).toBe(true);
   });
 
-  test("only a host-injected verifier can record a genuine deferred human decision", async () => {
+  test("an actor label alone cannot record a deferred human decision", async () => {
     const dir = await initialized();
     expect(
       (
@@ -399,7 +399,7 @@ describe("CLI filesystem protocol", () => {
           "--json",
         ])
       ).code,
-    ).toBe(EXIT.UNSUPPORTED);
+    ).toBe(EXIT.USAGE);
     expect(
       (
         await call(
