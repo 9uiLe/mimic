@@ -1,6 +1,4 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, realpath, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   canonicalJson,
   jsonCopy,
@@ -9,6 +7,7 @@ import {
 import type { ArtifactSnapshot, ArtifactStore } from "../artifact-store.js";
 import type { ExactArtifactRef } from "../runtime-engines/dependency.js";
 import { compileApprovedTokenAssets } from "../token-compiler/index.js";
+import { PrototypeOutputError, publishPrototypeBundle } from "./output.js";
 
 /** This authored render plan is a generation input, not a canonical artifact or an approval. */
 export type PrototypeState =
@@ -327,11 +326,13 @@ function renderNode(
   node: PrototypeNode,
   state: PrototypeState,
   fixtures: PrototypeBuilderInput["fixtures"],
+  renderedStates: ReadonlySet<PrototypeState>,
   componentIds: Set<string>,
   ids: Set<string>,
   depth: number,
   budget: { count: number },
-): string {
+  interactiveAncestor: boolean,
+): { html: string; hasText: boolean } {
   if (
     !node ||
     typeof node !== "object" ||
@@ -358,6 +359,9 @@ function renderNode(
   );
   if (!TAGS.includes(node.tag))
     revision(`Unsupported semantic element: ${String(node.tag)}`);
+  const interactive = node.tag === "button" || node.tag === "a";
+  if (interactiveAncestor && interactive)
+    revision("Nested interactive controls are unsupported");
   if (node.id !== undefined) {
     if (!ID.test(node.id) || ids.has(node.id))
       fail("INVALID", `Unsafe or duplicate DOM id: ${node.id}`);
@@ -393,69 +397,53 @@ function renderNode(
     revision("Link needs a local fragment target");
   if (node.tag === "button" && !node.targetState)
     revision("Button needs a declared state transition");
-  if (
-    node.targetState !== undefined &&
-    !Object.hasOwn(fixtures, node.targetState)
-  )
+  if (node.targetState !== undefined && !renderedStates.has(node.targetState))
     revision(`Missing transition target state ${node.targetState}`);
   if (node.children !== undefined && !Array.isArray(node.children))
     fail("INVALID", "children must be an array");
-  if (
-    (node.tag === "button" || node.tag === "a" || /^h[123]$/.test(node.tag)) &&
-    !value &&
-    !node.children?.length
-  )
-    revision(`${node.tag} needs a discernible label`);
   const attrs = `${node.id ? ` id="${node.id}"` : ""}${node.componentId ? ` data-component="${escapeHtml(node.componentId)}"` : ""}${node.href ? ` href="${node.href}"` : ""}${node.targetState ? ` type="button" data-target-state="${node.targetState}"` : ""}`;
-  const children =
-    node.children
-      ?.map((child) =>
-        renderNode(
-          child,
-          state,
-          fixtures,
-          componentIds,
-          ids,
-          depth + 1,
-          budget,
-        ),
-      )
-      .join("") ?? "";
-  return `<${node.tag}${attrs}>${value ? escapeHtml(value) : ""}${children}</${node.tag}>`;
+  const renderedChildren =
+    node.children?.map((child) =>
+      renderNode(
+        child,
+        state,
+        fixtures,
+        renderedStates,
+        componentIds,
+        ids,
+        depth + 1,
+        budget,
+        interactiveAncestor || interactive,
+      ),
+    ) ?? [];
+  const hasText =
+    Boolean(value?.trim()) || renderedChildren.some((child) => child.hasText);
+  if ((interactive || /^h[123]$/.test(node.tag)) && !hasText)
+    revision(`${node.tag} needs a discernible text label`);
+  const children = renderedChildren.map((child) => child.html).join("");
+  return {
+    html: `<${node.tag}${attrs}>${value ? escapeHtml(value) : ""}${children}</${node.tag}>`,
+    hasText,
+  };
 }
-async function outputDirectory(
-  root: string,
-  relative: string,
-): Promise<string> {
-  if (
-    typeof relative !== "string" ||
-    !relative ||
-    path.isAbsolute(relative) ||
-    relative
-      .split(/[\\/]/)
-      .some((part) => !part || part === "." || part === "..") ||
-    relative.includes("\\")
-  )
-    fail("PATH", "Output path must be a contained relative directory");
-  const base = await realpath(root);
-  let current = base;
-  for (const segment of relative.split("/")) {
-    current = path.join(current, segment);
-    try {
-      const stat = await lstat(current);
-      if (!stat.isDirectory() || stat.isSymbolicLink())
-        fail(
-          "PATH",
-          `Output path contains a symlink or non-directory: ${segment}`,
-        );
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-      await mkdir(current);
-    }
-  }
-  if (path.relative(base, await realpath(current)).startsWith(".."))
-    fail("PATH", "Output escapes root");
-  return current;
+function linksExactCompositionRef(
+  entry: ArtifactSnapshot["provenance"][number],
+  ref: ExactArtifactRef,
+): boolean {
+  if (!Array.isArray(entry.inputRefs)) return false;
+  const identity = `${ref.artifactId}@${ref.revision}`;
+  const matching = entry.inputRefs.filter(
+    (value) =>
+      typeof value === "string" &&
+      (value === identity || value.startsWith(`${identity}#`)),
+  );
+  return (
+    matching.length > 0 &&
+    matching.every(
+      (value) =>
+        value === identity || value === `${identity}#${ref.lockDigest}`,
+    )
+  );
 }
 /** Compile a reviewable, deterministic specification prototype from explicit composition input. */
 export async function buildPrototype(
@@ -487,20 +475,23 @@ export async function buildPrototype(
     scenario.meta.schemaVersion !== "1.0.0"
   )
     fail("INVALID", "Source is not a canonical v1 scenario");
+  const compositionRefs = selection
+    .filter(
+      ([kind]) =>
+        kind === "pattern" || kind === "layout" || kind === "component",
+    )
+    .map(([, ref]) => ref);
   const rationale = scenario.provenance.some(
     (entry) =>
       entry.path.startsWith("/content") &&
+      entry.kind === "derived" &&
       typeof entry.rationale === "string" &&
-      /Task\s*→.*pattern\s*→.*layout\s*→.*component/i.test(entry.rationale) &&
-      selection.every(
-        ([, ref]) =>
-          Array.isArray(entry.inputRefs) &&
-          entry.inputRefs.includes(`${ref.artifactId}@${ref.revision}`),
-      ),
+      Boolean(entry.rationale.trim()) &&
+      compositionRefs.every((ref) => linksExactCompositionRef(entry, ref)),
   );
   if (!rationale)
     revision(
-      "Revise scenario provenance with linked Task → Pattern → Layout → Components rationale",
+      "Revise scenario provenance with exact selected pattern, layout and component links plus composition rationale",
     );
   for (const [kind, ref] of selection) {
     if (!scenario.dependencies.some((dependency) => same(dependency, ref)))
@@ -545,7 +536,8 @@ export async function buildPrototype(
   const componentIds = new Set(
     plan.selection.components.map((ref) => ref.artifactId),
   );
-  const ids = new Set<string>();
+  const ids = new Set<string>(["prototype-status"]);
+  const renderedStates = new Set(plan.requiredStates);
   const budget = { count: 0 };
   const sections = plan.states.map((state) => {
     if (state.root.tag !== "main")
@@ -554,12 +546,14 @@ export async function buildPrototype(
       state.root,
       state.name,
       plan.fixtures,
+      renderedStates,
       componentIds,
       ids,
       0,
       budget,
+      false,
     );
-    return `<div data-state="${state.name}"${state.name === plan.initialState ? "" : " hidden"}>${rendered}</div>`;
+    return `<div data-state="${state.name}"${state.name === plan.initialState ? "" : " hidden"}>${rendered.html}</div>`;
   });
   const referencedFragments = [
     ...sections.join("").matchAll(/ href="#([A-Za-z][A-Za-z0-9_-]*)"/g),
@@ -593,16 +587,16 @@ export async function buildPrototype(
     "manifest.json": `${canonicalJson(manifest as unknown as JsonValue)}\n`,
     "plan.json": `${canonicalJson(plan as unknown as JsonValue)}\n`,
   };
-  const directory = await outputDirectory(outputRoot, plan.outputPath);
-  for (const [name, contents] of Object.entries(files)) {
-    const destination = path.join(directory, name);
-    try {
-      await lstat(destination);
-      fail("PATH", `Output file already exists: ${name}`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-    }
-    await writeFile(destination, contents, { flag: "wx" });
+  let directory: string;
+  try {
+    directory = await publishPrototypeBundle(
+      outputRoot,
+      plan.outputPath,
+      files,
+    );
+  } catch (error) {
+    if (error instanceof PrototypeOutputError) fail("PATH", error.message);
+    throw error;
   }
   return Object.freeze({
     directory,

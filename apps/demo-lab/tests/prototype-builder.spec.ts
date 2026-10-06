@@ -42,9 +42,23 @@ test("generated prototype supports desktop/mobile states and repeated interactio
     await expect(
       page.getByRole("heading", { name: "Synthetic candidate comparison" }),
     ).toBeVisible();
+    const assertAccessible = async () => {
+      const result = await new AxeBuilder({ page }).analyze();
+      expect(result.violations).toEqual([]);
+    };
     await expect(page.getByText("Loading synthetic candidates")).toBeVisible();
+    await assertAccessible();
     await page.getByRole("button", { name: "Show success" }).click();
     await expect(page.getByText("Synthetic candidate ready")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Choose candidate" }),
+    ).toBeVisible();
+    await expect(
+      page
+        .locator('[data-state="success"]')
+        .getByText("Synthetic candidate A; uncertainty visible"),
+    ).toBeVisible();
+    await assertAccessible();
     for (const state of [
       "empty",
       "partial",
@@ -59,18 +73,29 @@ test("generated prototype supports desktop/mobile states and repeated interactio
         page.getByRole("heading", { name: `${state} view` }),
       ).toBeVisible();
       await expect(page.getByRole("status")).toHaveText(`${state} state`);
+      await assertAccessible();
       await page.getByRole("button", { name: "Show success" }).click();
       await expect(page.getByRole("status")).toHaveText("success state");
     }
-    const columns = await page
-      .locator('[data-state="success"] main')
-      .evaluate(
-        (element) =>
-          getComputedStyle(element).gridTemplateColumns.split(" ").length,
-      );
-    expect(columns).toBe((page.viewportSize()?.width ?? 1000) <= 640 ? 1 : 2);
-    const axe = await new AxeBuilder({ page }).analyze();
-    expect(axe.violations).toEqual([]);
+    await page.getByRole("button", { name: "Choose candidate" }).click();
+    await expect(
+      page.getByText("Synthetic candidate selected; action disabled"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Show success" }).click();
+    await expect(page.getByText("Synthetic candidate ready")).toBeVisible();
+    const cards = page.locator('[data-state="success"] main > section');
+    await expect(cards).toHaveCount(2);
+    const first = await cards.nth(0).boundingBox();
+    const second = await cards.nth(1).boundingBox();
+    if (!first || !second)
+      throw new Error("Generated grid cards have no browser positions");
+    if ((page.viewportSize()?.width ?? 1000) <= 640) {
+      expect(Math.abs(first.x - second.x)).toBeLessThan(2);
+      expect(second.y).toBeGreaterThan(first.y + first.height);
+    } else {
+      expect(second.x).toBeGreaterThan(first.x + first.width);
+      expect(Math.abs(first.y - second.y)).toBeLessThan(2);
+    }
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(fixture.root, { recursive: true, force: true });

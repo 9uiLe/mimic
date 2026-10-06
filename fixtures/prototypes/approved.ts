@@ -32,10 +32,13 @@ const fixtureText: Record<PrototypeState, string> = {
   success: "Synthetic candidate ready",
   error: "Synthetic load error",
   permission: "Synthetic access required",
-  disabled: "Synthetic action disabled",
+  disabled: "Synthetic candidate selected; action disabled",
 };
 export async function setupApprovedPrototypeFixture(
-  options: { scenarioApproved?: boolean } = {},
+  options: {
+    scenarioApproved?: boolean;
+    compositionEvidence?: "s14" | "s14-wrong-digest";
+  } = {},
 ) {
   const root = await mkdtemp(
     path.join(os.tmpdir(), "mimic-prototype-fixture-"),
@@ -174,6 +177,25 @@ export async function setupApprovedPrototypeFixture(
     accessibilityRule.ref,
     token.ref,
   ];
+  const s14 = options.compositionEvidence
+    ? (
+        JSON.parse(
+          await readFile(
+            path.join(
+              repository,
+              "skills/s14-ui-composition-planner/examples/output.json",
+            ),
+            "utf8",
+          ),
+        ) as { scenario: { provenance: { rationale: string }[] } }
+      ).scenario.provenance[0]!
+    : undefined;
+  const compositionRefs = selected
+    .slice(0, 3)
+    .map(
+      (ref, index) =>
+        `${ref.artifactId}@${ref.revision}${options.compositionEvidence ? `#${options.compositionEvidence === "s14-wrong-digest" && index === 0 ? `sha256:${"0".repeat(64)}` : ref.lockDigest}` : ""}`,
+    );
   const scenario = await add(
     "art_fixture_scenario",
     "scenario",
@@ -183,8 +205,9 @@ export async function setupApprovedPrototypeFixture(
       {
         path: "/content/steps",
         kind: "derived",
-        inputRefs: selected.map((ref) => `${ref.artifactId}@${ref.revision}`),
+        inputRefs: compositionRefs,
         rationale:
+          s14?.rationale ??
           "Task → pattern → layout → components: synthetic comparison with explicit mobile parity",
       },
     ],
@@ -209,14 +232,22 @@ export async function setupApprovedPrototypeFixture(
             { tag: "h2", text: `${name} view` },
             { tag: "p", fixtureKey: "message" },
             ...(name === "success"
-              ? requiredStates
-                  .filter((target) => target !== "success")
-                  .map((target) => ({
+              ? [
+                  {
                     tag: "button" as const,
                     componentId: component.ref.artifactId,
-                    text: `Show ${target}`,
-                    targetState: target,
-                  }))
+                    text: "Choose candidate",
+                    targetState: "disabled" as const,
+                  },
+                  ...requiredStates
+                    .filter((target) => target !== "success")
+                    .map((target) => ({
+                      tag: "button" as const,
+                      componentId: component.ref.artifactId,
+                      text: `Show ${target}`,
+                      targetState: target,
+                    })),
+                ]
               : [
                   {
                     tag: "button" as const,
@@ -225,6 +256,19 @@ export async function setupApprovedPrototypeFixture(
                     targetState: "success" as const,
                   },
                 ]),
+          ],
+        },
+        {
+          tag: "section",
+          children: [
+            { tag: "h2", text: "Candidate context" },
+            {
+              tag: "p",
+              text:
+                name === "success" || name === "disabled"
+                  ? "Synthetic candidate A; uncertainty visible"
+                  : `Synthetic candidate context for ${name} state`,
+            },
           ],
         },
       ],

@@ -1,8 +1,18 @@
 import { afterEach, expect, test } from "vitest";
-import { mkdtemp, readFile, rm, symlink } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { buildPrototype } from "./index.js";
+import { publishPrototypeBundle } from "./output.js";
 import { setupApprovedPrototypeFixture } from "../../../../fixtures/prototypes/approved.js";
 
 const roots: string[] = [];
@@ -145,5 +155,124 @@ test("rejects an output directory symlink", async () => {
   await symlink(outside, path.join(root, "generated"));
   await expect(buildPrototype(store, input, root)).rejects.toMatchObject({
     code: "PATH",
+  });
+});
+
+test("rejects a transition to an unrendered state even when an extra fixture exists", async () => {
+  const { root, store, input } = await setup();
+  const plan = change(input);
+  (plan as { initialState: string }).initialState = "success";
+  (plan as unknown as { requiredStates: string[] }).requiredStates = [
+    "success",
+  ];
+  (plan as unknown as { states: typeof plan.states }).states =
+    plan.states.filter((state) => state.name === "success");
+  await expect(buildPrototype(store, plan, root)).rejects.toMatchObject({
+    code: "UPSTREAM_REVISION_REQUIRED",
+    upstreamRevisionRequest: expect.stringContaining("transition target"),
+  });
+});
+
+test("reserves the generated status element ID from authored nodes", async () => {
+  const { root, store, input } = await setup();
+  const plan = change(input);
+  (plan.states[0]!.root.children![0]!.children![0] as { id?: string }).id =
+    "prototype-status";
+  await expect(buildPrototype(store, plan, root)).rejects.toMatchObject({
+    code: "INVALID",
+  });
+});
+
+test("preserves an occupied output directory and permits retry when emptied", async () => {
+  const { root, store, input } = await setup();
+  const directory = path.join(root, "generated");
+  await mkdir(directory);
+  const manifest = path.join(directory, "manifest.json");
+  await writeFile(manifest, "preexisting manifest", "utf8");
+  await expect(buildPrototype(store, input, root)).rejects.toMatchObject({
+    code: "PATH",
+  });
+  expect(await readFile(manifest, "utf8")).toBe("preexisting manifest");
+  expect(await readdir(directory)).toEqual(["manifest.json"]);
+  await rm(manifest);
+  const result = await buildPrototype(store, input, root);
+  expect(result.directory).toBe(await realpath(directory));
+  expect((await readdir(directory)).sort()).toEqual([...result.files].sort());
+});
+
+test("accepts S14 digest-bearing composition evidence with an approved conforming fixture", async () => {
+  const fixture = await setupApprovedPrototypeFixture({
+    compositionEvidence: "s14",
+  });
+  roots.push(fixture.root);
+  const result = await buildPrototype(
+    fixture.store,
+    fixture.input,
+    fixture.root,
+  );
+  expect(result.files).toContain("index.html");
+});
+
+test("rejects an incorrect digest in linked S14 composition evidence", async () => {
+  const fixture = await setupApprovedPrototypeFixture({
+    compositionEvidence: "s14-wrong-digest",
+  });
+  roots.push(fixture.root);
+  await expect(
+    buildPrototype(fixture.store, fixture.input, fixture.root),
+  ).rejects.toMatchObject({
+    code: "UPSTREAM_REVISION_REQUIRED",
+  });
+});
+
+test("cleans staged files after a later write fails and allows a clean retry", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "mimic-prototype-publication-"),
+  );
+  roots.push(root);
+  const files = {
+    "index.html": "html",
+    "prototype.css": "css",
+    "manifest.json": "manifest",
+  };
+  let writes = 0;
+  await expect(
+    publishPrototypeBundle(root, "generated", files, async (file, contents) => {
+      writes += 1;
+      if (writes === 3) throw new Error("injected late write failure");
+      await writeFile(file, contents, { flag: "wx" });
+    }),
+  ).rejects.toThrow("injected late write failure");
+  expect(await readdir(root)).toEqual([]);
+  const directory = await publishPrototypeBundle(root, "generated", files);
+  expect((await readdir(directory)).sort()).toEqual(Object.keys(files).sort());
+});
+
+test("rejects nested interactive controls and empty descendant labels", async () => {
+  const { root, store, input } = await setup();
+  const nested = change(input);
+  const outer = nested.states[0]!.root.children![0]!.children![2]! as {
+    children?: unknown[];
+  };
+  outer.children = [
+    {
+      tag: "button",
+      componentId: input.selection.components[0]!.artifactId,
+      text: "Nested",
+      targetState: "success",
+    },
+  ];
+  await expect(buildPrototype(store, nested, root)).rejects.toMatchObject({
+    code: "UPSTREAM_REVISION_REQUIRED",
+  });
+  const empty = change(input);
+  const button = empty.states[0]!.root.children![0]!.children![2]! as {
+    text?: string;
+    children?: unknown[];
+  };
+  delete button.text;
+  button.children = [{ tag: "span" }];
+  await expect(buildPrototype(store, empty, root)).rejects.toMatchObject({
+    code: "UPSTREAM_REVISION_REQUIRED",
   });
 });
