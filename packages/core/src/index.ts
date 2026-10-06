@@ -15,3 +15,4 @@ export * from "./runtime-engines/index.js";
 export * from "./package-registry/index.js";
 export * from "./run-registry/index.js";
 export * from "./workspace-transaction.js";
+export * from "./orchestrator/index.js";
