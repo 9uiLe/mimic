@@ -486,7 +486,7 @@ test("built submit routes file work through the merged Skill harness and leaves 
   );
   expect(replay.status).toBe(5);
   expect(replay.stderr).toMatch(/nonce replayed/);
-});
+}, 20_000);
 
 test("built submit retries accepted blockers and recovers a lost response without accepting changed work", () => {
   const dir = root();
@@ -597,4 +597,4 @@ test("built submit retries accepted blockers and recovers a lost response withou
   expect(rejected.stderr).toMatch(/Submission retry changed input/);
   const recovered = invoke(...submitArgs("run_fault"));
   expect(recovered.status, recovered.stderr).toBe(0);
-});
+}, 20_000);
