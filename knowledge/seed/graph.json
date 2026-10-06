@@ -1,0 +1,878 @@
+{
+  "nodes": [
+    {
+      "id": "trait:gov-journey",
+      "kind": "trait",
+      "label": "People must complete ordered tasks across multiple services",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-journey"]
+    },
+    {
+      "id": "principle:gov-journey",
+      "kind": "principle",
+      "label": "Expose task order and re-entry points across service boundaries",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-journey"]
+    },
+    {
+      "id": "space:gov-journey",
+      "kind": "space",
+      "label": "Multi-step public service journey",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "doNotBorrow": [
+        "GOV.UK visual styling, departmental names and exact step wording"
+      ],
+      "risks": [
+        "A prescribed sequence can mislead people with different eligibility or paths."
+      ]
+    },
+    {
+      "id": "case:gov-journey",
+      "kind": "case",
+      "label": "GOV.UK step by step navigation",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:gov-journey"],
+      "doNotBorrow": [
+        "GOV.UK visual styling, departmental names and exact step wording"
+      ],
+      "risks": [
+        "A prescribed sequence can mislead people with different eligibility or paths."
+      ]
+    },
+    {
+      "id": "mechanism:gov-journey",
+      "kind": "mechanism",
+      "label": "Numbered task groups link guidance and transactions across services",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "doNotBorrow": [
+        "GOV.UK visual styling, departmental names and exact step wording"
+      ]
+    },
+    {
+      "id": "pattern:gov-journey",
+      "kind": "pattern",
+      "label": "Journey outline with task links and contextual re-entry",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-journey"]
+    },
+    {
+      "id": "failure:gov-journey",
+      "kind": "failure",
+      "label": "Forced sequence where tasks are optional or unordered",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "risks": [
+        "A prescribed sequence can mislead people with different eligibility or paths."
+      ]
+    },
+    {
+      "id": "trait:wiki-history",
+      "kind": "trait",
+      "label": "Readers or editors need to reconstruct how information changed",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:wiki-history"]
+    },
+    {
+      "id": "principle:wiki-history",
+      "kind": "principle",
+      "label": "Keep prior versions and meaningful comparisons inspectable",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:wiki-history"]
+    },
+    {
+      "id": "space:wiki-history",
+      "kind": "space",
+      "label": "Revision-aware editorial record",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "doNotBorrow": [
+        "Wiki page chrome, minor-edit letter and contributor-name layout"
+      ],
+      "risks": [
+        "An undifferentiated history can overwhelm readers and expose sensitive edits."
+      ]
+    },
+    {
+      "id": "case:wiki-history",
+      "kind": "case",
+      "label": "MediaWiki page history",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:wiki-history"],
+      "doNotBorrow": [
+        "Wiki page chrome, minor-edit letter and contributor-name layout"
+      ],
+      "risks": [
+        "An undifferentiated history can overwhelm readers and expose sensitive edits."
+      ]
+    },
+    {
+      "id": "mechanism:wiki-history",
+      "kind": "mechanism",
+      "label": "Dated revisions with predecessor/current comparison links",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "doNotBorrow": [
+        "Wiki page chrome, minor-edit letter and contributor-name layout"
+      ]
+    },
+    {
+      "id": "pattern:wiki-history",
+      "kind": "pattern",
+      "label": "Version timeline with explicit comparison target",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:wiki-history"]
+    },
+    {
+      "id": "failure:wiki-history",
+      "kind": "failure",
+      "label": "Revision list without a usable diff or attribution context",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "risks": [
+        "An undifferentiated history can overwhelm readers and expose sensitive edits."
+      ]
+    },
+    {
+      "id": "trait:toyota-andon",
+      "kind": "trait",
+      "label": "A shared process must surface defects before downstream work continues",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:toyota-andon"]
+    },
+    {
+      "id": "principle:toyota-andon",
+      "kind": "principle",
+      "label": "Make abnormalities interruptible and actionable at their source",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:toyota-andon"]
+    },
+    {
+      "id": "space:toyota-andon",
+      "kind": "space",
+      "label": "Exception-led production coordination",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "doNotBorrow": [
+        "Factory rope, andon board appearance and Toyota process terminology"
+      ],
+      "risks": [
+        "Uncalibrated alarms may cause needless interruption or be ignored."
+      ]
+    },
+    {
+      "id": "case:toyota-andon",
+      "kind": "case",
+      "label": "Toyota Production System Jidoka and andon",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:toyota-andon"],
+      "doNotBorrow": [
+        "Factory rope, andon board appearance and Toyota process terminology"
+      ],
+      "risks": [
+        "Uncalibrated alarms may cause needless interruption or be ignored."
+      ]
+    },
+    {
+      "id": "mechanism:toyota-andon",
+      "kind": "mechanism",
+      "label": "Operator or equipment can stop work and signal an abnormality to responders",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "doNotBorrow": [
+        "Factory rope, andon board appearance and Toyota process terminology"
+      ]
+    },
+    {
+      "id": "pattern:toyota-andon",
+      "kind": "pattern",
+      "label": "Visible exception signal with owner and restart condition",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:toyota-andon"]
+    },
+    {
+      "id": "failure:toyota-andon",
+      "kind": "failure",
+      "label": "Stop signal without a responder or safe recovery path",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "risks": [
+        "Uncalibrated alarms may cause needless interruption or be ignored."
+      ]
+    },
+    {
+      "id": "trait:vscode-debug",
+      "kind": "trait",
+      "label": "An operator must isolate the state that caused a failure",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:vscode-debug"]
+    },
+    {
+      "id": "principle:vscode-debug",
+      "kind": "principle",
+      "label": "Allow selective pause and inspection before changing the system",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:vscode-debug"]
+    },
+    {
+      "id": "space:vscode-debug",
+      "kind": "space",
+      "label": "Pause-and-inspect diagnostic instrument",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "doNotBorrow": [
+        "Red breakpoint icon, keyboard shortcuts and editor panel layout"
+      ],
+      "risks": [
+        "A breakpoint may perturb timing-sensitive behavior and give incomplete state."
+      ]
+    },
+    {
+      "id": "case:vscode-debug",
+      "kind": "case",
+      "label": "Visual Studio Code debugger",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:vscode-debug"],
+      "doNotBorrow": [
+        "Red breakpoint icon, keyboard shortcuts and editor panel layout"
+      ],
+      "risks": [
+        "A breakpoint may perturb timing-sensitive behavior and give incomplete state."
+      ]
+    },
+    {
+      "id": "mechanism:vscode-debug",
+      "kind": "mechanism",
+      "label": "Breakpoints pause execution while variables and call stack remain inspectable",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "doNotBorrow": [
+        "Red breakpoint icon, keyboard shortcuts and editor panel layout"
+      ]
+    },
+    {
+      "id": "pattern:vscode-debug",
+      "kind": "pattern",
+      "label": "Conditional stop with local state and continuation controls",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:vscode-debug"]
+    },
+    {
+      "id": "failure:vscode-debug",
+      "kind": "failure",
+      "label": "Diagnostic pause that changes timing or hides relevant state",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "risks": [
+        "A breakpoint may perturb timing-sensitive behavior and give incomplete state."
+      ]
+    },
+    {
+      "id": "trait:factorio-chain",
+      "kind": "trait",
+      "label": "A learner must understand how upstream resources constrain downstream outcomes",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:factorio-chain"]
+    },
+    {
+      "id": "principle:factorio-chain",
+      "kind": "principle",
+      "label": "Expose dependency chains through manipulable cause and effect",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:factorio-chain"]
+    },
+    {
+      "id": "space:factorio-chain",
+      "kind": "space",
+      "label": "Visible production dependency simulation",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "doNotBorrow": [
+        "Pixel art, game recipes, item names and progression rewards"
+      ],
+      "risks": [
+        "Simplified game rules may imply unrealistic throughput or incentives."
+      ]
+    },
+    {
+      "id": "case:factorio-chain",
+      "kind": "case",
+      "label": "Factorio quick-start production chain",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:factorio-chain"],
+      "doNotBorrow": [
+        "Pixel art, game recipes, item names and progression rewards"
+      ],
+      "risks": [
+        "Simplified game rules may imply unrealistic throughput or incentives."
+      ]
+    },
+    {
+      "id": "mechanism:factorio-chain",
+      "kind": "mechanism",
+      "label": "Belts, inserters and assemblers connect inputs, transformations and outputs",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "doNotBorrow": [
+        "Pixel art, game recipes, item names and progression rewards"
+      ]
+    },
+    {
+      "id": "pattern:factorio-chain",
+      "kind": "pattern",
+      "label": "Inspectable dependency chain with local bottleneck feedback",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:factorio-chain"]
+    },
+    {
+      "id": "failure:factorio-chain",
+      "kind": "failure",
+      "label": "Complex simulation that obscures the causal relationship",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "risks": [
+        "Simplified game rules may imply unrealistic throughput or incentives."
+      ]
+    },
+    {
+      "id": "trait:stripe-checkout",
+      "kind": "trait",
+      "label": "A service must collect payment while preserving order context",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:stripe-checkout"]
+    },
+    {
+      "id": "principle:stripe-checkout",
+      "kind": "principle",
+      "label": "Keep the transaction summary visible across a specialized handoff",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:stripe-checkout"]
+    },
+    {
+      "id": "space:stripe-checkout",
+      "kind": "space",
+      "label": "Bounded transaction handoff",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "doNotBorrow": [
+        "Stripe branding, exact form styling and upsell presentation"
+      ],
+      "risks": [
+        "A hosted boundary may confuse users if the order and return path are unclear."
+      ]
+    },
+    {
+      "id": "case:stripe-checkout",
+      "kind": "case",
+      "label": "Stripe Checkout",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:stripe-checkout"],
+      "doNotBorrow": [
+        "Stripe branding, exact form styling and upsell presentation"
+      ],
+      "risks": [
+        "A hosted boundary may confuse users if the order and return path are unclear."
+      ]
+    },
+    {
+      "id": "mechanism:stripe-checkout",
+      "kind": "mechanism",
+      "label": "Checkout Sessions coordinate hosted or embedded payment UI with an order summary",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "doNotBorrow": [
+        "Stripe branding, exact form styling and upsell presentation"
+      ]
+    },
+    {
+      "id": "pattern:stripe-checkout",
+      "kind": "pattern",
+      "label": "Transaction handoff with persistent amount and return state",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:stripe-checkout"]
+    },
+    {
+      "id": "failure:stripe-checkout",
+      "kind": "failure",
+      "label": "Payment handoff that loses the cart or completion status",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "risks": [
+        "A hosted boundary may confuse users if the order and return path are unclear."
+      ]
+    },
+    {
+      "id": "trait:slack-thread",
+      "kind": "trait",
+      "label": "Parallel discussions compete for attention in a shared channel",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:slack-thread"]
+    },
+    {
+      "id": "principle:slack-thread",
+      "kind": "principle",
+      "label": "Attach replies to a topic while preserving channel-level visibility choices",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:slack-thread"]
+    },
+    {
+      "id": "space:slack-thread",
+      "kind": "space",
+      "label": "Topic-anchored conversation",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "doNotBorrow": [
+        "Slack icons, emoji reactions and channel color treatment"
+      ],
+      "risks": [
+        "Thread-local replies can hide decisions from people outside the thread."
+      ]
+    },
+    {
+      "id": "case:slack-thread",
+      "kind": "case",
+      "label": "Slack threads",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:slack-thread"],
+      "doNotBorrow": [
+        "Slack icons, emoji reactions and channel color treatment"
+      ],
+      "risks": [
+        "Thread-local replies can hide decisions from people outside the thread."
+      ]
+    },
+    {
+      "id": "mechanism:slack-thread",
+      "kind": "mechanism",
+      "label": "Replies attach to a parent message and can optionally be sent to the channel",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "doNotBorrow": [
+        "Slack icons, emoji reactions and channel color treatment"
+      ]
+    },
+    {
+      "id": "pattern:slack-thread",
+      "kind": "pattern",
+      "label": "Parent-linked conversation with explicit broadcast and follow controls",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:slack-thread"]
+    },
+    {
+      "id": "failure:slack-thread",
+      "kind": "failure",
+      "label": "Critical reply hidden in a thread that affected people do not follow",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "risks": [
+        "Thread-local replies can hide decisions from people outside the thread."
+      ]
+    },
+    {
+      "id": "trait:skos-relations",
+      "kind": "trait",
+      "label": "A collection needs both hierarchy and lateral association",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:skos-relations"]
+    },
+    {
+      "id": "principle:skos-relations",
+      "kind": "principle",
+      "label": "Preserve relation meaning rather than flattening all links",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:skos-relations"]
+    },
+    {
+      "id": "space:skos-relations",
+      "kind": "space",
+      "label": "Typed conceptual navigation",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "doNotBorrow": [
+        "SKOS namespace syntax, example letters and diagram styling"
+      ],
+      "risks": [
+        "Incorrect semantic links can misroute search and imply false ancestry."
+      ]
+    },
+    {
+      "id": "case:skos-relations",
+      "kind": "case",
+      "label": "W3C SKOS semantic relations",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:skos-relations"],
+      "doNotBorrow": [
+        "SKOS namespace syntax, example letters and diagram styling"
+      ],
+      "risks": [
+        "Incorrect semantic links can misroute search and imply false ancestry."
+      ]
+    },
+    {
+      "id": "mechanism:skos-relations",
+      "kind": "mechanism",
+      "label": "Broader/narrower direct links differ from related links and inferred transitive ancestry",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "doNotBorrow": [
+        "SKOS namespace syntax, example letters and diagram styling"
+      ]
+    },
+    {
+      "id": "pattern:skos-relations",
+      "kind": "pattern",
+      "label": "Typed concept links with direct and expanded traversal",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:skos-relations"]
+    },
+    {
+      "id": "failure:skos-relations",
+      "kind": "failure",
+      "label": "Treating a related link as a parent-child relation",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "risks": [
+        "Incorrect semantic links can misroute search and imply false ancestry."
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "to": "principle:gov-journey",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "from": "trait:gov-journey"
+    },
+    {
+      "to": "space:gov-journey",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "from": "principle:gov-journey"
+    },
+    {
+      "to": "case:gov-journey",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:gov-journey"],
+      "from": "space:gov-journey"
+    },
+    {
+      "to": "mechanism:gov-journey",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:gov-journey"],
+      "from": "case:gov-journey"
+    },
+    {
+      "to": "principle:gov-journey",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "from": "mechanism:gov-journey"
+    },
+    {
+      "to": "pattern:gov-journey",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "from": "principle:gov-journey"
+    },
+    {
+      "to": "failure:gov-journey",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:gov-journey"],
+      "from": "principle:gov-journey"
+    },
+    {
+      "to": "principle:wiki-history",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "from": "trait:wiki-history"
+    },
+    {
+      "to": "space:wiki-history",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "from": "principle:wiki-history"
+    },
+    {
+      "to": "case:wiki-history",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:wiki-history"],
+      "from": "space:wiki-history"
+    },
+    {
+      "to": "mechanism:wiki-history",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:wiki-history"],
+      "from": "case:wiki-history"
+    },
+    {
+      "to": "principle:wiki-history",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "from": "mechanism:wiki-history"
+    },
+    {
+      "to": "pattern:wiki-history",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "from": "principle:wiki-history"
+    },
+    {
+      "to": "failure:wiki-history",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:wiki-history"],
+      "from": "principle:wiki-history"
+    },
+    {
+      "to": "principle:toyota-andon",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "from": "trait:toyota-andon"
+    },
+    {
+      "to": "space:toyota-andon",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "from": "principle:toyota-andon"
+    },
+    {
+      "to": "case:toyota-andon",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:toyota-andon"],
+      "from": "space:toyota-andon"
+    },
+    {
+      "to": "mechanism:toyota-andon",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:toyota-andon"],
+      "from": "case:toyota-andon"
+    },
+    {
+      "to": "principle:toyota-andon",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "from": "mechanism:toyota-andon"
+    },
+    {
+      "to": "pattern:toyota-andon",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "from": "principle:toyota-andon"
+    },
+    {
+      "to": "failure:toyota-andon",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:toyota-andon"],
+      "from": "principle:toyota-andon"
+    },
+    {
+      "to": "principle:vscode-debug",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "from": "trait:vscode-debug"
+    },
+    {
+      "to": "space:vscode-debug",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "from": "principle:vscode-debug"
+    },
+    {
+      "to": "case:vscode-debug",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:vscode-debug"],
+      "from": "space:vscode-debug"
+    },
+    {
+      "to": "mechanism:vscode-debug",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:vscode-debug"],
+      "from": "case:vscode-debug"
+    },
+    {
+      "to": "principle:vscode-debug",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "from": "mechanism:vscode-debug"
+    },
+    {
+      "to": "pattern:vscode-debug",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "from": "principle:vscode-debug"
+    },
+    {
+      "to": "failure:vscode-debug",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:vscode-debug"],
+      "from": "principle:vscode-debug"
+    },
+    {
+      "to": "principle:factorio-chain",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "from": "trait:factorio-chain"
+    },
+    {
+      "to": "space:factorio-chain",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "from": "principle:factorio-chain"
+    },
+    {
+      "to": "case:factorio-chain",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:factorio-chain"],
+      "from": "space:factorio-chain"
+    },
+    {
+      "to": "mechanism:factorio-chain",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:factorio-chain"],
+      "from": "case:factorio-chain"
+    },
+    {
+      "to": "principle:factorio-chain",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "from": "mechanism:factorio-chain"
+    },
+    {
+      "to": "pattern:factorio-chain",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "from": "principle:factorio-chain"
+    },
+    {
+      "to": "failure:factorio-chain",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:factorio-chain"],
+      "from": "principle:factorio-chain"
+    },
+    {
+      "to": "principle:stripe-checkout",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "from": "trait:stripe-checkout"
+    },
+    {
+      "to": "space:stripe-checkout",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "from": "principle:stripe-checkout"
+    },
+    {
+      "to": "case:stripe-checkout",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:stripe-checkout"],
+      "from": "space:stripe-checkout"
+    },
+    {
+      "to": "mechanism:stripe-checkout",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:stripe-checkout"],
+      "from": "case:stripe-checkout"
+    },
+    {
+      "to": "principle:stripe-checkout",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "from": "mechanism:stripe-checkout"
+    },
+    {
+      "to": "pattern:stripe-checkout",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "from": "principle:stripe-checkout"
+    },
+    {
+      "to": "failure:stripe-checkout",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:stripe-checkout"],
+      "from": "principle:stripe-checkout"
+    },
+    {
+      "to": "principle:slack-thread",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "from": "trait:slack-thread"
+    },
+    {
+      "to": "space:slack-thread",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "from": "principle:slack-thread"
+    },
+    {
+      "to": "case:slack-thread",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:slack-thread"],
+      "from": "space:slack-thread"
+    },
+    {
+      "to": "mechanism:slack-thread",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:slack-thread"],
+      "from": "case:slack-thread"
+    },
+    {
+      "to": "principle:slack-thread",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "from": "mechanism:slack-thread"
+    },
+    {
+      "to": "pattern:slack-thread",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "from": "principle:slack-thread"
+    },
+    {
+      "to": "failure:slack-thread",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:slack-thread"],
+      "from": "principle:slack-thread"
+    },
+    {
+      "to": "principle:skos-relations",
+      "rationale": "The principle addresses this problem trait.",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "from": "trait:skos-relations"
+    },
+    {
+      "to": "space:skos-relations",
+      "rationale": "This space offers a context in which to examine the principle.",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "from": "principle:skos-relations"
+    },
+    {
+      "to": "case:skos-relations",
+      "rationale": "The documented case belongs to this reference space.",
+      "evidenceRefs": ["obs:skos-relations"],
+      "from": "space:skos-relations"
+    },
+    {
+      "to": "mechanism:skos-relations",
+      "rationale": "The source describes this case mechanism.",
+      "evidenceRefs": ["obs:skos-relations"],
+      "from": "case:skos-relations"
+    },
+    {
+      "to": "principle:skos-relations",
+      "rationale": "The mechanism may serve this principle under the stated fit conditions.",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "from": "mechanism:skos-relations"
+    },
+    {
+      "to": "pattern:skos-relations",
+      "rationale": "This conditional pattern could implement the principle.",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "from": "principle:skos-relations"
+    },
+    {
+      "to": "failure:skos-relations",
+      "rationale": "This failure mode limits application of the principle.",
+      "evidenceRefs": ["hyp:skos-relations"],
+      "from": "principle:skos-relations"
+    }
+  ]
+}

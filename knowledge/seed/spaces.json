@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "spaces": [
+    {
+      "id": "space:gov-journey",
+      "category": "digital-interfaces",
+      "label": "Multi-step public service journey",
+      "problemTraits": ["trait:gov-journey"],
+      "principles": ["principle:gov-journey"],
+      "transferableMechanisms": ["mechanism:gov-journey"],
+      "referenceCases": ["case:gov-journey"],
+      "goodFit": [
+        "A journey has a start, finish and useful task order across services."
+      ],
+      "poorFit": ["Users only read guidance, or choices have no useful order."],
+      "failureModes": ["failure:gov-journey"],
+      "superficialDoNotBorrow": [
+        "GOV.UK visual styling, departmental names and exact step wording"
+      ],
+      "observedClaimRefs": ["obs:gov-journey"],
+      "transferHypothesisRefs": ["hyp:gov-journey"]
+    },
+    {
+      "id": "space:wiki-history",
+      "category": "editorial-information",
+      "label": "Revision-aware editorial record",
+      "problemTraits": ["trait:wiki-history"],
+      "principles": ["principle:wiki-history"],
+      "transferableMechanisms": ["mechanism:wiki-history"],
+      "referenceCases": ["case:wiki-history"],
+      "goodFit": [
+        "Content changes matter for editorial accountability or recovery."
+      ],
+      "poorFit": [
+        "A transient draft has no need for retained public revision history."
+      ],
+      "failureModes": ["failure:wiki-history"],
+      "superficialDoNotBorrow": [
+        "Wiki page chrome, minor-edit letter and contributor-name layout"
+      ],
+      "observedClaimRefs": ["obs:wiki-history"],
+      "transferHypothesisRefs": ["hyp:wiki-history"]
+    },
+    {
+      "id": "space:toyota-andon",
+      "category": "physical-operations",
+      "label": "Exception-led production coordination",
+      "problemTraits": ["trait:toyota-andon"],
+      "principles": ["principle:toyota-andon"],
+      "transferableMechanisms": ["mechanism:toyota-andon"],
+      "referenceCases": ["case:toyota-andon"],
+      "goodFit": [
+        "Work has detectable defects and an accountable responder can intervene."
+      ],
+      "poorFit": [
+        "Stopping work would create greater harm, or no one can assess the signal."
+      ],
+      "failureModes": ["failure:toyota-andon"],
+      "superficialDoNotBorrow": [
+        "Factory rope, andon board appearance and Toyota process terminology"
+      ],
+      "observedClaimRefs": ["obs:toyota-andon"],
+      "transferHypothesisRefs": ["hyp:toyota-andon"]
+    },
+    {
+      "id": "space:vscode-debug",
+      "category": "instruments-tools",
+      "label": "Pause-and-inspect diagnostic instrument",
+      "problemTraits": ["trait:vscode-debug"],
+      "principles": ["principle:vscode-debug"],
+      "transferableMechanisms": ["mechanism:vscode-debug"],
+      "referenceCases": ["case:vscode-debug"],
+      "goodFit": [
+        "A process can be paused safely and state at that point is informative."
+      ],
+      "poorFit": [
+        "Real-time or safety-critical action cannot tolerate a pause."
+      ],
+      "failureModes": ["failure:vscode-debug"],
+      "superficialDoNotBorrow": [
+        "Red breakpoint icon, keyboard shortcuts and editor panel layout"
+      ],
+      "observedClaimRefs": ["obs:vscode-debug"],
+      "transferHypothesisRefs": ["hyp:vscode-debug"]
+    },
+    {
+      "id": "space:factorio-chain",
+      "category": "games-simulation",
+      "label": "Visible production dependency simulation",
+      "problemTraits": ["trait:factorio-chain"],
+      "principles": ["principle:factorio-chain"],
+      "transferableMechanisms": ["mechanism:factorio-chain"],
+      "referenceCases": ["case:factorio-chain"],
+      "goodFit": [
+        "Learning or planning benefits from experimenting with resource flow."
+      ],
+      "poorFit": [
+        "The real domain has constraints the simulation cannot represent honestly."
+      ],
+      "failureModes": ["failure:factorio-chain"],
+      "superficialDoNotBorrow": [
+        "Pixel art, game recipes, item names and progression rewards"
+      ],
+      "observedClaimRefs": ["obs:factorio-chain"],
+      "transferHypothesisRefs": ["hyp:factorio-chain"]
+    },
+    {
+      "id": "space:stripe-checkout",
+      "category": "commerce-service",
+      "label": "Bounded transaction handoff",
+      "problemTraits": ["trait:stripe-checkout"],
+      "principles": ["principle:stripe-checkout"],
+      "transferableMechanisms": ["mechanism:stripe-checkout"],
+      "referenceCases": ["case:stripe-checkout"],
+      "goodFit": [
+        "A payment flow has a clear order and requires specialized collection."
+      ],
+      "poorFit": [
+        "There is no payment transaction or handoff to a payment provider."
+      ],
+      "failureModes": ["failure:stripe-checkout"],
+      "superficialDoNotBorrow": [
+        "Stripe branding, exact form styling and upsell presentation"
+      ],
+      "observedClaimRefs": ["obs:stripe-checkout"],
+      "transferHypothesisRefs": ["hyp:stripe-checkout"]
+    },
+    {
+      "id": "space:slack-thread",
+      "category": "communication",
+      "label": "Topic-anchored conversation",
+      "problemTraits": ["trait:slack-thread"],
+      "principles": ["principle:slack-thread"],
+      "transferableMechanisms": ["mechanism:slack-thread"],
+      "referenceCases": ["case:slack-thread"],
+      "goodFit": [
+        "Several topics progress concurrently and replies need local context."
+      ],
+      "poorFit": [
+        "An urgent update must reliably reach everyone in the channel."
+      ],
+      "failureModes": ["failure:slack-thread"],
+      "superficialDoNotBorrow": [
+        "Slack icons, emoji reactions and channel color treatment"
+      ],
+      "observedClaimRefs": ["obs:slack-thread"],
+      "transferHypothesisRefs": ["hyp:slack-thread"]
+    },
+    {
+      "id": "space:skos-relations",
+      "category": "spatial-conceptual-systems",
+      "label": "Typed conceptual navigation",
+      "problemTraits": ["trait:skos-relations"],
+      "principles": ["principle:skos-relations"],
+      "transferableMechanisms": ["mechanism:skos-relations"],
+      "referenceCases": ["case:skos-relations"],
+      "goodFit": [
+        "People search or browse a concept scheme with different relation types."
+      ],
+      "poorFit": [
+        "The information has no defensible hierarchy or associative taxonomy."
+      ],
+      "failureModes": ["failure:skos-relations"],
+      "superficialDoNotBorrow": [
+        "SKOS namespace syntax, example letters and diagram styling"
+      ],
+      "observedClaimRefs": ["obs:skos-relations"],
+      "transferHypothesisRefs": ["hyp:skos-relations"]
+    }
+  ]
+}
