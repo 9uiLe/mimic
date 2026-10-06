@@ -1,5 +1,6 @@
 /// <reference lib="dom" />
 import { createServer } from "node:http";
+import { createHash } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import { AxeBuilder } from "@axe-core/playwright";
 import {
@@ -9,18 +10,26 @@ import {
   type Page,
 } from "@playwright/test";
 import type { PrototypeBuilderInput } from "../prototype-builder/index.js";
+import { canonicalJson } from "../artifact-canonical.js";
 import {
   inspectBundle,
   type GateFinding,
   type GateInput,
   type QualityReport,
 } from "./index.js";
+import { qualityPlan } from "./plan.js";
 
 type BrowserFinding = GateFinding;
 const devices = [
-  { name: "chromium-desktop", width: 1280, height: 800, mobile: false },
-  { name: "chromium-mobile", width: 390, height: 844, mobile: true },
+  { width: 1280, height: 800, mobile: false },
+  { width: 390, height: 844, mobile: true },
 ] as const;
+interface Edge {
+  from: string;
+  to: string;
+  ordinal: number;
+  label: string;
+}
 function finding(
   criterion: string,
   state: BrowserFinding["state"],
@@ -40,15 +49,18 @@ function finding(
     limitations,
   };
 }
-function transitions(
-  plan: PrototypeBuilderInput,
-): Map<string, { to: string; label: string }[]> {
-  const graph = new Map<string, { to: string; label: string }[]>();
+function transitions(plan: PrototypeBuilderInput): Map<string, Edge[]> {
+  const graph = new Map<string, Edge[]>();
   for (const state of plan.states) {
-    const edges: { to: string; label: string }[] = [];
+    const edges: Edge[] = [];
     const walk = (node: typeof state.root): void => {
       if (node.tag === "button" && node.targetState)
-        edges.push({ to: node.targetState, label: node.text ?? "" });
+        edges.push({
+          from: state.name,
+          to: node.targetState,
+          ordinal: edges.length,
+          label: node.text ?? node.fixtureKey ?? "",
+        });
       for (const child of node.children ?? []) walk(child);
     };
     walk(state.root);
@@ -56,14 +68,9 @@ function transitions(
   }
   return graph;
 }
-function paths(
-  plan: PrototypeBuilderInput,
-): Map<string, { to: string; label: string }[]> {
-  const graph = transitions(plan);
-  const result = new Map<string, { to: string; label: string }[]>([
-    [plan.initialState, []],
-  ]);
-  const queue: string[] = [plan.initialState];
+function paths(graph: Map<string, Edge[]>, start: string): Map<string, Edge[]> {
+  const result = new Map<string, Edge[]>([[start, []]]);
+  const queue: string[] = [start];
   for (let index = 0; index < queue.length; index++) {
     const from = queue[index]!;
     for (const edge of graph.get(from) ?? []) {
@@ -78,19 +85,33 @@ function paths(
 async function servedPage(
   page: Page,
   base: string,
-  path: { to: string; label: string }[],
+  path: Edge[],
 ): Promise<void> {
   await page.goto(base, { waitUntil: "load" });
-  for (const edge of path) {
-    await page
-      .locator("[data-state]:not([hidden]) button[data-target-state]")
-      .filter({ hasText: edge.label })
-      .first()
-      .click({ timeout: 2_000 });
-    await page
-      .locator(`[data-state="${edge.to}"]:not([hidden])`)
-      .waitFor({ timeout: 2_000 });
-  }
+  for (const edge of path) await clickEdge(page, edge);
+}
+async function clickEdge(page: Page, edge: Edge): Promise<void> {
+  const button = page
+    .locator(
+      `[data-state="${edge.from}"]:not([hidden]) button[data-target-state]`,
+    )
+    .nth(edge.ordinal);
+  const actual = await button.getAttribute("data-target-state", {
+    timeout: 2_000,
+  });
+  if (actual !== edge.to)
+    throw new Error(
+      `${edge.from} → ${edge.to} ${edge.label}: rendered target is ${actual}`,
+    );
+  await button.click({ timeout: 2_000 });
+  await page
+    .locator(`[data-state="${edge.to}"]:not([hidden])`)
+    .waitFor({ timeout: 2_000 });
+  const status = await page.locator("#prototype-status").textContent();
+  if (status !== `${edge.to} state`)
+    throw new Error(
+      `${edge.from} → ${edge.to} ${edge.label}: status ${status}`,
+    );
 }
 
 /** Execute Chromium checks on a controlled in-memory copy of the inspected local bundle. */
@@ -99,7 +120,9 @@ export async function runBrowserQualityGates(
   suppliedBrowser?: Browser,
 ): Promise<QualityReport> {
   const bundle = await inspectBundle(input);
-  const { target, plan } = bundle;
+  const { target, manifest } = bundle;
+  const checked = qualityPlan(bundle.plan);
+  const plan = checked.plan;
   const findings: BrowserFinding[] = [];
   const basic = { bundleDigest: target.bundleDigest };
   const criteria = [
@@ -109,24 +132,41 @@ export async function runBrowserQualityGates(
     "viewport-overflow",
     "navigation-state",
   ];
-  if (
-    !plan ||
-    !Array.isArray(plan.states) ||
-    !Array.isArray(plan.requiredStates)
-  ) {
+  try {
+    if (
+      !plan ||
+      !manifest ||
+      manifest.kind !== "mimic-prototype-specification" ||
+      manifest.planDigest !==
+        `sha256:${createHash("sha256").update(canonicalJson(plan)).digest("hex")}` ||
+      canonicalJson(manifest.requiredStates) !==
+        canonicalJson(plan.requiredStates)
+    )
+      checked.errors.push(
+        "manifest and plan identity or required states differ",
+      );
+  } catch {
+    checked.errors.push("manifest or plan cannot be canonicalized");
+  }
+  if (checked.errors.length) {
     return {
       target,
       inspectedAt: new Date().toISOString(),
       action: "inspect-only",
-      findings: criteria.map((criterion) =>
-        finding(
-          criterion,
-          "UNVERIFIED",
-          "MAJOR",
-          "Render plan is invalid",
-          ["plan.json"],
-          basic,
-          "Browser execution was not attempted",
+      findings: devices.flatMap((device) =>
+        criteria.map((criterion) =>
+          finding(
+            criterion,
+            criterion === "navigation-state" ? "FAIL" : "UNVERIFIED",
+            "MAJOR",
+            `Invalid generated plan: ${checked.errors.join("; ")}`,
+            ["plan.json", "manifest.json"],
+            {
+              ...basic,
+              browser: `${suppliedBrowser?.browserType?.().name() ?? "chromium"}-${device.mobile ? "mobile" : "desktop"}`,
+            },
+            "Browser execution was not attempted for the invalid plan",
+          ),
         ),
       ),
     };
@@ -155,6 +195,7 @@ export async function runBrowserQualityGates(
   });
   let browser = suppliedBrowser;
   let launched = false;
+  let engine = "chromium";
   try {
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);
@@ -165,20 +206,24 @@ export async function runBrowserQualityGates(
       browser = await chromium.launch({ headless: true });
       launched = true;
     }
-    const routes = paths(plan);
+    engine = browser.browserType().name();
+    const graph = transitions(plan!);
+    const routes = paths(graph, plan!.initialState);
     for (const device of devices) {
+      const deviceName = `${engine}-${device.mobile ? "mobile" : "desktop"}`;
       let context: BrowserContext | undefined;
       const conditions = {
         ...basic,
-        browser: device.name,
+        browser: deviceName,
         viewportWidth: device.width,
         viewportHeight: device.height,
+        mobileViewportOnly: device.mobile && engine === "firefox",
         synthetic: true,
       };
       try {
         context = await browser.newContext({
           viewport: { width: device.width, height: device.height },
-          isMobile: device.mobile,
+          isMobile: device.mobile && engine !== "firefox",
           hasTouch: device.mobile,
         });
         await context.route("**/*", (route) => {
@@ -191,9 +236,23 @@ export async function runBrowserQualityGates(
         const errors: string[] = [];
         page.on("pageerror", (error) => errors.push(error.message));
         await page.goto(base);
+        const renderedNames = await page
+          .locator("[data-state]")
+          .evaluateAll((elements) =>
+            elements.map((element) => element.getAttribute("data-state")),
+          );
+        const complete =
+          renderedNames.length === plan!.requiredStates.length &&
+          new Set(renderedNames).size === renderedNames.length &&
+          renderedNames.every((state) =>
+            plan!.requiredStates.includes(
+              state as PrototypeBuilderInput["initialState"],
+            ),
+          );
         const rendered =
+          complete &&
           (await page
-            .locator(`[data-state="${plan.initialState}"]:not([hidden]) main`)
+            .locator(`[data-state="${plan!.initialState}"]:not([hidden]) main`)
             .count()) === 1;
         findings.push(
           finding(
@@ -201,19 +260,19 @@ export async function runBrowserQualityGates(
             rendered && !errors.length ? "PASS" : "FAIL",
             "MAJOR",
             rendered && !errors.length
-              ? "Initial generated state rendered without page errors"
-              : `Initial render/page error: ${errors.join("; ") || "main missing"}`,
+              ? "Every declared state rendered; initial state has a main and no page errors"
+              : `Render/state mismatch: ${errors.join("; ") || `expected ${plan!.requiredStates.join(",")}, got ${renderedNames.join(",")}`}`,
             ["index.html", "prototype.js"],
             conditions,
-            "Chromium rendering of a synthetic fixture only",
+            `${engine} rendering of a synthetic fixture only`,
           ),
         );
 
-        const missing = plan.requiredStates.filter(
+        const missing = plan!.requiredStates.filter(
           (state) => !routes.has(state),
         );
         const navigation: string[] = missing.map(
-          (state) => `${state}: unreachable from ${plan.initialState}`,
+          (state) => `${state}: unreachable from ${plan!.initialState}`,
         );
         const axe: string[] = [];
         const overflow: string[] = [];
@@ -229,7 +288,7 @@ export async function runBrowserQualityGates(
           unverified.set(criterion, messages);
         };
         let completed = 0;
-        for (const state of plan.requiredStates) {
+        for (const state of plan!.requiredStates) {
           const route = routes.get(state);
           if (!route) continue;
           try {
@@ -249,6 +308,14 @@ export async function runBrowserQualityGates(
               status !== `${state} state`
             )
               navigation.push(`${state}: visible state or status inconsistent`);
+            const renderedButtons = await page
+              .locator(`[data-state="${state}"] button`)
+              .count();
+            const declaredButtons = graph.get(state)?.length ?? 0;
+            if (renderedButtons !== declaredButtons)
+              navigation.push(
+                `${state}: ${renderedButtons} rendered buttons differ from ${declaredButtons} declared transitions`,
+              );
             const links = await page
               .locator(`[data-state="${state}"] a[href]`)
               .evaluateAll((elements) =>
@@ -318,12 +385,52 @@ export async function runBrowserQualityGates(
             navigation.push(`${state}: ${String(error)}`);
           }
         }
+        const totalEdges = [...graph.values()].reduce(
+          (count, edges) => count + edges.length,
+          0,
+        );
+        let edgesChecked = 0;
+        let repeatedEdges = 0;
+        for (const [from, edges] of graph) {
+          const toSource = routes.get(from);
+          if (!toSource) continue;
+          for (const edge of edges) {
+            try {
+              await servedPage(page, base, toSource);
+              await clickEdge(page, edge);
+              if (
+                (await page.locator("[data-state]:not([hidden])").count()) !== 1
+              )
+                throw new Error("more than one state is visible");
+              edgesChecked++;
+              const back = paths(graph, edge.to).get(from);
+              if (back?.length) {
+                for (const returnEdge of back)
+                  await clickEdge(page, returnEdge);
+                await clickEdge(page, edge);
+                repeatedEdges++;
+              }
+            } catch (error) {
+              navigation.push(
+                `${edge.from} → ${edge.to} ${edge.label}: ${String(error)}`,
+              );
+            }
+          }
+        }
+        const navigationState = navigation.length
+          ? "FAIL"
+          : totalEdges === 0
+            ? "N/A"
+            : completed === plan!.requiredStates.length &&
+                edgesChecked === totalEdges
+              ? "PASS"
+              : "UNVERIFIED";
         for (const [criterion, failures, severity, limit] of [
           [
             "navigation-state",
             navigation,
             "MAJOR",
-            "Only declared reachable states and local fragment targets are checked",
+            "Every declared transition is exercised; repeat checks use a same-session return path when one exists",
           ],
           [
             "axe",
@@ -347,17 +454,23 @@ export async function runBrowserQualityGates(
           findings.push(
             finding(
               criterion,
-              failures.length
-                ? "FAIL"
-                : completed < plan.requiredStates.length ||
-                    unverified.has(criterion)
-                  ? "UNVERIFIED"
-                  : "PASS",
+              criterion === "navigation-state"
+                ? navigationState
+                : failures.length
+                  ? "FAIL"
+                  : completed < plan!.requiredStates.length ||
+                      unverified.has(criterion)
+                    ? "UNVERIFIED"
+                    : "PASS",
               severity,
-              failures.join("; ") ||
-                (completed < plan.requiredStates.length ||
+              (criterion === "navigation-state" && !failures.length
+                ? navigationState === "N/A"
+                  ? "One state has no transition controls; navigation does not apply"
+                  : `${edgesChecked}/${totalEdges} transitions exercised; ${repeatedEdges} repeated after same-session return`
+                : failures.join("; ")) ||
+                (completed < plan!.requiredStates.length ||
                 unverified.has(criterion)
-                  ? `Only ${completed}/${plan.requiredStates.length} states were reached; ${unverified.get(criterion)?.join("; ") ?? ""}`
+                  ? `Only ${completed}/${plan!.requiredStates.length} states were reached; ${unverified.get(criterion)?.join("; ") ?? ""}`
                   : `${criterion} passed in ${completed} declared states`),
               ["index.html", "prototype.css", "prototype.js", "plan.json"],
               conditions,
@@ -370,7 +483,7 @@ export async function runBrowserQualityGates(
             !findings.some(
               (item) =>
                 item.criterion === criterion &&
-                item.conditions.browser === device.name,
+                item.conditions.browser === deviceName,
             )
           )
             findings.push(
@@ -398,7 +511,10 @@ export async function runBrowserQualityGates(
             "MAJOR",
             `Browser/server launch failed: ${String(error)}`,
             [],
-            { ...basic, browser: device.name },
+            {
+              ...basic,
+              browser: `${engine}-${device.mobile ? "mobile" : "desktop"}`,
+            },
             "No browser observation was made",
           ),
         );

@@ -1,9 +1,13 @@
 import { afterEach, expect, test } from "vitest";
+import { createHash } from "node:crypto";
 import { readFile, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildPrototype } from "../prototype-builder/index.js";
+import { canonicalJson } from "../artifact-canonical.js";
+import type { ArtifactStore } from "../artifact-store.js";
 import { setupApprovedPrototypeFixture } from "../../../../fixtures/prototypes/approved.js";
 import { inspectBundle, runStaticQualityGates } from "./index.js";
+import { runBrowserQualityGates } from "./browser.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -24,6 +28,22 @@ async function built() {
     store: fixture.store,
   };
   return { fixture, output, input };
+}
+async function rewritePlan(
+  directory: string,
+  change: (
+    plan: Record<string, unknown>,
+    manifest: Record<string, unknown>,
+  ) => void,
+) {
+  const planFile = path.join(directory, "plan.json");
+  const manifestFile = path.join(directory, "manifest.json");
+  const plan = JSON.parse(await readFile(planFile, "utf8"));
+  const manifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  change(plan, manifest);
+  manifest.planDigest = `sha256:${createHash("sha256").update(canonicalJson(plan)).digest("hex")}`;
+  await writeFile(planFile, `${canonicalJson(plan)}\n`);
+  await writeFile(manifestFile, `${canonicalJson(manifest)}\n`);
 }
 function state(
   findings: readonly { criterion: string; state: string }[],
@@ -134,4 +154,76 @@ test("manifest token provenance mismatch is not accepted as a compiled token pas
   expect(state(report.findings, "source-locks")).toBe("PASS");
   expect(state(report.findings, "token-resolution")).toBe("FAIL");
   expect(report.target.files["manifest.json"]).toMatch(/^sha256:/);
+});
+
+test("malformed selection and empty states with valid plan digests cannot pass", async () => {
+  const { input, output } = await built();
+  const originalPlan = JSON.parse(
+    await readFile(path.join(output.directory, "plan.json"), "utf8"),
+  );
+  await rewritePlan(output.directory, (plan) => {
+    (plan.selection as Record<string, unknown>).components = {};
+  });
+  const malformed = await runStaticQualityGates(input);
+  expect(state(malformed.report.findings, "bundle-manifest")).toBe("FAIL");
+  expect(
+    malformed.report.findings.find(
+      (item) => item.criterion === "bundle-manifest",
+    )?.reason,
+  ).toContain("selection must contain exact");
+  const malformedBrowser = await runBrowserQualityGates(input);
+  expect(state(malformedBrowser.findings, "navigation-state")).toBe("FAIL");
+  expect(state(malformedBrowser.findings, "axe")).toBe("UNVERIFIED");
+  await rewritePlan(output.directory, (plan, manifest) => {
+    (plan.selection as Record<string, unknown>).components =
+      originalPlan.selection.components;
+    plan.requiredStates = [];
+    plan.states = [];
+    manifest.requiredStates = [];
+  });
+  const empty = await runStaticQualityGates(input);
+  expect(state(empty.report.findings, "bundle-manifest")).toBe("FAIL");
+  expect(
+    empty.report.findings.find((item) => item.criterion === "bundle-manifest")
+      ?.reason,
+  ).toContain("requiredStates must be nonempty");
+  const emptyBrowser = await runBrowserQualityGates(input);
+  expect(state(emptyBrowser.findings, "navigation-state")).toBe("FAIL");
+  expect(state(emptyBrowser.findings, "axe")).toBe("UNVERIFIED");
+});
+
+test("an approved artifact in the wrong scenario role fails validity", async () => {
+  const { input, output, fixture } = await built();
+  await rewritePlan(output.directory, (plan, manifest) => {
+    plan.scenario = fixture.refs.pattern;
+    manifest.scenario = fixture.refs.pattern;
+  });
+  const { report } = await runStaticQualityGates(input);
+  expect(state(report.findings, "source-locks")).toBe("PASS");
+  expect(state(report.findings, "artifact-validity")).toBe("FAIL");
+  expect(
+    report.findings.find((item) => item.criterion === "artifact-validity")
+      ?.reason,
+  ).toContain("expected scenario, got pattern");
+});
+
+test("transient source read failure is UNVERIFIED rather than a verified FAIL", async () => {
+  const { input, fixture } = await built();
+  const unavailable = new Proxy(fixture.store, {
+    get(target, property, receiver) {
+      if (property === "read")
+        return async () => {
+          throw Object.assign(new Error("temporary read outage"), {
+            code: "EIO",
+          });
+        };
+      return Reflect.get(target, property, receiver);
+    },
+  }) as ArtifactStore;
+  const { report } = await runStaticQualityGates({
+    ...input,
+    store: unavailable,
+  });
+  expect(state(report.findings, "artifact-validity")).toBe("UNVERIFIED");
+  expect(state(report.findings, "token-resolution")).toBe("UNVERIFIED");
 });

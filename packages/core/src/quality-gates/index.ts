@@ -5,9 +5,14 @@ import { HtmlValidate } from "html-validate";
 import { ESLint } from "eslint";
 import stylelint from "stylelint";
 import { canonicalJson } from "../artifact-canonical.js";
-import type { ArtifactStore } from "../artifact-store.js";
+import {
+  ArtifactStoreError,
+  type ArtifactSnapshot,
+  type ArtifactStore,
+} from "../artifact-store.js";
 import type { PrototypeBuilderInput } from "../prototype-builder/index.js";
 import { compileApprovedTokenAssets } from "../token-compiler/index.js";
+import { qualityPlan } from "./plan.js";
 
 export type GateState = "PASS" | "CONCERN" | "FAIL" | "UNVERIFIED" | "N/A";
 export type GateSeverity = "BLOCKER" | "MAJOR" | "MINOR" | "NOTE";
@@ -75,6 +80,13 @@ const exact = (value: unknown): value is UiContractCheck =>
   Number.isSafeInteger(value.revision) &&
   Number(value.revision) > 0 &&
   /^sha256:[0-9a-f]{64}$/.test(String(value.lockDigest));
+const unavailable = (error: unknown): boolean =>
+  (error instanceof ArtifactStoreError &&
+    ["UNAVAILABLE", "UNVERIFIED"].includes(error.code)) ||
+  (object(error) &&
+    ["EIO", "ENETDOWN", "ETIMEDOUT", "ECONNRESET"].includes(
+      String(error.code),
+    ));
 
 function finding(
   criterion: string,
@@ -173,17 +185,26 @@ export async function runStaticQualityGates(
   input: GateInput,
 ): Promise<{ report: QualityReport; bundle: InspectedBundle }> {
   const bundle = await inspectBundle(input);
-  const { manifest, plan, target } = bundle;
+  const { manifest, target } = bundle;
+  const planShape = qualityPlan(bundle.plan);
+  const plan = planShape.plan;
   const findings: GateFinding[] = [];
   const base = { bundleDigest: target.bundleDigest };
-  const planMatches =
-    !!plan &&
-    !!manifest &&
-    manifest.kind === "mimic-prototype-specification" &&
-    manifest.productionReady === false &&
-    manifest.fixtures === "synthetic" &&
-    typeof manifest.planDigest === "string" &&
-    manifest.planDigest === digest(canonicalJson(plan));
+  const planMatches = (() => {
+    try {
+      return (
+        !!plan &&
+        !!manifest &&
+        manifest.kind === "mimic-prototype-specification" &&
+        manifest.productionReady === false &&
+        manifest.fixtures === "synthetic" &&
+        typeof manifest.planDigest === "string" &&
+        manifest.planDigest === digest(canonicalJson(plan))
+      );
+    } catch {
+      return false;
+    }
+  })();
   findings.push(
     finding(
       "bundle-manifest",
@@ -191,7 +212,9 @@ export async function runStaticQualityGates(
       "BLOCKER",
       planMatches
         ? "Manifest describes this exact plan and synthetic specification output"
-        : "Missing, malformed, or inconsistent manifest/plan digest",
+        : planShape.errors.length
+          ? `Invalid render plan: ${planShape.errors.join("; ")}`
+          : "Missing, malformed, or inconsistent manifest/plan digest",
       ["manifest.json", "plan.json"],
       "A matching plan digest does not approve authored render intent",
       base,
@@ -248,7 +271,9 @@ export async function runStaticQualityGates(
       "BLOCKER",
       sourceMatch
         ? "Plan and manifest name matching exact source revisions and lock digests"
-        : "Source reference or manifest selection differs from the plan",
+        : planShape.errors.length
+          ? `Invalid render plan: ${planShape.errors.join("; ")}`
+          : "Source reference or manifest selection differs from the plan",
       ["plan.json", "manifest.json"],
       "Lock declarations alone do not establish source relevance or current approval",
       base,
@@ -256,31 +281,65 @@ export async function runStaticQualityGates(
   );
 
   if (input.store && sourceMatch) {
-    const errors: string[] = [];
-    for (const ref of refs) {
+    const violations: string[] = [];
+    const unknowns: string[] = [];
+    let scenario: ArtifactSnapshot | undefined;
+    const roles = [
+      "scenario",
+      "pattern",
+      "layout",
+      ...plan!.selection.components.map(() => "component"),
+      "responsive-rule",
+      "accessibility-rule",
+      ...plan!.tokenSources.map(() => "dtcg-tokens"),
+    ];
+    for (const [index, ref] of refs.entries()) {
       if (!exact(ref)) continue;
       try {
         const snapshot = await input.store.read(ref.artifactId, ref.revision);
+        if (index === 0) scenario = snapshot.artifact;
         if (
           snapshot.digest !== ref.lockDigest ||
           snapshot.artifact.lifecycle.status !== "approved" ||
           snapshot.artifact.lifecycle.freshness !== "valid" ||
           snapshot.artifact.approval.status !== "approved"
         )
-          errors.push(
+          violations.push(
             `${ref.artifactId}@${ref.revision}: lock or approval mismatch`,
           );
+        const expectedRole = roles[index];
+        const actualRole =
+          snapshot.artifact.meta.type === "design-system-asset" &&
+          object(snapshot.artifact.content)
+            ? snapshot.artifact.content.assetKind
+            : snapshot.artifact.meta.type;
+        if (actualRole !== expectedRole)
+          violations.push(
+            `${ref.artifactId}@${ref.revision}: expected ${expectedRole}, got ${String(actualRole)}`,
+          );
       } catch (error) {
-        errors.push(`${ref.artifactId}@${ref.revision}: ${String(error)}`);
+        (unavailable(error) ? unknowns : violations).push(
+          `${ref.artifactId}@${ref.revision}: ${String(error)}`,
+        );
       }
     }
+    if (scenario)
+      for (const ref of refs.slice(1))
+        if (
+          !scenario.dependencies.some(
+            (dependency) => refKey(dependency) === refKey(ref),
+          )
+        )
+          violations.push(
+            `${refKey(ref)}: absent from exact scenario dependencies`,
+          );
     findings.push(
       finding(
         "artifact-validity",
-        errors.length ? "FAIL" : "PASS",
+        violations.length ? "FAIL" : unknowns.length ? "UNVERIFIED" : "PASS",
         "BLOCKER",
-        errors.length
-          ? errors.join("; ")
+        violations.length || unknowns.length
+          ? [...violations, ...unknowns].join("; ")
           : "All declared sources were read, schema-validated, fresh, approved, and exact-locked",
         refs.map((ref) => refKey(ref) ?? "invalid-ref"),
         "Approval of source artifacts does not approve the generated plan",
@@ -326,7 +385,7 @@ export async function runStaticQualityGates(
       findings.push(
         finding(
           "token-resolution",
-          "FAIL",
+          unavailable(error) ? "UNVERIFIED" : "FAIL",
           "MAJOR",
           String(error),
           ["prototype.css", "plan.json"],
@@ -342,7 +401,9 @@ export async function runStaticQualityGates(
           criterion,
           "UNVERIFIED",
           "MAJOR",
-          input.store ? "Source locks invalid" : "ArtifactStore not supplied",
+          input.store
+            ? `Source locks or plan invalid: ${planShape.errors.join("; ")}`
+            : "ArtifactStore not supplied",
           ["plan.json"],
           "Exact source validation requires a readable ArtifactStore",
           base,
