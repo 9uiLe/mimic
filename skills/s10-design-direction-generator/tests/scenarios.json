@@ -33,8 +33,8 @@
     {
       "id": "rejection-history",
       "expected": "preserved",
-      "rejectedRevision": 1,
-      "newRevision": 2
+      "rejectedRevision": 2,
+      "newRevision": 3
     },
     { "id": "no-safe-direction", "expected": "blocked", "outputCount": 0 },
     { "id": "exact-locks", "expected": "preserved", "minimumInputs": 3 },

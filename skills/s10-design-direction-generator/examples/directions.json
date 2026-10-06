@@ -67,7 +67,8 @@
         "temporal": "live append"
       },
       "mechanisms": ["owner timeline", "handoff acknowledgment"],
-      "references": ["case_near", "case_far"]
+      "references": ["case_near", "case_far"],
+      "visual": { "color": "neutral", "typography": "system" }
     },
     {
       "id": "queue",
@@ -109,6 +110,22 @@
       "references": ["case_far"]
     }
   ],
+  "visualOnlyVariant": {
+    "id": "timeline-blue",
+    "sameStructureAs": "timeline",
+    "axes": {
+      "navigation": "incident timeline",
+      "ia": "chronological events",
+      "interaction": "explicit acknowledgment",
+      "spatial": "single stream",
+      "density": "progressive detail",
+      "temporal": "live append"
+    },
+    "mechanisms": ["owner timeline", "handoff acknowledgment"],
+    "references": ["case_near", "case_far"],
+    "visual": { "color": "blue", "typography": "display" },
+    "disposition": "merge visual notes into later visual exploration; regenerate a structural option"
+  },
   "relaxation": {
     "removedConstraint": "Single chronological view only",
     "discoveryGoal": "Find whether role ownership is clearer when work is grouped by recipient",

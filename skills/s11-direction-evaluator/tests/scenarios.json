@@ -41,8 +41,14 @@
     {
       "id": "rejection-history",
       "expected": "preserved",
-      "rejectedRevision": 1
+      "rejectedRevision": 2,
+      "newRevision": 3
     },
-    { "id": "human-commit", "expected": "pending", "outcome": "proposed" }
+    { "id": "human-commit", "expected": "pending", "outcome": "proposed" },
+    {
+      "id": "self-approval",
+      "expected": "rejected",
+      "forbiddenOutcome": "committed"
+    }
   ]
 }

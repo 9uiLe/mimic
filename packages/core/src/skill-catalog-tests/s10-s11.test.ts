@@ -35,10 +35,16 @@ type PortfolioItem = {
   axes: Axes;
   mechanisms: string[];
   references: string[];
+  visual?: { color: string; typography: string };
 };
 type DirectionExample = {
   candidate: ArtifactSnapshot;
   portfolio: PortfolioItem[];
+  visualOnlyVariant: PortfolioItem & {
+    visual: { color: string; typography: string };
+    sameStructureAs: string;
+    disposition: string;
+  };
   relaxation: Record<string, string>;
   redundantOption: {
     id: string;
@@ -48,6 +54,36 @@ type DirectionExample = {
   };
 };
 const roots: string[] = [];
+const scenarioFields: Record<PackageName, Record<string, readonly string[]>> = {
+  "s10-design-direction-generator": {
+    "default-portfolio": ["expected", "min", "max"],
+    "pairwise-axes": ["expected", "minimumDifferences"],
+    "visual-only": ["expected", "differenceCount"],
+    "redundant-regeneration": ["expected", "optionId", "sameStructureAs"],
+    "constraint-relaxation": ["expected", "fields"],
+    "combined-transfer": ["expected", "directionId", "references"],
+    "contract-input": ["expected", "changedTerm"],
+    "provisional-capability": ["expected", "availability"],
+    "rejection-history": ["expected", "rejectedRevision", "newRevision"],
+    "no-safe-direction": ["expected", "outputCount"],
+    "exact-locks": ["expected", "minimumInputs"],
+    "self-approval": ["expected", "forbiddenStatus"],
+  },
+  "s11-direction-evaluator": {
+    "per-target": ["expected", "targets"],
+    "source-criteria": ["expected", "sources"],
+    "changed-goal": ["expected", "goal"],
+    "unverified-empirical": ["expected", "criterion"],
+    "no-score": ["expected", "field"],
+    "recommend-alternative-hybrid-return": ["expected", "alternatives"],
+    "failure-return": ["expected", "severity"],
+    "missing-target": ["expected", "outputCount"],
+    "wrong-lock": ["expected", "message"],
+    "rejection-history": ["expected", "rejectedRevision", "newRevision"],
+    "human-commit": ["expected", "outcome"],
+    "self-approval": ["expected", "forbiddenOutcome"],
+  },
+};
 afterEach(async () => {
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
@@ -63,7 +99,7 @@ const exactLabel = (artifact: ArtifactSnapshot) =>
 const structuralDifferences = (a: Axes, b: Axes) =>
   (Object.keys(a) as (keyof Axes)[]).filter((axis) => a[axis] !== b[axis]);
 
-async function setup(name: PackageName) {
+async function setup(name: PackageName, authorityFixture = false) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-direction-skills-"));
   roots.push(root);
   const schemas = await loadSchemaDirectory(path.join(schemaRoot, "artifacts"));
@@ -72,13 +108,30 @@ async function setup(name: PackageName) {
     schemas,
     scopes,
     {
-      async verify() {
-        return false;
+      async verify(record: { actor: { kind: string; id: string } }) {
+        return (
+          authorityFixture &&
+          record.actor.kind === "human" &&
+          record.actor.id === "human_1"
+        );
       },
       async allowCommit() {
-        return false;
+        return authorityFixture;
       },
     },
+    authorityFixture
+      ? {
+          async verifyApproval(approval) {
+            return (
+              approval.decisionId === "seed_human" &&
+              approval.actorId === "human_1"
+            );
+          },
+          async verifyDecision(id) {
+            return id === "seed_human";
+          },
+        }
+      : undefined,
   );
   const skill = await loadSkillPackage(
     path.join(repository, "skills", name),
@@ -89,6 +142,14 @@ async function setup(name: PackageName) {
       scenarios: Scenario[];
     }
   ).scenarios;
+  expect(new Set(scenarios.map((item) => item.id)).size).toBe(scenarios.length);
+  expect(scenarios.map((item) => item.id).sort()).toEqual(
+    Object.keys(scenarioFields[name]).sort(),
+  );
+  for (const scenario of scenarios)
+    expect(Object.keys(scenario).sort()).toEqual(
+      ["id", ...scenarioFields[name][scenario.id]!].sort(),
+    );
   const task: RoutedTask = {
     id: "target",
     skillId: skill.manifest.skillId,
@@ -180,6 +241,7 @@ async function startWithInputs(
   inputTypes: readonly string[],
   runId: string,
   changes: Record<string, (content: JsonValue) => JsonValue> = {},
+  extraTaskIds: readonly string[] = [],
 ) {
   const tasks: RoutedTask[] = [
     ...inputTypes.map((type, index) => ({
@@ -192,6 +254,7 @@ async function startWithInputs(
       inputs: { required: [], optional: [], alternatives: [] },
     })),
     x.task,
+    ...extraTaskIds.map((id) => ({ ...x.task, id })),
   ];
   await x.orchestrator.start({
     id: runId,
@@ -204,7 +267,7 @@ async function startWithInputs(
   const inputs: ArtifactSnapshot[] = [];
   for (const [index, type] of inputTypes.entries())
     inputs.push(
-      await seed(x, runId, type, `art_input_${index}`, changes[type]),
+      await seed(x, runId, type, `art_${runId}_input_${index}`, changes[type]),
     );
   const required = x.skill.manifest.inputs.required;
   const optional = x.skill.manifest.inputs.optional;
@@ -227,10 +290,14 @@ async function startWithInputs(
     },
   };
   expect(bound.size).toBe(inputTypes.length);
-  const routed = [...tasks.slice(0, -1), target];
+  const routed = [
+    ...tasks.slice(0, -(extraTaskIds.length + 1)),
+    target,
+    ...extraTaskIds.map((id) => ({ ...target, id })),
+  ];
   await x.registry.setWork({
     runId,
-    safeActions: ["target"],
+    safeActions: ["target", ...extraTaskIds],
     blockers: {},
     actor: { kind: "agent", id: "agent_1" },
     at,
@@ -313,15 +380,28 @@ test("S10 scenario inventory checks divergence semantics independently", async (
         break;
       case "visual-only":
         expect(item.expected).toBe("redundant");
+        expect(example.visualOnlyVariant.id).not.toBe(example.portfolio[0]!.id);
+        expect(example.visualOnlyVariant.sameStructureAs).toBe(
+          example.portfolio[0]!.id,
+        );
         expect(
-          structuralDifferences(example.portfolio[0]!.axes, {
-            ...example.portfolio[0]!.axes,
-          }).length,
+          structuralDifferences(
+            example.portfolio[0]!.axes,
+            example.visualOnlyVariant.axes,
+          ).length,
         ).toBe(item.differenceCount);
-        expect(example.redundantOption.visualChanges).toEqual([
-          "color",
-          "typography",
-        ]);
+        expect(example.visualOnlyVariant.mechanisms).toEqual(
+          example.portfolio[0]!.mechanisms,
+        );
+        expect(example.visualOnlyVariant.visual?.color).not.toBe(
+          example.portfolio[0]!.visual?.color,
+        );
+        expect(example.visualOnlyVariant.visual?.typography).not.toBe(
+          example.portfolio[0]!.visual?.typography,
+        );
+        expect(example.visualOnlyVariant.disposition).toMatch(
+          /merge.*regenerate/,
+        );
         break;
       case "redundant-regeneration":
         expect(item.expected).toBe("regenerate");
@@ -330,6 +410,9 @@ test("S10 scenario inventory checks divergence semantics independently", async (
           item.sameStructureAs,
         );
         expect(example.redundantOption.disposition).toMatch(/regenerate/);
+        expect(example.visualOnlyVariant.disposition).toBe(
+          example.redundantOption.disposition,
+        );
         break;
       case "constraint-relaxation":
         expect(item.expected).toBe("recorded");
@@ -508,6 +591,9 @@ test("S10 bridge creates several candidate artifacts from exact inputs and recor
   );
   expect(work.result.outputRefs.length).toBeGreaterThanOrEqual(4);
   const y = await setup(packageNames[0]);
+  const blockedScenario = y.scenarios.find(
+    (item) => item.id === "no-safe-direction",
+  )!;
   const blockedRun = "run_s10_blocked";
   const prepared = await startWithInputs(
     y,
@@ -536,7 +622,10 @@ test("S10 bridge creates several candidate artifacts from exact inputs and recor
       },
     }),
   });
-  expect(blocked.result.outputRefs).toEqual([]);
+  expect(blockedScenario.expected).toBe("blocked");
+  expect(blocked.result.outputRefs).toHaveLength(
+    blockedScenario.outputCount as number,
+  );
   expect((await y.registry.run(blockedRun)).run.artifacts).toHaveLength(count);
   expect((await y.registry.run(blockedRun)).run.blockers.target).toMatch(
     /return path/,
@@ -579,6 +668,7 @@ test("S11 inventory and bridge retain source-specific findings and pending alter
       "wrong-lock",
       "rejection-history",
       "human-commit",
+      "self-approval",
     ].sort(),
   );
   const work = await runSkillPackage({
@@ -708,6 +798,7 @@ test("S11 inventory and bridge retain source-specific findings and pending alter
   for (const item of x.scenarios)
     switch (item.id) {
       case "per-target":
+        expect(item.expected).toBe("evaluated");
         expect(evaluations).toHaveLength(item.targets as number);
         break;
       case "source-criteria":
@@ -739,6 +830,7 @@ test("S11 inventory and bridge retain source-specific findings and pending alter
         ).toBe(item.expected);
         break;
       case "no-score":
+        expect(item.expected).toBe("absent");
         for (const evaluation of evaluations)
           expect(evaluation.content).not.toHaveProperty(item.field as string);
         break;
@@ -750,25 +842,25 @@ test("S11 inventory and bridge retain source-specific findings and pending alter
         expect(choice.content).toHaveProperty("outcome", item.expected);
         break;
       case "failure-return":
-        expect(item.severity).toBe("BLOCKER");
-        expect(
-          (choice.content as { alternatives: string[] }).alternatives,
-        ).toContain("Return to divergence");
+        // Exercised with two FAIL/BLOCKER candidates in the separate bridge test.
         break;
       case "missing-target":
-        expect(item.outputCount).toBe(0);
+        // Exercised by the missing-direction router test.
         break;
       case "wrong-lock":
-        expect(item.message).toBe("Dependency lock digest mismatch");
+        expect(item.expected).toBe("rejected");
+        // The declared message is asserted against ArtifactStore below.
         break;
       case "rejection-history":
-        expect(item.rejectedRevision).toBe(1);
-        expect(x.skill.instructions).toMatch(/rejected envelopes/);
+        // Exercised with a human rejection and new revision below.
         break;
       case "human-commit":
         expect(choice.approval.status).toBe(item.expected);
         expect(choice.content).toHaveProperty("outcome", item.outcome);
         expect(choice.lifecycle.status).toBe("proposed");
+        break;
+      case "self-approval":
+        // Exercised against the shared runtime below.
         break;
       default:
         throw new Error(`Unhandled S11 scenario ${item.id}`);
@@ -798,11 +890,17 @@ test("S11 inventory and bridge retain source-specific findings and pending alter
     ],
   };
   await expect(x.artifacts.create(wrong)).rejects.toThrow(
-    "Dependency lock digest mismatch",
+    x.scenarios.find((item) => item.id === "wrong-lock")!.message as string,
   );
 });
 
 test("changed locked inputs change S10 mechanisms and S11 criteria", async () => {
+  const s10 = await setup(packageNames[0]);
+  const changedContract = s10.scenarios.find(
+    (item) => item.id === "contract-input",
+  )!;
+  const s11 = await setup(packageNames[1]);
+  const changedGoal = s11.scenarios.find((item) => item.id === "changed-goal")!;
   async function directionFor(entity: string) {
     const x = await setup(packageNames[0]);
     const runId = `run_s10_${entity.replaceAll(" ", "_")}`;
@@ -874,7 +972,8 @@ test("changed locked inputs change S10 mechanisms and S11 criteria", async () =>
     };
   }
   const incident = await directionFor("Incident ID");
-  const caseId = await directionFor("Case ID");
+  const caseId = await directionFor(changedContract.changedTerm as string);
+  expect(changedContract.expected).toBe("changes-output");
   expect(incident.artifact.content).not.toEqual(caseId.artifact.content);
   expect(incident.locks[1]?.lockDigest).not.toBe(caseId.locks[1]?.lockDigest);
   expect(caseId.artifact.provenance[0]?.inputRefs).toContain(
@@ -957,20 +1056,194 @@ test("changed locked inputs change S10 mechanisms and S11 criteria", async () =>
     return (await x.artifacts.read("art_evaluation", 1)).artifact;
   }
   const traceability = await criteriaFor("Versioned Design Package");
-  const escalation = await criteriaFor("Rapid escalation");
+  const escalation = await criteriaFor(changedGoal.goal as string);
+  expect(changedGoal.expected).toBe("changes-criteria");
   expect(traceability.content).not.toEqual(escalation.content);
   expect(
     (escalation.content as { findings: { criterion: string }[] }).findings[0]
       ?.criterion,
-  ).toBe("Goal: Rapid escalation");
+  ).toBe(`Goal: ${changedGoal.goal}`);
   expect(
     (escalation.content as { findings: { state: string }[] }).findings[0]
       ?.state,
   ).toBe("UNVERIFIED");
 });
 
+test("S11 returns to divergence when every candidate fails an essential contract criterion", async () => {
+  const x = await setup(packageNames[1]);
+  const scenario = x.scenarios.find((item) => item.id === "failure-return")!;
+  const runId = "run_s11_failure";
+  const { inputs, tasks } = await startWithInputs(
+    x,
+    [
+      "design-direction",
+      "design-direction",
+      "problem-profile",
+      "product-ui-contract",
+    ],
+    runId,
+    {
+      "design-direction": (value) => ({
+        ...(value as Record<string, JsonValue>),
+        summary: "A detached handoff queue without an incident return path",
+        mechanisms: ["Role-only queue", "Send work to another role"],
+      }),
+    },
+  );
+  const outputExample = JSON.parse(
+    x.skill.examples["examples/evaluation.json"]!,
+  ) as ArtifactSnapshot;
+  const decisionExample = JSON.parse(
+    x.skill.examples["examples/decision.json"]!,
+  ) as ArtifactSnapshot;
+  const work = await runSkillPackage({
+    orchestrator: x.orchestrator,
+    package: x.skill,
+    runId,
+    tasks,
+    taskId: "target",
+    at,
+    executor: async ({ invocation, inputs: bound }) => {
+      const directions = bound.filter(
+        (input) => input.name === "design-direction",
+      );
+      const contract = bound.find(
+        (input) => input.name === "product-ui-contract",
+      )!.artifact;
+      const entity = (contract.content as { entityContext: string[] })
+        .entityContext[0]!;
+      const evaluations: ArtifactSnapshot[] = [];
+      for (const [index, direction] of directions.entries()) {
+        const mechanisms = (
+          direction.artifact.content as { mechanisms: string[] }
+        ).mechanisms;
+        const preservesContext = mechanisms.some(
+          (mechanism) =>
+            mechanism.includes(entity) && mechanism.includes("return path"),
+        );
+        const evaluation = proposal(
+          outputExample,
+          `art_failed_eval_${index}`,
+          x.skill.manifest.skillId,
+          runId,
+          inputs,
+          {
+            summary: `Candidate ${index} must retain ${entity} and a return path`,
+            target: `${direction.artifact.meta.id}@1`,
+            findings: [
+              {
+                criterion: `Contract: preserve ${entity} and return path`,
+                state: preservesContext ? "PASS" : "FAIL",
+                severity: preservesContext ? "MAJOR" : "BLOCKER",
+                reason: preservesContext
+                  ? "Both mechanisms are explicit."
+                  : `No ${entity} return path is present in the stated mechanisms.`,
+              },
+            ],
+          },
+          [
+            {
+              path: "/content/findings/0",
+              kind: "derived",
+              inputRefs: [exactLabel(contract), exactLabel(direction.artifact)],
+              rationale:
+                "The essential criterion comes from the exact contract and target mechanism.",
+            },
+          ],
+        );
+        await x.artifacts.create(evaluation);
+        evaluations.push(evaluation);
+      }
+      const allBlocked = evaluations.every((evaluation) =>
+        (
+          evaluation.content as {
+            findings: { state: string; severity: string }[];
+          }
+        ).findings.some(
+          (finding) =>
+            finding.state === "FAIL" && finding.severity === "BLOCKER",
+        ),
+      );
+      const choice = proposal(
+        decisionExample,
+        "art_failed_choice",
+        x.skill.manifest.skillId,
+        runId,
+        inputs,
+        {
+          summary: "No candidate preserves essential entity continuity.",
+          question: "Should the candidate set return to divergence?",
+          alternatives: allBlocked
+            ? ["Return to divergence"]
+            : ["Review a viable candidate"],
+          outcome: "proposed",
+          rationale: allBlocked
+            ? `Regenerate mechanisms that preserve ${entity} and a return path.`
+            : "Review the passing structure.",
+        },
+        [
+          {
+            path: "/content/alternatives",
+            kind: "derived",
+            inputRefs: directions.map((direction) =>
+              exactLabel(direction.artifact),
+            ),
+            rationale: `Each candidate was assessed against the exact ${entity} contract.`,
+          },
+        ],
+      );
+      await x.artifacts.create(choice);
+      return {
+        result: {
+          runId,
+          taskId: invocation.taskId,
+          skillId: invocation.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [...evaluations, choice].map(exact),
+        },
+      };
+    },
+  });
+  const outputs = await Promise.all(
+    work.result.outputRefs.map(
+      async (ref) =>
+        (await x.artifacts.read(ref.artifactId, ref.revision)).artifact,
+    ),
+  );
+  const evaluations = outputs.filter(
+    (output) => output.meta.type === "evaluation",
+  );
+  const choice = outputs.find((output) => output.meta.type === "decision")!;
+  const entity = (inputs[3]!.content as { entityContext: string[] })
+    .entityContext[0]!;
+  expect(evaluations).toHaveLength(2);
+  for (const [index, evaluation] of evaluations.entries()) {
+    const mechanisms = (
+      inputs[index]!.content as { mechanisms: string[] }
+    ).mechanisms.join(" ");
+    expect(mechanisms).not.toContain(entity);
+    expect(mechanisms).not.toContain("return path");
+    expect(
+      (
+        evaluation.content as {
+          findings: { state: string; severity: string }[];
+        }
+      ).findings[0],
+    ).toEqual(
+      expect.objectContaining({ state: "FAIL", severity: scenario.severity }),
+    );
+  }
+  expect(scenario.expected).toBe("return-to-divergence");
+  expect(choice.content).toHaveProperty("alternatives", [
+    "Return to divergence",
+  ]);
+  expect(choice.content).toHaveProperty("outcome", "proposed");
+  expect(choice.approval.status).toBe("pending");
+});
+
 test("S11 router blocks a missing direction before any evaluation is written", async () => {
   const x = await setup(packageNames[1]);
+  const scenario = x.scenarios.find((item) => item.id === "missing-target")!;
   const runId = "run_s11_missing";
   const tasks: RoutedTask[] = [
     ...["problem-profile", "product-ui-contract"].map((type, index) => ({
@@ -997,10 +1270,185 @@ test("S11 router blocks a missing direction before any evaluation is written", a
   const action = (await x.orchestrator.next(runId, tasks)).actions.find(
     (item) => item.taskId === "target",
   );
+  expect(scenario.expected).toBe("blocked");
   expect(action?.action).toBe("BLOCK");
   expect(action?.reason).toContain("design-direction");
   expect((await x.registry.run(runId)).run.artifacts).toHaveLength(2);
+  expect(
+    (await x.registry.run(runId)).run.artifacts.filter((ref) =>
+      ref.artifactId.startsWith("art_eval"),
+    ),
+  ).toHaveLength(scenario.outputCount as number);
 });
+
+for (const name of packageNames)
+  test(`${name} preserves a human-rejected envelope and proposes a new revision`, async () => {
+    const x = await setup(name, true);
+    const scenario = x.scenarios.find(
+      (item) => item.id === "rejection-history",
+    )!;
+    const runId = `run_history_${name.slice(0, 3)}`;
+    const types =
+      name === packageNames[0]
+        ? ["problem-profile", "product-ui-contract", "reference-selection"]
+        : ["design-direction", "problem-profile", "product-ui-contract"];
+    const { inputs, tasks } = await startWithInputs(x, types, runId, {}, [
+      "retry",
+    ]);
+    const example =
+      name === packageNames[0]
+        ? (
+            JSON.parse(
+              x.skill.examples["examples/directions.json"]!,
+            ) as DirectionExample
+          ).candidate
+        : (JSON.parse(
+            x.skill.examples["examples/evaluation.json"]!,
+          ) as ArtifactSnapshot);
+    const artifactId = `art_history_${name.slice(0, 3)}`;
+    const first = proposal(
+      example,
+      artifactId,
+      x.skill.manifest.skillId,
+      runId,
+      inputs,
+      example.content,
+      [
+        {
+          path: "/content",
+          kind: "derived",
+          inputRefs: inputs.map(exactLabel),
+          rationale: "First synthetic candidate for human review.",
+        },
+      ],
+    );
+    await x.artifacts.create(first);
+    await runSkillPackage({
+      orchestrator: x.orchestrator,
+      package: x.skill,
+      runId,
+      tasks,
+      taskId: "target",
+      at,
+      executor: async ({ invocation }) => ({
+        result: {
+          runId,
+          taskId: invocation.taskId,
+          skillId: invocation.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [exact(first)],
+          proposal: {
+            packetId: `packet_${name.slice(0, 3)}`,
+            items: [
+              {
+                id: `proposal_${name.slice(0, 3)}`,
+                ref: exact(first),
+                alternatives: ["approve", "reject"],
+                rationale: "Human review of synthetic candidate",
+                evidenceLimits: ["No empirical evidence"],
+                dependents: [],
+              },
+            ],
+            reason: "Request human review",
+          },
+        },
+      }),
+    });
+    const rejectedBare: ArtifactSnapshot = {
+      ...first,
+      meta: {
+        ...first.meta,
+        revision: scenario.rejectedRevision as number,
+        supersedesRevision: 1,
+      },
+      lifecycle: { status: "rejected", freshness: "valid" },
+      approval: {
+        status: "rejected",
+        decisionId: `decision_${name.slice(0, 3)}`,
+        actorId: "human_1",
+        at,
+      },
+    };
+    const rejected: ArtifactSnapshot = {
+      ...rejectedBare,
+      meta: {
+        ...rejectedBare.meta,
+        contentDigest: artifactDigest(rejectedBare),
+      },
+    };
+    await x.registry.decide({
+      id: `decision_${name.slice(0, 3)}`,
+      packetId: `packet_${name.slice(0, 3)}`,
+      proposalId: `proposal_${name.slice(0, 3)}`,
+      outcome: "rejected",
+      actor: { kind: "human", id: "human_1" },
+      at,
+      rationale: "Reject this candidate's unresolved continuity risk",
+      output: { ref: exact(rejected), artifact: rejected },
+    });
+    const rejectedDigest = (
+      await x.artifacts.read(artifactId, scenario.rejectedRevision as number)
+    ).digest;
+    const renewed: ArtifactSnapshot = {
+      ...first,
+      meta: {
+        ...first.meta,
+        revision: scenario.newRevision as number,
+        supersedesRevision: scenario.rejectedRevision as number,
+      },
+      content: {
+        ...(first.content as Record<string, JsonValue>),
+        summary: "Revised proposal addresses the rejected continuity risk",
+      },
+      provenance: [
+        {
+          path: "/content/summary",
+          kind: "derived",
+          inputRefs: inputs.map(exactLabel),
+          rationale: `New proposal after human rejection decision_${name.slice(0, 3)} of ${artifactId}@${scenario.rejectedRevision}; retain rejected envelope.`,
+        },
+      ],
+    };
+    await x.artifacts.create(renewed);
+    const retried = await runSkillPackage({
+      orchestrator: x.orchestrator,
+      package: x.skill,
+      runId,
+      tasks,
+      taskId: "retry",
+      at,
+      executor: async ({ invocation }) => ({
+        result: {
+          runId,
+          taskId: invocation.taskId,
+          skillId: invocation.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [exact(renewed)],
+        },
+      }),
+    });
+    expect(scenario.expected).toBe("preserved");
+    expect(retried.result.outputRefs).toEqual([exact(renewed)]);
+    expect(
+      (await x.artifacts.read(artifactId, scenario.rejectedRevision as number))
+        .digest,
+    ).toBe(rejectedDigest);
+    expect(
+      (await x.artifacts.read(artifactId, scenario.rejectedRevision as number))
+        .artifact.approval.status,
+    ).toBe("rejected");
+    expect(
+      (await x.artifacts.read(artifactId, scenario.newRevision as number))
+        .artifact.approval.status,
+    ).toBe("pending");
+    expect(
+      (await x.artifacts.read(artifactId, scenario.newRevision as number))
+        .artifact.meta.supersedesRevision,
+    ).toBe(scenario.rejectedRevision);
+    expect(renewed.provenance[0]?.rationale).toContain(
+      `@${scenario.rejectedRevision}`,
+    );
+  });
 
 test("invalid authority variants cannot become selected directions or committed decisions", async () => {
   const x = await setup(packageNames[0]);
@@ -1031,15 +1479,122 @@ test("invalid authority variants cannot become selected directions or committed 
   };
   expect(x.schemas.validate(selected).valid).toBe(false);
   expect(x.schemas.validate(committed).valid).toBe(false);
-  const visualOnly = (
-    JSON.parse(
-      x.skill.examples["examples/directions.json"]!,
-    ) as DirectionExample
-  ).portfolio;
+  const designExample = JSON.parse(
+    x.skill.examples["examples/directions.json"]!,
+  ) as DirectionExample;
+  const visualOnly = designExample.portfolio;
   expect(
-    structuralDifferences(visualOnly[0]!.axes, { ...visualOnly[0]!.axes }),
+    structuralDifferences(
+      visualOnly[0]!.axes,
+      designExample.visualOnlyVariant.axes,
+    ),
   ).toEqual([]);
   expect(
     structuralDifferences(visualOnly[0]!.axes, visualOnly[1]!.axes).length,
   ).toBeGreaterThanOrEqual(2);
+
+  for (const name of packageNames) {
+    const y = await setup(name, true);
+    const scenario = y.scenarios.find((item) => item.id === "self-approval")!;
+    const runId = `run_authority_${name.slice(0, 3)}`;
+    const types =
+      name === packageNames[0]
+        ? ["problem-profile", "product-ui-contract", "reference-selection"]
+        : ["design-direction", "problem-profile", "product-ui-contract"];
+    const { inputs, tasks } = await startWithInputs(y, types, runId);
+    const template =
+      name === packageNames[0]
+        ? (
+            JSON.parse(
+              y.skill.examples["examples/directions.json"]!,
+            ) as DirectionExample
+          ).candidate
+        : (JSON.parse(
+            y.skill.examples["examples/decision.json"]!,
+          ) as ArtifactSnapshot);
+    const content =
+      name === packageNames[0]
+        ? {
+            ...(template.content as Record<string, JsonValue>),
+            selectionStatus: scenario.forbiddenStatus as string,
+          }
+        : {
+            ...(template.content as Record<string, JsonValue>),
+            outcome: scenario.forbiddenOutcome as string,
+            chosenAlternative: "Recommend timeline",
+          };
+    const pending = proposal(
+      template,
+      `art_durable_${name.slice(0, 3)}`,
+      y.skill.manifest.skillId,
+      runId,
+      inputs,
+      content,
+      [
+        {
+          path: "/content",
+          kind: "derived",
+          inputRefs: inputs.map(exactLabel),
+          rationale:
+            "Synthetic approved fixture outside this Run's canonical selection.",
+        },
+      ],
+    );
+    const signedBare: ArtifactSnapshot = {
+      ...pending,
+      lifecycle: { status: "approved", freshness: "valid" },
+      approval: {
+        status: "approved",
+        decisionId: "seed_human",
+        actorId: "human_1",
+        at,
+      },
+    };
+    const approved: ArtifactSnapshot = {
+      ...signedBare,
+      meta: { ...signedBare.meta, contentDigest: artifactDigest(signedBare) },
+    };
+    expect(y.schemas.validate(approved).valid).toBe(true);
+    const selfSignedBare: ArtifactSnapshot = {
+      ...signedBare,
+      meta: { ...signedBare.meta, id: `art_self_${name.slice(0, 3)}` },
+      approval: { ...signedBare.approval, actorId: y.skill.manifest.skillId },
+    };
+    const selfSigned: ArtifactSnapshot = {
+      ...selfSignedBare,
+      meta: {
+        ...selfSignedBare.meta,
+        contentDigest: artifactDigest(selfSignedBare),
+      },
+    };
+    await expect(y.artifacts.create(selfSigned)).rejects.toThrow(
+      /Human approval is not verified/,
+    );
+    await y.artifacts.create(approved);
+    const before = await y.registry.snapshot();
+    await expect(
+      runSkillPackage({
+        orchestrator: y.orchestrator,
+        package: y.skill,
+        runId,
+        tasks,
+        taskId: "target",
+        at,
+        executor: async ({ invocation }) => ({
+          result: {
+            runId,
+            taskId: invocation.taskId,
+            skillId: invocation.skillId,
+            inputRefs: invocation.inputRefs,
+            outputRefs: [exact(approved)],
+          },
+        }),
+      }),
+    ).rejects.toThrow(/Unchanged output is not verified approved Run context/);
+    expect(scenario.expected).toBe("rejected");
+    expect(await y.registry.snapshot()).toEqual(before);
+    expect((await y.registry.run(runId)).run.artifacts).toEqual(
+      inputs.map(exact),
+    );
+  }
 });
