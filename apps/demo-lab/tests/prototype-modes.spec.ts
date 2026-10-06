@@ -92,7 +92,7 @@ test("generated Current and Proposed modes preserve scenario and repeated deskto
       const axe = await new AxeBuilder({ page }).analyze();
       expect(axe.violations).toEqual([]);
       await page.getByRole("button", { name: "Show success" }).click();
-      const cards = page.locator('[data-state="success"] main > section');
+      const cards = page.locator('[data-state="success"] > div > section');
       await expect(cards).toHaveCount(mode === "proposed" ? 3 : 2);
       if (mode === "proposed")
         await expect(page.locator("#mode-notice-success")).toBeVisible();
