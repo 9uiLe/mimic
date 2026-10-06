@@ -7,6 +7,7 @@ import type { ArtifactSnapshot, ScopeNode } from "../artifact-store.js";
 import {
   createOrchestratorRuntime,
   type RoutedTask,
+  type SkillInvocation,
 } from "../orchestrator/router.js";
 import { loadSchemaDirectory } from "../schema-registry.js";
 import {
@@ -14,6 +15,7 @@ import {
   runSkillPackage,
   type SkillManifest,
   type SkillPackage,
+  type SkillContext,
 } from "../skill-runtime/index.js";
 import { FileWorkspaceStorage } from "../workspace-transaction.js";
 
@@ -32,6 +34,40 @@ const packages = [
   "s05-ui-contract-manager",
   "s06-product-design-principles",
   "s07-experience-architecture",
+];
+const commonScenarios = [
+  "missing-input",
+  "valid-candidate",
+  "optional-gap",
+  "exact-lock",
+  "mismatched-input-lock",
+];
+const semanticScenarios: Record<string, readonly string[]> = {
+  "s01-product-definition": [],
+  "s02-user-task-modeling": ["behavior-centered-user"],
+  "s03-brand-builder": ["inherited-brand"],
+  "s04-system-capability-extractor": [
+    "unverified-current",
+    "semantic-unknown",
+    "invented-semantic-meaning",
+  ],
+  "s05-ui-contract-manager": [
+    "current-required-proposed-unresolved",
+    "gui-feedback",
+    "mode-convergence",
+    "proposed-as-current",
+  ],
+  "s06-product-design-principles": [],
+  "s07-experience-architecture": [
+    "same-interaction-different-url",
+    "cross-domain-context",
+    "lost-cross-domain-state",
+  ],
+};
+const requiredNegativeEffects = [
+  "approved-output",
+  "canonical-write",
+  "direct-skill-call",
 ];
 const temporary: string[] = [];
 afterEach(async () => {
@@ -83,6 +119,10 @@ type ScenarioCase = {
   fixture?: string;
   exploration?: string;
   review?: string;
+  userIncludes?: readonly string[];
+  taskIncludes?: readonly string[];
+  provenanceKind?: string;
+  forbidden?: readonly string[];
   claimPath?: string;
   claimState?: string;
   claimKind?: string;
@@ -195,7 +235,7 @@ async function modeContract(
     })),
     target,
   ];
-  const runId = `run_${mode.replaceAll("-", "_")}`;
+  const runId = "run_contract_mode";
   await runtime.orchestrator.start({
     id: runId,
     scopeOwnerId: "product_mimic",
@@ -220,7 +260,7 @@ async function modeContract(
       ...source,
       meta: {
         ...source.meta,
-        id: `art_${mode.replaceAll("-", "_")}_${type.replaceAll("-", "_")}`,
+        id: `art_mode_input_${type.replaceAll("-", "_")}`,
       },
       lifecycle: { status: "provisional", freshness: "valid" },
       approval: { status: "pending" },
@@ -252,7 +292,7 @@ async function modeContract(
   });
   const candidate: ArtifactSnapshot = {
     ...example,
-    meta: { ...example.meta, id: `art_contract_${mode.replaceAll("-", "_")}` },
+    meta: { ...example.meta, id: "art_mode_contract" },
     origin: {
       actorKind: "skill",
       actorId: skill.manifest.skillId,
@@ -265,6 +305,12 @@ async function modeContract(
     })),
   };
   await runtime.artifacts.create(candidate);
+  const routed = (await runtime.orchestrator.next(runId, tasks)).actions.find(
+    (item) => item.taskId === "contract",
+  )?.invocation;
+  expect(routed).toBeDefined();
+  let observedInvocation: SkillInvocation | undefined;
+  let observedInputs: SkillContext["inputs"] | undefined;
   const work = await runSkillPackage({
     orchestrator: runtime.orchestrator,
     package: skill,
@@ -272,21 +318,45 @@ async function modeContract(
     tasks,
     taskId: "contract",
     at: now,
-    executor: async ({ invocation }) => ({
-      result: {
-        runId,
-        taskId: "contract",
-        skillId: skill.manifest.skillId,
-        inputRefs: invocation.inputRefs,
-        outputRefs: [ref(candidate)],
-      },
-    }),
+    executor: async ({ invocation, inputs }) => {
+      observedInvocation = invocation;
+      observedInputs = inputs;
+      return {
+        result: {
+          runId: invocation.runId,
+          taskId: invocation.taskId,
+          skillId: invocation.skillId,
+          inputRefs: invocation.inputRefs,
+          outputRefs: [ref(candidate)],
+        },
+      };
+    },
   });
-  expect(work.result.outputRefs).toEqual([ref(candidate)]);
+  const invocation = required(observedInvocation, "observed invocation");
+  const inputs = required(observedInputs, "observed context inputs");
+  expect(invocation).toEqual(routed);
+  const acceptedRef = required(work.result.outputRefs[0], "accepted output");
+  const stored = await runtime.artifacts.read(
+    acceptedRef.artifactId,
+    acceptedRef.revision,
+  );
+  const accepted = (await runtime.registry.run(runId)).run.artifacts;
+  expect(accepted).toContainEqual(acceptedRef);
+  expect(stored.digest).toBe(acceptedRef.lockDigest);
   return {
-    content: candidate.content,
-    inputTypes: types,
-    dependencyTypes: seeded.map((item) => item.meta.type),
+    routedInputs: required(routed, "routed invocation").inputRefs,
+    invocationInputs: invocation.inputRefs,
+    bindings: invocation.inputBindings,
+    contextInputs: inputs.map((item) => ({
+      name: item.name,
+      ref: item.ref,
+      type: item.artifact.meta.type,
+      content: item.artifact.content,
+    })),
+    outputRef: acceptedRef,
+    outputContent: stored.artifact.content,
+    outputDependencies: stored.artifact.dependencies,
+    accepted,
   };
 }
 
@@ -300,12 +370,17 @@ for (const slug of packages)
     const negative = JSON.parse(skill.tests["tests/negative.json"]!) as {
       cases: NegativeCase[];
     };
-    expect(new Set(scenarios.cases.map((item) => item.name)).size).toBe(
-      scenarios.cases.length,
+    const scenarioNames = scenarios.cases.map((item) => item.name);
+    const negativeEffects = negative.cases.map((item) => item.effect);
+    expect(scenarioNames.sort()).toEqual(
+      [
+        ...commonScenarios,
+        ...required(semanticScenarios[slug], "semantic inventory"),
+      ].sort(),
     );
-    expect(new Set(negative.cases.map((item) => item.effect)).size).toBe(
-      negative.cases.length,
-    );
+    expect(negativeEffects.sort()).toEqual([...requiredNegativeEffects].sort());
+    expect(new Set(scenarioNames).size).toBe(scenarios.cases.length);
+    expect(new Set(negativeEffects).size).toBe(negative.cases.length);
     expect(skill.instructions).toContain("Orchestrator");
     expect(skill.instructions).toContain("approved");
     const example = JSON.parse(
@@ -625,6 +700,33 @@ for (const slug of packages)
             required(caseData.errorContains, "errorContains"),
           );
           break;
+        case "behavior-centered-user": {
+          expect(caseData.expected).toBe("assumption-backed-behavior");
+          const model = JSON.parse(
+            required(
+              skill.examples[required(caseData.example, "example")],
+              "example source",
+            ),
+          ) as ArtifactSnapshot;
+          const content = model.content as { users: string[]; tasks: string[] };
+          const user = content.users.join(" ").toLowerCase();
+          const task = content.tasks.join(" ").toLowerCase();
+          for (const phrase of required(caseData.userIncludes, "userIncludes"))
+            expect(user).toContain(phrase.toLowerCase());
+          for (const phrase of required(caseData.taskIncludes, "taskIncludes"))
+            expect(task).toContain(phrase.toLowerCase());
+          for (const phrase of required(caseData.forbidden, "forbidden"))
+            expect(user).not.toContain(phrase.toLowerCase());
+          expect(
+            model.provenance.some(
+              (item) =>
+                item.kind ===
+                required(caseData.provenanceKind, "provenanceKind"),
+            ),
+          ).toBe(true);
+          expect(skill.instructions).toContain("not demographic personas");
+          break;
+        }
         case "inherited-brand": {
           expect(caseData.expected).toBe("reuse-exact-approved-ref");
           const inherited = await exerciseInheritedBrand();
@@ -829,11 +931,35 @@ for (const slug of packages)
               ),
             ),
           );
-          expect(results[0]?.content).toEqual(results[1]?.content);
-          expect(results[0]?.inputTypes).toEqual(results[1]?.inputTypes);
-          expect(results[0]?.dependencyTypes).toEqual(
-            results[1]?.dependencyTypes,
+          const [system, experience] = results;
+          expect(system?.routedInputs).toEqual(experience?.routedInputs);
+          expect(system?.invocationInputs).toEqual(
+            experience?.invocationInputs,
           );
+          expect(system?.bindings).toEqual(experience?.bindings);
+          expect(system?.contextInputs).toEqual(experience?.contextInputs);
+          expect(system?.outputContent).toEqual(experience?.outputContent);
+          expect(system?.outputDependencies).toEqual(
+            experience?.outputDependencies,
+          );
+          expect(system?.outputRef).toEqual(experience?.outputRef);
+          expect(system?.accepted).toEqual(experience?.accepted);
+          for (const observed of results) {
+            expect(observed.routedInputs).toEqual(observed.invocationInputs);
+            expect(observed.contextInputs.map((item) => item.ref)).toEqual(
+              observed.invocationInputs,
+            );
+            expect(
+              observed.outputDependencies.map(
+                ({ artifactId, revision, lockDigest }) => ({
+                  artifactId,
+                  revision,
+                  lockDigest,
+                }),
+              ),
+            ).toEqual(observed.invocationInputs);
+            expect(observed.accepted).toContainEqual(observed.outputRef);
+          }
           break;
         }
         case "same-interaction-different-url": {

@@ -24,6 +24,18 @@
       "name": "mismatched-input-lock",
       "expected": "rejected",
       "errorContains": "Result does not match invocation"
+    },
+    {
+      "name": "behavior-centered-user",
+      "expected": "assumption-backed-behavior",
+      "example": "examples/candidate.json",
+      "userIncludes": [
+        "resumes an interrupted design decision",
+        "compares evidence"
+      ],
+      "taskIncludes": ["compare supporting evidence", "resume review"],
+      "provenanceKind": "assumption",
+      "forbidden": ["age", "income", "gender"]
     }
   ]
 }
