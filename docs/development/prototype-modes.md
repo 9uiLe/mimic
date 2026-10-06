@@ -1,0 +1,11 @@
+# Current and Proposed prototype modes
+
+`buildPrototypeModes(store, modePlan, outputRoot)` builds two specification prototypes from explicit render plans for one exact scenario. The caller authors the plans and a separate mode plan. The mode plan is a non-artifact input, not a revision or approval of the Product UI Contract. Its canonical SHA-256 digest and exact references are saved in `comparison/mode-plan.json` and `comparison/comparison.json`; each generated prototype still carries its own render-plan digest and source locks.
+
+The canonical Product UI Contract schema has no structured current, required, proposed, or unresolved fields. S05 conveys those distinctions in prose and provenance. The mode plan declares each choice with a status and exact System Capability reference. Noncurrent choices also carry an exact System Request reference. It cannot infer approval from contract prose. Both modes must reference the same scenario revision and retain current choices.
+
+- **Current** uses only fresh, approved System Capabilities with `availability: current` and supporting evidence. The artifact store verifies human authority and exact locks.
+- **Proposed** may add approved required choices whose proposed capability and System Request are both approved, and explicitly proposed choices with a pending or approved System Request. Every generated state visibly labels noncurrent choices and the exact System Request lock. Synthetic fields and actions therefore remain clearly speculative.
+- **Unresolved or rejected** proposed choices cause the Proposed build to fall back to the Current build. The comparison manifest records the reason and preserves the authored proposed plan for revision. It does not rewrite canonical intent or treat rejection as approval.
+
+The builder remains the render and publication boundary: semantic HTML, plain CSS, ES JavaScript, escaped text, approved design-system locks, and a trusted local output root. The mode wrapper adds status text only; all UI structure and behavior still come from authored render plans. Callers must keep the output root free from hostile concurrent directory renames, as described in [Prototype Builder](prototype-builder.md). Neither prototype is production code, and artifact approval does not approve the authored mode or render plan.
