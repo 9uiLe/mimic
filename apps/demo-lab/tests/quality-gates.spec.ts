@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { chromium, expect, test } from "@playwright/test";
 import type { Browser } from "@playwright/test";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,19 +11,19 @@ import {
   overflowingUnfocusedCss,
 } from "../../../fixtures/quality-gates/regressions.js";
 
-test("browser gates inspect generated states and detect a broken transition", async ({
-  browser,
-}) => {
+test("browser gates inspect generated states and detect a broken transition", async () => {
   test.setTimeout(120_000);
   const fixture = await setupApprovedPrototypeFixture();
+  let gateBrowser: Browser | undefined;
   try {
+    gateBrowser = await chromium.launch();
     const output = await buildPrototype(
       fixture.store,
       fixture.input,
       fixture.root,
     );
     const input = { trustedRoot: fixture.root, directory: output.directory };
-    const good = await runBrowserQualityGates(input, browser);
+    const good = await runBrowserQualityGates(input, gateBrowser);
     const unavailable = await runBrowserQualityGates(input, {
       async newContext() {
         throw new Error("synthetic browser launch failure");
@@ -58,7 +58,7 @@ test("browser gates inspect generated states and detect a broken transition", as
         brokenTransition,
       ),
     );
-    const broken = await runBrowserQualityGates(input, browser);
+    const broken = await runBrowserQualityGates(input, gateBrowser);
     for (const device of ["chromium-desktop", "chromium-mobile"])
       expect(
         broken.findings.find(
@@ -88,7 +88,7 @@ test("browser gates inspect generated states and detect a broken transition", as
       cssFile,
       (await readFile(cssFile, "utf8")) + overflowingUnfocusedCss,
     );
-    const impaired = await runBrowserQualityGates(input, browser);
+    const impaired = await runBrowserQualityGates(input, gateBrowser);
     for (const device of ["chromium-desktop", "chromium-mobile"])
       for (const criterion of ["axe", "viewport-overflow", "keyboard-focus"])
         expect(
@@ -100,6 +100,7 @@ test("browser gates inspect generated states and detect a broken transition", as
           `${device} ${criterion}`,
         ).toBe("FAIL");
   } finally {
+    await gateBrowser?.close();
     await rm(fixture.root, { recursive: true, force: true });
   }
 });
