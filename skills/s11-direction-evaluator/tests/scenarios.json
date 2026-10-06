@@ -1,0 +1,54 @@
+{
+  "scenarios": [
+    { "id": "per-target", "expected": "evaluated", "targets": 2 },
+    {
+      "id": "source-criteria",
+      "expected": "sourced",
+      "sources": ["problem-profile", "product-ui-contract", "brand"]
+    },
+    {
+      "id": "changed-goal",
+      "expected": "changes-criteria",
+      "goal": "Rapid escalation"
+    },
+    {
+      "id": "unverified-empirical",
+      "expected": "UNVERIFIED",
+      "criterion": "Actual handoff comprehension"
+    },
+    { "id": "no-score", "expected": "absent", "field": "score" },
+    {
+      "id": "recommend-alternative-hybrid-return",
+      "expected": "proposed",
+      "alternatives": [
+        "Recommend timeline",
+        "Alternative queue",
+        "Hybrid timeline and queue with shared incident context",
+        "Return to divergence"
+      ]
+    },
+    {
+      "id": "failure-return",
+      "expected": "return-to-divergence",
+      "severity": "BLOCKER"
+    },
+    { "id": "missing-target", "expected": "blocked", "outputCount": 0 },
+    {
+      "id": "wrong-lock",
+      "expected": "rejected",
+      "message": "Dependency lock digest mismatch"
+    },
+    {
+      "id": "rejection-history",
+      "expected": "preserved",
+      "rejectedRevision": 2,
+      "newRevision": 3
+    },
+    { "id": "human-commit", "expected": "pending", "outcome": "proposed" },
+    {
+      "id": "self-approval",
+      "expected": "rejected",
+      "forbiddenOutcome": "committed"
+    }
+  ]
+}

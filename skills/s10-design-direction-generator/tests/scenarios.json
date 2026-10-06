@@ -1,0 +1,47 @@
+{
+  "scenarios": [
+    { "id": "default-portfolio", "expected": "ready", "min": 4, "max": 7 },
+    { "id": "pairwise-axes", "expected": "distinct", "minimumDifferences": 2 },
+    { "id": "visual-only", "expected": "redundant", "differenceCount": 0 },
+    {
+      "id": "redundant-regeneration",
+      "expected": "regenerate",
+      "optionId": "timeline-blue",
+      "sameStructureAs": "timeline"
+    },
+    {
+      "id": "constraint-relaxation",
+      "expected": "recorded",
+      "fields": ["removedConstraint", "discoveryGoal", "result"]
+    },
+    {
+      "id": "combined-transfer",
+      "expected": "combined",
+      "directionId": "timeline",
+      "references": ["case_near", "case_far"]
+    },
+    {
+      "id": "contract-input",
+      "expected": "changes-output",
+      "changedTerm": "Case ID"
+    },
+    {
+      "id": "provisional-capability",
+      "expected": "candidate",
+      "availability": "proposed"
+    },
+    {
+      "id": "rejection-history",
+      "expected": "preserved",
+      "rejectedRevision": 2,
+      "newRevision": 3
+    },
+    { "id": "no-safe-direction", "expected": "blocked", "outputCount": 0 },
+    { "id": "exact-locks", "expected": "preserved", "minimumInputs": 3 },
+    {
+      "id": "self-approval",
+      "expected": "rejected",
+      "forbiddenStatus": "selected"
+    }
+  ]
+}

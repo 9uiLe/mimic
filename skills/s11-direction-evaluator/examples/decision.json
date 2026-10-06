@@ -1,0 +1,44 @@
+{
+  "meta": {
+    "id": "art_s11_decision",
+    "type": "decision",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Incident structure recommendation",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": { "status": "proposed", "freshness": "valid" },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s11.direction-evaluator",
+    "runId": "run_s11_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": { "status": "pending" },
+  "content": {
+    "summary": "Recommend a bounded timeline prototype while owner selection remains pending.",
+    "question": "Which structural direction should proceed to system resolution?",
+    "alternatives": [
+      "Recommend timeline",
+      "Alternative queue",
+      "Hybrid timeline and queue with shared incident context",
+      "Return to divergence"
+    ],
+    "outcome": "proposed",
+    "rationale": "Timeline makes ownership explicit; queue may fit high handoff volume. The hybrid needs a continuity check and none is adopted automatically."
+  },
+  "provenance": [
+    {
+      "path": "/content/alternatives",
+      "kind": "derived",
+      "inputRefs": ["art_eval_timeline@1", "art_eval_queue@1"],
+      "rationale": "Sources are per-target evaluations; the owner makes the durable choice at the Human Commit Point."
+    }
+  ]
+}

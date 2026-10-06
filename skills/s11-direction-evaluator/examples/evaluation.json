@@ -1,0 +1,67 @@
+{
+  "meta": {
+    "id": "art_s11_timeline_evaluation",
+    "type": "evaluation",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Timeline direction evaluation",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": { "status": "provisional", "freshness": "valid" },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s11.direction-evaluator",
+    "runId": "run_s11_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": { "status": "pending" },
+  "content": {
+    "summary": "Structural fit can be reasoned from locked artifacts; real handoff usability remains unverified.",
+    "target": "art_s10_timeline@1",
+    "findings": [
+      {
+        "criterion": "Task: identify the next owner",
+        "state": "PASS",
+        "severity": "MAJOR",
+        "reason": "The proposed timeline places owner and next actor on the incident sequence; this assesses design structure only."
+      },
+      {
+        "criterion": "Contract: preserve incident identity and return path",
+        "state": "PASS",
+        "severity": "MAJOR",
+        "reason": "The acknowledgment mechanism retains incident context and a return path in its stated structure."
+      },
+      {
+        "criterion": "Risk: actual handoff comprehension",
+        "state": "UNVERIFIED",
+        "severity": "MAJOR",
+        "reason": "No observation with operators was supplied; prototype testing is needed."
+      }
+    ]
+  },
+  "provenance": [
+    {
+      "path": "/content/findings/0",
+      "kind": "derived",
+      "inputRefs": ["art_direction@1", "art_profile@1"],
+      "rationale": "Criterion source: profile handoff trait; structural reasoning is bounded to the candidate's stated mechanism."
+    },
+    {
+      "path": "/content/findings/1",
+      "kind": "derived",
+      "inputRefs": ["art_direction@1", "art_contract@1"],
+      "rationale": "Criterion source: contract entity context and navigation; no runtime test is claimed."
+    },
+    {
+      "path": "/content/findings/2",
+      "kind": "unknown",
+      "rationale": "Criterion source: profile risk. No empirical observation resolves comprehension."
+    }
+  ]
+}
