@@ -152,9 +152,9 @@ async function fetchJson(url) {
 }
 
 function renderSandbox(html, css, js) {
-  const styleTag = '<link rel="stylesheet" href="prototype.css">';
+  const styleTag = /<link rel="stylesheet" href="prototype\.css"\s*\/?\s*>/;
   const scriptTag = '<script type="module" src="prototype.js"></script>';
-  if (!html.includes(styleTag) || !html.includes(scriptTag))
+  if (!styleTag.test(html) || !html.includes(scriptTag))
     throw new Error("Generated bundle has an unsupported document shape");
   // The saved standalone files remain byte-for-byte builder output. Inline only in the
   // opaque-origin review frame so its script can run without same-origin parent access.

@@ -5,6 +5,6 @@
 
 body { color: var(--mimic-semantic-color-text); }
 [data-state][hidden] { display: none !important; }
-[data-state] main { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+[data-state] > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-@media (max-width: 640px) { [data-state] main { grid-template-columns: repeat(1, minmax(0, 1fr)); } }
+@media (max-width: 640px) { [data-state] > div { grid-template-columns: repeat(1, minmax(0, 1fr)); } }
