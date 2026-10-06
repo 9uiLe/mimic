@@ -27,11 +27,10 @@ for (const commit of commits) {
   const allSignoffs = message
     .split(/\r?\n/)
     .filter((line) => /^Signed-off-by:/i.test(line));
-  const footer = message
-    .trimEnd()
-    .split(/\r?\n\r?\n/)
-    .at(-1);
-  const signoffs = footer
+  const signoffs = execFileSync("git", ["interpret-trailers", "--parse"], {
+    encoding: "utf8",
+    input: message,
+  })
     .split(/\r?\n/)
     .filter((line) => /^Signed-off-by:/i.test(line));
   const parsed = signoffs.map((line) =>

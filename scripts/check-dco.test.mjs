@@ -14,7 +14,7 @@ function git(cwd, ...args) {
 function commit(cwd, text, message) {
   writeFileSync(resolve(cwd, "file.txt"), text);
   git(cwd, "add", "file.txt");
-  git(cwd, "commit", "-m", message);
+  git(cwd, "commit", "--cleanup=verbatim", "-m", message);
 }
 
 function fixture(run) {
@@ -103,6 +103,13 @@ test("rejects a sign-off line outside the commit footer", () => {
       "feature",
       "Feature\n\nSigned-off-by: Test Author <test@example.com>\n\nMore details",
     );
+    assert.equal(check(cwd, base).status, 1);
+  });
+});
+
+test("rejects a subject that looks like a sign-off but has no trailer", () => {
+  fixture((cwd, base) => {
+    commit(cwd, "feature", "Signed-off-by: Test Author <test@example.com>");
     assert.equal(check(cwd, base).status, 1);
   });
 });
