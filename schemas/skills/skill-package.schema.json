@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:mimic:skill-package:v1",
+  "title": "Mimic static Skill package manifest",
+  "type": "object",
+  "required": [
+    "skillId",
+    "manifestVersion",
+    "packageVersion",
+    "skillFile",
+    "inputs",
+    "outputs",
+    "forbiddenResponsibilities",
+    "humanGates",
+    "supportedArtifactSchemas",
+    "examples",
+    "tests"
+  ],
+  "properties": {
+    "skillId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"
+    },
+    "manifestVersion": { "const": "1.0.0" },
+    "packageVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "skillFile": { "$ref": "#/$defs/packagePath" },
+    "inputs": {
+      "type": "object",
+      "required": ["required", "optional", "alternatives"],
+      "properties": {
+        "required": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+        "optional": { "type": "array", "items": { "$ref": "#/$defs/input" } },
+        "alternatives": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/alternative" }
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        { "properties": { "required": { "type": "array", "minItems": 1 } } },
+        { "properties": { "alternatives": { "type": "array", "minItems": 1 } } }
+      ]
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/artifactType" }
+    },
+    "forbiddenResponsibilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "humanGates": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/humanGate" }
+    },
+    "supportedArtifactSchemas": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/artifactSchema" }
+    },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/packagePath" }
+    },
+    "tests": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/packagePath" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "packagePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.?(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "inputName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "artifactType": { "type": "string", "pattern": "^[a-z]+(?:-[a-z]+)*$" },
+    "input": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["name", "kind", "artifactType", "schemaVersion"],
+          "properties": {
+            "name": { "$ref": "#/$defs/inputName" },
+            "kind": { "const": "artifact" },
+            "artifactType": { "$ref": "#/$defs/artifactType" },
+            "schemaVersion": { "const": "1.0.0" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["name", "kind"],
+          "properties": {
+            "name": { "$ref": "#/$defs/inputName" },
+            "kind": { "enum": ["human-brief", "evidence-file"] }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "alternative": {
+      "type": "object",
+      "required": ["name", "oneOf"],
+      "properties": {
+        "name": { "$ref": "#/$defs/inputName" },
+        "oneOf": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/input" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "artifactSchema": {
+      "type": "object",
+      "required": ["artifactType", "schemaVersion"],
+      "properties": {
+        "artifactType": { "$ref": "#/$defs/artifactType" },
+        "schemaVersion": { "const": "1.0.0" }
+      },
+      "additionalProperties": false
+    },
+    "humanGate": {
+      "type": "object",
+      "required": ["decision", "authority"],
+      "properties": {
+        "decision": {
+          "enum": [
+            "product-definition",
+            "brand",
+            "experience-domain-boundary",
+            "selected-direction",
+            "system-change",
+            "organization-promotion",
+            "final-release"
+          ]
+        },
+        "authority": { "const": "PROPOSE_ONLY" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

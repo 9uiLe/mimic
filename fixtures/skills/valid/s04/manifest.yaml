@@ -1,0 +1,38 @@
+skillId: mimic.s04.system-capability
+manifestVersion: 1.0.0
+packageVersion: 0.1.0
+skillFile: SKILL.md
+inputs:
+  required: []
+  optional:
+    - name: product-context
+      kind: artifact
+      artifactType: product-definition
+      schemaVersion: 1.0.0
+  alternatives:
+    - name: system-source
+      oneOf:
+        - name: system-documentation
+          kind: evidence-file
+        - name: executable-evidence
+          kind: evidence-file
+        - name: existing-capability
+          kind: artifact
+          artifactType: system-capability
+          schemaVersion: 1.0.0
+outputs: [system-capability, system-request]
+forbiddenResponsibilities:
+  - Present a proposed capability as current without supporting evidence
+  - Implement a system change
+humanGates:
+  - decision: system-change
+    authority: PROPOSE_ONLY
+supportedArtifactSchemas:
+  - artifactType: product-definition
+    schemaVersion: 1.0.0
+  - artifactType: system-capability
+    schemaVersion: 1.0.0
+  - artifactType: system-request
+    schemaVersion: 1.0.0
+examples: [examples/source.json]
+tests: [tests/contract-case.json]
