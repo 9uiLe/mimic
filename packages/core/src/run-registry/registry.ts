@@ -34,6 +34,12 @@ export interface DecisionRecord {
   readonly rationale: string;
   readonly supersedesDecisionId?: string;
   readonly externalRefs?: readonly string[];
+  readonly resolvesBlockers?: readonly {
+    readonly runId: string;
+    readonly blockerId: string;
+    readonly blockerReason: string;
+    readonly conclusion: string;
+  }[];
   readonly output?: {
     readonly ref: ExactArtifactRef;
     readonly artifact: ArtifactSnapshot;
@@ -229,6 +235,16 @@ function closeCompleted(
 }
 export interface RegistryAuthority {
   verify(record: DecisionRecord, proposal: Proposal): Promise<boolean>;
+  verifyResolutionDecision?(
+    decision: DecisionRecord,
+    proposal: Proposal,
+    blocker: {
+      runId: string;
+      blockerId: string;
+      blockerReason: string;
+      conclusion: string;
+    },
+  ): Promise<boolean>;
   verifyEvidence?(
     proposal: Proposal,
     dependency: ExactArtifactRef,
@@ -479,25 +495,19 @@ export class RunRegistry {
             !Object.values(run.proposals).some((old) => same(old.ref, p.ref)),
           "Proposal must own a unique produced revision",
         );
-        const rejected = Object.values(run.proposals).filter(
-          (old) =>
-            old.ref.artifactId === p.ref.artifactId &&
-            (old.status === "rejected" || old.status === "superseded"),
-        );
-        requireThat(
-          rejected.every((old) => !same(old.ref, p.ref)),
-          "Rejected revision cannot be replayed",
-          "CONFLICT",
-        );
-        if (rejected.length)
+        const rejected = Object.values(state.decisions)
+          .filter(
+            (d) =>
+              d.outcome === "rejected" &&
+              d.output?.ref.artifactId === p.ref.artifactId,
+          )
+          .sort((a, b) => a.output!.ref.revision - b.output!.ref.revision);
+        const latestRejection = rejected.at(-1);
+        if (latestRejection)
           requireThat(
-            p.priorRejectionId &&
-              rejected.some((old) =>
-                Object.values(state.decisions).some(
-                  (d) => d.id === p.priorRejectionId && d.proposalId === old.id,
-                ),
-              ),
-            "Renewed proposal must cite rejection",
+            p.ref.revision > latestRejection.output!.ref.revision &&
+              p.priorRejectionId === latestRejection.id,
+            "Renewed proposal must cite the latest rejection and use a new revision",
             "CONFLICT",
           );
         requireThat(
@@ -646,8 +656,14 @@ export class RunRegistry {
           "Supersession must cite a prior decision on another revision of the same Run artifact",
           "CONFLICT",
         );
-        if (priorProposal.status === "pending")
+        if (priorProposal.status === "pending") {
           priorProposal.status = "superseded";
+          priorProposal.deferred = false;
+          priorProposal.readiness = "blocked";
+          priorProposal.readinessReason = `Superseded by ${x.id}`;
+          delete run.blockers[`decision:${priorProposal.id}`];
+          delete run.blockers[`proposal:${priorProposal.id}`];
+        }
       }
       requireThat(
         await this.authority.verify(x, proposal),
@@ -768,6 +784,21 @@ export class RunRegistry {
           "CONFLICT",
         );
         this.validateOutput(record, proposal);
+        const latestRejection = Object.values(state.decisions)
+          .filter(
+            (d) =>
+              d.outcome === "rejected" &&
+              d.output?.ref.artifactId === proposal.ref.artifactId,
+          )
+          .sort((a, b) => a.output!.ref.revision - b.output!.ref.revision)
+          .at(-1);
+        if (latestRejection)
+          requireThat(
+            proposal.ref.revision > latestRejection.output!.ref.revision &&
+              proposal.priorRejectionId === latestRejection.id,
+            "Commit proposal must cite latest rejection",
+            "CONFLICT",
+          );
         requireThat(
           (await this.authority.verify(record, proposal)) &&
             (await this.authority.allowCommit(
@@ -928,6 +959,53 @@ export class RunRegistry {
           reason: finding.reason,
         };
       }
+      const finalCanonical = { ...state.canonical };
+      for (const { proposal, record } of approved)
+        finalCanonical[proposal.ref.artifactId] = {
+          ref: record.output!.ref,
+          decisionId: record.id,
+        };
+      for (const { proposal, record } of approved) {
+        for (const dependency of record.output!.artifact.dependencies) {
+          const locked = {
+            artifactId: dependency.artifactId,
+            revision: dependency.revision,
+            lockDigest: dependency.lockDigest,
+          };
+          const final = finalCanonical[dependency.artifactId]?.ref;
+          const assessed = state.freshness[dependency.artifactId];
+          requireThat(
+            !assessed ||
+              !same(assessed.ref, locked) ||
+              assessed.status !== "blocked",
+            "Final effect depends on a blocked exact lock",
+            "CONFLICT",
+          );
+          if (final && !same(final, locked)) {
+            if (dependency.onChange === "validate") {
+              const evidence =
+                proposal.impactEvidence?.find((item) =>
+                  same(item.dependency, locked),
+                )?.evidenceRefs ?? [];
+              requireThat(
+                evidence.length > 0 &&
+                  (await this.authority.verifyEvidence?.(
+                    proposal,
+                    locked,
+                    evidence,
+                  )),
+                "Final effect requires verified validation of changed lock",
+                "UNVERIFIED",
+              );
+            } else
+              requireThat(
+                dependency.onChange === "none",
+                "Final effect retains a lock requiring revision or invalidation",
+                "CONFLICT",
+              );
+          }
+        }
+      }
       for (const { proposal, record } of approved) {
         delete state.freshness[proposal.ref.artifactId];
         state.canonical[proposal.ref.artifactId] = {
@@ -1080,11 +1158,35 @@ export class RunRegistry {
           `Missing resolution for ${blockerId}`,
           "UNVERIFIED",
         );
-        const decision =
-          resolution.decisionId && state.decisions[resolution.decisionId];
+        const decision = resolution.decisionId
+          ? state.decisions[resolution.decisionId]
+          : undefined;
         const evidence = resolution.evidenceRefs ?? [];
+        let authorizedDecision = false;
+        if (decision?.outcome === "approved") {
+          const packet = state.packets[decision.packetId];
+          const sourceRun = packet && state.runs[packet.runId];
+          const proposal = sourceRun?.proposals[decision.proposalId];
+          const binding = decision.resolvesBlockers?.find(
+            (item) =>
+              item.runId === run.id &&
+              item.blockerId === blockerId &&
+              item.blockerReason === run.blockers[blockerId] &&
+              item.conclusion.trim(),
+          );
+          authorizedDecision = !!(
+            binding &&
+            proposal &&
+            (await this.authority.verify(decision, proposal)) &&
+            (await this.authority.verifyResolutionDecision?.(
+              decision,
+              proposal,
+              binding,
+            ))
+          );
+        }
         requireThat(
-          (decision && decision.actor.kind === "human") ||
+          authorizedDecision ||
             (evidence.length > 0 &&
               (await this.authority.verifyResolution?.(blockerId, evidence))),
           `Unverified resolution for ${blockerId}`,

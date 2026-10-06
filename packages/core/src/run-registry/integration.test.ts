@@ -69,6 +69,7 @@ function approvedOutput(
 }
 async function setup(
   failpoint?: (phase: "before-rename" | "after-rename") => void,
+  submitInitial = true,
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-atomic-"));
   roots.push(root);
@@ -91,11 +92,26 @@ async function setup(
       return (
         authorityAvailable &&
         record.actor.id === actor.id &&
-        record.output?.ref.artifactId === proposal.ref.artifactId
+        (record.output?.ref.artifactId === proposal.ref.artifactId ||
+          record.outcome === "deferred")
       );
     },
     async allowCommit() {
       return authorityAvailable;
+    },
+    async verifyResolutionDecision(decision, proposal, binding) {
+      return (
+        authorityAvailable &&
+        decision.outcome === "approved" &&
+        decision.output?.ref.artifactId === proposal.ref.artifactId &&
+        decision.resolvesBlockers?.some(
+          (item) =>
+            item.runId === binding.runId &&
+            item.blockerId === binding.blockerId &&
+            item.blockerReason === binding.blockerReason &&
+            item.conclusion === binding.conclusion,
+        ) === true
+      );
     },
   };
   const seedAuthority: AuthorityVerifier = {
@@ -161,24 +177,25 @@ async function setup(
     at,
     reason: "draft",
   });
-  await registry.submit({
-    runId: "run_real",
-    packetId: "packet_real",
-    proposals: [
-      {
-        id: "proposal_real",
-        ref: candidateRef,
-        expectedCanonical: baseRef,
-        alternatives: ["adopt", "retain"],
-        rationale: "review exact candidate",
-        evidenceLimits: [],
-        dependents: [],
-      },
-    ],
-    actor: agent,
-    at,
-    reason: "review",
-  });
+  if (submitInitial)
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_real",
+      proposals: [
+        {
+          id: "proposal_real",
+          ref: candidateRef,
+          expectedCanonical: baseRef,
+          alternatives: ["adopt", "retain"],
+          rationale: "review exact candidate",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "review",
+    });
   const makeDecision = (
     outcome: "approved" | "rejected",
     id = `decision_${outcome}`,
@@ -273,6 +290,437 @@ function decideFor(
     output: { ref: exact(output), artifact: output },
   };
 }
+describe("reviewed Run contract regressions", () => {
+  test("same-set output cannot keep an invalidated lock on another selected output", async () => {
+    const { registry, store, baseRef, candidate, makeDecision } = await setup(
+      undefined,
+      false,
+    );
+    const downstream = newCandidate(candidate, "art_same_effect", 1, [
+      { ...baseRef, onChange: "invalidate" },
+    ]);
+    await store.create(downstream);
+    await registry.produce({
+      runId: "run_real",
+      ref: exact(downstream),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "dependent draft",
+    });
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_real",
+      proposals: [
+        {
+          id: "proposal_real",
+          ref: exact(candidate),
+          expectedCanonical: baseRef,
+          alternatives: ["adopt"],
+          rationale: "upstream",
+          evidenceLimits: [],
+          dependents: [],
+        },
+        {
+          id: "proposal_downstream",
+          ref: exact(downstream),
+          alternatives: ["adopt"],
+          rationale: "downstream",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "joint review",
+    });
+    const upstreamDecision = makeDecision("approved");
+    const downstreamDecision = decideFor(
+      "packet_real",
+      "proposal_downstream",
+      downstream,
+      "decision_downstream",
+    );
+    await registry.decide(upstreamDecision);
+    await registry.decide(downstreamDecision);
+    await expect(
+      registry.commit({
+        id: "commit_effect",
+        packetId: "packet_real",
+        approvals: [
+          { proposalId: "proposal_real", decisionId: upstreamDecision.id },
+          {
+            proposalId: "proposal_downstream",
+            decisionId: downstreamDecision.id,
+          },
+        ],
+        actor,
+        at,
+        reason: "joint commit",
+      }),
+    ).rejects.toThrow();
+    expect(
+      (await registry.snapshot()).canonical[baseRef.artifactId].ref,
+    ).toEqual(baseRef);
+    expect(
+      (await registry.snapshot()).canonical[downstream.meta.id],
+    ).toBeUndefined();
+  });
+  test("an unrelated human decision cannot clear another blocker", async () => {
+    const { registry, makeDecision } = await setup();
+    await registry.decide(makeDecision("approved"));
+    await registry.setWork({
+      runId: "run_real",
+      safeActions: [],
+      blockers: { capability: "production capability unknown" },
+      actor: agent,
+      at,
+      reason: "blocked",
+    });
+    await expect(
+      registry.setWork({
+        runId: "run_real",
+        safeActions: ["continue"],
+        blockers: {},
+        resolutions: { capability: { decisionId: "decision_approved" } },
+        actor: agent,
+        at,
+        reason: "unrelated decision",
+      }),
+    ).rejects.toThrow();
+    expect((await registry.run("run_real")).run.blockers.capability).toBe(
+      "production capability unknown",
+    );
+  });
+  test("superseding a deferred decision removes only its old review hold", async () => {
+    const { registry, store, candidate, baseRef } = await setup();
+    const deferred: DecisionRecord = {
+      id: "decision_defer",
+      packetId: "packet_real",
+      proposalId: "proposal_real",
+      outcome: "deferred",
+      actor,
+      at,
+      rationale: "review later",
+    };
+    await registry.decide(deferred);
+    const revised = newCandidate(candidate, candidate.meta.id, 3);
+    await store.create(revised);
+    await registry.produce({
+      runId: "run_real",
+      ref: exact(revised),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "revised draft",
+    });
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_revised",
+      proposals: [
+        {
+          id: "proposal_revised",
+          ref: exact(revised),
+          expectedCanonical: baseRef,
+          alternatives: ["adopt"],
+          rationale: "new decision",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "revised review",
+    });
+    await registry.setWork({
+      runId: "run_real",
+      safeActions: [],
+      blockers: { "decision:proposal_real": "Human decision deferred" },
+      actor: agent,
+      at,
+      reason: "exploration complete",
+    });
+    const approved = {
+      ...decideFor(
+        "packet_revised",
+        "proposal_revised",
+        revised,
+        "decision_revised",
+      ),
+      supersedesDecisionId: deferred.id,
+    };
+    await registry.decide(approved);
+    expect(
+      (await registry.run("run_real")).run.blockers["decision:proposal_real"],
+    ).toBeUndefined();
+    await registry.commit({
+      id: "commit_revised",
+      packetId: "packet_revised",
+      approvals: [{ proposalId: "proposal_revised", decisionId: approved.id }],
+      actor,
+      at,
+      reason: "new approved revision",
+    });
+    expect((await registry.run("run_real")).state).toBe("closed");
+    expect((await registry.snapshot()).decisions[deferred.id].outcome).toBe(
+      "deferred",
+    );
+  });
+  test("a bound human conclusion clears only its subject while authority remains valid", async () => {
+    const { registry, makeDecision, setAuthority } = await setup();
+    await registry.setWork({
+      runId: "run_real",
+      safeActions: [],
+      blockers: {
+        capability: "production capability unknown",
+        other: "separate fact",
+      },
+      actor: agent,
+      at,
+      reason: "two blockers",
+    });
+    const bound: DecisionRecord = {
+      ...makeDecision("approved"),
+      resolvesBlockers: [
+        {
+          runId: "run_real",
+          blockerId: "capability",
+          blockerReason: "production capability unknown",
+          conclusion: "Human verified capability status",
+        },
+      ],
+    };
+    await registry.decide(bound);
+    setAuthority(false);
+    await expect(
+      registry.setWork({
+        runId: "run_real",
+        safeActions: [],
+        blockers: { other: "separate fact" },
+        resolutions: { capability: { decisionId: bound.id } },
+        actor: agent,
+        at,
+        reason: "authority unavailable",
+      }),
+    ).rejects.toThrow();
+    setAuthority(true);
+    await expect(
+      registry.setWork({
+        runId: "run_real",
+        safeActions: [],
+        blockers: { capability: "production capability unknown" },
+        resolutions: { other: { decisionId: bound.id } },
+        actor: agent,
+        at,
+        reason: "wrong subject",
+      }),
+    ).rejects.toThrow();
+    await registry.setWork({
+      runId: "run_real",
+      safeActions: [],
+      blockers: { other: "separate fact" },
+      resolutions: { capability: { decisionId: bound.id } },
+      actor: agent,
+      at,
+      reason: "bound conclusion",
+    });
+    expect((await registry.run("run_real")).run.blockers).toEqual({
+      other: "separate fact",
+    });
+    expect(
+      (await registry.snapshot()).events.findLast(
+        (e) => e.action === "set-work",
+      )?.details,
+    ).toEqual({ resolutions: { capability: { decisionId: bound.id } } });
+  });
+  test("superseding a stale proposal clears only its stale review hold", async () => {
+    const { registry, store, baseRef, candidate, makeDecision } = await setup();
+    const oldDecision = makeDecision("approved");
+    await registry.decide(oldDecision);
+    const competing = newCandidate(candidate, candidate.meta.id, 3);
+    await store.create(competing);
+    await registry.start({
+      id: "run_competitor",
+      scope: "product_mimic",
+      entryMode: "hybrid",
+      base: [baseRef],
+      reused: [],
+      safeActions: ["explore"],
+      actor: agent,
+      at,
+      reason: "other branch",
+    });
+    await registry.produce({
+      runId: "run_competitor",
+      ref: exact(competing),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "other draft",
+    });
+    await registry.submit({
+      runId: "run_competitor",
+      packetId: "packet_competitor",
+      proposals: [
+        {
+          id: "proposal_competitor",
+          ref: exact(competing),
+          expectedCanonical: baseRef,
+          alternatives: ["adopt"],
+          rationale: "other",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "other review",
+    });
+    const otherDecision = decideFor(
+      "packet_competitor",
+      "proposal_competitor",
+      competing,
+      "decision_competitor",
+    );
+    await registry.decide(otherDecision);
+    await registry.commit({
+      id: "commit_competitor",
+      packetId: "packet_competitor",
+      approvals: [
+        { proposalId: "proposal_competitor", decisionId: otherDecision.id },
+      ],
+      actor,
+      at,
+      reason: "other commit",
+    });
+    expect(
+      (await registry.run("run_real")).run.blockers["proposal:proposal_real"],
+    ).toBeDefined();
+    const revised = newCandidate(candidate, candidate.meta.id, 5);
+    await store.create(revised);
+    await registry.produce({
+      runId: "run_real",
+      ref: exact(revised),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "new draft",
+    });
+    await registry.submit({
+      runId: "run_real",
+      packetId: "packet_stale_revision",
+      proposals: [
+        {
+          id: "proposal_stale_revision",
+          ref: exact(revised),
+          expectedCanonical: otherDecision.output!.ref,
+          alternatives: ["adopt"],
+          rationale: "explicit revision",
+          evidenceLimits: [],
+          dependents: [],
+        },
+      ],
+      actor: agent,
+      at,
+      reason: "new review",
+    });
+    await registry.setWork({
+      runId: "run_real",
+      safeActions: [],
+      blockers: {
+        "proposal:proposal_real":
+          "Canonical selection moved since proposal submission",
+      },
+      actor: agent,
+      at,
+      reason: "await new decision",
+    });
+    const renewed = {
+      ...decideFor(
+        "packet_stale_revision",
+        "proposal_stale_revision",
+        revised,
+        "decision_stale_revision",
+      ),
+      supersedesDecisionId: oldDecision.id,
+    };
+    await registry.decide(renewed);
+    expect(
+      (await registry.run("run_real")).run.blockers["proposal:proposal_real"],
+    ).toBeUndefined();
+    await registry.commit({
+      id: "commit_stale_revision",
+      packetId: "packet_stale_revision",
+      approvals: [
+        { proposalId: "proposal_stale_revision", decisionId: renewed.id },
+      ],
+      actor,
+      at,
+      reason: "new exact revision",
+    });
+    expect((await registry.run("run_real")).state).toBe("closed");
+    expect((await registry.snapshot()).decisions[oldDecision.id].outcome).toBe(
+      "approved",
+    );
+  });
+  test("a new Run must cite the latest rejection when renewing the same artifact", async () => {
+    const { registry, store, baseRef, candidate, makeDecision } = await setup();
+    const rejected = makeDecision("rejected");
+    await registry.decide(rejected);
+    const renewed = newCandidate(candidate, candidate.meta.id, 4);
+    await store.create(renewed);
+    await registry.start({
+      id: "run_renew",
+      scope: "product_mimic",
+      entryMode: "hybrid",
+      base: [baseRef],
+      reused: [],
+      safeActions: ["explore"],
+      actor: agent,
+      at,
+      reason: "renew after rejection",
+    });
+    await registry.produce({
+      runId: "run_renew",
+      ref: exact(renewed),
+      inputs: [baseRef],
+      actor: agent,
+      at,
+      reason: "new revision",
+    });
+    const proposal = {
+      id: "proposal_renew",
+      ref: exact(renewed),
+      expectedCanonical: baseRef,
+      alternatives: ["adopt"],
+      rationale: "explicit renewal",
+      evidenceLimits: [],
+      dependents: [],
+    };
+    await expect(
+      registry.submit({
+        runId: "run_renew",
+        packetId: "packet_renew",
+        proposals: [proposal],
+        actor: agent,
+        at,
+        reason: "missing rejection history",
+      }),
+    ).rejects.toThrow();
+    await registry.submit({
+      runId: "run_renew",
+      packetId: "packet_renew",
+      proposals: [{ ...proposal, priorRejectionId: rejected.id }],
+      actor: agent,
+      at,
+      reason: "cites rejection",
+    });
+    expect(
+      (await registry.snapshot()).runs.run_renew.proposals.proposal_renew
+        .priorRejectionId,
+    ).toBe(rejected.id);
+  });
+});
 describe("shared artifact and Run transaction", () => {
   test("approved revision and canonical selection become visible together; old snapshots stay immutable", async () => {
     const { store, registry, base, candidate, makeDecision } = await setup();
