@@ -1,0 +1,78 @@
+{
+  "scenarios": [
+    {
+      "id": "portfolio",
+      "expected": "ready",
+      "caseIds": [
+        "case_near",
+        "case_adjacent",
+        "case_far",
+        "case_wildcard",
+        "case_anti"
+      ],
+      "roles": ["near", "adjacent", "far", "wildcard", "anti-reference"]
+    },
+    {
+      "id": "far-fit",
+      "expected": "excluded",
+      "caseId": "case_far",
+      "reason": "role-fit-mismatch"
+    },
+    {
+      "id": "wildcard-fit",
+      "expected": "excluded",
+      "caseId": "case_wildcard",
+      "reason": "role-fit-mismatch"
+    },
+    {
+      "id": "rejection-history",
+      "expected": "excluded",
+      "caseId": "case_near",
+      "reason": "previously-rejected"
+    },
+    {
+      "id": "disconnected",
+      "expected": "excluded",
+      "caseId": "case_anti",
+      "reason": "no-trait-principle-space-mechanism-path"
+    },
+    {
+      "id": "dangling-edge",
+      "expected": "error",
+      "message": "Dangling edge"
+    },
+    {
+      "id": "deterministic",
+      "expected": "equal"
+    },
+    {
+      "id": "no-viable",
+      "expected": "blocked",
+      "reason": "no-defensible-candidate"
+    },
+    {
+      "id": "diversity-and-history",
+      "expected": "ready",
+      "firstCaseId": "case_far",
+      "gap": "uncovered-principle:principle_ownership"
+    },
+    {
+      "id": "exact-lock",
+      "expected": "preserved"
+    },
+    {
+      "id": "profile-map",
+      "expected": "mapped",
+      "traitIds": ["trait_handoff", "trait_sequence"]
+    },
+    {
+      "id": "usage-order",
+      "expected": "case_near_extra"
+    },
+    {
+      "id": "no-case-to-pattern",
+      "expected": "error",
+      "message": "Invalid edge: case -> pattern"
+    }
+  ]
+}

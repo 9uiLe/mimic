@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "id": "art_s08_profile",
+    "type": "problem-profile",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Shared incident handoff profile",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s08.design-problem-profiler",
+    "runId": "run_s08_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "content": {
+    "summary": "A team coordinates one incident across accountable handoffs.",
+    "traits": [
+      "Several roles hand off time-sensitive work on one incident.",
+      "Actions must retain an accountable sequence."
+    ],
+    "principles": [
+      "Make current ownership and next action visible.",
+      "Confirm and explain state transitions."
+    ],
+    "risks": [
+      "Actual handoff timing and role behavior are unverified.",
+      "A fixed sequence can fail when incidents change unexpectedly."
+    ]
+  },
+  "provenance": [
+    {
+      "path": "/content/traits/0",
+      "kind": "derived",
+      "rationale": "Derived from the handoff task, entity continuity, and operational domain.",
+      "inputRefs": ["art_user_task@1", "art_ui_contract@1", "art_domain@1"]
+    },
+    {
+      "path": "/content/traits/1",
+      "kind": "derived",
+      "rationale": "Derived from task sequence and temporal behavior.",
+      "inputRefs": ["art_user_task@1", "art_domain@1"]
+    },
+    {
+      "path": "/content/principles/0",
+      "kind": "derived",
+      "rationale": "Responds to the handoff trait.",
+      "inputRefs": ["art_user_task@1", "art_ui_contract@1"]
+    },
+    {
+      "path": "/content/principles/1",
+      "kind": "derived",
+      "rationale": "Responds to the sequence trait.",
+      "inputRefs": ["art_domain@1"]
+    },
+    {
+      "path": "/content/risks/0",
+      "kind": "unknown",
+      "rationale": "No observed task timing or role research was supplied."
+    },
+    {
+      "path": "/content/risks/1",
+      "kind": "hypothesis",
+      "rationale": "A fixed flow might conflict with unpredictable work."
+    }
+  ]
+}
