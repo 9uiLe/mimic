@@ -1,0 +1,28 @@
+{
+  "scenarios": [
+    {
+      "id": "profile-trace",
+      "expected": "provisional",
+      "traitPaths": ["/content/traits/0", "/content/traits/1"],
+      "requiredInputs": [
+        "user-task-model",
+        "product-ui-contract",
+        "experience-domain"
+      ]
+    },
+    {
+      "id": "missing-contract",
+      "expected": "blocked",
+      "reason": "Missing required user-task-model (user-task-model); Missing required product-ui-contract (product-ui-contract); Missing required experience-domain (experience-domain)"
+    },
+    {
+      "id": "unknown-behavior",
+      "expected": "unknown",
+      "path": "/content/risks/0"
+    },
+    {
+      "id": "exact-lock",
+      "expected": "preserved"
+    }
+  ]
+}

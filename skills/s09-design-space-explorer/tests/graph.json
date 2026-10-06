@@ -1,0 +1,359 @@
+{
+  "nodes": [
+    {
+      "id": "trait_handoff",
+      "kind": "trait",
+      "label": "Several roles hand off time-sensitive work on one incident.",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/trait_handoff"]
+    },
+    {
+      "id": "trait_sequence",
+      "kind": "trait",
+      "label": "Actions must retain an accountable sequence.",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/trait_sequence"]
+    },
+    {
+      "id": "principle_ownership",
+      "kind": "principle",
+      "label": "Make current ownership and next action visible.",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/principle_ownership"]
+    },
+    {
+      "id": "principle_cues",
+      "kind": "principle",
+      "label": "Confirm and explain state transitions.",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/principle_cues"]
+    },
+    {
+      "id": "space_ops",
+      "kind": "space",
+      "label": "Operational coordination",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/space_ops"]
+    },
+    {
+      "id": "space_editorial",
+      "kind": "space",
+      "label": "Editorial production",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/space_editorial"]
+    },
+    {
+      "id": "space_stage",
+      "kind": "space",
+      "label": "Live stage management",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/space_stage"]
+    },
+    {
+      "id": "space_kitchen",
+      "kind": "space",
+      "label": "Kitchen pass",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/space_kitchen"]
+    },
+    {
+      "id": "space_dashboard",
+      "kind": "space",
+      "label": "KPI summaries",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/space_dashboard"]
+    },
+    {
+      "id": "case_near",
+      "kind": "case",
+      "label": "Incident console",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/case_near"],
+      "doNotBorrow": ["Exact severity labels"],
+      "risks": ["Escalation chain may differ"]
+    },
+    {
+      "id": "case_adjacent",
+      "kind": "case",
+      "label": "Editorial queue",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/case_adjacent"],
+      "doNotBorrow": ["Publication cadence"],
+      "risks": ["Review gate could delay urgent action"]
+    },
+    {
+      "id": "case_far",
+      "kind": "case",
+      "label": "Stage manager cue ledger",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/case_far"],
+      "doNotBorrow": ["Theater terminology"],
+      "risks": ["Rigid cue order may fail"]
+    },
+    {
+      "id": "case_wildcard",
+      "kind": "case",
+      "label": "Kitchen pass",
+      "maturity": "provisional",
+      "evidenceRefs": ["fixture://knowledge/case_wildcard"],
+      "doNotBorrow": ["Physical layout"],
+      "risks": ["Per-order timing may not transfer"]
+    },
+    {
+      "id": "case_anti",
+      "kind": "case",
+      "label": "Generic KPI dashboard",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/case_anti"],
+      "doNotBorrow": ["Decorative status grid"],
+      "risks": ["Ownership can disappear"]
+    },
+    {
+      "id": "mechanism_timeline",
+      "kind": "mechanism",
+      "label": "Shared owner timeline",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/mechanism_timeline"]
+    },
+    {
+      "id": "mechanism_review",
+      "kind": "mechanism",
+      "label": "Assignment and return gate",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/mechanism_review"]
+    },
+    {
+      "id": "mechanism_ack",
+      "kind": "mechanism",
+      "label": "Explicit cue acknowledgment",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/mechanism_ack"]
+    },
+    {
+      "id": "mechanism_readiness",
+      "kind": "mechanism",
+      "label": "Shared readiness view",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/mechanism_readiness"]
+    },
+    {
+      "id": "mechanism_summary",
+      "kind": "mechanism",
+      "label": "Outcome summary without action",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/mechanism_summary"]
+    },
+    {
+      "id": "pattern_handoff",
+      "kind": "pattern",
+      "label": "Explicit handoff record",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/pattern_handoff"]
+    },
+    {
+      "id": "failure_hidden",
+      "kind": "failure",
+      "label": "Hidden ownership",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/failure_hidden"],
+      "risks": ["Users cannot identify next actor"]
+    },
+    {
+      "id": "pattern_ack",
+      "kind": "pattern",
+      "label": "Transition acknowledgment",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/pattern_ack"]
+    },
+    {
+      "id": "failure_rigid",
+      "kind": "failure",
+      "label": "Rigid sequence",
+      "maturity": "reviewed",
+      "evidenceRefs": ["fixture://knowledge/failure_rigid"],
+      "risks": ["Unexpected events have no path"]
+    }
+  ],
+  "edges": [
+    {
+      "from": "trait_handoff",
+      "to": "principle_ownership",
+      "rationale": "trait_handoff informs examination of principle_ownership",
+      "evidenceRefs": [
+        "fixture://knowledge/link/trait_handoff/principle_ownership"
+      ]
+    },
+    {
+      "from": "trait_sequence",
+      "to": "principle_cues",
+      "rationale": "trait_sequence informs examination of principle_cues",
+      "evidenceRefs": ["fixture://knowledge/link/trait_sequence/principle_cues"]
+    },
+    {
+      "from": "principle_ownership",
+      "to": "space_ops",
+      "rationale": "principle_ownership informs examination of space_ops",
+      "evidenceRefs": ["fixture://knowledge/link/principle_ownership/space_ops"]
+    },
+    {
+      "from": "principle_ownership",
+      "to": "space_kitchen",
+      "rationale": "principle_ownership informs examination of space_kitchen",
+      "evidenceRefs": [
+        "fixture://knowledge/link/principle_ownership/space_kitchen"
+      ]
+    },
+    {
+      "from": "principle_ownership",
+      "to": "space_dashboard",
+      "rationale": "principle_ownership informs examination of space_dashboard",
+      "evidenceRefs": [
+        "fixture://knowledge/link/principle_ownership/space_dashboard"
+      ]
+    },
+    {
+      "from": "principle_cues",
+      "to": "space_editorial",
+      "rationale": "principle_cues informs examination of space_editorial",
+      "evidenceRefs": [
+        "fixture://knowledge/link/principle_cues/space_editorial"
+      ]
+    },
+    {
+      "from": "principle_cues",
+      "to": "space_stage",
+      "rationale": "principle_cues informs examination of space_stage",
+      "evidenceRefs": ["fixture://knowledge/link/principle_cues/space_stage"]
+    },
+    {
+      "from": "space_ops",
+      "to": "case_near",
+      "rationale": "space_ops informs examination of case_near",
+      "evidenceRefs": ["fixture://knowledge/link/space_ops/case_near"]
+    },
+    {
+      "from": "space_editorial",
+      "to": "case_adjacent",
+      "rationale": "space_editorial informs examination of case_adjacent",
+      "evidenceRefs": ["fixture://knowledge/link/space_editorial/case_adjacent"]
+    },
+    {
+      "from": "space_stage",
+      "to": "case_far",
+      "rationale": "space_stage informs examination of case_far",
+      "evidenceRefs": ["fixture://knowledge/link/space_stage/case_far"]
+    },
+    {
+      "from": "space_kitchen",
+      "to": "case_wildcard",
+      "rationale": "space_kitchen informs examination of case_wildcard",
+      "evidenceRefs": ["fixture://knowledge/link/space_kitchen/case_wildcard"]
+    },
+    {
+      "from": "space_dashboard",
+      "to": "case_anti",
+      "rationale": "space_dashboard informs examination of case_anti",
+      "evidenceRefs": ["fixture://knowledge/link/space_dashboard/case_anti"]
+    },
+    {
+      "from": "case_near",
+      "to": "mechanism_timeline",
+      "rationale": "case_near informs examination of mechanism_timeline",
+      "evidenceRefs": ["fixture://knowledge/link/case_near/mechanism_timeline"]
+    },
+    {
+      "from": "case_adjacent",
+      "to": "mechanism_review",
+      "rationale": "case_adjacent informs examination of mechanism_review",
+      "evidenceRefs": [
+        "fixture://knowledge/link/case_adjacent/mechanism_review"
+      ]
+    },
+    {
+      "from": "case_far",
+      "to": "mechanism_ack",
+      "rationale": "case_far informs examination of mechanism_ack",
+      "evidenceRefs": ["fixture://knowledge/link/case_far/mechanism_ack"]
+    },
+    {
+      "from": "case_wildcard",
+      "to": "mechanism_readiness",
+      "rationale": "case_wildcard informs examination of mechanism_readiness",
+      "evidenceRefs": [
+        "fixture://knowledge/link/case_wildcard/mechanism_readiness"
+      ]
+    },
+    {
+      "from": "case_anti",
+      "to": "mechanism_summary",
+      "rationale": "case_anti informs examination of mechanism_summary",
+      "evidenceRefs": ["fixture://knowledge/link/case_anti/mechanism_summary"]
+    },
+    {
+      "from": "mechanism_timeline",
+      "to": "principle_ownership",
+      "rationale": "mechanism_timeline informs examination of principle_ownership",
+      "evidenceRefs": [
+        "fixture://knowledge/link/mechanism_timeline/principle_ownership"
+      ]
+    },
+    {
+      "from": "mechanism_review",
+      "to": "principle_cues",
+      "rationale": "mechanism_review informs examination of principle_cues",
+      "evidenceRefs": [
+        "fixture://knowledge/link/mechanism_review/principle_cues"
+      ]
+    },
+    {
+      "from": "mechanism_ack",
+      "to": "principle_cues",
+      "rationale": "mechanism_ack informs examination of principle_cues",
+      "evidenceRefs": ["fixture://knowledge/link/mechanism_ack/principle_cues"]
+    },
+    {
+      "from": "mechanism_readiness",
+      "to": "principle_ownership",
+      "rationale": "mechanism_readiness informs examination of principle_ownership",
+      "evidenceRefs": [
+        "fixture://knowledge/link/mechanism_readiness/principle_ownership"
+      ]
+    },
+    {
+      "from": "mechanism_summary",
+      "to": "principle_ownership",
+      "rationale": "mechanism_summary informs examination of principle_ownership",
+      "evidenceRefs": [
+        "fixture://knowledge/link/mechanism_summary/principle_ownership"
+      ]
+    },
+    {
+      "from": "principle_ownership",
+      "to": "pattern_handoff",
+      "rationale": "principle_ownership informs examination of pattern_handoff",
+      "evidenceRefs": [
+        "fixture://knowledge/link/principle_ownership/pattern_handoff"
+      ]
+    },
+    {
+      "from": "principle_ownership",
+      "to": "failure_hidden",
+      "rationale": "principle_ownership informs examination of failure_hidden",
+      "evidenceRefs": [
+        "fixture://knowledge/link/principle_ownership/failure_hidden"
+      ]
+    },
+    {
+      "from": "principle_cues",
+      "to": "pattern_ack",
+      "rationale": "principle_cues informs examination of pattern_ack",
+      "evidenceRefs": ["fixture://knowledge/link/principle_cues/pattern_ack"]
+    },
+    {
+      "from": "principle_cues",
+      "to": "failure_rigid",
+      "rationale": "principle_cues informs examination of failure_rigid",
+      "evidenceRefs": ["fixture://knowledge/link/principle_cues/failure_rigid"]
+    }
+  ]
+}

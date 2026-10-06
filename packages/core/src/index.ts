@@ -17,3 +17,5 @@ export * from "./run-registry/index.js";
 export * from "./workspace-transaction.js";
 export * from "./orchestrator/index.js";
 export * from "./skill-runtime/index.js";
+
+export * from "./design-knowledge/index.js";

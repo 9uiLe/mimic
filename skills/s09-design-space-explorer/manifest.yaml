@@ -1,0 +1,60 @@
+{
+  "skillId": "mimic.s09.design-space-explorer",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "problem-profile",
+            "kind": "artifact",
+            "artifactType": "problem-profile",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "product-ui-contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "reference-source", "kind": "evidence-file" },
+        ],
+      "optional":
+        [
+          {
+            "name": "experience-domain",
+            "kind": "artifact",
+            "artifactType": "experience-domain",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "journey",
+            "kind": "artifact",
+            "artifactType": "journey",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "alternatives": [],
+    },
+  "outputs": ["reference-selection"],
+  "forbiddenResponsibilities":
+    [
+      "Treat visual similarity or novelty as structural fit",
+      "Call a random distant case Far or a disconnected case Wildcard",
+      "Copy a Reference Case directly into UI or select a durable direction",
+      "Present provisional or rejected knowledge as validated evidence",
+    ],
+  "humanGates": [],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "experience-domain", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/selection.json"],
+  "tests": ["tests/scenarios.json", "tests/graph.json"],
+}

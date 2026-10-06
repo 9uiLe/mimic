@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "id": "art_s09_selection",
+    "type": "reference-selection",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Incident handoff reference exploration",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s09.design-space-explorer",
+    "runId": "run_s09_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "content": {
+    "summary": "Compare structurally related mechanisms across contexts; case details are not UI instructions.",
+    "references": [
+      {
+        "reference": "case_near",
+        "classification": "near",
+        "structuralRelevance": "high",
+        "contextDistance": "low",
+        "transferableMechanisms": ["mechanism_timeline"]
+      },
+      {
+        "reference": "case_far",
+        "classification": "far",
+        "structuralRelevance": "high",
+        "contextDistance": "high",
+        "transferableMechanisms": ["mechanism_ack"]
+      }
+    ]
+  },
+  "provenance": [
+    {
+      "path": "/content/references/0",
+      "kind": "derived",
+      "rationale": "trait_handoff \u2192 principle_ownership \u2192 space_ops \u2192 case_near \u2192 mechanism_timeline. Borrow owner visibility, not exact severity labels; escalation chain is a risk. Reviewed synthetic case, usage 0.",
+      "inputRefs": [
+        "fixture://knowledge/case_near",
+        "fixture://knowledge/mechanism_timeline"
+      ]
+    },
+    {
+      "path": "/content/references/1",
+      "kind": "hypothesis",
+      "rationale": "trait_sequence \u2192 principle_cues \u2192 space_stage \u2192 case_far \u2192 mechanism_ack. High structural fit and high context distance; borrow explicit acknowledgment, not theater terminology. Rigid cue order is a failure mode. Transfer remains unverified.",
+      "evidenceRefs": [
+        "fixture://knowledge/case_far",
+        "fixture://knowledge/mechanism_ack"
+      ]
+    },
+    {
+      "path": "/content/summary",
+      "kind": "derived",
+      "rationale": "Generic KPI dashboard excluded as an anti-reference for hiding ownership; do not borrow decorative status grids. Missing roles and rejected cases are retained in linked retrieval evidence.",
+      "inputRefs": ["fixture://knowledge/case_anti"]
+    }
+  ]
+}

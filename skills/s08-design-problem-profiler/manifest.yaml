@@ -1,0 +1,66 @@
+{
+  "skillId": "mimic.s08.design-problem-profiler",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "user-task-model",
+            "kind": "artifact",
+            "artifactType": "user-task-model",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "product-ui-contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "experience-domain",
+            "kind": "artifact",
+            "artifactType": "experience-domain",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "journey",
+            "kind": "artifact",
+            "artifactType": "journey",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "system-capability",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "task-evidence", "kind": "evidence-file" },
+        ],
+      "alternatives": [],
+    },
+  "outputs": ["problem-profile"],
+  "forbiddenResponsibilities":
+    [
+      "Invent observed user behavior or empirical support",
+      "Collapse materially different Experience Domains without rationale",
+      "Change the Product UI Contract or approve a durable decision",
+    ],
+  "humanGates": [],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "experience-domain", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/profile.json"],
+  "tests": ["tests/scenarios.json"],
+}
