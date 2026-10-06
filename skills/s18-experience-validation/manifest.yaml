@@ -1,0 +1,91 @@
+{
+  "skillId": "mimic.s18-experience-validation",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required":
+        [
+          {
+            "name": "target",
+            "kind": "artifact",
+            "artifactType": "scenario",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "contract",
+            "kind": "artifact",
+            "artifactType": "product-ui-contract",
+            "schemaVersion": "1.0.0",
+          },
+        ],
+      "optional":
+        [
+          {
+            "name": "journey",
+            "kind": "artifact",
+            "artifactType": "journey",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "prior-evaluation",
+            "kind": "artifact",
+            "artifactType": "evaluation",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "prior-validation",
+            "kind": "artifact",
+            "artifactType": "validation",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "task-model",
+            "kind": "artifact",
+            "artifactType": "user-task-model",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "problem-profile",
+            "kind": "artifact",
+            "artifactType": "problem-profile",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "system-capability",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "observation", "kind": "evidence-file" },
+        ],
+      "alternatives": [],
+    },
+  "outputs": ["validation", "evaluation", "system-request"],
+  "forbiddenResponsibilities":
+    [
+      "Invent participant observations",
+      "Treat deterministic checks as empirical task evidence",
+      "Claim full accessibility conformance from automated tests",
+    ],
+  "humanGates":
+    [
+      { "decision": "system-change", "authority": "PROPOSE_ONLY" },
+      { "decision": "final-release", "authority": "PROPOSE_ONLY" },
+    ],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "evaluation", "schemaVersion": "1.0.0" },
+      { "artifactType": "journey", "schemaVersion": "1.0.0" },
+      { "artifactType": "problem-profile", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-ui-contract", "schemaVersion": "1.0.0" },
+      { "artifactType": "scenario", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-request", "schemaVersion": "1.0.0" },
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+      { "artifactType": "validation", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/output.json"],
+  "tests": ["tests/scenarios.json", "tests/observations.json"],
+}

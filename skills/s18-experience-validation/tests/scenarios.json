@@ -1,0 +1,48 @@
+{
+  "scenarios": [
+    {
+      "id": "unobserved-plan",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "UNVERIFIED",
+      "expectEvidenceRefs": []
+    },
+    {
+      "id": "missing-target",
+      "mode": "blocked",
+      "reason": "No identifiable exact target",
+      "expectOutputs": 0
+    },
+    {
+      "id": "unsupported-claim",
+      "mode": "reject-no-evidence",
+      "output": "validation"
+    },
+    {
+      "id": "wrong-run",
+      "mode": "reject-run",
+      "output": "validation"
+    },
+    {
+      "id": "evidence-supported",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "PASS",
+      "evidenceRefs": ["tests/observations.json#supported"]
+    },
+    {
+      "id": "evidence-mixed",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "CONCERN",
+      "evidenceRefs": ["tests/observations.json#mixed"]
+    },
+    {
+      "id": "evidence-unsupported",
+      "mode": "produce",
+      "output": "validation",
+      "expectState": "FAIL",
+      "evidenceRefs": ["tests/observations.json#unsupported"]
+    }
+  ]
+}

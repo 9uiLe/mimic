@@ -1,0 +1,38 @@
+{
+  "scenarios": [
+    {
+      "id": "local-disposition",
+      "mode": "produce",
+      "output": "decision",
+      "expectAlternatives": [
+        "KEEP_LOCAL",
+        "PROMOTE_TO_PRODUCT",
+        "PROPOSE_TO_ORGANIZATION",
+        "DEPRECATE",
+        "MERGE"
+      ],
+      "expectOutcome": "proposed"
+    },
+    {
+      "id": "approved-reuse",
+      "mode": "reuse-approved",
+      "output": "design-system-asset"
+    },
+    {
+      "id": "untraceable-source",
+      "mode": "blocked",
+      "reason": "No traceable source or rationale",
+      "expectOutputs": 0
+    },
+    {
+      "id": "self-approval",
+      "mode": "reject-self-approval",
+      "output": "decision"
+    },
+    {
+      "id": "rejected-replay",
+      "mode": "reject-replay",
+      "output": "decision"
+    }
+  ]
+}

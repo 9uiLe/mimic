@@ -1,0 +1,47 @@
+{
+  "scenarios": [
+    {
+      "id": "criterion-review",
+      "mode": "produce",
+      "output": "evaluation",
+      "expectCriteria": [
+        "Goal fit",
+        "Task fit",
+        "Information hierarchy",
+        "Interaction behavior",
+        "Brand fit",
+        "Accessibility",
+        "Responsive primary-goal parity",
+        "System feasibility",
+        "Cross-domain continuity",
+        "Design-system compliance",
+        "Generic AI-pattern risk"
+      ],
+      "expectStates": {
+        "Information hierarchy": "CONCERN",
+        "Accessibility": "UNVERIFIED"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "id": "missing-target-lock",
+      "mode": "blocked",
+      "reason": "Exact target lock is unavailable",
+      "expectOutputs": 0
+    },
+    {
+      "id": "missing-empirical-evidence",
+      "mode": "produce",
+      "output": "evaluation",
+      "expectStates": {
+        "Accessibility": "UNVERIFIED"
+      },
+      "evidenceRefs": []
+    },
+    {
+      "id": "undeclared-output",
+      "mode": "reject-output-type",
+      "output": "brand"
+    }
+  ]
+}

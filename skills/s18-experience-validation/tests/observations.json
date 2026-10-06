@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "warning": "Fictional observations for deterministic package bridge tests only; not empirical user research.",
+  "target": "art_target@1",
+  "method": "Task observation on a specified device and scenario",
+  "cases": {
+    "supported": {
+      "classification": "supported",
+      "condition": "Illustrative desktop task, simulated participant",
+      "observation": "Primary goal completed with context preserved."
+    },
+    "mixed": {
+      "classification": "mixed",
+      "condition": "Illustrative mobile task, simulated participant",
+      "observation": "Primary goal completed, but return path needed an extra recovery step."
+    },
+    "unsupported": {
+      "classification": "unsupported",
+      "condition": "Illustrative mobile task, simulated participant",
+      "observation": "Primary goal could not be completed after state loss."
+    }
+  }
+}

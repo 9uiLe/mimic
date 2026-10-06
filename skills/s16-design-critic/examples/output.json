@@ -1,0 +1,165 @@
+{
+  "meta": {
+    "id": "art_example_evaluation",
+    "type": "evaluation",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "Illustrative evaluation",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s16-design-critic",
+    "runId": "run_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [
+    {
+      "artifactId": "art_target",
+      "revision": 1,
+      "lockDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "onChange": "validate"
+    }
+  ],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content/findings/0",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/1",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/2",
+      "kind": "derived",
+      "inputRefs": ["art_target@1"]
+    },
+    {
+      "path": "/content/findings/3",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/4",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/5",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/6",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/7",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/8",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/9",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    },
+    {
+      "path": "/content/findings/10",
+      "kind": "unknown",
+      "rationale": "Example has no actual observation for this criterion."
+    }
+  ],
+  "content": {
+    "summary": "Illustrative criterion-by-criterion critique; not a real product assessment.",
+    "target": "art_target@1",
+    "findings": [
+      {
+        "criterion": "Goal fit",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Task fit",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Information hierarchy",
+        "state": "CONCERN",
+        "severity": "MAJOR",
+        "reason": "Illustrative scenario places the primary action below secondary content; review task impact before direction selection."
+      },
+      {
+        "criterion": "Interaction behavior",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Brand fit",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Accessibility",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Responsive primary-goal parity",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "System feasibility",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Cross-domain continuity",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Design-system compliance",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      },
+      {
+        "criterion": "Generic AI-pattern risk",
+        "state": "UNVERIFIED",
+        "severity": "NOTE",
+        "reason": "Illustrative target lacks criterion-specific observation; identify the method and affected action before relying on this claim."
+      }
+    ]
+  }
+}
