@@ -309,3 +309,65 @@ test("requires the real store's verified approval and exact digest", async () =>
     ]),
   ).rejects.toThrow(/lock mismatch/);
 });
+
+test("snapshots caller-owned exact refs before awaited reads and isolates returned provenance", async () => {
+  const { store, add } = await setup();
+  const prior = await add("art_prior", {
+    primitive: { base: { $type: "number", $value: 3 } },
+  });
+  const current = await add("art_current", {
+    semantic: { amount: { $type: "number", $value: "{primitive.base}" } },
+  });
+  const priorRef = { ...prior.ref };
+  const currentRef = { ...current.ref };
+  let releaseRead!: () => void;
+  let signalEntered!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    releaseRead = resolve;
+  });
+  const entered = new Promise<void>((resolve) => {
+    signalEntered = resolve;
+  });
+  const realRead = store.read.bind(store);
+  let firstRead = true;
+  store.read = async (id, revision) => {
+    if (firstRead) {
+      firstRead = false;
+      signalEntered();
+      await gate;
+    }
+    return realRead(id, revision);
+  };
+  const pending = compileApprovedTokenAssets(store, [currentRef], priorRef);
+  await entered;
+  Object.assign(priorRef, {
+    artifactId: "art_other",
+    revision: 7,
+    lockDigest: `sha256:${"0".repeat(64)}`,
+  });
+  Object.assign(currentRef, {
+    artifactId: "art_other",
+    revision: 7,
+    lockDigest: `sha256:${"0".repeat(64)}`,
+  });
+  releaseRead();
+  const result = await pending;
+  expect(result.css).toContain("--mimic-primitive-base: 3;");
+  expect(result.css).toContain(
+    "--mimic-semantic-amount: var(--mimic-primitive-base);",
+  );
+  expect(result.sources).toEqual([prior.ref, current.ref]);
+  expect(result.tokens.map((token) => token.source.artifactId)).toEqual([
+    "art_prior",
+    "art_current",
+  ]);
+  currentRef.lockDigest = `sha256:${"f".repeat(64)}`;
+  priorRef.lockDigest = `sha256:${"f".repeat(64)}`;
+  expect(result.sources).toEqual([prior.ref, current.ref]);
+  expect(result.tokens.map((token) => token.source.lockDigest)).toEqual([
+    prior.ref.lockDigest,
+    current.ref.lockDigest,
+  ]);
+  expect(Object.isFrozen(result.sources)).toBe(true);
+  expect(result.sources.every(Object.isFrozen)).toBe(true);
+});

@@ -46,9 +46,31 @@ const TYPES: readonly SupportedTokenType[] = [
 ];
 const SEGMENT = /^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|[0-9]+)$/;
 const ALIAS = /^\{((?:[^{}.]+\.)*[^{}.]+)\}$/;
+const ARTIFACT_ID = /^art_[A-Za-z0-9_-]+$/;
+const DIGEST = /^sha256:[0-9a-f]{64}$/;
 
 function fail(code: TokenCompilerError["code"], message: string): never {
   throw new TokenCompilerError(code, message);
+}
+
+function exactRef(input: ExactArtifactRef): ExactArtifactRef {
+  if (
+    !input ||
+    typeof input !== "object" ||
+    typeof input.artifactId !== "string" ||
+    !ARTIFACT_ID.test(input.artifactId) ||
+    typeof input.revision !== "number" ||
+    !Number.isSafeInteger(input.revision) ||
+    input.revision < 1 ||
+    typeof input.lockDigest !== "string" ||
+    !DIGEST.test(input.lockDigest)
+  )
+    return fail("INVALID", "Invalid exact token source reference");
+  return Object.freeze({
+    artifactId: input.artifactId,
+    revision: input.revision,
+    lockDigest: input.lockDigest,
+  });
 }
 
 function object(value: unknown, at: string): Record<string, unknown> {
@@ -259,9 +281,14 @@ export async function compileApprovedTokenAssets(
   sources: readonly ExactArtifactRef[],
   previous?: ExactArtifactRef,
 ): Promise<TokenCompilation> {
-  if (!sources.length)
+  if (!Array.isArray(sources) || !sources.length)
     return fail("INVALID", "At least one approved token source is required");
-  const allRefs = previous ? [previous, ...sources] : [...sources];
+  // Snapshot every caller-owned reference before the first awaited store read.
+  const allRefs = Object.freeze(
+    previous
+      ? [exactRef(previous), ...sources.map(exactRef)]
+      : sources.map(exactRef),
+  );
   const seen = new Set<string>();
   const tokens = new Map<string, RawToken>();
   const newPaths = new Set<string>();
@@ -349,19 +376,19 @@ export async function compileApprovedTokenAssets(
       type = declared as SupportedTokenType;
       value = cssValue(type, raw, path);
     }
-    const compiled: CompiledToken = {
+    const compiled: CompiledToken = Object.freeze({
       path,
       name: `--mimic-${path.replaceAll(".", "-")}`,
       type,
       value,
       ...(reference ? { reference } : {}),
       source: token.source,
-    };
+    });
     visiting.delete(path);
     resolved.set(path, compiled);
     return compiled;
   }
-  const compiled = [...tokens.keys()].sort().map(resolve);
+  const compiled = Object.freeze([...tokens.keys()].sort().map(resolve));
   const css = `:root {\n${compiled.map((token) => `  ${token.name}: ${token.value};`).join("\n")}\n}\n`;
-  return { css, tokens: compiled, sources: allRefs };
+  return Object.freeze({ css, tokens: compiled, sources: allRefs });
 }

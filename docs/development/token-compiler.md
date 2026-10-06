@@ -4,6 +4,8 @@ The compiler uses the [DTCG 2025.10 Format Module](https://www.designtokens.org/
 
 `compileApprovedTokenAssets(store, sources, previous?)` takes exact artifact references (`artifactId`, `revision`, `lockDigest`) and reads them through `ArtifactStore`. The store validates the v1 artifact schema, snapshot digest, dependency locks and human approval using its configured authority verifier. The compiler also requires approved, fresh `design-system-asset` snapshots of kind `dtcg-tokens`. A caller cannot authorize a proposal by setting an approval label. No CSS is emitted on failure. The returned `sources` list and each token's `source` retain the exact input locks; generated CSS is derived output.
 
+Exact references are validated and copied before the first asynchronous read. Returned source metadata is immutable, so caller changes during compilation or after return cannot relabel the verified CSS.
+
 ## Accepted source subset
 
 - `content.definition.tokens` is a DTCG group tree under top-level `primitive`, `semantic`, and `component` groups. Group `$type` inheritance, token `$type`, `$value`, `$description`, and `$deprecated` are accepted. Types are never guessed from values.
