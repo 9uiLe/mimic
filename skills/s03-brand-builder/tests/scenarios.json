@@ -1,0 +1,33 @@
+{
+  "cases": [
+    {
+      "name": "missing-input",
+      "expected": "blocked",
+      "reason": "Essential brand identity or authority unknown with no honest provisional direction"
+    },
+    {
+      "name": "valid-candidate",
+      "expected": "provisional",
+      "example": "examples/candidate.json"
+    },
+    {
+      "name": "optional-gap",
+      "expected": "reported",
+      "reason": "Missing optional inputs narrow the conclusion"
+    },
+    {
+      "name": "exact-lock",
+      "expected": "preserved",
+      "reason": "exact input references and locks"
+    },
+    {
+      "name": "inherited-brand",
+      "expected": "reuse-exact-approved-ref"
+    },
+    {
+      "name": "mismatched-input-lock",
+      "expected": "rejected",
+      "errorContains": "Result does not match invocation"
+    }
+  ]
+}

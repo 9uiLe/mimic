@@ -1,0 +1,59 @@
+{
+  "skillId": "mimic.s01.product-definition",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required": [],
+      "optional":
+        [
+          {
+            "name": "user-tasks",
+            "kind": "artifact",
+            "artifactType": "user-task-model",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "system-context",
+            "kind": "artifact",
+            "artifactType": "system-capability",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "research", "kind": "evidence-file" },
+        ],
+      "alternatives":
+        [
+          {
+            "name": "product-intent",
+            "oneOf":
+              [
+                { "name": "human-intent", "kind": "human-brief" },
+                {
+                  "name": "existing-definition",
+                  "kind": "artifact",
+                  "artifactType": "product-definition",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
+          },
+        ],
+    },
+  "outputs": ["product-definition", "decision"],
+  "forbiddenResponsibilities":
+    [
+      "Approve product definition",
+      "Treat inferred market demand or scope as a human-approved fact",
+    ],
+  "humanGates":
+    [{ "decision": "product-definition", "authority": "PROPOSE_ONLY" }],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "decision", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-definition", "schemaVersion": "1.0.0" },
+      { "artifactType": "system-capability", "schemaVersion": "1.0.0" },
+      { "artifactType": "user-task-model", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/candidate.json"],
+  "tests": ["tests/scenarios.json", "tests/negative.json"],
+}

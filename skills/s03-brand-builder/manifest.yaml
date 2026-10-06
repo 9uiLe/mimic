@@ -1,0 +1,58 @@
+{
+  "skillId": "mimic.s03.brand-builder",
+  "manifestVersion": "1.0.0",
+  "packageVersion": "0.1.0",
+  "skillFile": "SKILL.md",
+  "inputs":
+    {
+      "required": [],
+      "optional":
+        [
+          {
+            "name": "product-context",
+            "kind": "artifact",
+            "artifactType": "product-definition",
+            "schemaVersion": "1.0.0",
+          },
+          {
+            "name": "organization-foundation",
+            "kind": "artifact",
+            "artifactType": "design-system-asset",
+            "schemaVersion": "1.0.0",
+          },
+          { "name": "brand-evidence", "kind": "evidence-file" },
+        ],
+      "alternatives":
+        [
+          {
+            "name": "brand-source",
+            "oneOf":
+              [
+                { "name": "human-brand-direction", "kind": "human-brief" },
+                {
+                  "name": "existing-brand",
+                  "kind": "artifact",
+                  "artifactType": "brand",
+                  "schemaVersion": "1.0.0",
+                },
+              ],
+          },
+        ],
+    },
+  "outputs": ["brand", "decision"],
+  "forbiddenResponsibilities":
+    [
+      "Declare generated brand canonical",
+      "Override locked parent brand rules or claim trademark rights",
+    ],
+  "humanGates": [{ "decision": "brand", "authority": "PROPOSE_ONLY" }],
+  "supportedArtifactSchemas":
+    [
+      { "artifactType": "brand", "schemaVersion": "1.0.0" },
+      { "artifactType": "decision", "schemaVersion": "1.0.0" },
+      { "artifactType": "design-system-asset", "schemaVersion": "1.0.0" },
+      { "artifactType": "product-definition", "schemaVersion": "1.0.0" },
+    ],
+  "examples": ["examples/candidate.json"],
+  "tests": ["tests/scenarios.json", "tests/negative.json"],
+}

@@ -1,0 +1,27 @@
+{
+  "surfaces": [
+    {
+      "url": "/candidates",
+      "domain": "exploration",
+      "primaryGoal": "Compare candidate directions",
+      "interactionModel": "Browse and compare candidate evidence",
+      "riskModel": "Avoid confusing comparison with approval"
+    },
+    {
+      "url": "/candidates/candidate-42",
+      "domain": "exploration",
+      "primaryGoal": "Compare candidate directions",
+      "interactionModel": "Browse and compare candidate evidence",
+      "riskModel": "Avoid confusing comparison with approval"
+    },
+    {
+      "url": "/reviews/candidate-42",
+      "domain": "review",
+      "primaryGoal": "Decide whether a candidate is acceptable",
+      "interactionModel": "Compare evidence and record an explicit choice",
+      "riskModel": "Prevent accidental approval of provisional work"
+    }
+  ],
+  "sameDomain": ["/candidates", "/candidates/candidate-42"],
+  "differentDomain": ["/candidates/candidate-42", "/reviews/candidate-42"]
+}

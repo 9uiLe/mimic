@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "name": "missing-input",
+      "expected": "blocked",
+      "reason": "No identifiable user or task"
+    },
+    {
+      "name": "valid-candidate",
+      "expected": "provisional",
+      "example": "examples/candidate.json"
+    },
+    {
+      "name": "optional-gap",
+      "expected": "reported",
+      "reason": "Missing optional inputs narrow the conclusion"
+    },
+    {
+      "name": "exact-lock",
+      "expected": "preserved",
+      "reason": "exact input references and locks"
+    },
+    {
+      "name": "mismatched-input-lock",
+      "expected": "rejected",
+      "errorContains": "Result does not match invocation"
+    },
+    {
+      "name": "behavior-centered-user",
+      "expected": "assumption-backed-behavior",
+      "example": "examples/candidate.json",
+      "userIncludes": [
+        "resumes an interrupted design decision",
+        "compares evidence"
+      ],
+      "taskIncludes": ["compare supporting evidence", "resume review"],
+      "provenanceKind": "assumption",
+      "forbidden": ["age", "income", "gender"]
+    }
+  ]
+}

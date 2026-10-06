@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "id": "art_s07_experience_architecture_journey",
+    "type": "journey",
+    "schemaVersion": "1.0.0",
+    "revision": 1,
+    "title": "journey candidate",
+    "createdAt": "2026-10-05T17:00:00Z"
+  },
+  "scope": {
+    "level": "product",
+    "ownerId": "product_mimic",
+    "parentId": "org_9uile"
+  },
+  "lifecycle": {
+    "status": "provisional",
+    "freshness": "valid"
+  },
+  "origin": {
+    "actorKind": "skill",
+    "actorId": "mimic.s07.experience-architecture",
+    "runId": "run_s01_s07_example",
+    "createdAt": "2026-10-06T12:00:00Z"
+  },
+  "dependencies": [],
+  "approval": {
+    "status": "pending"
+  },
+  "provenance": [
+    {
+      "path": "/content",
+      "kind": "assumption",
+      "rationale": "Illustrative proposed design change, not a verified current capability."
+    }
+  ],
+  "content": {
+    "summary": "Move from exploration to review without losing candidate context.",
+    "domains": ["exploration", "review"],
+    "steps": [
+      "Compare candidate evidence",
+      "Open review for the same candidate",
+      "Return to exploration with review state intact"
+    ],
+    "preservedContext": [
+      "entity",
+      "terminology",
+      "navigation",
+      "return-path",
+      "state"
+    ]
+  }
+}

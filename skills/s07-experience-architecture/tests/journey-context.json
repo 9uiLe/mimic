@@ -1,0 +1,31 @@
+{
+  "from": {
+    "domain": "exploration",
+    "entity": "candidate-42",
+    "terminology": "Candidate",
+    "navigation": "exploration",
+    "return-path": "/candidates/candidate-42",
+    "state": "comparison-open"
+  },
+  "to": {
+    "domain": "review",
+    "entity": "candidate-42",
+    "terminology": "Candidate",
+    "navigation": "exploration",
+    "return-path": "/candidates/candidate-42",
+    "state": "comparison-open"
+  },
+  "expectedDomains": ["exploration", "review"],
+  "expectedSteps": [
+    "Compare candidate evidence",
+    "Open review for the same candidate",
+    "Return to exploration with review state intact"
+  ],
+  "keys": {
+    "entity": "entity",
+    "terminology": "terminology",
+    "navigation": "navigation",
+    "return-path": "return-path",
+    "state": "state"
+  }
+}
