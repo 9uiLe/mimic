@@ -376,6 +376,17 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
       (decision) =>
         object(decision.output!.artifact.content)?.assetKind === "governance",
     );
+    const locksNamed = (
+      target: ArtifactSnapshot,
+      source: ExactArtifactRef,
+    ): boolean =>
+      target.dependencies.some(
+        (dependency) =>
+          dependency.artifactId === source.artifactId &&
+          dependency.revision === source.revision &&
+          dependency.lockDigest === source.lockDigest &&
+          dependency.onChange !== "none",
+      );
     try {
       for (let i = 0; i < namedGovernance.length; i++)
         for (let j = i + 1; j < namedGovernance.length; j++) {
@@ -400,10 +411,20 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
               )
                 continue;
               if (a.scope.ownerId === b.scope.ownerId) return false;
-              if (bChain.includes(a.scope.ownerId) && !narrows(left, right))
-                return false;
-              if (aChain.includes(b.scope.ownerId) && !narrows(right, left))
-                return false;
+              if (bChain.includes(a.scope.ownerId)) {
+                if (
+                  !narrows(left, right) ||
+                  !locksNamed(b, namedGovernance[i].output!.ref)
+                )
+                  return false;
+              }
+              if (aChain.includes(b.scope.ownerId)) {
+                if (
+                  !narrows(right, left) ||
+                  !locksNamed(a, namedGovernance[j].output!.ref)
+                )
+                  return false;
+              }
             }
         }
     } catch {
@@ -426,7 +447,6 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
               rule.targetAssetKind === content.assetKind &&
               (rule.targetName === undefined ||
                 rule.targetName === content.name) &&
-              pointer(artifact, rule.path) !== undefined &&
               ancestors(this.scopeNodes, artifact.scope.ownerId).some(
                 (scope) =>
                   scope.ownerId === decision.output!.artifact.scope.ownerId,

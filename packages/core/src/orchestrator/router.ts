@@ -143,6 +143,8 @@ export interface UpstreamRevisionRequest {
 
 const equal = (a: unknown, b: unknown): boolean =>
   canonicalJson(a) === canonicalJson(b);
+const completionReason = (taskId: string): string =>
+  `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`;
 function assert(ok: unknown, message: string): asserts ok {
   if (!ok) throw new Error(message);
 }
@@ -343,6 +345,21 @@ export class Orchestrator {
         await this.verified(item),
       );
     const actions: RoutedAction[] = [];
+    const completed = new Set(
+      state.events
+        .filter(
+          (event) =>
+            event.runId === runId &&
+            event.action === "set-work" &&
+            event.actor.kind === "agent" &&
+            event.actor.id === "orchestrator",
+        )
+        .flatMap((event) =>
+          tasks
+            .filter((task) => event.reason === completionReason(task.id))
+            .map((task) => task.id),
+        ),
+    );
     for (const task of ordered) {
       assert(
         chain.includes(task.scopeOwnerId),
@@ -409,9 +426,12 @@ export class Orchestrator {
       }
       if (
         (task.dependsOn ?? []).some((id) => {
+          if (actions.find((action) => action.taskId === id)?.action === "USE")
+            return false;
           return (
-            run.safeActions.includes(id) &&
-            actions.find((action) => action.taskId === id)?.action !== "USE"
+            !!run.blockers[id] ||
+            run.safeActions.includes(id) ||
+            !completed.has(id)
           );
         })
       ) {
@@ -659,12 +679,33 @@ export class Orchestrator {
             reason: finding.reason,
           });
     }
+    const blockers = {
+      ...run.blockers,
+      ...Object.fromEntries(
+        actions
+          .filter((action) => action.action === "BLOCK")
+          .map((action) => [action.taskId, action.reason]),
+      ),
+    };
+    const hasRunnableWork = actions.some((action) =>
+      ["USE", "UPDATE", "GENERATE"].includes(action.action),
+    );
+    const allSafeActionsRepresented = run.safeActions.every((id) =>
+      byId.has(id),
+    );
+    const registryState = (await this.registry.run(runId)).state;
     return {
       runId,
-      state: run.closed ? "closed" : (await this.registry.run(runId)).state,
+      state:
+        registryState === "active" &&
+        allSafeActionsRepresented &&
+        !hasRunnableWork &&
+        Object.keys(blockers).length
+          ? "blocked"
+          : registryState,
       actions,
       commitPoints,
-      blockers: jsonCopy(run.blockers),
+      blockers,
       evidenceGaps,
     };
   }
@@ -860,7 +901,7 @@ export class Orchestrator {
       at,
       reason: result.blocked
         ? "Skill reported a genuine affected-work blocker"
-        : "Skill task completed with verified exact outputs",
+        : completionReason(invocation.taskId),
     });
   }
 

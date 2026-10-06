@@ -372,6 +372,91 @@ describe("orchestrator over shared workspace", () => {
     );
   });
 
+  test("a blocked upstream is not mistaken for successful completion", async () => {
+    const x = await setup();
+    const upstream: RoutedTask = {
+      ...route("upstream", "system-capability"),
+      uncertainties: [
+        {
+          kind: "blocking-unknown",
+          reason: "Required API contract is unknown",
+          affectedTaskIds: ["upstream"],
+        },
+      ],
+    };
+    const downstream: RoutedTask = {
+      ...route("downstream", "product-ui-contract"),
+      dependsOn: ["upstream"],
+    };
+    const tasks = [upstream, downstream];
+    await x.orchestrator.start({
+      id: "run_blocked_upstream",
+      scopeOwnerId: "product_mimic",
+      entryMode: "system-first",
+      actor: agent,
+      at: now,
+      tasks,
+    });
+    const plan = await x.orchestrator.next("run_blocked_upstream", tasks);
+    expect(plan.actions.map(({ taskId, action }) => [taskId, action])).toEqual([
+      ["upstream", "BLOCK"],
+      ["downstream", "BLOCK"],
+    ]);
+    expect(plan.state).toBe("blocked");
+    expect(plan.blockers.downstream).toMatch(/upstream/);
+  });
+
+  test("a Skill blocker also blocks its sole consumer and the dynamic Run view", async () => {
+    const x = await setup();
+    const upstream = route("producer", "product-ui-contract");
+    const downstream: RoutedTask = {
+      ...route("consumer", "problem-profile", [
+        {
+          kind: "artifact",
+          name: "contract",
+          artifactType: "product-ui-contract",
+        },
+      ]),
+      dependsOn: ["producer"],
+    };
+    const tasks = [upstream, downstream];
+    await x.orchestrator.start({
+      id: "run_skill_block",
+      scopeOwnerId: "product_mimic",
+      entryMode: "hybrid",
+      actor: agent,
+      at: now,
+      tasks,
+    });
+    const invocation = (
+      await x.orchestrator.next("run_skill_block", tasks)
+    ).actions.find((action) => action.taskId === "producer")!.invocation!;
+    await x.orchestrator.accept(
+      invocation,
+      {
+        runId: invocation.runId,
+        taskId: invocation.taskId,
+        skillId: invocation.skillId,
+        inputRefs: [],
+        outputRefs: [],
+        blocked: {
+          reason: "Real prerequisite absent",
+          affectedTaskIds: ["producer"],
+        },
+      },
+      { kind: "skill", id: upstream.skillId },
+      now,
+    );
+    const plan = await x.orchestrator.next("run_skill_block", tasks);
+    expect(plan.actions.map(({ taskId, action }) => [taskId, action])).toEqual([
+      ["producer", "BLOCK"],
+      ["consumer", "BLOCK"],
+    ]);
+    expect(plan.state).toBe("blocked");
+    expect(plan.blockers.producer).toBe("Real prerequisite absent");
+    expect(plan.blockers.consumer).toMatch(/upstream/);
+  });
+
   test("rejected proposed directions are excluded from later Skill context", async () => {
     const x = await setup();
     const direction: RoutedTask = {
@@ -1520,6 +1605,96 @@ describe("orchestrator over shared workspace", () => {
         await x.workspace.snapshots.read(candidate.meta.id, 2),
       ).toBeUndefined();
     }
+  });
+
+  test("one named commit cannot bypass a new rule by omitting the governed property", async () => {
+    const x = await setup();
+    const rule = asset(
+      x.template,
+      "art_new_density_rule",
+      scopes[0],
+      content("governance", "Density rule", {
+        rules: [
+          {
+            targetAssetKind: "component",
+            targetName: "Button",
+            path: pathDensity,
+            policy: "locked",
+            value: "comfortable",
+          },
+        ],
+      }),
+      "proposed",
+    );
+    const button = asset(
+      x.template,
+      "art_button_without_density",
+      scopes[1],
+      content("component", "Button", { intent: "Visible button" }),
+      "proposed",
+    );
+    const approvals = await stagePacket(
+      x,
+      "run_missing_density",
+      "packet_missing_density",
+      [rule, button],
+    );
+    await expect(
+      x.registry.commit({
+        id: "commit_missing_density",
+        packetId: "packet_missing_density",
+        approvals,
+        actor: human,
+        at: now,
+        reason: "Try incomplete same-set policy",
+      }),
+    ).rejects.toThrow(/policy|authority/i);
+    const state = await x.registry.snapshot();
+    expect(state.canonical[rule.meta.id]).toBeUndefined();
+    expect(state.canonical[button.meta.id]).toBeUndefined();
+  });
+
+  test("one named commit cannot publish matching parent and child rules without exact source lock", async () => {
+    const x = await setup();
+    const rule = (id: string, scope: ScopeNode) =>
+      asset(
+        x.template,
+        id,
+        scope,
+        content("governance", id, {
+          rules: [
+            {
+              targetAssetKind: "component",
+              targetName: "Button",
+              path: pathDensity,
+              policy: "locked",
+              value: "comfortable",
+            },
+          ],
+        }),
+        "proposed",
+      );
+    const parent = rule("art_new_parent_density", scopes[0]);
+    const child = rule("art_new_child_density", scopes[1]);
+    const approvals = await stagePacket(
+      x,
+      "run_new_rule_pair",
+      "packet_new_rule_pair",
+      [parent, child],
+    );
+    await expect(
+      x.registry.commit({
+        id: "commit_new_rule_pair",
+        packetId: "packet_new_rule_pair",
+        approvals,
+        actor: human,
+        at: now,
+        reason: "Try child rule without approved parent lock",
+      }),
+    ).rejects.toThrow(/policy|authority/i);
+    const state = await x.registry.snapshot();
+    expect(state.canonical[parent.meta.id]).toBeUndefined();
+    expect(state.canonical[child.meta.id]).toBeUndefined();
   });
 
   test("scope ancestry is copied before caller mutation", async () => {
