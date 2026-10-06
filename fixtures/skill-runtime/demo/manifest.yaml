@@ -1,0 +1,40 @@
+skillId: mimic.runtime.demo
+manifestVersion: 1.0.0
+packageVersion: 0.1.0
+skillFile: SKILL.md
+inputs:
+  required:
+    - name: brief
+      kind: human-brief
+  optional:
+    - name: research
+      kind: evidence-file
+  alternatives:
+    - name: context
+      oneOf:
+        - name: existing-definition
+          kind: artifact
+          artifactType: product-definition
+          schemaVersion: 1.0.0
+        - name: context-brief
+          kind: human-brief
+outputs:
+  - product-definition
+  - decision
+  - system-request
+forbiddenResponsibilities:
+  - Approve product definition
+humanGates:
+  - decision: product-definition
+    authority: PROPOSE_ONLY
+supportedArtifactSchemas:
+  - artifactType: product-definition
+    schemaVersion: 1.0.0
+  - artifactType: decision
+    schemaVersion: 1.0.0
+  - artifactType: system-request
+    schemaVersion: 1.0.0
+examples:
+  - examples/intent.json
+tests:
+  - tests/contract-case.json
