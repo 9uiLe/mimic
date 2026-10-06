@@ -3,16 +3,168 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Mimic demo lab</title>
+    <meta name="color-scheme" content="light" />
+    <title>Mimic demo lab · Scenario review</title>
     <link rel="stylesheet" href="/src/style.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
-    <main>
-      <h1>Mimic demo lab</h1>
-      <p>This vanilla lab previews a semantic HTML prototype.</p>
-      <button type="button" id="preview">Show preview status</button>
-      <p id="status" role="status" aria-live="polite"></p>
-    </main>
+    <a class="skip-link" href="#preview-heading">Skip to prototype</a>
+    <div class="app-shell">
+      <header class="topbar" aria-label="Demo Lab navigation">
+        <a class="brand" href="/" aria-label="Mimic demo lab home">
+          <span class="brand-mark" aria-hidden="true">m<span>.</span></span>
+          <h1 class="brand-name">Mimic <span>demo lab</span></h1>
+        </a>
+        <span class="topbar-note"
+          >Design review workspace <span aria-hidden="true">/</span> Synthetic
+          catalog</span
+        >
+      </header>
+      <main class="workspace" aria-label="Demo Lab review workspace">
+        <aside class="controls" aria-labelledby="controls-heading">
+          <div class="section-kicker">
+            <span class="kicker-line"></span> Review context
+          </div>
+          <h2 id="controls-heading">
+            Explore a scenario<span class="heading-dot">.</span>
+          </h2>
+          <p class="intro">
+            Follow a design path, then inspect the generated prototype in its
+            exact scenario context.
+          </p>
+          <div class="control-stack">
+            <div class="field">
+              <label for="project">01 <span>Project</span></label
+              ><select id="project" disabled></select>
+            </div>
+            <div class="field">
+              <label for="domain">02 <span>Experience Domain</span></label
+              ><select id="domain" disabled></select>
+            </div>
+            <div class="field">
+              <label for="direction"
+                >03 <span>Direction / architecture</span></label
+              ><select id="direction" disabled></select>
+            </div>
+            <div class="field">
+              <label for="scenario">04 <span>Scenario</span></label
+              ><select id="scenario" disabled></select>
+            </div>
+          </div>
+          <div class="context-note">
+            <span class="note-icon" aria-hidden="true">i</span>
+            <p>
+              <strong>Review surface</strong> — these authored plans are visible
+              for inspection. Viewing a design here does not approve it or
+              change canonical selections.
+            </p>
+          </div>
+        </aside>
+        <section class="review" aria-labelledby="preview-heading">
+          <div class="review-head">
+            <div>
+              <div class="section-kicker">
+                <span class="kicker-line"></span> Live generated output
+              </div>
+              <h2 id="preview-heading">Prototype review</h2>
+              <p id="selection-summary" class="selection-summary">
+                Loading the synthetic catalog…
+              </p>
+            </div>
+            <span class="fixture-pill"
+              ><span class="pill-dot"></span> Synthetic fixture</span
+            >
+          </div>
+          <div class="toolbar">
+            <fieldset class="segmented" id="viewport-controls">
+              <legend>Viewport</legend>
+              <button type="button" data-viewport="desktop" aria-pressed="true">
+                Desktop</button
+              ><button
+                type="button"
+                data-viewport="mobile"
+                aria-pressed="false"
+              >
+                Mobile
+              </button>
+            </fieldset>
+            <fieldset class="segmented" id="mode-controls">
+              <legend>System mode</legend>
+              <button type="button" data-mode="current" aria-pressed="true">
+                Current</button
+              ><button type="button" data-mode="proposed" aria-pressed="false">
+                Proposed
+              </button>
+            </fieldset>
+          </div>
+          <div id="mode-notice" class="mode-notice" hidden></div>
+          <div class="preview-surface">
+            <div class="surface-head">
+              <span
+                ><span class="surface-indicator"></span> Generated HTML / CSS /
+                JS</span
+              ><span id="surface-size">880px canvas</span>
+            </div>
+            <section
+              class="preview-canvas"
+              id="preview-canvas"
+              aria-label="Prototype viewport"
+              tabindex="0"
+            >
+              <div class="device-frame desktop" id="device-frame">
+                <iframe
+                  id="prototype-frame"
+                  title="Generated specification prototype"
+                  sandbox="allow-scripts"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </div>
+              <div
+                id="preview-message"
+                class="preview-message"
+                role="status"
+                aria-live="polite"
+              >
+                Loading generated prototype…
+              </div>
+            </section>
+          </div>
+          <div class="preview-footer">
+            <button type="button" id="preview">Show preview status</button>
+            <p id="status" role="status" aria-live="polite"></p>
+            <a
+              id="standalone-link"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              hidden
+              >Open standalone prototype <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <section class="provenance" aria-labelledby="provenance-heading">
+            <div class="provenance-heading">
+              <div>
+                <div class="section-kicker">
+                  <span class="kicker-line"></span> Source trail
+                </div>
+                <h3 id="provenance-heading">Exact provenance</h3>
+              </div>
+              <span>Read from generated manifests</span>
+            </div>
+            <dl id="provenance-list">
+              <div>
+                <dt>Status</dt>
+                <dd>Waiting for catalog</dd>
+              </div>
+            </dl>
+          </section>
+        </section>
+      </main>
+      <footer class="site-footer">
+        Mimic prototype output is a specification, not a production application.
+        Synthetic data does not represent user evidence.
+      </footer>
+    </div>
   </body>
 </html>
