@@ -38,7 +38,7 @@
       "reason": "Clarify or propose detail freshness before treating pre-assignment values as current"
     }
   ],
-  "submit": "accepted, exit 0; see attempts/corrected/commands.jsonl",
+  "submit": "accepted, exit 0; see attempts/final/commands.jsonl",
   "readbackEventActions": [
     "produce-provisional",
     "produce-provisional",
