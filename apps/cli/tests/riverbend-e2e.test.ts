@@ -547,6 +547,11 @@ function submitAndCommit(
 }
 
 test("Riverbend authored chain replays through unmodified built CLI in independent processes", async () => {
+  const startedAt = performance.now();
+  const checkpoint = (phase: string) =>
+    console.info(
+      `Riverbend CLI replay ${phase}: ${Math.round(performance.now() - startedAt)} ms`,
+    );
   const source = await setupSystemFirst();
   roots.push(source.root);
   const root = mkdtempSync(path.join(os.tmpdir(), "mimic-riverbend-cli-"));
@@ -622,6 +627,7 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
     if (original.artifactId === source.refs.directionB.artifactId)
       directionCandidate = result.candidateRef;
   }
+  checkpoint("exact artifact chain");
   expect(source.refs.directionB.lockDigest).toBe(historicalDirection);
   expect(directionCandidate!.lockDigest).not.toBe(historicalDirection);
   const identity = JSON.parse(
@@ -755,6 +761,7 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
     }[];
     fallback?: string;
   };
+  checkpoint("Current and Proposed preview");
   expect(preview.fallback).toBeUndefined();
   expect(preview.directories).toHaveLength(2);
   expect(preview.reports).toHaveLength(2);
@@ -826,6 +833,7 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
     "--file",
     "current-bundle.json",
   ) as typeof preview;
+  checkpoint("standalone Current quality");
   expect(standalone.fallback).toBeUndefined();
   expect(standalone.directories).toHaveLength(1);
   expect(standalone.reports).toHaveLength(1);
@@ -1268,6 +1276,7 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
       ).toBe(true);
       expect(Object.keys(bundledChild!.bundled ?? {})).toEqual([]);
     }
+    checkpoint(`${mode} publish, retry, and readback`);
     published.push({
       mode,
       digest: released.digest,
