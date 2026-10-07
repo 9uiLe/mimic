@@ -1,0 +1,16 @@
+{
+  "id": "commit_rb159_source",
+  "packetId": "packet_rb159_source",
+  "approvals": [
+    {
+      "proposalId": "proposal_rb159_source",
+      "decisionId": "decision_rb159_source"
+    }
+  ],
+  "actor": {
+    "kind": "human",
+    "id": "d62fbb04-9fd1-42af-8e06-48be824f6fc4"
+  },
+  "at": "2026-10-08T12:00:01.000Z",
+  "reason": "If separately confirmed by the owner, publish only the exact approved source revision."
+}

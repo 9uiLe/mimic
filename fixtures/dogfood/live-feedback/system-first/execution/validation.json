@@ -1,0 +1,64 @@
+{
+  "kind": "static-contract-checks-only",
+  "node": "v24.21.0",
+  "checks": [
+    {
+      "check": "stored-artifact-digest",
+      "id": "art_rb157_current_inspection@1",
+      "pass": true,
+      "expected": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+      "actual": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2"
+    },
+    {
+      "check": "stored-artifact-digest",
+      "id": "art_rb157_detail_freshness_request@1",
+      "pass": true,
+      "expected": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4",
+      "actual": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4"
+    },
+    {
+      "check": "stored-artifact-digest",
+      "id": "art_rb157_dispatch_task@1",
+      "pass": true,
+      "expected": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+      "actual": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1"
+    },
+    {
+      "check": "stored-artifact-digest",
+      "id": "art_rb157_product_intent@1",
+      "pass": true,
+      "expected": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+      "actual": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7"
+    },
+    {
+      "check": "stored-artifact-digest",
+      "id": "art_rb157_ui_contract@1",
+      "pass": true,
+      "expected": "sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38",
+      "actual": "sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38"
+    },
+    {
+      "check": "new-source-digest",
+      "pass": true,
+      "digest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0"
+    },
+    {
+      "check": "pending-packet-candidate",
+      "pass": true
+    },
+    {
+      "check": "planned-approved-envelope",
+      "pass": true,
+      "digest": "sha256:f39c8286a87bb8d4e71c8934e99230e93ed81e51f99fffd68945bda4e716dc60"
+    },
+    {
+      "check": "planned-commit-binding",
+      "pass": true
+    },
+    {
+      "check": "no-authority-or-canonical-change",
+      "pass": true
+    }
+  ],
+  "allPassed": true
+}

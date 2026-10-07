@@ -1,0 +1,379 @@
+{
+  "workspace": "/tmp/mimic-9ui-159-source-review",
+  "sourceWorkspace": "/tmp/mimic-9ui-157-reviewed.SxJHia",
+  "sourceWorkspaceSha256": "0a4abad4dcf4ef4521f7cc019b20bd751288db60f295ca7bb8a09d95d97ce07f",
+  "workingWorkspaceSha256": "4cdcb57e201584f088fbfcdc9c0d28f7babe07a0c2a189e9e15a3b9dea466b54",
+  "oldRun": {
+    "id": "run_9ui157_live_reviewed",
+    "artifacts": [
+      {
+        "artifactId": "art_rb157_current_inspection",
+        "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+        "revision": 1
+      },
+      {
+        "artifactId": "art_rb157_product_intent",
+        "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+        "revision": 1
+      },
+      {
+        "artifactId": "art_rb157_dispatch_task",
+        "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+        "revision": 1
+      },
+      {
+        "artifactId": "art_rb157_ui_contract",
+        "lockDigest": "sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38",
+        "revision": 1
+      },
+      {
+        "artifactId": "art_rb157_detail_freshness_request",
+        "lockDigest": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4",
+        "revision": 1
+      }
+    ],
+    "proposalIds": ["proposal_rb157_product"],
+    "canonical": {},
+    "storedDigests": {
+      "art_rb157_current_inspection@1": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+      "art_rb157_detail_freshness_request@1": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4",
+      "art_rb157_dispatch_task@1": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+      "art_rb157_product_intent@1": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+      "art_rb157_ui_contract@1": "sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38"
+    }
+  },
+  "newRun": {
+    "artifacts": [
+      {
+        "artifactId": "art_rb157_current_inspection",
+        "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+        "revision": 2
+      }
+    ],
+    "base": [],
+    "blockers": {},
+    "entryMode": "system-first",
+    "id": "run_9ui159_source_review",
+    "proposals": {
+      "proposal_rb159_source": {
+        "alternatives": [
+          "approve this exact bounded source",
+          "request a revision with additional evidence",
+          "reject this source"
+        ],
+        "dependents": [],
+        "evidenceLimits": [
+          "Synthetic inventory only; detail-field freshness, production behavior and user validation are unknown."
+        ],
+        "id": "proposal_rb159_source",
+        "packetId": "packet_rb159_source",
+        "rationale": "A current label is limited to the constructed inventory; human review is required before canonical use.",
+        "readiness": "ready",
+        "ref": {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+          "revision": 2
+        },
+        "status": "pending"
+      }
+    },
+    "reused": [],
+    "safeActions": [],
+    "scope": "org_local"
+  },
+  "newPacket": {
+    "createdAt": "2026-10-07T23:23:54.004Z",
+    "id": "packet_rb159_source",
+    "proposalIds": ["proposal_rb159_source"],
+    "reason": "Review the bounded system-capability source before any canonical use.",
+    "runId": "run_9ui159_source_review"
+  },
+  "newSnapshot": {
+    "artifact": {
+      "approval": {
+        "status": "pending"
+      },
+      "content": {
+        "availability": "current",
+        "capabilityId": "riverbend.single_order_inspection_assignment",
+        "description": "The synthetic GET /work-orders list includes ID, zone, severity, age, and assigned crew. The constructed screen inventory permits opening one work-order detail and assigning one crew there. It does not establish whether detail refreshes severity, age, or crew; update time, authorization, errors, persistence, and deployed behavior are unknown. No comparison or bulk-assignment endpoint is inventoried.",
+        "summary": "Current only in the constructed Riverbend inventory: a list exposes work-order ID, zone, severity, age, and crew; a detail can open one order and offer one crew assignment. Detail-field freshness and deployed behavior are unverified.",
+        "supportingEvidence": [
+          "inputs/input-packet.json#/system/observedInventory/0",
+          "inputs/input-packet.json#/system/observedInventory/1",
+          "inputs/input-packet.json#/system/observedInventory/2"
+        ]
+      },
+      "dependencies": [],
+      "lifecycle": {
+        "freshness": "valid",
+        "status": "proposed"
+      },
+      "meta": {
+        "createdAt": "2026-10-07T23:25:00.000Z",
+        "id": "art_rb157_current_inspection",
+        "revision": 2,
+        "schemaVersion": "1.0.0",
+        "supersedesRevision": 1,
+        "title": "Riverbend constructed single-order inspection capability",
+        "type": "system-capability"
+      },
+      "origin": {
+        "actorId": "mimic.s04.system-capability-extractor",
+        "actorKind": "skill",
+        "createdAt": "2026-10-07T23:25:00.000Z",
+        "runId": "run_9ui159_source_review"
+      },
+      "provenance": [
+        {
+          "evidenceRefs": [
+            "inputs/input-packet.json#/classification",
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1"
+          ],
+          "kind": "fact",
+          "path": "/content/summary"
+        },
+        {
+          "inputRefs": ["inputs/input-packet.json#/system"],
+          "kind": "derived",
+          "path": "/content/capabilityId"
+        },
+        {
+          "evidenceRefs": [
+            "inputs/input-packet.json#/classification",
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1"
+          ],
+          "kind": "fact",
+          "path": "/content/availability"
+        },
+        {
+          "evidenceRefs": [
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1",
+            "inputs/input-packet.json#/system/observedInventory/2",
+            "inputs/input-packet.json#/limits/0"
+          ],
+          "kind": "fact",
+          "path": "/content/description"
+        },
+        {
+          "inputRefs": ["inputs/input-packet.json#/system/observedInventory"],
+          "kind": "derived",
+          "path": "/content/supportingEvidence"
+        }
+      ],
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      }
+    },
+    "canonicalization": "mimic-json-v1",
+    "digest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0"
+  },
+  "newEvents": [
+    {
+      "action": "start",
+      "actor": {
+        "id": "cli",
+        "kind": "agent"
+      },
+      "at": "2026-10-07T23:23:53.778Z",
+      "canonicalAfter": {},
+      "freshnessAfter": {},
+      "inputs": [],
+      "outputs": [],
+      "reason": "Start from verified applicable canonical selection",
+      "runAfter": {
+        "artifacts": [],
+        "base": [],
+        "blockers": {},
+        "entryMode": "system-first",
+        "id": "run_9ui159_source_review",
+        "proposals": {},
+        "reused": [],
+        "safeActions": ["task_source_review"],
+        "scope": "org_local"
+      },
+      "runId": "run_9ui159_source_review",
+      "sequence": 12
+    },
+    {
+      "action": "produce-provisional",
+      "actor": {
+        "id": "mimic.s04.system-capability-extractor",
+        "kind": "skill"
+      },
+      "at": "2026-10-07T23:23:54.004Z",
+      "canonicalAfter": {},
+      "freshnessAfter": {},
+      "inputs": [],
+      "outputs": [
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+          "revision": 2
+        }
+      ],
+      "reason": "Skill task \"task_source_review\" by \"mimic.s04.system-capability-extractor\" returned exact provisional output",
+      "runAfter": {
+        "artifacts": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+            "revision": 2
+          }
+        ],
+        "base": [],
+        "blockers": {},
+        "entryMode": "system-first",
+        "id": "run_9ui159_source_review",
+        "proposals": {},
+        "reused": [],
+        "safeActions": ["task_source_review"],
+        "scope": "org_local"
+      },
+      "runId": "run_9ui159_source_review",
+      "sequence": 13
+    },
+    {
+      "action": "submit-proposal",
+      "actor": {
+        "id": "orchestrator",
+        "kind": "agent"
+      },
+      "at": "2026-10-07T23:23:54.004Z",
+      "canonicalAfter": {},
+      "freshnessAfter": {},
+      "inputs": [],
+      "outputs": [
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+          "revision": 2
+        }
+      ],
+      "reason": "Review the bounded system-capability source before any canonical use.",
+      "runAfter": {
+        "artifacts": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+            "revision": 2
+          }
+        ],
+        "base": [],
+        "blockers": {},
+        "entryMode": "system-first",
+        "id": "run_9ui159_source_review",
+        "proposals": {
+          "proposal_rb159_source": {
+            "alternatives": [
+              "approve this exact bounded source",
+              "request a revision with additional evidence",
+              "reject this source"
+            ],
+            "dependents": [],
+            "evidenceLimits": [
+              "Synthetic inventory only; detail-field freshness, production behavior and user validation are unknown."
+            ],
+            "id": "proposal_rb159_source",
+            "packetId": "packet_rb159_source",
+            "rationale": "A current label is limited to the constructed inventory; human review is required before canonical use.",
+            "readiness": "ready",
+            "ref": {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+              "revision": 2
+            },
+            "status": "pending"
+          }
+        },
+        "reused": [],
+        "safeActions": ["task_source_review"],
+        "scope": "org_local"
+      },
+      "runId": "run_9ui159_source_review",
+      "sequence": 14
+    },
+    {
+      "action": "set-work",
+      "actor": {
+        "id": "orchestrator",
+        "kind": "agent"
+      },
+      "at": "2026-10-07T23:23:54.004Z",
+      "canonicalAfter": {},
+      "details": {
+        "resolutions": {}
+      },
+      "freshnessAfter": {},
+      "inputs": [],
+      "outputs": [],
+      "reason": "Skill task \"task_source_review\" completed with verified exact outputs",
+      "runAfter": {
+        "artifacts": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+            "revision": 2
+          }
+        ],
+        "base": [],
+        "blockers": {},
+        "entryMode": "system-first",
+        "id": "run_9ui159_source_review",
+        "proposals": {
+          "proposal_rb159_source": {
+            "alternatives": [
+              "approve this exact bounded source",
+              "request a revision with additional evidence",
+              "reject this source"
+            ],
+            "dependents": [],
+            "evidenceLimits": [
+              "Synthetic inventory only; detail-field freshness, production behavior and user validation are unknown."
+            ],
+            "id": "proposal_rb159_source",
+            "packetId": "packet_rb159_source",
+            "rationale": "A current label is limited to the constructed inventory; human review is required before canonical use.",
+            "readiness": "ready",
+            "ref": {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:0c8180500def077593d3b0bb11ffabeda44504b39a3dea3a7f618a9925f9d0c0",
+              "revision": 2
+            },
+            "status": "pending"
+          }
+        },
+        "reused": [],
+        "safeActions": [],
+        "scope": "org_local"
+      },
+      "runId": "run_9ui159_source_review",
+      "sequence": 15
+    }
+  ],
+  "canonical": {},
+  "decisions": {},
+  "commits": {},
+  "plannedApprovedRef": {
+    "artifactId": "art_rb157_current_inspection",
+    "revision": 3,
+    "lockDigest": "sha256:f39c8286a87bb8d4e71c8934e99230e93ed81e51f99fffd68945bda4e716dc60"
+  },
+  "newSubmissionBinding": {
+    "version": 1,
+    "runId": "run_9ui159_source_review",
+    "taskId": "task_source_review",
+    "packageDigest": "a26e4a20af5f9067b08458f08ff0acabcc4ce0789a1ef57003ee2da4e307095a",
+    "workDigest": "81be3560457298bbe918c052e11e0f72ab0e72090a718e140ef660c42ecde9d8",
+    "baselineSequence": 12
+  },
+  "routedInputSha256": "15de4ecd13795d330c313d0508398733b7bc71ca361edfd2e5ffb1230cd66432",
+  "packageFileSha256": {
+    "SKILL.md": "39c8cad60126f97685fc574c4ba99b4e181db391e558674cd1c57000ac4d39b0",
+    "manifest.yaml": "4a54724c0cb0531bef1756f1090c3c18cf2a22a27c9acfe132391810a681b3e2"
+  }
+}

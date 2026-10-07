@@ -1,0 +1,60 @@
+{
+  "packetId": "riverbend-observed-input-v1",
+  "classification": "entirely synthetic; constructed inventory, not a deployed backend or observed dispatcher study",
+  "sources": [
+    {
+      "path": "fixtures/dogfood/system-first/case.json",
+      "usedFields": [
+        "privacy",
+        "system.name",
+        "system.purpose",
+        "system.evidence[0].observed",
+        "system.evidence[0].limitations",
+        "system.sampleOrders",
+        "task",
+        "currentCapability"
+      ]
+    },
+    {
+      "path": "Linear 9UI-157",
+      "usedFields": ["goal and provisional authority boundary"]
+    },
+    {
+      "path": "Mimic v1 architecture and operating reference",
+      "usedFields": [
+        "WCAG 2.2 AA baseline; provisional-to-human approval boundary"
+      ]
+    }
+  ],
+  "system": {
+    "name": "Riverbend Repairs",
+    "context": "A constructed city repair desk for public water-leak work orders.",
+    "observedInventory": [
+      "Synthetic GET /work-orders response lists work-order ID, address zone, severity, age, and assigned crew.",
+      "The constructed screen inventory permits opening one work-order detail and assigning one crew from detail.",
+      "The inventory has no comparison or bulk-assignment endpoint; lifecycle, error and authorization behavior were not observed."
+    ],
+    "exampleRecords": [
+      {
+        "id": "WO-1042",
+        "zone": "North",
+        "severity": "urgent",
+        "ageHours": 3,
+        "crew": "unassigned"
+      },
+      {
+        "id": "WO-1043",
+        "zone": "West",
+        "severity": "routine",
+        "ageHours": 18,
+        "crew": "Crew B"
+      }
+    ]
+  },
+  "humanTaskRequirement": "Before assigning a crew, inspect a work order's severity and age without losing its ID between list and detail.",
+  "limits": [
+    "No real users, interviews, telemetry, production backend, authorization semantics or assignment outcome were supplied.",
+    "No expected artifact, prior design-direction candidate or historical approval is input.",
+    "Any model output is provisional/pending; no human commit is requested."
+  ]
+}
