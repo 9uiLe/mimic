@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { createServer } from "node:http";
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { buildPrototype } from "../../../packages/core/src/prototype-builder/index.js";
 import { runBrowserQualityGates } from "../../../packages/core/src/quality-gates/browser.js";
 import {
@@ -66,13 +67,28 @@ test("Experience-first generated case states retain context on desktop and mobil
 }, testInfo) => {
   // The browser gate checks both viewports and all seven states within this test.
   test.setTimeout(300_000);
+  const started = performance.now();
+  let previousPhase = started;
+  const phase = (name: string, details?: Record<string, unknown>) => {
+    const now = performance.now();
+    console.info(
+      `C-204 phase ${testInfo.project.name} ${name}: total=${(now - started).toFixed(1)}ms delta=${(now - previousPhase).toFixed(1)}ms ${JSON.stringify(details ?? {})}`,
+    );
+    previousPhase = now;
+  };
+  const context = page.context();
   const fixture = await setupExperienceFirst();
+  phase("fixture ready");
   const output = await buildPrototype(
     fixture.store,
     fixture.input,
     fixture.root,
   );
+  phase("bundle built");
+  let requests = 0;
+  let connections = 0;
   const server = createServer(async (request, response) => {
+    requests += 1;
     const name = request.url === "/" ? "index.html" : request.url?.slice(1);
     if (
       !name ||
@@ -90,7 +106,15 @@ test("Experience-first generated case states retain context on desktop and mobil
     });
     response.end(await readFile(path.join(output.directory, name)));
   });
+  server.on("connection", (socket) => {
+    connections += 1;
+    socket.on("close", () => {
+      connections -= 1;
+    });
+  });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  phase("server listening");
+  const cleanupErrors: unknown[] = [];
   try {
     const address = server.address();
     if (!address || typeof address === "string")
@@ -150,6 +174,7 @@ test("Experience-first generated case states retain context on desktop and mobil
         page.locator('[data-state="success"] h2').first(),
       ).toBeFocused();
     }
+    phase("state routes complete");
     for (const state of ["empty", "partial", "empty", "partial"] as const) {
       await page.getByRole("button", { name: `Show ${state}` }).click();
       await expect(page.getByRole("status")).toHaveText(`${state} state`);
@@ -220,6 +245,7 @@ test("Experience-first generated case states retain context on desktop and mobil
               child.id || (child as HTMLElement).dataset.responsiveTarget,
           ),
         );
+    phase("layout checked");
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
       .poll(order)
@@ -229,6 +255,7 @@ test("Experience-first generated case states retain context on desktop and mobil
         "evidence-list",
         "decision-history",
       ]);
+    phase("mobile DOM ready", { order: await order() });
     await expect(page.locator("#case-context")).toHaveCount(0);
     await expect(page.locator("#mobile-case-identity")).toHaveText(
       "Case C-204",
@@ -261,11 +288,23 @@ test("Experience-first generated case states retain context on desktop and mobil
         "evidence-list",
         "decision-history",
       ]);
+    phase("desktop DOM ready", { order: await order() });
     await expect(page.locator("#overview-anchor")).toBeFocused();
     await expect(page.getByRole("status")).toHaveText("success state");
     await expect(evidence).toBeVisible();
     await expect(history).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(order)
+      .toEqual([
+        "review-decision",
+        "mobile-case-nav",
+        "evidence-list",
+        "decision-history",
+      ]);
+    await expect(page.locator("#case-context")).toHaveCount(0);
+    await expect(page.locator("#mobile-case-nav")).toHaveCount(1);
+    phase("mobile DOM restored", { order: await order() });
     await expect(page.locator("#mobile-overview-anchor")).toBeFocused();
     await expect(evidence).toBeVisible();
     await expect(history).toBeVisible();
@@ -328,8 +367,29 @@ test("Experience-first generated case states retain context on desktop and mobil
       await expect(
         page.locator('[data-state="empty"] h2').first(),
       ).toBeFocused();
+      phase("empty focused before desktop resize", {
+        order: await order(),
+        connections,
+        requests,
+      });
       await page.setViewportSize({ width: 1280, height: 800 });
+      phase("desktop viewport set", { order: await order() });
+      await expect
+        .poll(order)
+        .toEqual([
+          "case-context",
+          "review-decision",
+          "evidence-list",
+          "decision-history",
+        ]);
+      await expect(page.locator("#case-context")).toHaveCount(1);
+      await expect(page.locator("#mobile-case-nav")).toHaveCount(0);
+      await expect(page.locator("[data-responsive-details]")).toHaveCount(0);
+      phase("desktop DOM restored before keyboard", { order: await order() });
       await expect(page.getByRole("status")).toHaveText("empty state");
+      await expect(
+        page.locator('[data-state="empty"] h2').first(),
+      ).toBeVisible();
       await expect(
         page.locator('[data-state="empty"] h2').first(),
       ).toBeFocused();
@@ -344,12 +404,26 @@ test("Experience-first generated case states retain context on desktop and mobil
       ).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(page.locator("#case-context h2")).toBeFocused();
+      phase("desktop keyboard return complete", { order: await order() });
       await page.setViewportSize({ width: 390, height: 844 });
+      await expect
+        .poll(order)
+        .toEqual([
+          "review-decision",
+          "mobile-case-nav",
+          "evidence-list",
+          "decision-history",
+        ]);
+      await expect(page.locator("#case-context")).toHaveCount(0);
+      await expect(page.locator("#mobile-case-nav")).toHaveCount(1);
+      await expect(page.locator("[data-responsive-details]")).toHaveCount(2);
+      phase("mobile DOM restored before focus check", { order: await order() });
       await expect(page.getByRole("status")).toHaveText("success state");
       await expect(page.locator("#review-decision h2")).toBeFocused();
       await page.keyboard.press("Tab");
       await expect(page.locator("#choose-case")).toBeFocused();
     }
+    phase("journey assertions complete", { connections, requests });
     const report = await runBrowserQualityGates(
       {
         trustedRoot: fixture.root,
@@ -359,6 +433,11 @@ test("Experience-first generated case states retain context on desktop and mobil
       },
       browser,
     );
+    phase("browser gates complete", {
+      findings: report.findings.length,
+      connections,
+      requests,
+    });
     const inspected = await inspectBundle({
       trustedRoot: fixture.root,
       directory: output.directory,
@@ -366,6 +445,7 @@ test("Experience-first generated case states retain context on desktop and mobil
     console.info(
       `C-204 bundle ${inspected.target.bundleDigest} on ${testInfo.project.name} at 1280x800 and 390x844`,
     );
+    phase("bundle inspected", { digest: inspected.target.bundleDigest });
     const engineName = browser.browserType().name();
     if (!["chromium", "firefox", "webkit"].includes(engineName))
       throw new Error(`Unexpected browser engine: ${engineName}`);
@@ -396,8 +476,45 @@ test("Experience-first generated case states retain context on desktop and mobil
         inspected.target.bundleDigest,
       ),
     ).toThrow("Unverified");
+    phase("report assertions complete", { connections, requests });
+  } catch (error) {
+    phase("original failure", { error: String(error), connections, requests });
+    throw error;
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    await rm(fixture.root, { recursive: true, force: true });
+    const cleanup = async (name: string, action: () => Promise<void>) => {
+      const before = performance.now();
+      try {
+        await action();
+        phase(`${name} complete`, {
+          durationMs: +(performance.now() - before).toFixed(1),
+          connections,
+          requests,
+        });
+      } catch (error) {
+        cleanupErrors.push(error);
+        phase(`${name} failed`, {
+          error: String(error),
+          connections,
+          requests,
+        });
+      }
+    };
+    phase("cleanup start", { connections, requests });
+    await cleanup("page.close", () => page.close());
+    await cleanup("context.close", () => context.close());
+    await cleanup("server.close", async () => {
+      const closed = new Promise<void>((resolve, reject) => {
+        server.close((error) => (error ? reject(error) : resolve()));
+      });
+      server.closeAllConnections();
+      phase("server.closeAllConnections called", { connections, requests });
+      await closed;
+      phase("server.close callback", { connections, requests });
+    });
+    await cleanup("fixture rm", () =>
+      rm(fixture.root, { recursive: true, force: true }),
+    );
   }
+  if (cleanupErrors.length)
+    throw new AggregateError(cleanupErrors, "C-204 cleanup failed");
 });
