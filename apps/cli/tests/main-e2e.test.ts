@@ -675,6 +675,7 @@ test("main executable authors, locally approves, previews, and publishes an exac
     id: string,
     mode: "reference" | "portable",
     source: string,
+    primary: typeof baseDependency = baseDependency,
   ) => ({
     ...releasePlan,
     ref: { packageId: `product/${id}`, version: "0.1.0" },
@@ -690,10 +691,10 @@ test("main executable authors, locally approves, previews, and publishes an exac
         status: "included",
         artifacts: [],
         files: ["foundation.txt"],
-        dependencies: [baseDependency.ref],
+        dependencies: [primary.ref],
       },
     },
-    dependencies: [{ ...baseDependency, source }],
+    dependencies: [{ ...primary, source }],
   });
   put(
     root,
@@ -710,12 +711,13 @@ test("main executable authors, locally approves, previews, and publishes an exac
     source: string,
     kind: "local-publication" | "imported-acceptance",
     extras: (typeof baseDependency)[] = [],
+    primary: typeof baseDependency = baseDependency,
   ) => {
     const planFile = `${id}-plan.json`;
     const policyFile = `${id}-policy.json`;
     const dependencyFile = `${id}-dependencies.json`;
     const confirmationFile = `${id}-release.json`;
-    const authored = consumer(id, mode, source);
+    const authored = consumer(id, mode, source, primary);
     authored.dependencies.push(...extras);
     authored.inventory["product-foundation"].dependencies.push(
       ...extras.map((item) => item.ref),
@@ -731,6 +733,7 @@ test("main executable authors, locally approves, previews, and publishes an exac
         nodes: {
           ref: { packageId: string; version: string };
           digest: string;
+          locations: string[];
         }[];
         edges: unknown[];
       };
@@ -877,7 +880,9 @@ test("main executable authors, locally approves, previews, and publishes an exac
     "packages",
     "local-publication",
   );
-  portable.confirm();
+  const portablePublished = JSON.parse(portable.confirm().stdout) as {
+    digest: string;
+  };
   expect(JSON.parse(portable.publish().stdout).status).toBe("recovered");
 
   const preparedOnly = dependentRelease(
@@ -1002,8 +1007,23 @@ test("main executable authors, locally approves, previews, and publishes an exac
         "Synthetic host accepts these imported exact bytes for this consumer only",
     })),
   };
+  put(root, "main_imported-dependencies.json", {
+    ...accepted,
+    packages: accepted.packages.map((item) => ({
+      ...item,
+      publisherAuthenticated: true,
+    })),
+  });
+  expect(invoke(root, ...copied.prepareArgs).status).toBe(4);
   put(root, "main_imported-dependencies.json", accepted);
   copied.confirm();
+  const importedPortable = dependentRelease(
+    "main_imported_portable",
+    "portable",
+    "imports",
+    "imported-acceptance",
+  );
+  importedPortable.confirm();
 
   const referenceDependency = {
     ref: reference.authored.ref,
@@ -1064,6 +1084,55 @@ test("main executable authors, locally approves, previews, and publishes an exac
   };
   put(root, "main_bad_portable-dependencies.json", missingGrant);
   expect(invoke(root, ...badPortable.prepareArgs).status).toBe(3);
+  const portableDependency = {
+    ref: portable.authored.ref,
+    digest: portablePublished.digest,
+    source: "packages",
+    license: baseDependency.license,
+  };
+  const validPortable = dependentRelease(
+    "main_portable_closure",
+    "portable",
+    "packages",
+    "local-publication",
+    [],
+    portableDependency,
+  );
+  expect(validPortable.matrix.dependencyContext.nodes).toHaveLength(2);
+  expect(validPortable.matrix.dependencyContext.edges).toHaveLength(2);
+  expect(
+    validPortable.matrix.dependencyContext.nodes.find(
+      (node) => node.ref.packageId === baseDependency.ref.packageId,
+    )?.locations,
+  ).toEqual(["bundled:product/main_portable@0.1.0"]);
+  const missingTransitiveGrant = {
+    ...validPortable.dependencyDecision,
+    redistribution: validPortable.dependencyDecision.redistribution.filter(
+      (item) => item.ref.packageId !== baseDependency.ref.packageId,
+    ),
+  };
+  put(root, "main_portable_closure-dependencies.json", missingTransitiveGrant);
+  const deniedGrant = invoke(root, ...validPortable.prepareArgs);
+  expect(deniedGrant.status, deniedGrant.stderr).toBe(3);
+  expect(deniedGrant.stderr).toContain(
+    "Missing exact redistribution grant: product/main-e2e@0.1.0",
+  );
+  expect(
+    existsSync(
+      path.join(
+        root,
+        ".mimic",
+        "releases",
+        "main_portable_closure.prepared.json",
+      ),
+    ),
+  ).toBe(false);
+  put(
+    root,
+    "main_portable_closure-dependencies.json",
+    validPortable.dependencyDecision,
+  );
+  validPortable.confirm();
 
   const sourceChanged = structuredClone(reference.authored);
   sourceChanged.ref.packageId = "product/main_changed_consumer";

@@ -46,6 +46,11 @@ const refLike = (value: unknown): value is PackageRef =>
   typeof value === "object" &&
   typeof (value as PackageRef).packageId === "string" &&
   typeof (value as PackageRef).version === "string";
+const onlyKeys = (value: unknown, names: readonly string[]): boolean =>
+  !!value &&
+  typeof value === "object" &&
+  !Array.isArray(value) &&
+  Object.keys(value).every((key) => names.includes(key));
 function inside(root: string, target: string): boolean {
   return target !== root && target.startsWith(`${root}${path.sep}`);
 }
@@ -268,7 +273,20 @@ export async function authorizeDependencies(
 ): Promise<AuthorizedDependencies> {
   check(confirmation, "Dependency confirmation is unavailable", "UNSUPPORTED");
   check(
-    confirmation.version === 1 &&
+    onlyKeys(confirmation, [
+      "version",
+      "action",
+      "hostId",
+      "humanActorId",
+      "confirmedAt",
+      "contextDigest",
+      "consumer",
+      "destination",
+      "packages",
+      "licenses",
+      "redistribution",
+    ]) &&
+      confirmation.version === 1 &&
       confirmation.action === "release-dependencies" &&
       confirmation.hostId === hostId &&
       typeof confirmation.humanActorId === "string" &&
@@ -286,9 +304,7 @@ export async function authorizeDependencies(
   const { nodes, edges } = review.context;
   check(
     confirmation.packages.length === nodes.length &&
-      confirmation.licenses.length === edges.length &&
-      confirmation.redistribution.length ===
-        (review.context.consumer.mode === "portable" ? nodes.length : 0),
+      confirmation.licenses.length === edges.length,
     "Dependency decisions are incomplete",
   );
   for (const node of nodes) {
@@ -301,7 +317,15 @@ export async function authorizeDependencies(
     );
     const decision = matching[0]!;
     check(
-      decision.allowed === true &&
+      onlyKeys(decision, [
+        "ref",
+        "digest",
+        "kind",
+        "allowed",
+        "evidence",
+        "publicationConfirmation",
+      ]) &&
+        decision.allowed === true &&
         typeof decision.evidence === "string" &&
         decision.evidence.trim() !== "" &&
         ["local-publication", "imported-acceptance"].includes(decision.kind),
@@ -331,7 +355,8 @@ export async function authorizeDependencies(
     );
     const decision = matching[0]!;
     check(
-      decision.allowed === true &&
+      onlyKeys(decision, ["edge", "allowed", "evidence"]) &&
+        decision.allowed === true &&
         typeof decision.evidence === "string" &&
         decision.evidence.trim() !== "",
       `Dependency license denied: ${identity(edge.ref)}`,
@@ -349,13 +374,19 @@ export async function authorizeDependencies(
       `Missing exact redistribution grant: ${identity(node.ref)}`,
     );
     check(
-      matching[0]!.allowed === true &&
+      onlyKeys(matching[0], ["ref", "digest", "allowed", "evidence"]) &&
+        matching[0]!.allowed === true &&
         typeof matching[0]!.evidence === "string" &&
         matching[0]!.evidence.trim() !== "",
       `Redistribution denied: ${identity(node.ref)}`,
       "UNSUPPORTED",
     );
   }
+  check(
+    confirmation.redistribution.length ===
+      (review.context.consumer.mode === "portable" ? nodes.length : 0),
+    "Unexpected redistribution decision",
+  );
   return {
     source: review.source,
     manifests: review.manifests,

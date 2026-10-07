@@ -11,6 +11,7 @@ import {
   PackageRegistry,
   parseDesignLock,
   parseManifest,
+  sha256,
   type ArtifactStore,
   type CompileInput,
   type InventoryCategory,
@@ -411,10 +412,16 @@ async function verifiedLocalPublication(
     if (!idPattern.test(id)) continue;
     try {
       const prepared = await readPrepared(root, id);
+      const externalLocations = node.locations.filter(
+        (location) => !location.startsWith("bundled:"),
+      );
       if (
         prepared.request.digest !== node.digest ||
         !same(prepared.request.ref, node.ref) ||
-        !node.locations.includes(prepared.destination)
+        (externalLocations.length > 0 &&
+          !externalLocations.includes(prepared.destination)) ||
+        (externalLocations.length === 0 &&
+          !node.locations.some((location) => location.startsWith("bundled:")))
       )
         continue;
       const intent = JSON.parse(
@@ -460,6 +467,12 @@ async function verifiedLocalPublication(
       if (
         snapshot &&
         packageDigest(snapshot) === node.digest &&
+        sha256(snapshot.lockBytes) === node.lockDigest &&
+        same(node.manifest, {
+          mode: prepared.request.manifest.mode,
+          scope: prepared.request.manifest.scope,
+          approval: prepared.request.manifest.approval,
+        }) &&
         same(
           parseManifest(snapshot.manifestBytes),
           prepared.request.manifest,

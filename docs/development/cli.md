@@ -24,9 +24,51 @@ Use Node 24.21.0. All commands accept `--root <workspace-directory>` (default: c
 
 The standalone CLI requires `--policy-confirmation <file>` from the cooperative controlling host. The assertion has `version: 1`, `action: "release-policy"`, a nonempty `hostId`, `confirmedAt` after the quality inspection, the exact `planDigest` from `release inspect`, and one `decisions` entry per finding. Each decision names the exact `reportDigest`, `findingIndex`, and `findingDigest` from `release inspect`, plus the finding's `criterion`, `state`, and `severity`, `blockRelease`, and a nonempty `reason`. The index and full finding digest distinguish viewport findings with the same criterion, state, and severity. Missing, duplicate, or changed findings fail. This assertion does not approve publication; the later release confirmation binds the full candidate and destination and must use the same `hostId`. The controlling host must show the findings to its operator and write the assertion. As with local decide/commit confirmation, another process with the same OS rights could forge it.
 
-For standalone dependency-bearing releases, `--dependency-confirmation <file>` is a separate versioned controlling-host assertion. It has `version: 1`, `action: "release-dependencies"`, the same `hostId`, an explicit `humanActorId` and `confirmedAt`, the exact `dependencyContextDigest` from inspect, the consumer package ref and mode, and the intended local destination. `packages` contains one permitted decision per exact reachable package ref and digest, with evidence and `kind: "local-publication"` or `"imported-acceptance"`. `licenses` contains one permitted decision per complete exact edge from inspect, including its license and distribution; two same-license edges still require two decisions. `redistribution` contains a permitted ref/digest/evidence grant for every reachable Portable package node and is empty for Reference. Missing or denied decisions fail closed. An imported acceptance is the host and human explicitly accepting those exact bytes for this consumer; it does not assert prior Mimic publication or independent publisher authentication. No field of the authored plan or license text grants authority by itself.
+For standalone dependency-bearing releases, `--dependency-confirmation <file>` is a separate versioned controlling-host assertion. It has `version: 1`, `action: "release-dependencies"`, the same `hostId`, an explicit `humanActorId` and `confirmedAt`, a `contextDigest` field equal to `release inspect`'s `dependencyContextDigest`, the `consumer` object copied from `dependencyContext.consumer`, and the intended local `destination`. `packages` contains one permitted decision per exact reachable package ref and digest, with evidence and `kind: "local-publication"` or `"imported-acceptance"`. `licenses` contains one permitted decision per complete exact edge from inspect, including its license and distribution; two same-license edges still require two decisions. `redistribution` contains a permitted ref/digest/evidence grant for every reachable Portable package node and is empty for Reference. Missing or denied decisions fail closed. An imported acceptance is the host and human explicitly accepting those exact bytes for this consumer; it does not assert prior Mimic publication or independent publisher authentication. No field of the authored plan or license text grants authority by itself.
 
-For `local-publication`, the CLI requires the original prepared candidate, durable intent, completed publication, complete exact release confirmation, and actual `FilePackageSource` bytes at the same workspace destination. It checks the manifest, lock, release request, digest, actor, host, and destination before reusing that release as authority. New intent and completion records store the versioned full confirmation as well as digests. Legacy digest-only records need the original exact release confirmation supplied in that package decision or a fresh explicit `imported-acceptance`; the records alone do not acquire authority. A copied package, prepared-only candidate, or incomplete/tampered completion is not a local publication. The dependency source and authority are closed to the reviewed graph for one invocation. Core's license callback only receives license and distribution, so the CLI first validates every exact edge decision and then permits only the approved pairs within that closed graph. Promotion remains denied.
+For example, after inspecting a Reference plan with one exact local dependency, a host writes a JSON assertion in this shape after presenting each decision to the human. Replace the shown digest, ref, edge, time, actor, and evidence with the exact inspected values and the actual decision; `edge` is the entire object in `dependencyContext.edges[0]`, not just its license:
+
+```json
+{
+  "version": 1,
+  "action": "release-dependencies",
+  "hostId": "my-local-host",
+  "humanActorId": "human-1",
+  "confirmedAt": "2026-10-07T12:00:00Z",
+  "contextDigest": "<inspect.dependencyContextDigest>",
+  "consumer": {
+    "ref": { "packageId": "product/example", "version": "0.1.0" },
+    "mode": "reference"
+  },
+  "destination": "packages",
+  "packages": [
+    {
+      "ref": { "packageId": "org/source", "version": "1.0.0" },
+      "digest": "<exact dependency digest from inspect>",
+      "kind": "local-publication",
+      "allowed": true,
+      "evidence": "Reviewed completed local publication and exact bytes"
+    }
+  ],
+  "licenses": [
+    {
+      "edge": {
+        "parent": { "packageId": "product/example", "version": "0.1.0" },
+        "ref": { "packageId": "org/source", "version": "1.0.0" },
+        "digest": "<exact dependency digest from inspect>",
+        "source": "packages",
+        "license": "<reviewed license>",
+        "distribution": "external"
+      },
+      "allowed": true,
+      "evidence": "Reviewed this exact edge and license"
+    }
+  ],
+  "redistribution": []
+}
+```
+
+For `local-publication`, the CLI requires the original prepared candidate, durable intent, completed publication, complete exact release confirmation, and actual `FilePackageSource` bytes at the same workspace destination. It checks the manifest, lock, release request, digest, actor, host, and destination before reusing that release as authority. A dependency acquired as an external local source must come from that publication destination. A node reached only through a bundled parent can reuse its own completed local publication when its bundled snapshot has the same exact package digest, lock bytes, and manifest claims as the originally published bytes; no redundant direct edge is required. New intent and completion records store the versioned full confirmation as well as digests. Legacy digest-only records need the original exact release confirmation supplied in that package decision or a fresh explicit `imported-acceptance`; the records alone do not acquire authority. A copied package, prepared-only candidate, or incomplete/tampered completion is not a local publication. The dependency source and authority are closed to the reviewed graph for one invocation. Core's license callback only receives license and distribution, so the CLI first validates every exact edge decision and then permits only the approved pairs within that closed graph. Promotion remains denied.
 
 A trusted embedding host may instead supply `CliHost.release`: package authority, license policy, finding-by-finding release policy, and exact redistribution grants. Local and injected policies cannot be mixed. Reference mode retains external acquisition hints; Portable mode requires grants for every transitive dependency and Core still rejects a partial bundled closure. A release policy must explain each finding without changing its state or severity. A `FAIL`, `CONCERN`, or `UNVERIFIED` stays visible even when policy permits it.
 
