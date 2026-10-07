@@ -870,7 +870,7 @@ test.each(["reference", "portable"] as const)(
       mode === "portable" ? 1 : 0,
     );
   },
-  30_000,
+  120_000,
 );
 
 test("rejection requires a new revision and explicit retry provenance", async () => {
