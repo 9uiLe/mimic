@@ -83,6 +83,8 @@ export interface SnapshotStorage {
   read(id: string, revision: number): Promise<string | undefined>;
   revisions(id: string): Promise<readonly number[]>;
   writeIfAbsent(id: string, revision: number, record: string): Promise<boolean>;
+  /** A stable artifact and registry image for one verification checkpoint. */
+  withReadSession?<T>(read: () => Promise<T>): Promise<T>;
 }
 
 export class ArtifactStoreError extends Error {
@@ -222,6 +224,18 @@ interface StoredRecord {
   readonly artifact: ArtifactSnapshot;
 }
 
+interface VerifiedNode {
+  readonly artifact: ArtifactSnapshot;
+  readonly digest: string;
+  readonly authorities: readonly ArtifactSnapshot[];
+}
+
+interface ReadContext {
+  readonly active: Set<string>;
+  readonly completed: Map<string, VerifiedNode>;
+  readonly reusable: boolean;
+}
+
 function pointerExists(artifact: ArtifactSnapshot, pointer: string): boolean {
   if (!pointer.startsWith("/content")) return false;
   let current: unknown = artifact;
@@ -322,7 +336,32 @@ export class ArtifactStore {
     }
   }
 
-  private async verify(artifact: ArtifactSnapshot): Promise<void> {
+  private async verifyAuthority(artifact: ArtifactSnapshot): Promise<void> {
+    for (const entry of artifact.provenance) {
+      if (
+        entry.kind === "human-decision" &&
+        (!entry.decisionId ||
+          !(await this.decisionVerified(entry.decisionId, artifact)))
+      )
+        throw new ArtifactStoreError(
+          "UNVERIFIED",
+          "Decision reference is not verified",
+        );
+    }
+    if (
+      artifact.approval.status !== "pending" &&
+      !(await this.approvalVerified(artifact))
+    )
+      throw new ArtifactStoreError(
+        "UNVERIFIED",
+        "Human approval is not verified",
+      );
+  }
+
+  private async verify(
+    artifact: ArtifactSnapshot,
+    context?: ReadContext,
+  ): Promise<readonly ArtifactSnapshot[]> {
     const validation = this.schemas.validate(artifact);
     if (!validation.valid)
       throw new ArtifactStoreError(
@@ -339,16 +378,20 @@ export class ArtifactStore {
         "Artifact scope is not registered",
       );
     const ancestors = this.ancestry(registered);
+    const authorities = new Map<string, ArtifactSnapshot>();
     for (const dependency of artifact.dependencies) {
       if (dependency.artifactId === artifact.meta.id)
         throw new ArtifactStoreError(
           "INVALID",
           "Self dependency is not allowed",
         );
-      const resolved = await this.read(
-        dependency.artifactId,
-        dependency.revision,
-      );
+      const resolved = context
+        ? await this.readNode(
+            dependency.artifactId,
+            dependency.revision,
+            context,
+          )
+        : await this.read(dependency.artifactId, dependency.revision);
       if (resolved.digest !== dependency.lockDigest)
         throw new ArtifactStoreError(
           "INVALID",
@@ -359,6 +402,12 @@ export class ArtifactStore {
           "INVALID",
           "Dependency scope is not an ancestor",
         );
+      if ("authorities" in resolved)
+        for (const evidence of resolved.authorities)
+          authorities.set(
+            `${evidence.meta.id}@${evidence.meta.revision}`,
+            evidence,
+          );
     }
     for (const entry of artifact.provenance) {
       if (!pointerExists(artifact, entry.path))
@@ -366,81 +415,122 @@ export class ArtifactStore {
           "INVALID",
           `Unresolved provenance pointer: ${entry.path}`,
         );
-      if (
-        entry.kind === "human-decision" &&
-        (!entry.decisionId ||
-          !(await this.decisionVerified(entry.decisionId, artifact)))
-      )
-        throw new ArtifactStoreError(
-          "UNVERIFIED",
-          "Decision reference is not verified",
-        );
     }
-    if (artifact.approval.status !== "pending") {
-      if (!(await this.approvalVerified(artifact)))
-        throw new ArtifactStoreError(
-          "UNVERIFIED",
-          "Human approval is not verified",
-        );
-    }
+    await this.verifyAuthority(artifact);
+    if (
+      artifact.approval.status !== "pending" ||
+      artifact.provenance.some((entry) => entry.kind === "human-decision")
+    )
+      authorities.set(
+        `${artifact.meta.id}@${artifact.meta.revision}`,
+        artifact,
+      );
+    return [...authorities.values()];
   }
 
   async read(
     id: string,
     revision: number,
   ): Promise<{ artifact: ArtifactSnapshot; digest: string }> {
-    assertId(id);
-    assertRevision(revision);
-    let raw: string | undefined;
+    const run = async () => {
+      const context: ReadContext = {
+        active: new Set(),
+        completed: new Map(),
+        reusable: !!this.storage.withReadSession,
+      };
+      const result = await this.readNode(id, revision, context);
+      // Recheck authority before leaving the checkpoint, including a leaf whose
+      // confirmation changed after its first visit.
+      if (context.reusable)
+        for (const evidence of result.authorities)
+          await this.verifyAuthority(evidence);
+      return { artifact: jsonCopy(result.artifact), digest: result.digest };
+    };
+    if (!this.storage.withReadSession) return run();
     try {
-      raw = await this.storage.read(id, revision);
+      return await this.storage.withReadSession(run);
     } catch (error) {
       if (error instanceof ArtifactStoreError) throw error;
       throw new ArtifactStoreError(
         "UNAVAILABLE",
-        `Cannot read snapshot ${id}@${revision}: ${String(error)}`,
+        `Workspace changed during verification: ${String(error)}`,
       );
     }
-    if (raw === undefined)
-      throw new ArtifactStoreError(
-        "UNAVAILABLE",
-        `Snapshot unavailable: ${id}@${revision}`,
-      );
-    let record: StoredRecord;
-    try {
-      record = JSON.parse(raw) as StoredRecord;
-    } catch {
-      throw new ArtifactStoreError(
-        "CORRUPT",
-        `Unreadable snapshot: ${id}@${revision}`,
-      );
+  }
+
+  private async readNode(
+    id: string,
+    revision: number,
+    context: ReadContext,
+  ): Promise<VerifiedNode> {
+    assertId(id);
+    assertRevision(revision);
+    const key = `${id}@${revision}`;
+    if (context.active.has(key))
+      throw new ArtifactStoreError("CORRUPT", `Dependency cycle: ${key}`);
+    const completed = context.reusable ? context.completed.get(key) : undefined;
+    if (completed) {
+      for (const evidence of completed.authorities)
+        await this.verifyAuthority(evidence);
+      return completed;
     }
+    context.active.add(key);
     try {
-      if (
-        record.canonicalization !== CANONICALIZATION_VERSION ||
-        record.artifact.meta.id !== id ||
-        record.artifact.meta.revision !== revision
-      )
-        throw new Error("Record identity or canonicalization mismatch");
-      const digest = artifactDigest(record.artifact);
-      if (
-        record.digest !== digest ||
-        (record.artifact.meta.contentDigest &&
-          record.artifact.meta.contentDigest !== digest)
-      )
-        throw new Error("Snapshot digest mismatch");
-      await this.verify(record.artifact);
-      return { artifact: jsonCopy(record.artifact), digest };
-    } catch (error) {
-      if (
-        error instanceof ArtifactStoreError &&
-        (error.code === "UNVERIFIED" || error.code === "UNAVAILABLE")
-      )
-        throw error;
-      throw new ArtifactStoreError(
-        "CORRUPT",
-        `Invalid snapshot ${id}@${revision}: ${String(error)}`,
-      );
+      let raw: string | undefined;
+      try {
+        raw = await this.storage.read(id, revision);
+      } catch (error) {
+        if (error instanceof ArtifactStoreError) throw error;
+        throw new ArtifactStoreError(
+          "UNAVAILABLE",
+          `Cannot read snapshot ${id}@${revision}: ${String(error)}`,
+        );
+      }
+      if (raw === undefined)
+        throw new ArtifactStoreError(
+          "UNAVAILABLE",
+          `Snapshot unavailable: ${id}@${revision}`,
+        );
+      let record: StoredRecord;
+      try {
+        record = JSON.parse(raw) as StoredRecord;
+      } catch {
+        throw new ArtifactStoreError(
+          "CORRUPT",
+          `Unreadable snapshot: ${id}@${revision}`,
+        );
+      }
+      try {
+        if (
+          record.canonicalization !== CANONICALIZATION_VERSION ||
+          record.artifact.meta.id !== id ||
+          record.artifact.meta.revision !== revision
+        )
+          throw new Error("Record identity or canonicalization mismatch");
+        const digest = artifactDigest(record.artifact);
+        if (
+          record.digest !== digest ||
+          (record.artifact.meta.contentDigest &&
+            record.artifact.meta.contentDigest !== digest)
+        )
+          throw new Error("Snapshot digest mismatch");
+        const authorities = await this.verify(record.artifact, context);
+        const result = { artifact: record.artifact, digest, authorities };
+        if (context.reusable) context.completed.set(key, result);
+        return result;
+      } catch (error) {
+        if (
+          error instanceof ArtifactStoreError &&
+          (error.code === "UNVERIFIED" || error.code === "UNAVAILABLE")
+        )
+          throw error;
+        throw new ArtifactStoreError(
+          "CORRUPT",
+          `Invalid snapshot ${id}@${revision}: ${String(error)}`,
+        );
+      }
+    } finally {
+      context.active.delete(key);
     }
   }
 

@@ -1,5 +1,8 @@
-import { canonicalJson } from "../artifact-canonical.js";
-import { isWorkspaceTransactionView } from "../workspace-transaction.js";
+import { canonicalJson, jsonCopy } from "../artifact-canonical.js";
+import {
+  FileWorkspaceStorage,
+  isWorkspaceTransactionView,
+} from "../workspace-transaction.js";
 import {
   ArtifactStore,
   type ArtifactSnapshot,
@@ -100,7 +103,10 @@ function registryVerifier(
         match.decision.at === approval.at &&
         admitted(match.decision)
       )
-        return authority.verify(match.decision, match.proposal);
+        return authority.verify(
+          jsonCopy(match.decision),
+          jsonCopy(match.proposal),
+        );
       return fallback?.verifyApproval(approval, artifact) ?? false;
     },
     verifyDecision: async (id, artifact) => {
@@ -110,7 +116,10 @@ function registryVerifier(
         canonicalJson(match.decision.output.artifact) ===
           canonicalJson(artifact) &&
         admitted(match.decision) &&
-        (await authority.verify(match.decision, match.proposal))
+        (await authority.verify(
+          jsonCopy(match.decision),
+          jsonCopy(match.proposal),
+        ))
       )
         return true;
       return fallback?.verifyDecision(id, artifact) ?? false;
@@ -124,12 +133,17 @@ export class RegistryAuthorityVerifier implements AuthorityVerifier {
     private readonly authority: RegistryAuthority,
     private readonly fallback?: AuthorityVerifier,
   ) {}
+  private async state(): Promise<RegistryState> {
+    return this.storage instanceof FileWorkspaceStorage
+      ? this.storage.readVerificationState()
+      : this.storage.read();
+  }
   async verifyApproval(
     approval: ArtifactSnapshot["approval"],
     artifact: ArtifactSnapshot,
   ): Promise<boolean> {
     return registryVerifier(
-      await this.storage.read(),
+      await this.state(),
       this.authority,
       this.fallback,
       true,
@@ -140,7 +154,7 @@ export class RegistryAuthorityVerifier implements AuthorityVerifier {
     artifact: ArtifactSnapshot,
   ): Promise<boolean> {
     return registryVerifier(
-      await this.storage.read(),
+      await this.state(),
       this.authority,
       this.fallback,
       true,
