@@ -1,6 +1,15 @@
 import { afterEach, expect, test } from "vitest";
-import { readFile, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
+import { format } from "prettier";
 import {
   setupSystemFirst,
   exact,
@@ -145,6 +154,234 @@ const directionTask = (ref: {
   authority: "PROPOSE_ONLY" as const,
 });
 
+async function advanceSyntheticSelectionToScenario(
+  x: Awaited<ReturnType<typeof setupSystemFirst>>,
+) {
+  const { orchestrator, registry, artifacts } = x.runtime;
+  const directionRun = await orchestrator.start({
+    id: "run_rb_package_direction",
+    scopeOwnerId: "product_riverbend",
+    entryMode: "system-first",
+    actor: agent,
+    at,
+    tasks: [directionTask(x.refs.directionB)],
+  });
+  await registry.produce({
+    runId: directionRun.id,
+    ref: x.refs.directionB,
+    inputs: [x.refs.profile, x.refs.contract, x.refs.references],
+    actor: agent,
+    at,
+    reason: "Synthetic candidate direction",
+  });
+  await registry.submit({
+    runId: directionRun.id,
+    packetId: "packet_rb_package_direction",
+    proposals: [
+      {
+        id: "proposal_rb_package_direction",
+        ref: x.refs.directionB,
+        alternatives: [
+          "Provisional paired inspection",
+          "Retain queue/detail",
+          "Revise",
+        ],
+        rationale: "Synthetic test of a structural choice, not owner judgment",
+        evidenceLimits: [
+          "No owner decision",
+          "No observed dispatcher task",
+          "Comparison capability proposed only",
+        ],
+        dependents: [],
+      },
+    ],
+    actor: agent,
+    at,
+    reason: "Synthetic review packet",
+  });
+  const candidateDirection = (
+    await artifacts.read(x.refs.directionB.artifactId, 1)
+  ).artifact;
+  const direction = decidedOutput(
+    candidateDirection,
+    "decision_rb_package_synthetic",
+    "approved",
+  );
+  await registry.decide({
+    id: "decision_rb_package_synthetic",
+    packetId: "packet_rb_package_direction",
+    proposalId: "proposal_rb_package_direction",
+    outcome: "approved",
+    actor: syntheticHuman,
+    at,
+    rationale: "Synthetic fixture decision only",
+    output: direction,
+  });
+  await registry.commit({
+    id: "commit_rb_package_direction",
+    packetId: "packet_rb_package_direction",
+    approvals: [
+      {
+        proposalId: "proposal_rb_package_direction",
+        decisionId: "decision_rb_package_synthetic",
+      },
+    ],
+    actor: syntheticHuman,
+    at,
+    reason: "Synthetic direction commit only",
+  });
+
+  const assetTasks = x.refs.assets.map((ref, index) => ({
+    id: `reuse-asset-${index}`,
+    skillId: "s12.design-system-resolver",
+    outputType: "design-system-asset",
+    scopeOwnerId: "product_riverbend",
+    targetArtifactId: ref.artifactId,
+    inputs: { required: [], optional: [], alternatives: [] },
+    intent: "use" as const,
+    authority: "AUTONOMOUS" as const,
+  }));
+  const scenarioTask = {
+    id: "revise-scenario",
+    skillId: "s14.ui-composition-planner",
+    outputType: "scenario",
+    scopeOwnerId: "domain_triage",
+    targetArtifactId: x.refs.scenario.artifactId,
+    inputs: { required: [], optional: [], alternatives: [] },
+    intent: "revise" as const,
+    authority: "PROPOSE_ONLY" as const,
+  };
+  const scenarioRun = await orchestrator.start({
+    id: "run_rb_package_scenario",
+    scopeOwnerId: "domain_triage",
+    entryMode: "system-first",
+    actor: agent,
+    at,
+    tasks: [...assetTasks, scenarioTask],
+  });
+  const reuse = await orchestrator.next(scenarioRun.id, [
+    ...assetTasks,
+    scenarioTask,
+  ]);
+  for (const [index, ref] of x.refs.assets.entries())
+    expect(
+      reuse.actions.find((action) => action.taskId === `reuse-asset-${index}`),
+    ).toMatchObject({ action: "USE", ref });
+  const prior = (await artifacts.read(x.refs.scenario.artifactId, 1)).artifact;
+  const { contentDigest: _priorDigest, ...priorMeta } = prior.meta;
+  void _priorDigest;
+  const proposedScenario: ArtifactSnapshot = {
+    ...prior,
+    meta: { ...priorMeta, revision: 2, supersedesRevision: 1 },
+    lifecycle: { status: "proposed", freshness: "valid" },
+    approval: { status: "pending" },
+    dependencies: [
+      ...prior.dependencies,
+      { ...direction.ref, onChange: "validate" },
+    ],
+    provenance: [
+      ...prior.provenance,
+      {
+        path: "/content/expectedOutcome",
+        kind: "derived",
+        inputRefs: [
+          `${direction.ref.artifactId}@${direction.ref.revision}#${direction.ref.lockDigest}`,
+        ],
+        rationale:
+          "Provisional paired-inspection direction chosen only by synthetic test authority",
+      },
+    ],
+  };
+  const proposedRef = exact(proposedScenario);
+  await artifacts.create(proposedScenario);
+  await registry.produce({
+    runId: scenarioRun.id,
+    ref: proposedRef,
+    inputs: [
+      x.refs.scenario,
+      direction.ref,
+      x.refs.contract,
+      x.refs.journey,
+      ...x.refs.assets,
+    ],
+    actor: agent,
+    at,
+    reason: "Explicitly adopt exact synthetic direction and unchanged assets",
+  });
+  await registry.submit({
+    runId: scenarioRun.id,
+    packetId: "packet_rb_package_scenario",
+    proposals: [
+      {
+        id: "proposal_rb_package_scenario",
+        ref: proposedRef,
+        expectedCanonical: x.refs.scenario,
+        alternatives: ["Adopt scenario", "Retain previous scenario"],
+        rationale:
+          "Bind the scenario to the selected exact direction and reused Design System",
+        evidenceLimits: ["No real owner review or empirical outcome"],
+        dependents: [],
+      },
+    ],
+    actor: agent,
+    at,
+    reason: "Synthetic scenario review",
+  });
+  const approvedScenario: ArtifactSnapshot = {
+    ...proposedScenario,
+    meta: { ...priorMeta, revision: 3, supersedesRevision: 2 },
+    lifecycle: { status: "approved", freshness: "valid" },
+    approval: {
+      status: "approved",
+      decisionId: "decision_rb_scenario_synthetic",
+      actorId: syntheticHuman.id,
+      at,
+    },
+  };
+  const scenario = {
+    artifact: {
+      ...approvedScenario,
+      meta: {
+        ...approvedScenario.meta,
+        contentDigest: artifactDigest(approvedScenario),
+      },
+    },
+    ref: exact(approvedScenario),
+  };
+  await registry.decide({
+    id: "decision_rb_scenario_synthetic",
+    packetId: "packet_rb_package_scenario",
+    proposalId: "proposal_rb_package_scenario",
+    outcome: "approved",
+    actor: syntheticHuman,
+    at,
+    rationale: "Synthetic fixture decision only",
+    output: scenario,
+  });
+  await registry.commit({
+    id: "commit_rb_package_scenario",
+    packetId: "packet_rb_package_scenario",
+    approvals: [
+      {
+        proposalId: "proposal_rb_package_scenario",
+        decisionId: "decision_rb_scenario_synthetic",
+      },
+    ],
+    actor: syntheticHuman,
+    at,
+    reason: "Synthetic scenario commit only",
+  });
+  expect(
+    (await registry.snapshot()).canonical[x.refs.scenario.artifactId]?.ref,
+  ).toEqual(scenario.ref);
+  const modePlan = {
+    ...x.modePlan,
+    current: { ...x.modePlan.current, scenario: scenario.ref },
+    proposed: { ...x.modePlan.proposed, scenario: scenario.ref },
+  };
+  return { direction: direction.ref, scenario: scenario.ref, modePlan };
+}
+
 test("actual Run submission guards synthetic decision, exact commit, and unchanged reuse", async () => {
   const x = await setupSystemFirst();
   cleanup.push(x.close);
@@ -260,9 +497,125 @@ test.each(["reference", "portable"] as const)(
   async (mode) => {
     const x = await setupSystemFirst();
     cleanup.push(x.close);
+    const chain = await advanceSyntheticSelectionToScenario(x);
+    const modes = await buildPrototypeModes(
+      x.runtime.artifacts,
+      chain.modePlan,
+      x.root,
+    );
+    expect(modes.proposed).toBeDefined();
+    if (mode === "reference" && process.env.MIMIC_EXPORT_SYSTEM_FIRST === "1") {
+      const sample = path.resolve(
+        import.meta.dirname,
+        "../../../../fixtures/dogfood/system-first/sample",
+      );
+      await rm(sample, { recursive: true, force: true });
+      await cp(modes.comparisonDirectory, path.join(sample, "comparison"), {
+        recursive: true,
+      });
+      for (const directory of ["", "current", "proposed"]) {
+        const root = path.join(sample, "comparison", directory);
+        for (const name of await readdir(root)) {
+          if (!name.endsWith(".json")) continue;
+          await rename(path.join(root, name), path.join(root, `${name}.raw`));
+        }
+      }
+      const exportedArtifacts = path.join(sample, "artifacts");
+      await mkdir(exportedArtifacts);
+      for (const [name, ref] of [
+        ["queue-direction", x.refs.directionA],
+        ["paired-candidate", x.refs.directionB],
+        ["paired-synthetic-selection", chain.direction],
+        ["synthetic-scenario", chain.scenario],
+      ] as const) {
+        const snapshot = await x.runtime.artifacts.read(
+          ref.artifactId,
+          ref.revision,
+        );
+        expect(snapshot.digest).toBe(ref.lockDigest);
+        await writeFile(
+          path.join(exportedArtifacts, `${name}.json`),
+          await format(JSON.stringify(snapshot.artifact), { parser: "json" }),
+        );
+      }
+      await writeFile(
+        path.join(sample, "review.json"),
+        `${JSON.stringify(
+          {
+            authority: "synthetic-simulation-only",
+            humanCommitPoint: "pending-real-owner-decision",
+            candidate: x.refs.directionB,
+            selectedInSimulation: chain.direction,
+            scenarioAfterSimulation: chain.scenario,
+            modePlanDigest: modes.modePlanDigest,
+            systemRequest: x.refs.request,
+            limits: [
+              "No owner judgment or dispatcher task observation",
+              "Authored render and mode plans; no AI design judgment demonstrated",
+              "No comparison endpoint or production release",
+            ],
+          },
+          null,
+          2,
+        )}\n`,
+      );
+    }
+    if (mode === "reference") {
+      const sample = path.resolve(
+        import.meta.dirname,
+        "../../../../fixtures/dogfood/system-first/sample/comparison",
+      );
+      for (const [directory, names] of [
+        ["", ["comparison.json", "mode-plan.json"]],
+        [
+          "current",
+          [
+            "index.html",
+            "prototype.css",
+            "prototype.js",
+            "plan.json",
+            "manifest.json",
+          ],
+        ],
+        [
+          "proposed",
+          [
+            "index.html",
+            "prototype.css",
+            "prototype.js",
+            "plan.json",
+            "manifest.json",
+          ],
+        ],
+      ] as const) {
+        for (const name of names) {
+          const sampleName = name.endsWith(".json") ? `${name}.raw` : name;
+          expect(
+            await readFile(path.join(sample, directory, sampleName)),
+          ).toEqual(
+            await readFile(
+              path.join(modes.comparisonDirectory, directory, name),
+            ),
+          );
+        }
+      }
+    }
+    const modeQuality = (
+      await runStaticQualityGates({
+        trustedRoot: x.root,
+        directory: modes.current.directory,
+        store: x.runtime.artifacts,
+        uiContract: x.refs.contract,
+      })
+    ).report;
+    expect(
+      modeQuality.findings.find(
+        (finding) => finding.criterion === "bundle-manifest",
+      )?.state,
+    ).toBe("FAIL");
     const built = await buildPrototype(
       x.runtime.artifacts,
-      { ...x.modePlan.current, outputPath: "release-prototype" },
+      { ...chain.modePlan.current, outputPath: "release-prototype" },
       x.root,
     );
     const report = (
@@ -407,7 +760,7 @@ test.each(["reference", "portable"] as const)(
         x.refs.journey,
         x.refs.profile,
         x.refs.references,
-        x.refs.directionA,
+        chain.direction,
       ]),
       "design-system": included(x.refs.assets, [], [childRef]),
       "interface-system-boundary": included([x.refs.contract]),
@@ -415,7 +768,7 @@ test.each(["reference", "portable"] as const)(
         [],
         names.map((name) => `prototype/${name}`),
       ),
-      scenarios: included([x.refs.scenario]),
+      scenarios: included([chain.scenario]),
       quality: included([], ["quality/limits.txt"]),
       decisions: included([], ["decisions.txt"]),
       handoff: included([], ["guide.md"]),
@@ -456,7 +809,7 @@ test.each(["reference", "portable"] as const)(
               },
             ]
           : [],
-      quality: [{ report, artifacts: [x.refs.scenario] }],
+      quality: [{ report, artifacts: [chain.scenario] }],
     };
     const policy = {
       assess: async (finding: { state: string }) => ({
@@ -490,6 +843,22 @@ test.each(["reference", "portable"] as const)(
       input.ref,
       compiled.digest,
     );
+    expect(
+      reconstructed[0]!.manifest.artifacts.some(
+        (entry) =>
+          entry.artifactId === chain.direction.artifactId &&
+          entry.revision === chain.direction.revision &&
+          entry.snapshotDigest === chain.direction.lockDigest,
+      ),
+    ).toBe(true);
+    expect(
+      reconstructed[0]!.manifest.artifacts.some(
+        (entry) =>
+          entry.artifactId === chain.scenario.artifactId &&
+          entry.revision === chain.scenario.revision &&
+          entry.snapshotDigest === chain.scenario.lockDigest,
+      ),
+    ).toBe(true);
     expect(reconstructed.map((item) => item.manifest.ref.packageId)).toEqual([
       input.ref.packageId,
       childRef.packageId,

@@ -17,6 +17,7 @@ import {
 import {
   type PrototypeBuilderInput,
   type PrototypeNode,
+  type PrototypeState,
 } from "../../../packages/core/src/prototype-builder/index.js";
 import { type ExactArtifactRef } from "../../../packages/core/src/runtime-engines/dependency.js";
 import { loadSchemaDirectory } from "../../../packages/core/src/schema-registry.js";
@@ -475,26 +476,105 @@ export async function setupSystemFirst() {
       scenario.ref,
       ...assets,
     ]);
-    const states = base.input.states.map((state) => {
-      const root = structuredClone(state.root) as PrototypeNode;
-      const rewrite = (node: PrototypeNode): PrototypeNode => ({
-        ...node,
-        ...(node.text
-          ? {
-              text: node.text
-                .replaceAll("candidate", "work order")
-                .replaceAll("Candidate", "Work order")
-                .replace(
-                  "Synthetic work order A; uncertainty visible",
-                  "WO-1042 · North · urgent · 3h · unassigned",
-                ),
-            }
-          : {}),
-        ...(node.componentId ? { componentId: component.artifactId } : {}),
-        ...(node.children ? { children: node.children.map(rewrite) } : {}),
-      });
-      return { ...state, root: rewrite(root) };
+    const button = (
+      label: string,
+      targetState: PrototypeState,
+    ): PrototypeNode => ({
+      tag: "button",
+      componentId: component.artifactId,
+      text: label,
+      targetState,
     });
+    const section = (...children: PrototypeNode[]): PrototypeNode => ({
+      tag: "section",
+      children,
+    });
+    const heading = (text: string): PrototypeNode => ({ tag: "h2", text });
+    const paragraph = (text: string): PrototypeNode => ({ tag: "p", text });
+    const order1042 = "WO-1042 · North · urgent · 3h · unassigned";
+    const order1043 = "WO-1043 · West · routine · 18h · Crew B";
+    const authoredStates: PrototypeBuilderInput["states"] = [
+      {
+        name: "loading",
+        root: {
+          tag: "main",
+          children: [
+            section(
+              heading("Loading work orders"),
+              paragraph("Synthetic queue is loading"),
+              button("Open queue", "success"),
+            ),
+            section(
+              heading("System boundary"),
+              paragraph(
+                "Constructed list/detail/assignment inventory; no network request",
+              ),
+            ),
+          ],
+        },
+      },
+      {
+        name: "success",
+        root: {
+          tag: "main",
+          children: [
+            section(
+              heading("Open work orders"),
+              paragraph(order1042),
+              paragraph(order1043),
+              button("Inspect WO-1042", "partial"),
+            ),
+            section(
+              heading("Current action"),
+              paragraph(
+                "Inspect one order, then assign a crew. No comparison endpoint exists.",
+              ),
+            ),
+          ],
+        },
+      },
+      {
+        name: "partial",
+        root: {
+          tag: "main",
+          children: [
+            section(
+              heading("WO-1042 detail"),
+              paragraph(order1042),
+              button("Assign Crew A to WO-1042", "disabled"),
+              button("Return to queue", "success"),
+            ),
+            section(
+              heading("Current evidence"),
+              paragraph(
+                "Severity, age, and assignment remain tied to WO-1042.",
+              ),
+            ),
+          ],
+        },
+      },
+      {
+        name: "disabled",
+        root: {
+          tag: "main",
+          children: [
+            section(
+              heading("WO-1042 assignment mock"),
+              paragraph(
+                "WO-1042 · Crew A selected in synthetic local state; no backend write",
+              ),
+              button("Return to queue", "success"),
+            ),
+            section(
+              heading("Limit"),
+              paragraph(
+                "This specification prototype never assigns a real crew.",
+              ),
+            ),
+          ],
+        },
+      },
+    ];
     const currentRender: PrototypeBuilderInput = {
       ...base.input,
       scenario: scenario.ref,
@@ -507,62 +587,45 @@ export async function setupSystemFirst() {
       },
       tokenSources: [token],
       title: "Riverbend Repairs — synthetic work-order triage",
-      states,
-      fixtures: Object.fromEntries(
-        Object.entries(base.input.fixtures).map(([name, values]) => [
-          name,
-          Object.fromEntries(
-            Object.entries(values ?? {}).map(([key, value]) => [
-              key,
-              value
-                .replaceAll("candidate", "work order")
-                .replaceAll("Candidate", "Work order"),
-            ]),
-          ),
-        ]),
-      ),
+      initialState: "loading",
+      requiredStates: ["loading", "success", "partial", "disabled"],
+      states: authoredStates,
+      fixtures: { loading: {}, success: {}, partial: {}, disabled: {} },
       outputPath: "current",
     };
     const proposedRender: PrototypeBuilderInput = {
       ...currentRender,
       outputPath: "proposed",
       states: currentRender.states.map((state) =>
-        state.name === "success"
+        state.name === "success" || state.name === "partial"
           ? {
               ...state,
               root: {
                 ...state.root,
                 children: [
                   ...(state.root.children ?? []),
-                  {
-                    tag: "section" as const,
-                    children: [
-                      {
-                        tag: "h2" as const,
-                        text: "Proposed two-order inspection",
-                      },
-                      { tag: "p" as const, fixtureKey: "comparison" },
-                      {
-                        tag: "button" as const,
-                        componentId: component.artifactId,
-                        text: "Compare work orders",
-                        targetState: "disabled" as const,
-                      },
-                    ],
-                  },
+                  section(
+                    heading("Proposed paired inspection: WO-1042"),
+                    paragraph("North · urgent · 3h · unassigned"),
+                    paragraph(
+                      "Comparison endpoint is absent; these values are fixture data only.",
+                    ),
+                    ...(state.name === "success"
+                      ? [button("Compare WO-1042 and WO-1043", "partial")]
+                      : []),
+                  ),
+                  section(
+                    heading("Proposed paired inspection: WO-1043"),
+                    paragraph("West · routine · 18h · Crew B"),
+                    paragraph(
+                      "Synthetic paired view, not implemented capability",
+                    ),
+                  ),
                 ],
               },
             }
           : state,
       ),
-      fixtures: {
-        ...currentRender.fixtures,
-        success: {
-          ...currentRender.fixtures.success,
-          comparison:
-            "Synthetic WO-1042 and WO-1043 comparison; no endpoint implemented",
-        },
-      },
     };
     function bindings(
       render: PrototypeBuilderInput,
@@ -573,9 +636,9 @@ export async function setupSystemFirst() {
         const visit = (node: PrototypeNode, nodePath: number[]) => {
           const proposedNode =
             proposal &&
-            state.name === "success" &&
-            nodePath[0] ===
-              currentRender.states.find((entry) => entry.name === "success")!
+            (state.name === "success" || state.name === "partial") &&
+            nodePath[0] >=
+              currentRender.states.find((entry) => entry.name === state.name)!
                 .root.children!.length;
           for (const field of [
             "text",

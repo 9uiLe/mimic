@@ -1,0 +1,30 @@
+{
+  "authority": "synthetic-simulation-only",
+  "humanCommitPoint": "pending-real-owner-decision",
+  "candidate": {
+    "artifactId": "art_rb_direction_pair",
+    "revision": 1,
+    "lockDigest": "sha256:26261a036aa99034b98bfb90ebe32f0c0ae2099353d62b3a3e5a9826e16ce63c"
+  },
+  "selectedInSimulation": {
+    "artifactId": "art_rb_direction_pair",
+    "revision": 2,
+    "lockDigest": "sha256:1bc76e3d5448878c91e6b2470d11129f45a6d50bcdc8bd46145234c5cfc5de95"
+  },
+  "scenarioAfterSimulation": {
+    "artifactId": "art_rb_scenario",
+    "revision": 3,
+    "lockDigest": "sha256:b6c06851674539738ea10c4a676f837bd1b11270f79f7b890478b808bbcb6226"
+  },
+  "modePlanDigest": "sha256:7d849da9c51567dac85af4ce9b71d145d4277eb17a5eed064226fc6ef8af6d47",
+  "systemRequest": {
+    "artifactId": "art_rb_compare_request",
+    "revision": 1,
+    "lockDigest": "sha256:8822c4b70c0a6c646a7a14b4fdbc0bcf915b265e46a0d68f1daf222c00460770"
+  },
+  "limits": [
+    "No owner judgment or dispatcher task observation",
+    "Authored render and mode plans; no AI design judgment demonstrated",
+    "No comparison endpoint or production release"
+  ]
+}

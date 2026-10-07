@@ -1,0 +1,68 @@
+{
+  "approval": {
+    "actorId": "synthetic_human_fixture",
+    "at": "2026-10-07T12:00:00Z",
+    "decisionId": "decision_rb_package_synthetic",
+    "status": "approved"
+  },
+  "content": {
+    "mechanisms": ["Explicit two-order inspection tray"],
+    "principles": ["Make competing priorities explicit"],
+    "selectionStatus": "selected",
+    "summary": "paired-inspection"
+  },
+  "dependencies": [
+    {
+      "artifactId": "art_rb_profile",
+      "lockDigest": "sha256:75dffdcbc71556de796c9d0b175c9fd9006ef4fb348c2bebbf3d8cbdf74c6a07",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_contract",
+      "lockDigest": "sha256:9c5931ae2bf8e9e20cf1140804ca3b0951e871a2a5f16d4c7563a95d4974303e",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_references",
+      "lockDigest": "sha256:6a4172a766ba5a0ad5c8af01cc587966cbae51aa68786169a66a343f1d841195",
+      "onChange": "validate",
+      "revision": 1
+    }
+  ],
+  "lifecycle": { "freshness": "valid", "status": "approved" },
+  "meta": {
+    "contentDigest": "sha256:1bc76e3d5448878c91e6b2470d11129f45a6d50bcdc8bd46145234c5cfc5de95",
+    "createdAt": "2026-10-07T12:00:00Z",
+    "id": "art_rb_direction_pair",
+    "revision": 2,
+    "schemaVersion": "1.0.0",
+    "supersedesRevision": 1,
+    "title": "art_rb_direction_pair",
+    "type": "design-direction"
+  },
+  "origin": {
+    "actorId": "agent_system_first_fixture",
+    "actorKind": "agent",
+    "createdAt": "2026-10-07T12:00:00Z",
+    "runId": "run_system_first_fixture"
+  },
+  "provenance": [
+    {
+      "kind": "assumption",
+      "path": "/content",
+      "rationale": "Authored synthetic case; no field observation"
+    },
+    {
+      "decisionId": "decision_rb_package_synthetic",
+      "kind": "human-decision",
+      "path": "/content/selectionStatus"
+    }
+  ],
+  "scope": {
+    "level": "product",
+    "ownerId": "product_riverbend",
+    "parentId": "org_riverbend"
+  }
+}
