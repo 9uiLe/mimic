@@ -607,7 +607,7 @@ export async function runBrowserQualityGates(
             "keyboard-focus",
             keyboard,
             "MAJOR",
-            "First Tab focus and visible outline only; full keyboard operation needs manual inspection",
+            "First Tab from the document body after each routed state and visible outline only; natural post-route Tab reachability and full keyboard operation remain outside this finding",
           ],
         ] as const)
           findings.push(
