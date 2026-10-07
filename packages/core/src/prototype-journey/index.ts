@@ -785,6 +785,19 @@ function runtime(
         binding.nodeId,
       ),
     })),
+    returnFocusMaps: plan.views.flatMap((view) =>
+      (view.render.responsive?.states ?? []).flatMap((entry) =>
+        entry.operations.flatMap((operation) =>
+          operation.kind === "replace"
+            ? operation.focusMap.map((pair) => ({
+                viewId: view.id,
+                desktopId: domId(view.id, pair.desktopId),
+                mobileId: domId(view.id, pair.mobileId),
+              }))
+            : [],
+        ),
+      ),
+    ),
   };
   return `const journey = ${JSON.stringify(program)};
 const entities = new Map(journey.entities.map((item) => [item.id, item]));
@@ -821,6 +834,14 @@ function focusTarget(id) {
     target.focus();
     focusAnchor = null;
   } else focusAfterStateChange();
+}
+function mappedReturnFocus(context) {
+  if (!context.focusId) return null;
+  const original = context.viewId + '__' + context.focusId;
+  const mapping = journey.returnFocusMaps.find((item) =>
+    item.viewId === context.viewId &&
+    (activeSurface() === 'mobile' ? item.desktopId === original : item.mobileId === original));
+  return mapping ? (activeSurface() === 'mobile' ? mapping.mobileId : mapping.desktopId) : original;
 }
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Tab' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ||
@@ -891,16 +912,19 @@ function run(action, input) {
   } else if (action.kind === 'return') {
     if (!returnContext) return;
     viewId = returnContext.viewId;
-    const focusId = returnContext.focusId ? viewId + '__' + returnContext.focusId : null;
+    const focusId = mappedReturnFocus(returnContext);
     returnContext = null;
     refresh();
     focusTarget(focusId);
   } else if (action.kind === 'set-filter') {
-    filterValue = input.value;
+    filterValue = input.value.slice(0, 100);
+    input.value = filterValue;
     refresh();
   } else if (action.kind === 'edit-draft') {
     if (!entityId) return;
-    drafts.get(entityId)[action.field] = input.value;
+    const value = input.value.slice(0, 4000);
+    input.value = value;
+    drafts.get(entityId)[action.field] = value;
     refresh();
   } else if (action.kind === 'discard-draft' || action.kind === 'reset-draft') {
     if (!entityId) return;

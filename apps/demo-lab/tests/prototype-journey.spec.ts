@@ -197,6 +197,10 @@ test("replacement return control survives desktop/mobile startup and both resize
       const filter = page.getByRole("searchbox", {
         name: "Filter cases by status",
       });
+      await filter.fill("x".repeat(120));
+      expect(
+        await filter.evaluate((node: HTMLInputElement) => node.value.length),
+      ).toBe(100);
       await filter.fill("not-present");
       await expect(page.getByText("No matching cases")).toBeVisible();
       await filter.fill("needs-review");
@@ -204,6 +208,10 @@ test("replacement return control survives desktop/mobile startup and both resize
       const draft = page.getByRole("textbox", {
         name: "Uncommitted review draft",
       });
+      await draft.fill("x".repeat(4100));
+      expect(
+        await draft.evaluate((node: HTMLInputElement) => node.value.length),
+      ).toBe(4000);
       await draft.fill("Return replacement draft " + start);
       await page.setViewportSize({
         width: start === 1280 ? 390 : 1280,
@@ -215,7 +223,11 @@ test("replacement return control survives desktop/mobile startup and both resize
       await expect(swappedReturn).toBeVisible();
       await swappedReturn.click();
       await expect(filter).toHaveValue("needs-review");
-      await expect(filter).toBeFocused();
+      await expect(
+        page.locator(
+          start === 1280 ? "#queue__mobile-open-c204" : "#queue__open-c204",
+        ),
+      ).toBeFocused();
       await filter.fill("not-present");
       await expect(page.getByText("No matching cases")).toBeVisible();
       await filter.fill("needs-review");
@@ -227,6 +239,11 @@ test("replacement return control survives desktop/mobile startup and both resize
       );
       await expect(originalReturn).toBeVisible();
       await originalReturn.click();
+      await expect(
+        page.locator(
+          start === 1280 ? "#queue__open-c204" : "#queue__mobile-open-c204",
+        ),
+      ).toBeFocused();
       await page.getByRole("button", { name: "Open C-205" }).click();
       await expect(draft).toHaveValue("");
       await expect(page.locator('[data-view="review"]')).not.toContainText(
@@ -249,11 +266,25 @@ test("replacement return control survives desktop/mobile startup and both resize
       },
       browser,
     );
-    expect(
-      report.findings
-        .filter((finding) => finding.criterion === "journey-actions")
-        .map((finding) => finding.state),
-    ).toEqual(["PASS", "PASS"]);
+    for (const width of [1280, 390])
+      for (const criterion of [
+        "journey-render",
+        "journey-actions",
+        "journey-continuity",
+        "journey-axe",
+        "journey-keyboard",
+        "journey-overflow",
+      ]) {
+        const finding = report.findings.find(
+          (item) =>
+            item.criterion === criterion &&
+            item.conditions.viewportWidth === width,
+        );
+        expect(
+          finding?.state,
+          criterion + " " + width + ": " + finding?.reason,
+        ).toBe("PASS");
+      }
     const sabotagedBrowser = new Proxy(browser, {
       get(target, property) {
         if (property === "newContext")

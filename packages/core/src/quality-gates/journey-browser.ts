@@ -82,6 +82,24 @@ function available(
     width === 390 ? "mobile" : "desktop",
   );
 }
+function expectedReturnFocus(
+  plan: PrototypeJourneyInput,
+  control: JourneyControl,
+  width: number,
+): string {
+  if (control.action.kind !== "select")
+    throw new Error("Return focus requires a selection");
+  let id = control.action.returnFocusId;
+  const view = plan.views.find((item) => item.id === control.viewId)!;
+  for (const entry of view.render.responsive?.states ?? [])
+    for (const operation of entry.operations)
+      if (operation.kind === "replace")
+        for (const mapping of operation.focusMap) {
+          if (width === 390 && mapping.desktopId === id) id = mapping.mobileId;
+          if (width !== 390 && mapping.mobileId === id) id = mapping.desktopId;
+        }
+  return domId(control.viewId, id);
+}
 function domId(viewId: string, nodeId: string): string {
   return viewId + "__" + nodeId;
 }
@@ -287,15 +305,25 @@ async function sameSession(
   page: Page,
   plan: PrototypeJourneyInput,
   width: number,
-): Promise<void> {
+): Promise<string> {
   const filter = plan.controls.find(
     (control) =>
       control.action.kind === "set-filter" && available(plan, control, width),
   );
-  const selects = plan.controls.filter(
-    (control) =>
-      control.action.kind === "select" && available(plan, control, width),
-  );
+  const selects = plan.controls
+    .filter(
+      (control) =>
+        control.action.kind === "select" && available(plan, control, width),
+    )
+    .sort((left, right) => {
+      const rank = (control: JourneyControl) => {
+        const action = control.action;
+        return action.kind === "select"
+          ? plan.entities.findIndex((item) => item.id === action.entityId)
+          : Infinity;
+      };
+      return rank(left) - rank(right);
+    });
   const edit = plan.controls.find(
     (control) =>
       control.action.kind === "edit-draft" && available(plan, control, width),
@@ -381,7 +409,9 @@ async function sameSession(
   await page.locator("#" + domId(ret.viewId, ret.nodeId)).click();
   if (
     (await filterNode.inputValue()) !== filterValue ||
-    !(await filterNode.evaluate((node) => node === document.activeElement))
+    !(await page
+      .locator("#" + expectedReturnFocus(plan, first, width))
+      .evaluate((node) => node === document.activeElement))
   )
     throw new Error("Return lost filter or focus");
   await firstButton.click();
@@ -411,6 +441,7 @@ async function sameSession(
       throw new Error(
         "Approval or committed decision changed through local journey actions",
       );
+  return firstEntityId;
 }
 export async function runBrowserJourneyQualityGates(
   input: GateInput,
@@ -592,7 +623,7 @@ export async function runBrowserJourneyQualityGates(
           }
         }
         try {
-          await sameSession(page, plan, width);
+          const selectedEntityId = await sameSession(page, plan, width);
           count += 8;
           const focused = await page.evaluate(
             () =>
@@ -605,14 +636,17 @@ export async function runBrowserJourneyQualityGates(
           await page.setViewportSize({ width: nextWidth, height: 844 });
           if (
             !(await page.locator("#prototype-status").textContent())?.includes(
-              (
-                plan.controls.find((item) => item.action.kind === "select")!
-                  .action as { entityId: string }
-              ).entityId,
+              selectedEntityId,
             )
           )
             throw new Error("Entity identity changed on resize");
           await page.setViewportSize({ width, height: 844 });
+          if (
+            !(await page.locator("#prototype-status").textContent())?.includes(
+              selectedEntityId,
+            )
+          )
+            throw new Error("Entity identity changed on reverse resize");
         } catch (error) {
           continuityErrors.push(String(error));
         }

@@ -507,7 +507,16 @@ export function authoredReplacementSurfacePlan(
           },
     ),
     controls: [
-      ...source.controls,
+      ...source.controls.map((control) =>
+        control.viewId === "queue" &&
+        control.nodeId === "open-c204" &&
+        control.action.kind === "select"
+          ? {
+              ...control,
+              action: { ...control.action, returnFocusId: "open-c204" },
+            }
+          : control,
+      ),
       {
         viewId: "queue",
         nodeId: "mobile-open-c204",
@@ -515,7 +524,7 @@ export function authoredReplacementSurfacePlan(
           kind: "select",
           entityId: "C-204",
           viewId: "review",
-          returnFocusId: "queue-filter",
+          returnFocusId: "mobile-open-c204",
         },
       },
     ],
