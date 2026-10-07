@@ -7,6 +7,7 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
   unlinkSync,
   writeFileSync,
@@ -63,21 +64,37 @@ beforeAll(() => {
     });
     expect(
       built.status,
-      target + ": " + built.stdout + "\n" + built.stderr,
+      target +
+        ": " +
+        built.stdout +
+        "\n" +
+        built.stderr +
+        "\nerror=" +
+        (built.error?.message ?? "none") +
+        " signal=" +
+        (built.signal ?? "none"),
     ).toBe(0);
   }
 }, 180_000);
 afterEach(() => {
-  if (process.env.MIMIC_RIVERBEND_DEBUG === "1") return;
   for (const root of roots.splice(0))
     rmSync(root, { recursive: true, force: true });
 });
 function invoke(root: string, ...args: string[]) {
-  return spawnSync(process.execPath, [bin, ...args, "--root", root, "--json"], {
-    encoding: "utf8",
-    timeout: 180_000,
-    killSignal: "SIGTERM",
-  });
+  const result = spawnSync(
+    process.execPath,
+    [bin, ...args, "--root", root, "--json"],
+    {
+      encoding: "utf8",
+      timeout: 180_000,
+      killSignal: "SIGTERM",
+    },
+  );
+  if (result.error || result.signal)
+    throw new Error(
+      `${args.join(" ")}: ${result.error?.message ?? "process signaled"}; signal=${result.signal ?? "none"}\n${result.stdout}\n${result.stderr}`,
+    );
+  return result;
 }
 function accepted(root: string, ...args: string[]) {
   const result = invoke(root, ...args);
@@ -691,24 +708,39 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
     return value;
   };
   const modePlan = replaceRefs(source.modePlan) as typeof source.modePlan;
+  const wrongScenarioRef = {
+    ...modePlan.current.scenario,
+    lockDigest: historicalDirection,
+  };
   const changedScenario = {
     ...modePlan,
-    current: {
-      ...modePlan.current,
-      scenario: {
-        ...modePlan.current.scenario,
-        lockDigest: historicalDirection,
-      },
-    },
+    current: { ...modePlan.current, scenario: wrongScenarioRef },
+    proposed: { ...modePlan.proposed, scenario: wrongScenarioRef },
   };
+  expect(changedScenario.current.scenario).toEqual(
+    changedScenario.proposed.scenario,
+  );
   put(root, "wrong-scenario-lock.json", {
     kind: "modes",
     plan: changedScenario,
     uiContract: mapped.get(source.refs.contract.artifactId),
   });
+  const wrongScenario = invoke(
+    root,
+    "preview",
+    "--file",
+    "wrong-scenario-lock.json",
+  );
+  expect(wrongScenario.status).toBe(3);
+  expect(wrongScenario.stderr).toContain(
+    "MIMIC_3: Exact lock mismatch: art_rb_scenario@2",
+  );
+  expect(existsSync(path.join(root, changedScenario.comparisonPath))).toBe(
+    false,
+  );
   expect(
-    invoke(root, "preview", "--file", "wrong-scenario-lock.json").status,
-  ).toBe(3);
+    readdirSync(root).filter((name) => name.startsWith(".mimic-modes-")),
+  ).toEqual([]);
   put(root, "modes.json", {
     kind: "modes",
     plan: modePlan,
@@ -1175,6 +1207,7 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
       id + "-confirmation.json",
     );
     expect(retry.status).toBe("recovered");
+    expect(retry.digest).toBe(released.digest);
     const snapshot = await new FilePackageSource(
       path.join(root, "packages"),
     ).read(plan.ref);
@@ -1198,17 +1231,42 @@ test("Riverbend authored chain replays through unmodified built CLI in independe
           readFileSync(path.join(bundleDirectory, name)),
         ),
       ).toBe(true);
+    const distribution = mode === "reference" ? "external" : "bundled";
+    expect(manifest.dependencies).toHaveLength(1);
+    expect(manifest.dependencies[0]).toMatchObject({
+      ref: childRef,
+      digest: childDigest,
+      distribution,
+    });
+    expect(lock.packages).toHaveLength(1);
     expect(lock.packages[0]).toMatchObject({
       ref: childRef,
       digest: childDigest,
-      distribution: mode === "reference" ? "external" : "bundled",
+      distribution,
+      dependencies: [],
     });
+    const bundledKey = `${encodeURIComponent(childRef.packageId)}@${childRef.version}`;
     if (mode === "reference") {
-      expect(manifest.dependencies[0]?.distribution).toBe("external");
-      expect(Object.keys(snapshot!.bundled ?? {})).toHaveLength(0);
+      expect(Object.keys(snapshot!.bundled ?? {})).toEqual([]);
     } else {
-      expect(manifest.dependencies[0]?.distribution).toBe("bundled");
-      expect(Object.keys(snapshot!.bundled ?? {})).toHaveLength(1);
+      expect(Object.keys(snapshot!.bundled ?? {})).toEqual([bundledKey]);
+      const bundledChild = snapshot!.bundled?.[bundledKey];
+      expect(bundledChild).toBeDefined();
+      expect(packageDigest(bundledChild!)).toBe(childDigest);
+      expect(
+        Buffer.from(bundledChild!.files["colors.json"]!).equals(childBytes),
+      ).toBe(true);
+      expect(
+        Buffer.from(bundledChild!.manifestBytes).equals(
+          Buffer.from(child.manifestBytes),
+        ),
+      ).toBe(true);
+      expect(
+        Buffer.from(bundledChild!.lockBytes).equals(
+          Buffer.from(child.lockBytes),
+        ),
+      ).toBe(true);
+      expect(Object.keys(bundledChild!.bundled ?? {})).toEqual([]);
     }
     published.push({
       mode,
