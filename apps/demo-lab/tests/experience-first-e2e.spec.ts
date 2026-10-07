@@ -4,7 +4,59 @@ import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { buildPrototype } from "../../../packages/core/src/prototype-builder/index.js";
 import { runBrowserQualityGates } from "../../../packages/core/src/quality-gates/browser.js";
+import {
+  inspectBundle,
+  type QualityReport,
+} from "../../../packages/core/src/quality-gates/index.js";
 import { setupExperienceFirst } from "../../../fixtures/dogfood/experience-first/setup.js";
+
+const criteria = [
+  "browser-render",
+  "axe",
+  "keyboard-focus",
+  "viewport-overflow",
+  "navigation-state",
+] as const;
+
+function requireObservedGateCoverage(
+  report: QualityReport,
+  engine: "chromium" | "webkit",
+  bundleDigest: string,
+): void {
+  if (
+    report.target.bundleDigest !== bundleDigest ||
+    report.findings.length !== 10
+  )
+    throw new Error("Browser gate target or criterion coverage is incomplete");
+  for (const viewport of ["desktop", "mobile"] as const) {
+    for (const criterion of criteria) {
+      const matches = report.findings.filter(
+        (finding) =>
+          finding.criterion === criterion &&
+          finding.conditions.browser === `${engine}-${viewport}` &&
+          finding.conditions.bundleDigest === bundleDigest &&
+          finding.conditions.viewportWidth ===
+            (viewport === "desktop" ? 1280 : 390),
+      );
+      if (matches.length !== 1)
+        throw new Error(
+          `Missing exact ${engine}-${viewport} ${criterion} observation`,
+        );
+      const state = matches[0]!.state;
+      if (
+        state !== "PASS" &&
+        !(
+          engine === "webkit" &&
+          criterion === "keyboard-focus" &&
+          state === "FAIL"
+        )
+      )
+        throw new Error(
+          `Unverified or unexpected ${engine}-${viewport} ${criterion}: ${state}`,
+        );
+    }
+  }
+}
 
 // This serves the builder's actual files. No Demo Lab mock is substituted.
 test("Experience-first generated case states retain context on desktop and mobile", async ({
@@ -93,20 +145,28 @@ test("Experience-first generated case states retain context on desktop and mobil
       },
       browser,
     );
-    const failures = report.findings.filter(
-      (finding) => finding.state === "FAIL",
-    );
-    if (test.info().project.name.startsWith("webkit")) {
-      // WebKit focus behavior varies by host. Preserve any observed FAIL and
-      // reject failures outside the known first-Tab criterion.
-      expect(
-        failures.filter((finding) => finding.criterion !== "keyboard-focus"),
-        JSON.stringify(failures),
-      ).toEqual([]);
-    } else {
-      expect(failures, JSON.stringify(failures)).toEqual([]);
-    }
-    expect(report.findings.length).toBeGreaterThan(0);
+    const inspected = await inspectBundle({
+      trustedRoot: fixture.root,
+      directory: output.directory,
+    });
+    const engine = test.info().project.name.startsWith("webkit")
+      ? "webkit"
+      : "chromium";
+    requireObservedGateCoverage(report, engine, inspected.target.bundleDigest);
+    const unavailable: QualityReport = {
+      ...report,
+      findings: report.findings.map((finding) => ({
+        ...finding,
+        state: "UNVERIFIED" as const,
+      })),
+    };
+    expect(() =>
+      requireObservedGateCoverage(
+        unavailable,
+        engine,
+        inspected.target.bundleDigest,
+      ),
+    ).toThrow("Unverified");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await rm(fixture.root, { recursive: true, force: true });

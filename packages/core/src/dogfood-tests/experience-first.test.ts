@@ -77,21 +77,52 @@ test("Experience-first locks two domains, a cross-domain journey, and inherited 
       intent: "propose",
     }),
   ).toMatchObject({ allowed: false, effect: "blocked" });
-  await expect(
-    fixture.store.create({
-      ...fixture.scenario.artifact,
+  const queueScoped = (
+    id: string,
+    dependencies: ArtifactSnapshot["dependencies"],
+  ): ArtifactSnapshot => {
+    const source = fixture.scenario.artifact;
+    const bare: ArtifactSnapshot = {
+      ...source,
       meta: {
-        ...fixture.scenario.artifact.meta,
-        id: "art_exp_invalid_sibling",
-      },
+        ...Object.fromEntries(
+          Object.entries(source.meta).filter(
+            ([key]) => key !== "contentDigest",
+          ),
+        ),
+        id,
+      } as ArtifactSnapshot["meta"],
       scope: {
         level: "domain",
         ownerId: "domain_queue",
         parentId: "product_mimic",
       },
-      dependencies: [{ ...fixture.domains[1]!.ref, onChange: "validate" }],
-    }),
-  ).rejects.toThrow();
+      dependencies,
+    };
+    return {
+      ...bare,
+      meta: { ...bare.meta, contentDigest: artifactDigest(bare) },
+    };
+  };
+  const invalid = queueScoped(
+    "art_exp_invalid_sibling",
+    fixture.scenario.artifact.dependencies,
+  );
+  await expect(fixture.store.create(invalid)).rejects.toMatchObject({
+    code: "INVALID",
+    message: "Dependency scope is not an ancestor",
+  });
+  const validDependencies = fixture.scenario.artifact.dependencies.filter(
+    (dependency) =>
+      dependency.artifactId !== fixture.domains[1]!.ref.artifactId &&
+      dependency.artifactId !== fixture.domainAsset.ref.artifactId,
+  );
+  const repaired = queueScoped("art_exp_queue_scoped_control", [
+    ...validDependencies,
+    { ...fixture.domains[0]!.ref, onChange: "validate" },
+  ]);
+  const savedControl = await fixture.store.create(repaired);
+  expect(savedControl.digest).toBe(artifactDigest(repaired));
 });
 
 test("exact stale input and lock mismatch are rejected before generated output", async () => {
@@ -184,6 +215,48 @@ test("generated states, exact source locks, and static quality remain reviewable
         finding.state === "CONCERN" || finding.state === "UNVERIFIED",
     ),
   ).toBe(true);
+});
+
+test("domain routing and draft editing are not representable by the current builder", async () => {
+  const fixture = await setup();
+  const route = structuredClone(fixture.input);
+  (
+    route.states[0]!.root.children![0] as unknown as { children: unknown[] }
+  ).children.push({
+    tag: "a",
+    text: "Open C-204 review",
+    href: "/review/C-204",
+  });
+  await expect(
+    buildPrototype(fixture.store, route, fixture.root),
+  ).rejects.toMatchObject({
+    code: "INVALID",
+    message: "Only local fragment URLs are allowed",
+  });
+  const target = structuredClone(fixture.input);
+  (
+    target.states[0]!.root.children![0]!.children![3] as { targetState: string }
+  ).targetState = "review";
+  await expect(
+    buildPrototype(fixture.store, target, fixture.root),
+  ).rejects.toMatchObject({
+    code: "INVALID",
+    message: "Only buttons may use supported state transitions",
+  });
+  const draft = structuredClone(fixture.input);
+  (
+    draft.states[0]!.root.children![0] as unknown as { children: unknown[] }
+  ).children.push({
+    tag: "input",
+    id: "draft-note",
+    text: "Synthetic draft note",
+  });
+  await expect(
+    buildPrototype(fixture.store, draft, fixture.root),
+  ).rejects.toMatchObject({
+    code: "UPSTREAM_REVISION_REQUIRED",
+    upstreamRevisionRequest: "Unsupported semantic element: input",
+  });
 });
 
 test("mobile transformation is rejected as unsupported structure, rather than fixture-label proof", async () => {
