@@ -315,7 +315,7 @@ export class LocalConfirmationAuthority implements RegistryAuthority {
       if (marks.length !== 1 || !marks[0]!.startsWith(LOCAL_MARKER))
         return false;
       const c = await this.lookup(marks[0]!.slice(LOCAL_MARKER.length));
-      const state = await this.workspace.read();
+      const state = await this.workspace.readVerificationState();
       if (
         state.decisions[record.id] &&
         !same(state.decisions[record.id], record)

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdir, open, readFile, rm, rename } from "node:fs/promises";
 import path from "node:path";
 import { canonicalJson, jsonCopy } from "./artifact-canonical.js";
@@ -52,6 +53,11 @@ function revisionList(data: WorkspaceData, id: string): number[] {
     .map((name) => Number(name.slice(prefix.length)))
     .sort((a, b) => a - b);
 }
+function freezeEvidence(value: unknown): void {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return;
+  for (const child of Object.values(value)) freezeEvidence(child);
+  Object.freeze(value);
+}
 function view(data: WorkspaceData): SnapshotStorage {
   return {
     async read(id, revision) {
@@ -70,6 +76,7 @@ function view(data: WorkspaceData): SnapshotStorage {
 }
 /** A single visibility unit for artifact records and Run/Decision/canonical state. */
 export class FileWorkspaceStorage implements AtomicRegistryStorage {
+  private readonly readSession = new AsyncLocalStorage<WorkspaceData>();
   readonly snapshots: SnapshotStorage = {
     read: async (id, revision) =>
       (await this.load()).snapshots[key(id, revision)],
@@ -82,6 +89,18 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
           throw new Error("Nonconsecutive artifact publication");
         return snapshots.writeIfAbsent(id, revision, record);
       }),
+    withReadSession: async (read) => {
+      if (this.readSession.getStore()) return read();
+      const source = await this.readSource();
+      freezeEvidence(source.data.registry);
+      return this.readSession.run(source.data, async () => {
+        const result = await read();
+        const current = await this.readSource();
+        if (current.raw !== source.raw)
+          throw new Error("Workspace changed during verification");
+        return result;
+      });
+    },
   };
   constructor(
     readonly file: string,
@@ -89,21 +108,28 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
       phase: "before-rename" | "after-rename",
     ) => void,
   ) {}
-  private async load(): Promise<WorkspaceData> {
+  private async readSource(): Promise<{ data: WorkspaceData; raw?: string }> {
     try {
-      const data = JSON.parse(
-        await readFile(this.file, "utf8"),
-      ) as WorkspaceData;
+      const raw = await readFile(this.file, "utf8");
+      const data = JSON.parse(raw) as WorkspaceData;
       if (data.version !== 1 || !data.snapshots || !data.registry)
         throw new Error("Invalid workspace state");
-      return data;
+      return { data, raw };
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return initial();
+      if ((error as NodeJS.ErrnoException).code === "ENOENT")
+        return { data: initial() };
       throw error;
     }
   }
+  private async load(): Promise<WorkspaceData> {
+    return this.readSession.getStore() ?? (await this.readSource()).data;
+  }
   async read(): Promise<RegistryState> {
     return jsonCopy((await this.load()).registry);
+  }
+  /** Pinned, frozen evidence for internal verifiers; callbacks receive their own copies. */
+  async readVerificationState(): Promise<RegistryState> {
+    return this.readSession.getStore()?.registry ?? this.read();
   }
   async transact<T>(
     change: (registry: RegistryState) => Promise<T>,
@@ -126,7 +152,7 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
     let temp: string | undefined;
     let transactionSnapshots: SnapshotStorage | undefined;
     try {
-      const data = await this.load();
+      const data = (await this.readSource()).data;
       const before = canonicalJson(data);
       transactionSnapshots = view(data);
       activeTransactionViews.set(transactionSnapshots, this.snapshots);

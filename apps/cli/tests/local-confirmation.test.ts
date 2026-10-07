@@ -1,4 +1,14 @@
 import { afterEach, beforeAll, expect, test } from "vitest";
+import { performance } from "node:perf_hooks";
+import {
+  ArtifactStore,
+  CANONICALIZATION_VERSION,
+  FileWorkspaceStorage,
+  RegistryAuthorityVerifier,
+  loadSchemaDirectory,
+  type SnapshotStorage,
+} from "@mimic/core";
+import { LocalConfirmationAuthority } from "../src/local-confirmation-authority.js";
 import { spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
@@ -914,3 +924,138 @@ test("reserved and mixed markers, missing evidence, and missing signed trust fai
   expect(commit.status).toBe(3);
   expect(state(dir).registry.canonical.art_local).toBeUndefined();
 });
+
+test("9UI-153 persisted confirmation diamond profile", async () => {
+  const { dir, candidate, ref } = setup();
+  const { decision, commit, confirmation, commitConfirmation } = approval(
+    dir,
+    candidate,
+    ref,
+  );
+  put(dir, "decision.json", decision);
+  put(dir, "confirmation.json", confirmation);
+  put(dir, "commit.json", commit);
+  put(dir, "commit-confirmation.json", commitConfirmation);
+  const confirmed = invoke(
+    dir,
+    "decide",
+    "--file",
+    "decision.json",
+    "--confirmation",
+    "confirmation.json",
+    "--commit",
+    "commit.json",
+    "--commit-confirmation",
+    "commit-confirmation.json",
+  );
+  expect(confirmed.status, confirmed.stderr).toBe(0);
+  const file = path.join(dir, ".mimic", "workspace.json");
+  const data = JSON.parse(readFileSync(file, "utf8"));
+  const approved = JSON.parse(data.snapshots["art_local@2"])
+    .artifact as ArtifactSnapshot;
+  let previous: ArtifactSnapshot[] = [];
+  let edges = 0;
+  for (let layer = 10; layer >= 0; layer--) {
+    const current: ArtifactSnapshot[] = [];
+    for (let side = 0; side < (layer === 0 ? 1 : 2); side++) {
+      if (layer === 10 && side === 0) {
+        current.push(approved);
+        continue;
+      }
+      const deps = previous.map((child) => ({
+        artifactId: child.meta.id,
+        revision: child.meta.revision,
+        lockDigest: artifactDigest(child),
+        onChange: "validate",
+      }));
+      edges += deps.length;
+      const artifact: ArtifactSnapshot = {
+        ...candidate,
+        meta: { ...candidate.meta, id: `art_profile_${layer}_${side}` },
+        scope: { level: "organization", ownerId: "org_local" },
+        lifecycle: { status: "provisional", freshness: "valid" },
+        approval: { status: "pending" },
+        dependencies: deps,
+        content: {
+          ...(candidate.content as object),
+          summary: `Layer ${layer} side ${side}`,
+        },
+      };
+      data.snapshots[`${artifact.meta.id}@1`] = canonicalJson({
+        canonicalization: CANONICALIZATION_VERSION,
+        digest: artifactDigest(artifact),
+        artifact,
+      });
+      current.push(artifact);
+    }
+    previous = current;
+  }
+  writeFileSync(file, JSON.stringify(data));
+  const workspace = new FileWorkspaceStorage(file);
+  let loads = 0;
+  const instrumented = workspace as unknown as {
+    readSource: () => Promise<unknown>;
+  };
+  const load = instrumented.readSource.bind(workspace);
+  instrumented.readSource = async () => {
+    loads++;
+    return load();
+  };
+  const local = new LocalConfirmationAuthority(workspace, dir);
+  let confirmations = 0;
+  const localVerify = local.verify.bind(local);
+  local.verify = async (record, proposal) => {
+    confirmations++;
+    return localVerify(record, proposal);
+  };
+  const authority = new RegistryAuthorityVerifier(workspace, {
+    verify: (record, proposal) => local.verify(record, proposal),
+  });
+  let reads = 0;
+  const storage: SnapshotStorage = {
+    read: async (id, revision) => {
+      reads++;
+      return workspace.snapshots.read(id, revision);
+    },
+    revisions: workspace.snapshots.revisions,
+    writeIfAbsent: workspace.snapshots.writeIfAbsent,
+    withReadSession: workspace.snapshots.withReadSession,
+  };
+  const schemas = await loadSchemaDirectory(
+    path.join(repo, "schemas/artifacts"),
+  );
+  let validates = 0;
+  const validate = schemas.validate.bind(schemas);
+  schemas.validate = (artifact) => {
+    validates++;
+    return validate(artifact);
+  };
+  const store = new ArtifactStore(
+    storage,
+    schemas,
+    [{ level: "organization", ownerId: "org_local" }],
+    authority,
+  );
+  const cpuStart = process.cpuUsage();
+  const start = performance.now();
+  await store.read(previous[0]!.meta.id, 1);
+  const wallMs = performance.now() - start;
+  const cpu = process.cpuUsage(cpuStart);
+  expect({ nodes: 21, edges, reads, validates, workspaceLoads: loads }).toEqual(
+    { nodes: 21, edges: 38, reads: 21, validates: 21, workspaceLoads: 2 },
+  );
+  expect(confirmations).toBeGreaterThan(0);
+  expect(confirmations).toBeLessThanOrEqual(21);
+  console.log(
+    JSON.stringify({
+      nodes: 21,
+      edges,
+      reads,
+      validates,
+      confirmations,
+      workspaceLoads: loads,
+      wallMs,
+      cpuMs: (cpu.user + cpu.system) / 1000,
+    }),
+  );
+}, 60000);
