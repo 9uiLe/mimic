@@ -3,6 +3,7 @@ import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { artifactDigest } from "../artifact-canonical.js";
+import { serializeArtifactYaml } from "../artifact-codec.js";
 import {
   ArtifactStore,
   FileSnapshotStorage,
@@ -13,6 +14,8 @@ import {
   FilePackageSource,
   PackageRegistry,
   packageDigest,
+  parseManifest,
+  parseDesignLock,
   serializePackageDocument,
   sha256,
   type PackageManifest,
@@ -608,6 +611,139 @@ describe("package compiler and local publisher", () => {
     ).rejects.toMatchObject({ code: "UNVERIFIED" });
   });
 
+  test.each(["provisional", "stale"] as const)(
+    "rejects %s external artifact in new release while historical registry reads remain available",
+    async (state) => {
+      const fixture = await setup();
+      const original = fixture.saved.artifact;
+      const withoutDigest = (
+        meta: ArtifactSnapshot["meta"],
+      ): ArtifactSnapshot["meta"] =>
+        Object.fromEntries(
+          Object.entries(meta).filter(([key]) => key !== "contentDigest"),
+        ) as ArtifactSnapshot["meta"];
+      const external: ArtifactSnapshot = {
+        ...original,
+        meta: { ...withoutDigest(original.meta), id: "art_external_fixture" },
+        scope: organization,
+        lifecycle:
+          state === "stale"
+            ? {
+                status: "approved",
+                freshness: "stale",
+                freshnessReason: "Fixture external assessment is outdated.",
+              }
+            : { status: "provisional", freshness: "valid" },
+        approval: state === "stale" ? original.approval : { status: "pending" },
+      };
+      const externalDocument =
+        state === "stale"
+          ? {
+              ...external,
+              meta: {
+                ...external.meta,
+                contentDigest: artifactDigest(external),
+              },
+            }
+          : external;
+      const externalSaved = await fixture.store.create(externalDocument);
+      const root: ArtifactSnapshot = {
+        ...original,
+        meta: {
+          ...withoutDigest(original.meta),
+          id: "art_root_with_external_fixture",
+        },
+        dependencies: [
+          {
+            artifactId: external.meta.id,
+            revision: 1,
+            lockDigest: externalSaved.digest,
+            onChange: "validate",
+          },
+        ],
+      };
+      const rootSaved = await fixture.store.create({
+        ...root,
+        meta: { ...root.meta, contentDigest: artifactDigest(root) },
+      });
+      const childManifest = parseManifest(fixture.child.manifestBytes);
+      const artifactBytes = bytes(
+        serializeArtifactYaml(externalSaved.artifact),
+      );
+      const entry = {
+        artifactId: external.meta.id,
+        revision: 1,
+        schemaVersion: "1.0.0",
+        snapshotDigest: externalSaved.digest,
+        path: "artifacts/external.yaml",
+        digest: sha256(artifactBytes),
+      };
+      const child: PackageSnapshot = {
+        manifestBytes: serializePackageDocument({
+          ...childManifest,
+          artifacts: [entry],
+        }),
+        lockBytes: serializePackageDocument({
+          ...parseDesignLock(fixture.child.lockBytes),
+          artifacts: [entry],
+        }),
+        files: { ...fixture.child.files, [entry.path]: artifactBytes },
+      };
+      const childDigest = packageDigest(child);
+      const registry = fixture.registryForSource(
+        packageSource(fixture.packages, child),
+      );
+      expect(
+        await registry.reconstruct(childManifest.ref, childDigest),
+      ).toHaveLength(1);
+      const selected = {
+        artifactId: root.meta.id,
+        revision: 1,
+        lockDigest: rootSaved.digest,
+      };
+      const input: CompileInput = {
+        ...fixture.input,
+        dependencies: [
+          { ...fixture.input.dependencies[0]!, digest: childDigest },
+        ],
+        inventory: {
+          ...fixture.input.inventory,
+          "product-foundation": {
+            status: "included",
+            artifacts: [selected],
+            files: [],
+            dependencies: [],
+          },
+        },
+        quality: [{ ...fixture.input.quality[0]!, artifacts: [selected] }],
+      };
+      await expect(
+        compilePackage(
+          input,
+          fixture.store,
+          registry,
+          fixture.policy,
+          fixture.registryForSource,
+        ),
+      ).rejects.toMatchObject({ code: "UNVERIFIED" });
+      const contextOnly: CompileInput = {
+        ...fixture.input,
+        dependencies: [
+          { ...fixture.input.dependencies[0]!, digest: childDigest },
+        ],
+      };
+      await expect(
+        compilePackage(
+          contextOnly,
+          fixture.store,
+          registry,
+          fixture.policy,
+          fixture.registryForSource,
+        ),
+      ).resolves.toMatchObject({ ref: reference });
+    },
+  );
+
   test("copies mutable inputs and rejects changed candidate bytes", async () => {
     const fixture = await setup();
     const baseline = await compilePackage(
@@ -803,5 +939,53 @@ describe("package compiler and local publisher", () => {
     expect(
       (await fixture.registry.resolve(reference, compiled.digest))[0]!.ref,
     ).toEqual(reference);
+  });
+
+  test("abort during final verification leaves no version, stage or claim and permits retry", async () => {
+    const fixture = await setup();
+    const compiled = await compilePackage(
+      fixture.input,
+      fixture.store,
+      fixture.registry,
+      fixture.policy,
+      fixture.registryForSource,
+    );
+    fixture.approve(compiled.digest);
+    const abort = new AbortController();
+    let release!: () => void;
+    let reached!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const finalVerificationReached = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    let checks = 0;
+    const candidate = {
+      ...compiled,
+      verifyCurrent: async () => {
+        await compiled.verifyCurrent();
+        if (++checks === 3) {
+          reached();
+          await gate;
+        }
+      },
+    };
+    const publication = fixture.publisher.publish(
+      candidate,
+      fixture.authority,
+      { signal: abort.signal },
+    );
+    await finalVerificationReached;
+    abort.abort();
+    release();
+    await expect(publication).rejects.toMatchObject({ code: "CANCELLED" });
+    const parent = path.join(fixture.packages, "product", "mimic");
+    expect(await readdir(parent)).toEqual([]);
+    await expect(
+      fixture.registry.resolve(reference, compiled.digest),
+    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    await fixture.publisher.publish(compiled, fixture.authority);
+    expect(await readdir(parent)).toEqual(["1.0.0"]);
   });
 });

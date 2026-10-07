@@ -10,7 +10,7 @@ import {
 import path from "node:path";
 import { artifactDigest } from "../artifact-canonical.js";
 import { serializeArtifactYaml } from "../artifact-codec.js";
-import type { ArtifactStore } from "../artifact-store.js";
+import { ArtifactStoreError, type ArtifactStore } from "../artifact-store.js";
 import {
   packageDigest,
   parseManifest,
@@ -355,6 +355,7 @@ export async function compilePackage(
     const item = input.inventory[category];
     return item.status === "included" ? item.artifacts : [];
   });
+  const externalSelections: ArtifactSelection[] = [];
   const files: Record<string, Uint8Array> = Object.fromEntries(
     Object.entries(input.files).map(([name, bytes]) => [
       name,
@@ -363,8 +364,24 @@ export async function compilePackage(
   );
   const artifactEntries: ArtifactEntry[] = [];
   const verifyCurrent = async (): Promise<void> => {
-    for (const ref of selections) {
-      const current = await store.read(ref.artifactId, ref.revision);
+    for (const ref of [...selections, ...externalSelections]) {
+      let current: Awaited<ReturnType<ArtifactStore["read"]>>;
+      try {
+        current = await store.read(ref.artifactId, ref.revision);
+      } catch (error) {
+        if (
+          error instanceof ArtifactStoreError &&
+          ["CORRUPT", "INVALID"].includes(error.code)
+        )
+          fail(
+            "INVALID",
+            `Artifact verification failed: ${ref.artifactId}@${ref.revision}: ${error.message}`,
+          );
+        fail(
+          "UNVERIFIED",
+          `Trusted artifact verification unavailable: ${ref.artifactId}@${ref.revision}: ${String(error)}`,
+        );
+      }
       if (
         current.digest !== ref.lockDigest ||
         artifactDigest(current.artifact) !== ref.lockDigest
@@ -544,15 +561,37 @@ export async function compilePackage(
         fail("INVALID", `Conflicting artifact revision: ${id}`);
       closure.set(id, entry.snapshotDigest);
     }
-  for (const ref of selections) {
-    const { artifact } = await store.read(ref.artifactId, ref.revision);
-    for (const dep of artifact.dependencies)
-      if (closure.get(`${dep.artifactId}@${dep.revision}`) !== dep.lockDigest)
+  const localKeys = new Set(
+    selections.map((ref) => `${ref.artifactId}@${ref.revision}`),
+  );
+  const visitedArtifacts = new Set<string>();
+  const walkArtifact = async (ref: ArtifactSelection): Promise<void> => {
+    const key = `${ref.artifactId}@${ref.revision}`;
+    if (visitedArtifacts.has(key)) return;
+    visitedArtifacts.add(key);
+    const { artifact, digest } = await store.read(ref.artifactId, ref.revision);
+    if (digest !== ref.lockDigest)
+      fail("INVALID", `Artifact lock mismatch: ${key}`);
+    for (const dep of artifact.dependencies) {
+      const child = `${dep.artifactId}@${dep.revision}`;
+      if (closure.get(child) !== dep.lockDigest)
         fail(
           "INVALID",
-          `Artifact dependency absent or wrong lock: ${ref.artifactId} -> ${dep.artifactId}@${dep.revision}`,
+          `Artifact dependency absent or wrong lock: ${key} -> ${child}`,
         );
-  }
+      const selected = {
+        artifactId: dep.artifactId,
+        revision: dep.revision,
+        lockDigest: dep.lockDigest,
+      };
+      if (!localKeys.has(child)) externalSelections.push(selected);
+      await walkArtifact(selected);
+    }
+  };
+  for (const ref of selections) await walkArtifact(ref);
+  // Historical package contents remain readable. A new release requires trusted
+  // approval and current freshness for the exact consumed artifact closure.
+  await verifyCurrent();
   const manifest: PackageManifest = {
     format: 1,
     ref: input.ref,
@@ -721,6 +760,7 @@ export class FilePackagePublisher {
       await candidate.verifyResolution();
       if (packageDigest(candidate.snapshot) !== candidate.digest)
         fail("INVALID", "Candidate bytes changed before commit");
+      checkCancel();
       await rename(stage, target);
       return {
         ref: structuredClone(candidate.ref),
