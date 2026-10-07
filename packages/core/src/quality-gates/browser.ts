@@ -2,7 +2,6 @@
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
 import { realpath } from "node:fs/promises";
-import path from "node:path";
 import type { AddressInfo } from "node:net";
 import { AxeBuilder } from "@axe-core/playwright";
 import {
@@ -20,6 +19,7 @@ import {
   type QualityReport,
 } from "./index.js";
 import { qualityPlan } from "./plan.js";
+import { matchesOutputLocation } from "./location.js";
 
 type BrowserFinding = GateFinding;
 const devices = [
@@ -167,7 +167,7 @@ export async function runBrowserQualityGates(
         `sha256:${createHash("sha256").update(canonicalJson(plan)).digest("hex")}` ||
       canonicalJson(manifest.requiredStates) !==
         canonicalJson(plan.requiredStates) ||
-      path.resolve(trustedRoot, plan.outputPath) !== target.directory
+      !(await matchesOutputLocation(trustedRoot, target.directory, plan))
     )
       checked.errors.push(
         "manifest, plan, required states, or output directory differ",

@@ -13,6 +13,7 @@ import {
 import type { PrototypeBuilderInput } from "../prototype-builder/index.js";
 import { compileApprovedTokenAssets } from "../token-compiler/index.js";
 import { qualityPlan } from "./plan.js";
+import { matchesOutputLocation } from "./location.js";
 
 export type GateState = "PASS" | "CONCERN" | "FAIL" | "UNVERIFIED" | "N/A";
 export type GateSeverity = "BLOCKER" | "MAJOR" | "MINOR" | "NOTE";
@@ -191,7 +192,7 @@ export async function runStaticQualityGates(
   const trustedRoot = await realpath(input.trustedRoot);
   const findings: GateFinding[] = [];
   const base = { bundleDigest: target.bundleDigest };
-  const planMatches = (() => {
+  const planMatches = await (async () => {
     try {
       return (
         !!plan &&
@@ -203,7 +204,7 @@ export async function runStaticQualityGates(
         manifest.planDigest === digest(canonicalJson(plan)) &&
         canonicalJson(manifest.requiredStates) ===
           canonicalJson(plan.requiredStates) &&
-        path.resolve(trustedRoot, plan.outputPath) === target.directory
+        (await matchesOutputLocation(trustedRoot, target.directory, plan))
       );
     } catch {
       return false;

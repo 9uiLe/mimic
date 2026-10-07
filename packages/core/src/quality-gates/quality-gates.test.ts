@@ -1,11 +1,13 @@
 import { afterEach, expect, test } from "vitest";
 import { createHash } from "node:crypto";
-import { readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { buildPrototype } from "../prototype-builder/index.js";
+import { buildPrototypeModes } from "../prototype-modes/index.js";
 import { canonicalJson } from "../artifact-canonical.js";
 import type { ArtifactStore } from "../artifact-store.js";
 import { setupApprovedPrototypeFixture } from "../../../../fixtures/prototypes/approved.js";
+import { setupPrototypeModesFixture } from "../../../../fixtures/prototype-modes/approved.js";
 import { inspectBundle, runStaticQualityGates } from "./index.js";
 import { runBrowserQualityGates } from "./browser.js";
 
@@ -88,6 +90,233 @@ test("real generated bundle records exact target and scoped static results", asy
     "FAIL",
   );
 });
+
+test("generated mode Current and Proposed bundles pass their manifest gate", async () => {
+  const fixture = await setupPrototypeModesFixture();
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  for (const output of [modes.current, modes.proposed!]) {
+    const result = await runStaticQualityGates({
+      trustedRoot: fixture.root,
+      directory: output.directory,
+      store: fixture.store,
+      uiContract: fixture.modeRefs.contract,
+    });
+    expect(state(result.report.findings, "bundle-manifest")).toBe("PASS");
+    expect(state(result.report.findings, "source-locks")).toBe("PASS");
+    expect(result.report.target.planDigest).toBe(output.planDigest);
+  }
+  const savedModePlan = JSON.parse(
+    await readFile(
+      path.join(modes.comparisonDirectory, "mode-plan.json"),
+      "utf8",
+    ),
+  );
+  const comparison = JSON.parse(
+    await readFile(
+      path.join(modes.comparisonDirectory, "comparison.json"),
+      "utf8",
+    ),
+  );
+  expect(savedModePlan).toEqual(fixture.modePlan);
+  expect(comparison.modePlanDigest).toBe(modes.modePlanDigest);
+  for (const [slot, output] of [
+    ["current", modes.current],
+    ["proposed", modes.proposed!],
+  ] as const) {
+    const savedPlan = JSON.parse(
+      await readFile(path.join(output.directory, "plan.json"), "utf8"),
+    );
+    expect(savedPlan.outputPath).toBe(fixture.modePlan[slot].outputPath);
+    expect(comparison[slot].planDigest).toBe(output.planDigest);
+  }
+});
+
+test("rejected mode comparison verifies its published Current fallback", async () => {
+  const fixture = await setupPrototypeModesFixture({
+    requestStatus: "rejected",
+  });
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  expect(modes.fallback).toBe("rejected-system-request");
+  expect(modes.proposed).toBeUndefined();
+  const { report } = await runStaticQualityGates({
+    trustedRoot: fixture.root,
+    directory: modes.current.directory,
+    store: fixture.store,
+    uiContract: fixture.modeRefs.contract,
+  });
+  expect(state(report.findings, "bundle-manifest")).toBe("PASS");
+  const comparison = JSON.parse(
+    await readFile(
+      path.join(modes.comparisonDirectory, "comparison.json"),
+      "utf8",
+    ),
+  );
+  expect(comparison.proposed).toBeNull();
+});
+
+test("mode location uses authored slot names and rejects a moved comparison", async () => {
+  const fixture = await setupPrototypeModesFixture();
+  roots.push(fixture.root);
+  const plan = {
+    ...fixture.modePlan,
+    current: { ...fixture.modePlan.current, outputPath: "before" },
+    proposed: { ...fixture.modePlan.proposed, outputPath: "after" },
+    comparisonPath: "alternatives",
+  };
+  const modes = await buildPrototypeModes(fixture.store, plan, fixture.root);
+  const input = {
+    trustedRoot: fixture.root,
+    directory: modes.current.directory,
+    store: fixture.store,
+  };
+  const initial = await runStaticQualityGates(input);
+  expect(state(initial.report.findings, "bundle-manifest")).toBe("PASS");
+  const moved = path.join(path.dirname(modes.comparisonDirectory), "relocated");
+  await rename(modes.comparisonDirectory, moved);
+  const relocated = await runStaticQualityGates({
+    ...input,
+    directory: path.join(moved, "before"),
+  });
+  expect(state(relocated.report.findings, "bundle-manifest")).toBe("FAIL");
+});
+
+test.each([
+  {
+    name: "comparison slot path",
+    file: "comparison.json",
+    change: (value: Record<string, unknown>) => {
+      (value.current as Record<string, unknown>).path = "another-directory";
+    },
+  },
+  {
+    name: "Proposed slot path",
+    file: "comparison.json",
+    change: (value: Record<string, unknown>) => {
+      (value.proposed as Record<string, unknown>).path = "another-directory";
+    },
+  },
+  {
+    name: "comparison mode digest",
+    file: "comparison.json",
+    change: (value: Record<string, unknown>) => {
+      value.modePlanDigest = `sha256:${"0".repeat(64)}`;
+    },
+  },
+  {
+    name: "comparison bundle digest",
+    file: "comparison.json",
+    change: (value: Record<string, unknown>) => {
+      (value.current as Record<string, unknown>).planDigest =
+        `sha256:${"0".repeat(64)}`;
+    },
+  },
+  {
+    name: "authored mode path",
+    file: "mode-plan.json",
+    change: (value: Record<string, unknown>) => {
+      (value.current as Record<string, unknown>).outputPath =
+        "another-directory";
+    },
+  },
+])("mode bundle rejects changed $name", async ({ file, change }) => {
+  const fixture = await setupPrototypeModesFixture();
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  const metadataFile = path.join(modes.comparisonDirectory, file);
+  const metadata = JSON.parse(await readFile(metadataFile, "utf8"));
+  change(metadata);
+  await writeFile(metadataFile, `${canonicalJson(metadata)}\n`);
+  const input = {
+    trustedRoot: fixture.root,
+    directory: modes.current.directory,
+    store: fixture.store,
+  };
+  const { report } = await runStaticQualityGates(input);
+  expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
+  const browser = await runBrowserQualityGates(input);
+  expect(state(browser.findings, "navigation-state")).toBe("FAIL");
+});
+
+test("mode bundle rejects a changed saved render path even with a matching manifest digest", async () => {
+  const fixture = await setupPrototypeModesFixture();
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  await rewritePlan(modes.current.directory, (plan) => {
+    plan.outputPath = "another-directory";
+  });
+  const { report } = await runStaticQualityGates({
+    trustedRoot: fixture.root,
+    directory: modes.current.directory,
+    store: fixture.store,
+  });
+  expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
+});
+
+test("mode bundle rejects a changed authored path even with a matching mode-plan digest", async () => {
+  const fixture = await setupPrototypeModesFixture();
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  const modePlanFile = path.join(modes.comparisonDirectory, "mode-plan.json");
+  const comparisonFile = path.join(
+    modes.comparisonDirectory,
+    "comparison.json",
+  );
+  const modePlan = JSON.parse(await readFile(modePlanFile, "utf8"));
+  const comparison = JSON.parse(await readFile(comparisonFile, "utf8"));
+  modePlan.current.outputPath = "another-directory";
+  comparison.modePlanDigest = `sha256:${createHash("sha256")
+    .update(canonicalJson(modePlan))
+    .digest("hex")}`;
+  await writeFile(modePlanFile, `${canonicalJson(modePlan)}\n`);
+  await writeFile(comparisonFile, `${canonicalJson(comparison)}\n`);
+  const { report } = await runStaticQualityGates({
+    trustedRoot: fixture.root,
+    directory: modes.current.directory,
+    store: fixture.store,
+  });
+  expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
+});
+
+test("controlled browser checks run on generated mode bundles", async () => {
+  const fixture = await setupPrototypeModesFixture();
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  for (const output of [modes.current, modes.proposed!]) {
+    const report = await runBrowserQualityGates({
+      trustedRoot: fixture.root,
+      directory: output.directory,
+      store: fixture.store,
+    });
+    expect(state(report.findings, "browser-render")).toBe("PASS");
+    expect(state(report.findings, "navigation-state")).toBe("PASS");
+  }
+}, 30_000);
 
 test("generated single-main HTML passes and an extra main fails lint", async () => {
   const { input, output } = await built();
