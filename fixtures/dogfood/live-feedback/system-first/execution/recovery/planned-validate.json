@@ -1,0 +1,16 @@
+{
+  "kind": "planned-approved-artifact-schema-only",
+  "argv": [
+    "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+    "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+    "validate",
+    "--file",
+    "work/approved-source.preview.json",
+    "--root",
+    "/tmp/mimic-9ui-159-source-review",
+    "--json"
+  ],
+  "exit": 0,
+  "stdout": "{\"valid\":true,\"level\":\"schema-only\",\"diagnostics\":0}\n",
+  "stderr": ""
+}

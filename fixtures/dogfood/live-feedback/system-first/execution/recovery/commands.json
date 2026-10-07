@@ -1,0 +1,131 @@
+[
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "submit",
+      "run_9ui157_live_reviewed",
+      "--task",
+      "task_contract",
+      "--package",
+      "packages/s05-ui-contract-manager",
+      "--work",
+      "work/task_contract.json",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"runId\":\"run_9ui157_live_reviewed\",\"state\":\"review-ready\",\"actions\":[{\"taskId\":\"task_capability\",\"action\":\"IGNORE\"},{\"taskId\":\"task_product\",\"action\":\"IGNORE\"},{\"taskId\":\"task_users\",\"action\":\"IGNORE\"},{\"taskId\":\"task_contract\",\"action\":\"IGNORE\"}],\"packetIds\":[\"packet_rb157_product\"],\"blockers\":[],\"path\":\".mimic/outputs/d5d9618b-bc15-4d89-8e29-4a811ada62dd.json\",\"submissionState\":\"accepted\",\"revisionRequests\":{\"count\":1,\"state\":\"pending-source-approval\",\"path\":\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\",\"paths\":[\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\"]}}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "revision-requests",
+      "run_9ui157_live_reviewed",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"runId\":\"run_9ui157_live_reviewed\",\"count\":1,\"records\":[{\"runId\":\"run_9ui157_live_reviewed\",\"taskId\":\"task_contract\",\"workDigest\":\"f13d76f0b92ad68e2c3e55435434c03c514fce4d1599cfef3104ff9103c35373\",\"packageDigest\":\"f12b10c940e150e231bc02a6544cdf301ebfdd248669a1c299049383cfd4b934\",\"skillId\":\"mimic.s05.ui-contract-manager\",\"inputRefs\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"outputRefs\":[{\"artifactId\":\"art_rb157_ui_contract\",\"revision\":1,\"lockDigest\":\"sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38\"},{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"}],\"path\":\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\",\"requests\":[{\"request\":{\"runId\":\"run_9ui157_live_reviewed\",\"source\":{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1},\"request\":{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"},\"affectedLocks\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"evidenceRefs\":[\"art_rb157_current_inspection@1#/content/description\",\"art_rb157_dispatch_task@1#/content/tasks/0\"],\"reason\":\"Clarify or propose detail freshness before treating pre-assignment values as current\"},\"state\":\"pending-source-approval\"}]}],\"requests\":[{\"runId\":\"run_9ui157_live_reviewed\",\"source\":{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1},\"request\":{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"},\"affectedLocks\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"evidenceRefs\":[\"art_rb157_current_inspection@1#/content/description\",\"art_rb157_dispatch_task@1#/content/tasks/0\"],\"reason\":\"Clarify or propose detail freshness before treating pre-assignment values as current\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "submit",
+      "run_9ui157_live_reviewed",
+      "--task",
+      "task_contract",
+      "--package",
+      "packages/s05-ui-contract-manager",
+      "--work",
+      "work/task_contract.json",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"runId\":\"run_9ui157_live_reviewed\",\"state\":\"review-ready\",\"actions\":[{\"taskId\":\"task_capability\",\"action\":\"IGNORE\"},{\"taskId\":\"task_product\",\"action\":\"IGNORE\"},{\"taskId\":\"task_users\",\"action\":\"IGNORE\"},{\"taskId\":\"task_contract\",\"action\":\"IGNORE\"}],\"packetIds\":[\"packet_rb157_product\"],\"blockers\":[],\"path\":\".mimic/outputs/5345ff56-49e2-4f86-bd0a-c481e59e232f.json\",\"submissionState\":\"accepted\",\"revisionRequests\":{\"count\":1,\"state\":\"pending-source-approval\",\"path\":\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\",\"paths\":[\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\"]}}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "revision-requests",
+      "run_9ui157_live_reviewed",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"runId\":\"run_9ui157_live_reviewed\",\"count\":1,\"records\":[{\"runId\":\"run_9ui157_live_reviewed\",\"taskId\":\"task_contract\",\"workDigest\":\"f13d76f0b92ad68e2c3e55435434c03c514fce4d1599cfef3104ff9103c35373\",\"packageDigest\":\"f12b10c940e150e231bc02a6544cdf301ebfdd248669a1c299049383cfd4b934\",\"skillId\":\"mimic.s05.ui-contract-manager\",\"inputRefs\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"outputRefs\":[{\"artifactId\":\"art_rb157_ui_contract\",\"revision\":1,\"lockDigest\":\"sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38\"},{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"}],\"path\":\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\",\"requests\":[{\"request\":{\"runId\":\"run_9ui157_live_reviewed\",\"source\":{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1},\"request\":{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"},\"affectedLocks\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"evidenceRefs\":[\"art_rb157_current_inspection@1#/content/description\",\"art_rb157_dispatch_task@1#/content/tasks/0\"],\"reason\":\"Clarify or propose detail freshness before treating pre-assignment values as current\"},\"state\":\"pending-source-approval\"}]}],\"requests\":[{\"runId\":\"run_9ui157_live_reviewed\",\"source\":{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1},\"request\":{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"},\"affectedLocks\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"evidenceRefs\":[\"art_rb157_current_inspection@1#/content/description\",\"art_rb157_dispatch_task@1#/content/tasks/0\"],\"reason\":\"Clarify or propose detail freshness before treating pre-assignment values as current\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "next",
+      "run_9ui157_live_reviewed",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"runId\":\"run_9ui157_live_reviewed\",\"state\":\"review-ready\",\"actions\":[{\"taskId\":\"task_capability\",\"action\":\"IGNORE\"},{\"taskId\":\"task_product\",\"action\":\"IGNORE\"},{\"taskId\":\"task_users\",\"action\":\"IGNORE\"},{\"taskId\":\"task_contract\",\"action\":\"IGNORE\"}],\"packetIds\":[\"packet_rb157_product\"],\"blockers\":[],\"path\":\".mimic/outputs/e434b292-7407-48b4-8908-5451b5ea57db.json\",\"revisionRequests\":{\"count\":1,\"state\":\"pending-source-approval\",\"path\":\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\",\"paths\":[\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\"]}}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "status",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"status\":\"ready\",\"scope\":\"org_local\",\"runs\":[{\"id\":\"run_9ui157_live_reviewed\",\"state\":\"review-ready\"}],\"canonical\":[],\"statePath\":\".mimic/workspace.json\"}\n",
+    "stderr": ""
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "submit",
+      "run_9ui157_live_reviewed",
+      "--task",
+      "task_contract",
+      "--package",
+      "packages/s05-ui-contract-manager",
+      "--work",
+      "work/9ui159-changed-work-negative.json",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 5,
+    "stdout": "",
+    "stderr": "MIMIC_5: Submission retry changed input\n"
+  },
+  {
+    "argv": [
+      "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+      "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+      "revision-requests",
+      "run_9ui157_live_reviewed",
+      "--root",
+      "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "--json"
+    ],
+    "exit": 0,
+    "stdout": "{\"runId\":\"run_9ui157_live_reviewed\",\"count\":1,\"records\":[{\"runId\":\"run_9ui157_live_reviewed\",\"taskId\":\"task_contract\",\"workDigest\":\"f13d76f0b92ad68e2c3e55435434c03c514fce4d1599cfef3104ff9103c35373\",\"packageDigest\":\"f12b10c940e150e231bc02a6544cdf301ebfdd248669a1c299049383cfd4b934\",\"skillId\":\"mimic.s05.ui-contract-manager\",\"inputRefs\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"outputRefs\":[{\"artifactId\":\"art_rb157_ui_contract\",\"revision\":1,\"lockDigest\":\"sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38\"},{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"}],\"path\":\".mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json\",\"requests\":[{\"request\":{\"runId\":\"run_9ui157_live_reviewed\",\"source\":{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1},\"request\":{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"},\"affectedLocks\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"evidenceRefs\":[\"art_rb157_current_inspection@1#/content/description\",\"art_rb157_dispatch_task@1#/content/tasks/0\"],\"reason\":\"Clarify or propose detail freshness before treating pre-assignment values as current\"},\"state\":\"pending-source-approval\"}]}],\"requests\":[{\"runId\":\"run_9ui157_live_reviewed\",\"source\":{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1},\"request\":{\"artifactId\":\"art_rb157_detail_freshness_request\",\"revision\":1,\"lockDigest\":\"sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4\"},\"affectedLocks\":[{\"artifactId\":\"art_rb157_product_intent\",\"lockDigest\":\"sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7\",\"revision\":1},{\"artifactId\":\"art_rb157_dispatch_task\",\"lockDigest\":\"sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1\",\"revision\":1},{\"artifactId\":\"art_rb157_current_inspection\",\"lockDigest\":\"sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2\",\"revision\":1}],\"evidenceRefs\":[\"art_rb157_current_inspection@1#/content/description\",\"art_rb157_dispatch_task@1#/content/tasks/0\"],\"reason\":\"Clarify or propose detail freshness before treating pre-assignment values as current\"}]}\n",
+    "stderr": ""
+  }
+]

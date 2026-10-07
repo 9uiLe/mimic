@@ -1,0 +1,37 @@
+{
+  "kind": "read-only-preflight-no-158-execution",
+  "pr60HeadReviewed": "dce3e165a63c3467f275b8459fc05497b2940873",
+  "originalWorkspaceSha256": "0a4abad4dcf4ef4521f7cc019b20bd751288db60f295ca7bb8a09d95d97ce07f",
+  "markerPath": "/tmp/mimic-9ui-157-reviewed.SxJHia/.mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.json",
+  "marker": {
+    "version": 1,
+    "runId": "run_9ui157_live_reviewed",
+    "taskId": "task_contract",
+    "packageDigest": "f12b10c940e150e231bc02a6544cdf301ebfdd248669a1c299049383cfd4b934",
+    "workDigest": "f13d76f0b92ad68e2c3e55435434c03c514fce4d1599cfef3104ff9103c35373",
+    "baselineSequence": 8
+  },
+  "places": [
+    {
+      "root": "/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "realRoot": "/private/tmp/mimic-9ui-157-reviewed.SxJHia",
+      "packageDirectory": "/private/tmp/mimic-9ui-157-reviewed.SxJHia/packages/s05-ui-contract-manager",
+      "packageDigest": "f12b10c940e150e231bc02a6544cdf301ebfdd248669a1c299049383cfd4b934",
+      "workDigest": "f13d76f0b92ad68e2c3e55435434c03c514fce4d1599cfef3104ff9103c35373",
+      "skillFileSha256": "0f6cdeb9024eeb6f475b5456175a0d2618565c370eb5784064ebad9b3fceae29",
+      "manifestFileSha256": "5fc39276eb1b7a359ebba1fcc69321be69eaa3eeac397f68f45999726d95fd9d",
+      "matchesV1Reservation": true
+    },
+    {
+      "root": "/tmp/mimic-9ui-159-source-review",
+      "realRoot": "/private/tmp/mimic-9ui-159-source-review",
+      "packageDirectory": "/private/tmp/mimic-9ui-159-source-review/packages/s05-ui-contract-manager",
+      "packageDigest": "3b37c293b3375dbb1289452ad9ada37c7c8275e28d650dc81e4ddfc5608ee213",
+      "workDigest": "f13d76f0b92ad68e2c3e55435434c03c514fce4d1599cfef3104ff9103c35373",
+      "skillFileSha256": "0f6cdeb9024eeb6f475b5456175a0d2618565c370eb5784064ebad9b3fceae29",
+      "manifestFileSha256": "5fc39276eb1b7a359ebba1fcc69321be69eaa3eeac397f68f45999726d95fd9d",
+      "matchesV1Reservation": false
+    }
+  ],
+  "conclusion": "Original realpath preserves both v1 digests; relocated copy preserves work digest but changes package digest and would conflict before v1 recovery."
+}

@@ -1,0 +1,30 @@
+{
+  "kind": "relocated-v1-recovery-negative",
+  "argv": [
+    "/Users/t.kobayashi/.nodebrew/node/v24.21.0/bin/node",
+    "/Users/t.kobayashi/orca/mimic-worktrees/9UI-159/apps/cli/dist/main.js",
+    "submit",
+    "run_9ui157_live_reviewed",
+    "--task",
+    "task_contract",
+    "--package",
+    "packages/s05-ui-contract-manager",
+    "--work",
+    "work/task_contract.json",
+    "--root",
+    "/tmp/mimic-9ui-159-source-review",
+    "--json"
+  ],
+  "exit": 5,
+  "stdout": "",
+  "stderr": "MIMIC_5: Submission retry changed input\n",
+  "pre": {
+    "workspaceSha256": "4cdcb57e201584f088fbfcdc9c0d28f7babe07a0c2a189e9e15a3b9dea466b54",
+    "markerSha256": "f7470cdb1a70367051ed3b3120f76fa13f43bcf5668fe266e7421d070690b3ed"
+  },
+  "post": {
+    "workspaceSha256": "4cdcb57e201584f088fbfcdc9c0d28f7babe07a0c2a189e9e15a3b9dea466b54",
+    "markerSha256": "f7470cdb1a70367051ed3b3120f76fa13f43bcf5668fe266e7421d070690b3ed"
+  },
+  "unchanged": true
+}
