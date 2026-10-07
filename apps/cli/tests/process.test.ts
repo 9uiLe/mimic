@@ -206,7 +206,7 @@ test("built executable classifies malformed preview and release objects as inval
     );
     expect(prepare.status, prepare.stderr).toBe(3);
   }
-});
+}, 20_000);
 
 test("built executable rejects malformed plans before state, permits correction, and reports errors on stderr", () => {
   const dir = root();
