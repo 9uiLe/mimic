@@ -4,6 +4,8 @@ import {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  renameSync,
+  copyFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -517,58 +519,69 @@ test("approved request with false evidence is retained but cannot route", async 
   expect(Object.keys(state.canonical)).toEqual(["art_revision_source"]);
 });
 
-test("malformed and stale side-channel refs cannot create artifacts or events", async () => {
-  type MutableWork = {
-    work: {
-      revisionRequests: {
-        evidenceRefs: string[];
-        source: { lockDigest: string };
-        request: { lockDigest: string };
-        affectedLocks: unknown[];
-      }[];
-    };
+type MutableWork = {
+  work: {
+    revisionRequests: {
+      evidenceRefs: string[];
+      source: { lockDigest: string };
+      request: { lockDigest: string };
+      affectedLocks: unknown[];
+    }[];
   };
-  const mutations: Array<(work: MutableWork) => void> = [
-    (work) => {
-      work.work.revisionRequests[0].evidenceRefs = [];
+};
+test.each<{ name: string; mutate: (work: MutableWork) => void }>([
+  {
+    name: "empty evidence",
+    mutate: (work) => {
+      work.work.revisionRequests[0]!.evidenceRefs = [];
     },
-    (work) => {
-      work.work.revisionRequests[0].source.lockDigest =
+  },
+  {
+    name: "stale source lock",
+    mutate: (work) => {
+      work.work.revisionRequests[0]!.source.lockDigest =
         "sha256:" + "0".repeat(64);
     },
-    (work) => {
-      work.work.revisionRequests[0].request.lockDigest =
+  },
+  {
+    name: "changed request lock",
+    mutate: (work) => {
+      work.work.revisionRequests[0]!.request.lockDigest =
         "sha256:" + "0".repeat(64);
     },
-    (work) => {
-      work.work.revisionRequests[0].affectedLocks = [];
+  },
+  {
+    name: "missing affected lock",
+    mutate: (work) => {
+      work.work.revisionRequests[0]!.affectedLocks = [];
     },
-  ];
-  for (const mutate of mutations) {
-    const { root, runtime } = await setup();
-    const before = await runtime.registry.snapshot();
-    const work = JSON.parse(readFileSync(path.join(root, "work.json"), "utf8"));
-    mutate(work);
-    writeFileSync(path.join(root, "work.json"), JSON.stringify(work));
-    const result = invoke(
-      root,
-      "submit",
-      runId,
-      "--task",
-      taskId,
-      "--package",
-      "skill",
-      "--work",
-      "work.json",
-    );
-    expect(result.status, result.stderr).toBe(3);
-    expect(result.stderr).toContain("Invalid revision request exact bindings");
-    const after = await runtime.registry.snapshot();
-    expect(after.events).toEqual(before.events);
-    expect(after.runs[runId]!.artifacts).toEqual(before.runs[runId]!.artifacts);
-    expect(after.canonical).toEqual(before.canonical);
-    expect(parsed(invoke(root, "revision-requests", runId)).count).toBe(0);
-  }
+  },
+])("$name cannot create artifacts or events", async ({ mutate }) => {
+  const { root, runtime } = await setup();
+  const before = await runtime.registry.snapshot();
+  const work = JSON.parse(
+    readFileSync(path.join(root, "work.json"), "utf8"),
+  ) as MutableWork;
+  mutate(work);
+  writeFileSync(path.join(root, "work.json"), JSON.stringify(work));
+  const result = invoke(
+    root,
+    "submit",
+    runId,
+    "--task",
+    taskId,
+    "--package",
+    "skill",
+    "--work",
+    "work.json",
+  );
+  expect(result.status, result.stderr).toBe(3);
+  expect(result.stderr).toContain("Invalid revision request exact bindings");
+  const after = await runtime.registry.snapshot();
+  expect(after.events).toEqual(before.events);
+  expect(after.runs[runId]!.artifacts).toEqual(before.runs[runId]!.artifacts);
+  expect(after.canonical).toEqual(before.canonical);
+  expect(parsed(invoke(root, "revision-requests", runId)).count).toBe(0);
 });
 
 test("approved route receipt can be rebuilt after interrupted persistence", async () => {
@@ -633,4 +646,127 @@ test("candidate origin mismatch is rejected without canonical effects", async ()
   const after = await runtime.registry.snapshot();
   expect(after.events).toEqual(before.events);
   expect(after.canonical).toEqual(before.canonical);
+});
+
+test("identical retry recovers an accepted pre-change reservation with revision requests", async () => {
+  const { root, revisionRequest, runtime } = await setup();
+  const first = parsed(
+    invoke(
+      root,
+      "submit",
+      runId,
+      "--task",
+      taskId,
+      "--package",
+      "skill",
+      "--work",
+      "work.json",
+    ),
+  );
+  const marker = path.join(root, first.revisionRequests.path);
+  const legacy = JSON.parse(readFileSync(marker, "utf8"));
+  legacy.version = 1;
+  delete legacy.result;
+  delete legacy.revisionRequests;
+  delete legacy.revisionDigest;
+  writeFileSync(marker, JSON.stringify(legacy));
+  const accepted = await runtime.registry.snapshot();
+  const retry = parsed(
+    invoke(
+      root,
+      "submit",
+      runId,
+      "--task",
+      taskId,
+      "--package",
+      "skill",
+      "--work",
+      "work.json",
+    ),
+  );
+  expect(retry.revisionRequests).toMatchObject({
+    count: 1,
+    state: "pending-source-approval",
+  });
+  const readback = parsed(invoke(root, "revision-requests", runId));
+  expect(readback.requests).toEqual([revisionRequest]);
+  expect(retry.revisionRequests.path).toMatch(/\.revision\.json$/);
+  expect(
+    JSON.parse(
+      readFileSync(path.join(root, retry.revisionRequests.path), "utf8"),
+    ).revisionRequests,
+  ).toEqual([revisionRequest]);
+  expect((await runtime.registry.snapshot()).events).toEqual(accepted.events);
+});
+
+type MutableReservation = {
+  result: { skillId: string };
+  revisionRequests: { reason: string; evidenceRefs: string[] }[];
+};
+test.each<{ name: string; mutate: (record: MutableReservation) => void }>([
+  {
+    name: "reason",
+    mutate: (record) => {
+      record.revisionRequests[0]!.reason = "altered reason";
+    },
+  },
+  {
+    name: "evidence",
+    mutate: (record) => {
+      record.revisionRequests[0]!.evidenceRefs = ["evidence://altered"];
+    },
+  },
+  {
+    name: "Skill ID",
+    mutate: (record) => {
+      record.result.skillId = "mimic.revision.other";
+    },
+  },
+])("readback rejects changed accepted $name", async ({ mutate }) => {
+  const { root } = await setup();
+  const first = parsed(
+    invoke(
+      root,
+      "submit",
+      runId,
+      "--task",
+      taskId,
+      "--package",
+      "skill",
+      "--work",
+      "work.json",
+    ),
+  );
+  const marker = path.join(root, first.revisionRequests.path);
+  const record = JSON.parse(readFileSync(marker, "utf8")) as MutableReservation;
+  mutate(record);
+  writeFileSync(marker, JSON.stringify(record));
+  expect(invoke(root, "revision-requests", runId).status).toBe(5);
+  expect(invoke(root, "next", runId).status).toBe(5);
+});
+
+test("duplicate and renamed reservation files fail closed", async () => {
+  const { root } = await setup();
+  const first = parsed(
+    invoke(
+      root,
+      "submit",
+      runId,
+      "--task",
+      taskId,
+      "--package",
+      "skill",
+      "--work",
+      "work.json",
+    ),
+  );
+  const duplicate = path.join(
+    root,
+    `.mimic/submissions/${runId}-${"0".repeat(64)}.json`,
+  );
+  copyFileSync(path.join(root, first.revisionRequests.path), duplicate);
+  expect(invoke(root, "revision-requests", runId).status).toBe(5);
+  rmSync(duplicate);
+  renameSync(path.join(root, first.revisionRequests.path), duplicate);
+  expect(invoke(root, "revision-requests", runId).status).toBe(5);
 });
