@@ -691,6 +691,19 @@ export class PackageRegistry {
     const registered = this.scopes.get(node.ownerId);
     assert(registered && same(registered, node), "Unregistered package scope");
   }
+  private artifactWithinPackageScope(
+    manifest: PackageManifest,
+    artifactScope: ScopeNode,
+  ): boolean {
+    if (this.ancestors(manifest.scope).includes(artifactScope.ownerId))
+      return true;
+    return (
+      manifest.kind === "design" &&
+      manifest.scope.level === "product" &&
+      (artifactScope.level === "domain" || artifactScope.level === "local") &&
+      this.ancestors(artifactScope).includes(manifest.scope.ownerId)
+    );
+  }
   private async acquire(
     ref: PackageRef,
     expectedDigest: string,
@@ -791,7 +804,7 @@ export class PackageRegistry {
         scope(document.scope);
         this.verifyScope(document.scope);
         assert(
-          this.ancestors(manifest.scope).includes(document.scope.ownerId),
+          this.artifactWithinPackageScope(manifest, document.scope),
           "Artifact is out of package scope",
         );
         assert(

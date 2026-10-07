@@ -14,6 +14,7 @@ import {
   assessUpgrade,
   packageDigest,
   parseDesignLock,
+  parseManifest,
   serializePackageDocument,
   sha256,
   type DesignLock,
@@ -35,8 +36,33 @@ const domain = {
   ownerId: "domain",
   parentId: "product",
 } as const;
+const anotherDomain = {
+  level: "domain",
+  ownerId: "another-domain",
+  parentId: "product",
+} as const;
+const local = { level: "local", ownerId: "local", parentId: "domain" } as const;
+const foreignProduct = {
+  level: "product",
+  ownerId: "foreign-product",
+  parentId: "other",
+} as const;
+const foreignDomain = {
+  level: "domain",
+  ownerId: "foreign-domain",
+  parentId: "foreign-product",
+} as const;
 const outsider = { level: "organization", ownerId: "other" } as const;
-const scopes = [org, product, domain, outsider];
+const scopes = [
+  org,
+  product,
+  domain,
+  anotherDomain,
+  local,
+  outsider,
+  foreignProduct,
+  foreignDomain,
+];
 const bytes = (text: string) => new TextEncoder().encode(text);
 const ref = (packageId: string, version = "1.0.0"): PackageRef => ({
   packageId,
@@ -643,6 +669,192 @@ describe("package registry", () => {
         packageDigest(changed),
       ),
     ).rejects.toMatchObject({ code: "CORRUPT" });
+  });
+
+  test("a Product design deliverable inventories registered descendant artifacts without consuming them", async () => {
+    const schemas = await loadSchemaDirectory(
+      path.join(
+        path.resolve(import.meta.dirname, "../../../../"),
+        "schemas/artifacts",
+      ),
+    );
+    const original = JSON.parse(
+      await readFile(
+        path.resolve(
+          import.meta.dirname,
+          "../../../../fixtures/artifacts/valid/product-definition.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    const artifact = (
+      scope: PackageManifest["scope"],
+      id: string,
+      dependencies: unknown[] = [],
+    ) => ({
+      ...original,
+      meta: { ...(original.meta as object), id },
+      scope,
+      dependencies,
+    });
+    const descendants = [
+      artifact(domain, "art_domain_one"),
+      artifact(anotherDomain, "art_domain_two"),
+      artifact(local, "art_local_extension"),
+      artifact(product, "art_product_own"),
+      artifact(org, "art_org_ancestor"),
+    ];
+    const snapshot = withArtifacts(
+      release(ref("product/delivery"), product),
+      descendants,
+    );
+    const active = registry(memory([snapshot]), ["1.0.0"], schemas);
+    const resolved = await active.reconstruct(
+      ref("product/delivery"),
+      packageDigest(snapshot),
+    );
+    expect(resolved[0]!.manifest.artifacts).toHaveLength(descendants.length);
+    for (const item of descendants) {
+      expect(
+        (
+          await active.resolveArtifact(
+            ref("product/delivery"),
+            packageDigest(snapshot),
+            ref("product/delivery"),
+            (item.meta as { id: string }).id,
+            1,
+          )
+        ).entry.snapshotDigest,
+      ).toBe(artifactDigest(item));
+    }
+
+    const wrongKindManifest = parseManifest(snapshot.manifestBytes);
+    const wrongKind = {
+      ...snapshot,
+      manifestBytes: serializePackageDocument({
+        ...wrongKindManifest,
+        kind: "design-system",
+      }),
+    };
+    await expect(
+      registry(memory([wrongKind]), ["1.0.0"], schemas).reconstruct(
+        ref("product/delivery"),
+        packageDigest(wrongKind),
+      ),
+    ).rejects.toMatchObject({ code: "CORRUPT" });
+    const domainRelease = withArtifacts(
+      release(ref("domain/delivery"), domain),
+      [artifact(local, "art_local_not_domain_inventory")],
+    );
+    await expect(
+      registry(memory([domainRelease]), ["1.0.0"], schemas).reconstruct(
+        ref("domain/delivery"),
+        packageDigest(domainRelease),
+      ),
+    ).rejects.toMatchObject({ code: "CORRUPT" });
+    for (const foreign of [
+      artifact(foreignDomain, "art_foreign_domain"),
+      artifact(foreignProduct, "art_foreign_product"),
+      artifact({ ...domain, parentId: "foreign-product" }, "art_forged_parent"),
+      artifact(
+        { level: "domain", ownerId: "unregistered", parentId: "product" },
+        "art_unregistered",
+      ),
+    ]) {
+      const invalid = withArtifacts(release(ref("product/delivery"), product), [
+        foreign,
+      ]);
+      await expect(
+        registry(memory([invalid]), ["1.0.0"], schemas).reconstruct(
+          ref("product/delivery"),
+          packageDigest(invalid),
+        ),
+      ).rejects.toMatchObject({ code: "CORRUPT" });
+    }
+    const wrongDigestManifest = parseManifest(snapshot.manifestBytes);
+    const wrongDigestEntries = wrongDigestManifest.artifacts.map(
+      (entry, index) =>
+        index === 0
+          ? { ...entry, snapshotDigest: sha256(bytes("wrong")) }
+          : entry,
+    );
+    const wrongDigest = {
+      ...snapshot,
+      manifestBytes: serializePackageDocument({
+        ...wrongDigestManifest,
+        artifacts: wrongDigestEntries,
+      }),
+      lockBytes: serializePackageDocument({
+        ...parseDesignLock(snapshot.lockBytes),
+        artifacts: wrongDigestEntries,
+      }),
+    };
+    await expect(
+      registry(memory([wrongDigest]), ["1.0.0"], schemas).reconstruct(
+        ref("product/delivery"),
+        packageDigest(wrongDigest),
+      ),
+    ).rejects.toMatchObject({ code: "CORRUPT" });
+  });
+
+  test("Product inventory does not grant sibling artifact or child package consumption", async () => {
+    const schemas = await loadSchemaDirectory(
+      path.join(
+        path.resolve(import.meta.dirname, "../../../../"),
+        "schemas/artifacts",
+      ),
+    );
+    const original = JSON.parse(
+      await readFile(
+        path.resolve(
+          import.meta.dirname,
+          "../../../../fixtures/artifacts/valid/product-definition.json",
+        ),
+        "utf8",
+      ),
+    ) as Record<string, unknown>;
+    const target = {
+      ...original,
+      meta: { ...(original.meta as object), id: "art_other_domain" },
+      scope: anotherDomain,
+    };
+    const consumer = {
+      ...original,
+      meta: { ...(original.meta as object), id: "art_domain_consumer" },
+      scope: domain,
+      dependencies: [
+        {
+          artifactId: "art_other_domain",
+          revision: 1,
+          lockDigest: artifactDigest(target),
+          onChange: "validate",
+        },
+      ],
+    };
+    const invalid = withArtifacts(release(ref("product/delivery"), product), [
+      consumer,
+      target,
+    ]);
+    await expect(
+      registry(memory([invalid]), ["1.0.0"], schemas).reconstruct(
+        ref("product/delivery"),
+        packageDigest(invalid),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
+    const child = release(ref("domain/child"), domain);
+    const childNode = node(child);
+    const root = release(
+      ref("product/delivery"),
+      product,
+      [childNode],
+      [childNode],
+    );
+    await expect(
+      registry(memory([root, child])).reconstruct(
+        ref("product/delivery"),
+        packageDigest(root),
+      ),
+    ).rejects.toMatchObject({ code: "INVALID" });
   });
 
   test("filesystem source reads an exact release from a local or Git checkout", async () => {

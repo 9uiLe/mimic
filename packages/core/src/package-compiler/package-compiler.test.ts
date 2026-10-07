@@ -39,6 +39,21 @@ const scope = {
   parentId: "org_9uile",
 } as const;
 const organization = { level: "organization", ownerId: "org_9uile" } as const;
+const exploration = {
+  level: "domain",
+  ownerId: "domain_exploration",
+  parentId: "product_mimic",
+} as const;
+const review = {
+  level: "domain",
+  ownerId: "domain_review",
+  parentId: "product_mimic",
+} as const;
+const reviewLocal = {
+  level: "local",
+  ownerId: "local_review",
+  parentId: "domain_review",
+} as const;
 const approval = {
   decisionId: "release_fixture_1",
   actorId: "human_fixture_1",
@@ -111,7 +126,7 @@ async function setup() {
   const store = new ArtifactStore(
     new FileSnapshotStorage(path.join(root, "artifacts")),
     schemas,
-    [organization, scope],
+    [organization, scope, exploration, review, reviewLocal],
     {
       verifyApproval: async (item) =>
         item.actorId === "human_fixture_1" &&
@@ -143,7 +158,7 @@ async function setup() {
   const packages = path.join(root, "packages");
   const registryForSource = (source: PackageSource): PackageRegistry =>
     new PackageRegistry(source, {
-      scopes: [organization, scope],
+      scopes: [organization, scope, exploration, review, reviewLocal],
       supportedSchemaVersions: ["1.0.0"],
       artifactSchemas: schemas,
       authority: {
@@ -388,6 +403,120 @@ describe("package compiler and local publisher", () => {
       await expect(
         fixture.publisher.publish(compiled, fixture.authority),
       ).rejects.toMatchObject({ code: "CONFLICT" });
+    },
+  );
+
+  test.each(["reference", "portable"] as const)(
+    "Product inventory with two Domains, a Local extension, and a journey publishes in %s mode",
+    async (mode) => {
+      const fixture = await setup();
+      const save = async (
+        name: string,
+        id: string,
+        ownerScope: ArtifactSnapshot["scope"],
+      ) => {
+        const source = JSON.parse(
+          await readFile(
+            path.join(repository, `fixtures/artifacts/valid/${name}.json`),
+            "utf8",
+          ),
+        ) as ArtifactSnapshot;
+        const artifact: ArtifactSnapshot = {
+          ...source,
+          meta: { ...source.meta, id },
+          scope: ownerScope,
+          lifecycle: { status: "approved", freshness: "valid" },
+          approval: {
+            status: "approved",
+            actorId: "human_fixture_1",
+            decisionId: "decision_fixture_1",
+            at: "2026-10-07T00:00:00Z",
+          },
+        };
+        return fixture.store.create({
+          ...artifact,
+          meta: { ...artifact.meta, contentDigest: artifactDigest(artifact) },
+        });
+      };
+      const included = await Promise.all([
+        save("experience-domain", "art_exploration", exploration),
+        save("experience-domain", "art_review", review),
+        save("experience-domain", "art_review_local", reviewLocal),
+        save("journey", "art_cross_domain_journey", scope),
+      ]);
+      const selections = included.map(({ artifact, digest }) => ({
+        artifactId: artifact.meta.id,
+        revision: artifact.meta.revision,
+        lockDigest: digest,
+      }));
+      const input: CompileInput = {
+        ...fixture.input,
+        mode,
+        inventory: {
+          ...fixture.input.inventory,
+          "experience-structure": {
+            status: "included",
+            artifacts: selections,
+            files: [],
+            dependencies: [],
+          },
+        },
+        quality: [
+          {
+            ...fixture.input.quality[0]!,
+            artifacts: [fixture.input.quality[0]!.artifacts[0]!, ...selections],
+          },
+        ],
+        redistribution:
+          mode === "portable"
+            ? [
+                {
+                  ref: fixture.input.dependencies[0]!.ref,
+                  digest: fixture.input.dependencies[0]!.digest,
+                  allowed: true,
+                  evidence: "Fixture redistribution grant only",
+                },
+              ]
+            : [],
+      };
+      const compiled = await compilePackage(
+        input,
+        fixture.store,
+        fixture.registry,
+        fixture.policy,
+        fixture.registryForSource,
+      );
+      await expect(compiled.verifyResolution()).resolves.toBeUndefined();
+      fixture.approve(compiled.digest);
+      await fixture.publisher.publish(compiled, fixture.authority);
+      const reconstructed = await fixture.registry.reconstruct(
+        reference,
+        compiled.digest,
+      );
+      expect(reconstructed[0]!.manifest.artifacts).toHaveLength(5);
+      for (const { artifact, digest } of included) {
+        const located = await fixture.registry.resolveArtifact(
+          reference,
+          compiled.digest,
+          reference,
+          artifact.meta.id,
+          artifact.meta.revision,
+        );
+        expect(located.entry.snapshotDigest).toBe(digest);
+        expect(new TextDecoder().decode(located.bytes)).toContain(
+          artifact.scope.ownerId,
+        );
+      }
+      const journey = included[3]!.artifact;
+      expect((journey.content as { domains: string[] }).domains).toEqual([
+        "exploration",
+        "review",
+      ]);
+      expect(journey.dependencies).toEqual([]);
+      expect(reconstructed[0]!.manifest.mode).toBe(mode);
+      expect(
+        Object.keys(reconstructed[0]!.snapshot.bundled ?? {}),
+      ).toHaveLength(mode === "portable" ? 1 : 0);
     },
   );
 
