@@ -1,0 +1,34 @@
+{
+  "historical150": {
+    "origin": "agent",
+    "candidate": {
+      "artifactId": "art_rb_direction_pair",
+      "revision": 1,
+      "lockDigest": "sha256:26261a036aa99034b98bfb90ebe32f0c0ae2099353d62b3a3e5a9826e16ce63c"
+    },
+    "decisionLimit": "Provisional structural direction for this exact historical candidate only"
+  },
+  "cliReplay": {
+    "authority": "synthetic-local-host-only",
+    "origin": "skill",
+    "candidate": {
+      "artifactId": "art_rb_direction_pair",
+      "revision": 1,
+      "lockDigest": "sha256:9cd0d0dc32e7cc750c6af1c6d2f6f746205f511a6b33ec6b81131b11e73c8fb5"
+    },
+    "syntheticSelected": {
+      "artifactId": "art_rb_direction_pair",
+      "revision": 2,
+      "lockDigest": "sha256:544d1991dd2e1f78e0e2ad76b8fb50d456c18fca585f3e4fbbc94689d3892dfd"
+    },
+    "syntheticScenario": {
+      "artifactId": "art_rb_scenario",
+      "revision": 2,
+      "lockDigest": "sha256:4df5c6f9eb01aa1a6dec7cb6ca633d5fe73dde8c9f185a71323a15a6f0cab635"
+    },
+    "limits": [
+      "The 9UI-150 human choice does not authorize these CLI replay digests",
+      "No real Core human decision, live Skill/model reasoning, user data, provider billing, or production release"
+    ]
+  }
+}
