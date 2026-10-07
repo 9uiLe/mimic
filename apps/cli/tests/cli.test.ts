@@ -262,10 +262,10 @@ describe("CLI filesystem protocol", () => {
       ).code,
     ).toBe(EXIT.UNSUPPORTED);
     expect((await call(["preview", "--root", dir, "--json"])).code).toBe(
-      EXIT.UNSUPPORTED,
+      EXIT.USAGE,
     );
     expect((await call(["release", "--root", dir, "--json"])).code).toBe(
-      EXIT.UNSUPPORTED,
+      EXIT.USAGE,
     );
     expect(
       (await call(["decide", "--file", "tasks.json", "--root", dir, "--json"]))

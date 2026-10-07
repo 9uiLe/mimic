@@ -9,6 +9,16 @@ import {
   type LocalConfirmation,
 } from "./local-confirmation-authority.js";
 import { runSkillCli } from "./skill/index.js";
+import { createPreview, type PreviewPlan } from "./preview.js";
+import {
+  CliReleaseError,
+  prepareRelease,
+  publishRelease,
+  type ReleaseConfirmation,
+  type ReleaseHost,
+  type ReleasePlan,
+  type LocalReleasePolicyConfirmation,
+} from "./release.js";
 import { PlanError, preflightPlan, scopeChain } from "./plan.js";
 import {
   ReceiptAuthority,
@@ -39,6 +49,10 @@ import {
   type SkillInvocation,
   type SkillResult,
   type SkillWork,
+  PackageCompilerError,
+  PackageRegistryError,
+  PrototypeBuilderError,
+  PrototypeModeError,
 } from "@mimic/core";
 
 export interface CliHost {
@@ -52,6 +66,8 @@ export interface CliHost {
   readonly executeSkill?: (invocation: SkillInvocation) => Promise<SkillResult>;
   /** Trusted host fault hook; useful for testing recovery after Core accepts a submission. */
   readonly afterSkillAccepted?: () => void;
+  /** Release policies and package authority must originate from the controlling host. */
+  readonly release?: ReleaseHost;
 }
 export interface CliIO {
   out(value: string): void;
@@ -106,10 +122,15 @@ function parse(argv: readonly string[]) {
   const options: Record<string, string> = {};
   const positionals: string[] = [];
   let json = false;
+  let browser = false;
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i]!;
     if (arg === "--json") {
       json = true;
+      continue;
+    }
+    if (arg === "--browser") {
+      browser = true;
       continue;
     }
     if (arg.startsWith("--")) {
@@ -131,6 +152,8 @@ function parse(argv: readonly string[]) {
           "confirmation",
           "commit-confirmation",
           "acceptance",
+          "destination",
+          "policy-confirmation",
         ]).has(arg.slice(2))
       )
         throw new CliError(EXIT.USAGE, `Unknown option ${arg}`);
@@ -142,7 +165,7 @@ function parse(argv: readonly string[]) {
       options[arg.slice(2)] = value;
     } else positionals.push(arg);
   }
-  return { command, options, positionals, json };
+  return { command, options, positionals, json, browser };
 }
 function inside(root: string, target: string): boolean {
   const relative = path.relative(root, target);
@@ -398,7 +421,7 @@ export async function runCli(
   }
   if (argv[0] === "skill") return runSkillCli(argv.slice(1), io);
   try {
-    const { command, options, positionals, json } = parse(argv);
+    const { command, options, positionals, json, browser } = parse(argv);
     const root = await realpath(path.resolve(options.root ?? process.cwd()));
     if (command === "init") {
       if (positionals.length)
@@ -985,11 +1008,153 @@ export async function runCli(
       );
       return result.valid ? EXIT.OK : EXIT.INVALID;
     }
-    if (command === "preview" || command === "release")
-      throw new CliError(
-        EXIT.UNSUPPORTED,
-        `${command} backend is not implemented`,
+    if (command === "preview") {
+      if (positionals.length)
+        throw new CliError(EXIT.USAGE, "preview takes no positional arguments");
+      const plan = (await readJson(
+        root,
+        required(options.file, "--file"),
+      )) as PreviewPlan;
+      const preview = await createPreview(
+        root,
+        runtime.artifacts,
+        plan,
+        browser,
       );
+      const paths: string[] = [];
+      for (const report of preview.reports)
+        paths.push(await outputFile(root, report));
+      emit(
+        io,
+        {
+          directories: preview.directories.map((directory) =>
+            path.relative(root, directory),
+          ),
+          reports: preview.reports.map((report, i) => ({
+            path: paths[i],
+            bundleDigest: report.target.bundleDigest,
+            findings: report.findings.map((finding) => ({
+              criterion: finding.criterion,
+              state: finding.state,
+              severity: finding.severity,
+            })),
+          })),
+          ...(preview.fallback ? { fallback: preview.fallback } : {}),
+        },
+        json,
+      );
+      return EXIT.OK;
+    }
+    if (command === "release") {
+      const [action, id] = positionals;
+      if (browser)
+        throw new CliError(EXIT.USAGE, "--browser is only valid for preview");
+      if (action === "inspect" && positionals.length === 1) {
+        const plan = (await readJson(
+          root,
+          required(options.file, "--file"),
+        )) as ReleasePlan;
+        if (!Array.isArray(plan.quality))
+          throw new CliError(EXIT.INVALID, "Invalid release evidence");
+        const reports = [];
+        for (const item of plan.quality) {
+          const report = object(await readJson(root, item.report));
+          if (!Array.isArray(report.findings))
+            throw new CliError(EXIT.INVALID, "Invalid quality report");
+          reports.push({
+            reportDigest: `sha256:${jsonDigest(report)}`,
+            findings: report.findings.map((finding) => {
+              const value = object(finding);
+              return {
+                criterion: value.criterion,
+                state: value.state,
+                severity: value.severity,
+              };
+            }),
+          });
+        }
+        emit(
+          io,
+          {
+            planDigest: `sha256:${jsonDigest(plan)}`,
+            dependencyCount: plan.dependencies?.length ?? 0,
+            reports,
+          },
+          json,
+        );
+        return EXIT.OK;
+      }
+      if (action === "prepare" && positionals.length === 1) {
+        const file = required(options.file, "--file");
+        const plan = (await readJson(root, file)) as ReleasePlan;
+        const localPolicy = options["policy-confirmation"]
+          ? ((await readJson(
+              root,
+              options["policy-confirmation"],
+            )) as LocalReleasePolicyConfirmation)
+          : undefined;
+        const prepared = await prepareRelease(
+          root,
+          safeId(required(options.id, "--id"), "release ID"),
+          required(options.destination, "--destination"),
+          plan,
+          `sha256:${jsonDigest(plan)}`,
+          runtime.artifacts,
+          host.release,
+          schemas,
+          config.scopes,
+          localPolicy,
+        );
+        const reviewPath = await outputFile(root, {
+          request: prepared.request,
+          destination: prepared.destination,
+          requestDigest: `sha256:${jsonDigest({
+            request: prepared.request,
+            destination: prepared.destination,
+          })}`,
+        });
+        emit(
+          io,
+          {
+            id: prepared.id,
+            status: "prepared",
+            digest: prepared.request.digest,
+            reviewPath,
+          },
+          json,
+        );
+        return EXIT.OK;
+      }
+      if (action === "publish" && positionals.length === 2) {
+        const result = await publishRelease(
+          root,
+          safeId(id!, "release ID"),
+          (await readJson(
+            root,
+            required(options.confirmation, "--confirmation"),
+          )) as ReleaseConfirmation,
+          runtime.artifacts,
+          host.release,
+          schemas,
+          config.scopes,
+        );
+        emit(
+          io,
+          {
+            status: result.recovered ? "recovered" : "published",
+            ref: result.ref,
+            digest: result.digest,
+            directory: path.relative(root, result.directory),
+          },
+          json,
+        );
+        return EXIT.OK;
+      }
+      throw new CliError(
+        EXIT.USAGE,
+        "Usage: mimic release inspect --file <plan> | release prepare --id <id> --file <plan> --destination <directory> [--policy-confirmation <file>] | release publish <id> --confirmation <file>",
+      );
+    }
     throw new CliError(EXIT.USAGE, "Unknown command");
   } catch (error) {
     const code =
@@ -1006,7 +1171,21 @@ export async function runCli(
               ? error.code === "CONFLICT"
                 ? EXIT.CONFLICT
                 : EXIT.INVALID
-              : EXIT.IO;
+              : error instanceof CliReleaseError
+                ? error.code === "CONFLICT"
+                  ? EXIT.CONFLICT
+                  : error.code === "UNSUPPORTED"
+                    ? EXIT.UNSUPPORTED
+                    : EXIT.INVALID
+                : error instanceof PackageCompilerError
+                  ? error.code === "CONFLICT"
+                    ? EXIT.CONFLICT
+                    : EXIT.INVALID
+                  : error instanceof PackageRegistryError ||
+                      error instanceof PrototypeBuilderError ||
+                      error instanceof PrototypeModeError
+                    ? EXIT.INVALID
+                    : EXIT.IO;
     io.err(
       `MIMIC_${code}: ${error instanceof Error ? error.message : String(error)}`,
     );

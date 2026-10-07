@@ -3,7 +3,9 @@ import { spawnSync } from "node:child_process";
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import {
   cpSync,
+  copyFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -17,6 +19,10 @@ import {
   canonicalJson,
   type ArtifactSnapshot,
 } from "@mimic/core";
+import {
+  setupSystemFirst,
+  syntheticHuman,
+} from "../../../fixtures/dogfood/system-first/setup.js";
 
 const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -57,6 +63,22 @@ function operatorInvoke(trust: unknown, ...args: string[]) {
         MIMIC_TEST_OPERATOR_PUBLIC_KEYS: JSON.stringify(trust),
       },
     },
+  );
+}
+function syntheticSeedHostInvoke(...args: string[]) {
+  const entry = pathToFileURL(path.join(repo, "apps/cli/dist/cli.js")).href;
+  const source = `import { runCli } from ${JSON.stringify(entry)};
+const host = {
+  seedAuthority: {
+    verifyApproval: async (approval) => approval.decisionId === "synthetic_seed" && approval.actorId === "synthetic_human_fixture",
+    verifyDecision: async () => false,
+  },
+};
+process.exitCode = await runCli(process.argv.slice(1), undefined, host);`;
+  return spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", source, ...args],
+    { encoding: "utf8" },
   );
 }
 function hash(value: unknown) {
@@ -156,10 +178,10 @@ test("built executable rejects malformed plans before state, permits correction,
   writeFileSync(path.join(dir, "tasks.json"), JSON.stringify([task]));
   expect(invoke(...args).status).toBe(0);
   expect(invoke(...args).status).toBe(0);
-  const unsupported = invoke("preview", "--root", dir, "--json");
-  expect(unsupported.status).toBe(4);
-  expect(unsupported.stdout).toBe("");
-  expect(unsupported.stderr).toMatch(/^MIMIC_4:/);
+  const incomplete = invoke("preview", "--root", dir, "--json");
+  expect(incomplete.status).toBe(2);
+  expect(incomplete.stdout).toBe("");
+  expect(incomplete.stderr).toMatch(/^MIMIC_2:/);
   const invalidSchema = invoke(
     "validate",
     "--root",
@@ -177,6 +199,291 @@ test("built executable rejects malformed plans before state, permits correction,
   expect(corrupt.stdout).toBe("");
   expect(corrupt.stderr).toMatch(/^MIMIC_6:/);
 });
+
+test("built CLI crosses preview, quality, candidate, confirmation and fresh-process package readback", async () => {
+  const fixture = await setupSystemFirst();
+  try {
+    const dir = fixture.root;
+    writeFileSync(
+      path.join(dir, "scopes.json"),
+      JSON.stringify({
+        version: 1,
+        defaultScope: "product_riverbend",
+        scopes: [
+          { level: "organization", ownerId: "org_riverbend" },
+          {
+            level: "product",
+            ownerId: "product_riverbend",
+            parentId: "org_riverbend",
+          },
+          {
+            level: "domain",
+            ownerId: "domain_triage",
+            parentId: "product_riverbend",
+          },
+          {
+            level: "domain",
+            ownerId: "domain_dispatch",
+            parentId: "product_riverbend",
+          },
+        ],
+      }),
+    );
+    expect(
+      invoke("init", "--root", dir, "--scopes", "scopes.json", "--json").status,
+    ).toBe(0);
+    copyFileSync(
+      path.join(dir, "workspace.json"),
+      path.join(dir, ".mimic", "workspace.json"),
+    );
+    writeFileSync(
+      path.join(dir, "tasks.json"),
+      JSON.stringify([
+        {
+          id: "process_review",
+          skillId: "skill.process-review",
+          outputType: "evaluation",
+          scopeOwnerId: "product_riverbend",
+          inputs: { required: [], optional: [], alternatives: [] },
+          intent: "create",
+          authority: "AUTONOMOUS",
+        },
+      ]),
+    );
+    const run = syntheticSeedHostInvoke(
+      "run",
+      "--root",
+      dir,
+      "--tasks",
+      "tasks.json",
+      "--id",
+      "process_review_run",
+      "--mode",
+      "system-first",
+      "--json",
+    );
+    expect(run.status, run.stderr).toBe(0);
+    const status = syntheticSeedHostInvoke("status", "--root", dir, "--json");
+    expect(status.status, status.stderr).toBe(0);
+    expect(JSON.parse(status.stdout).runs).toEqual(
+      expect.arrayContaining([{ id: "process_review_run", state: "active" }]),
+    );
+    const next = syntheticSeedHostInvoke(
+      "next",
+      "process_review_run",
+      "--root",
+      dir,
+      "--json",
+    );
+    expect(next.status, next.stderr).toBe(0);
+    expect(JSON.parse(next.stdout).actions).toEqual(
+      expect.arrayContaining([
+        { taskId: "process_review", action: "GENERATE" },
+      ]),
+    );
+    writeFileSync(
+      path.join(dir, "preview.json"),
+      JSON.stringify({
+        kind: "standalone",
+        plan: { ...fixture.modePlan.current, outputPath: "standalone-process" },
+        uiContract: fixture.refs.contract,
+      }),
+    );
+    const preview = syntheticSeedHostInvoke(
+      "preview",
+      "--root",
+      dir,
+      "--file",
+      "preview.json",
+      "--json",
+    );
+    expect(preview.status, preview.stderr).toBe(0);
+    const inspected = JSON.parse(preview.stdout) as {
+      directories: string[];
+      reports: { path: string; findings: { state: string }[] }[];
+    };
+    expect(
+      inspected.reports[0]!.findings.filter((item) => item.state === "FAIL"),
+    ).toEqual([]);
+    const files: Record<string, string> = {};
+    const names = [
+      "index.html",
+      "prototype.css",
+      "prototype.js",
+      "plan.json",
+      "manifest.json",
+    ];
+    for (const name of names)
+      files[`prototype/${name}`] = path.join(inspected.directories[0]!, name);
+    for (const name of ["quality/limits.txt", "decisions.txt", "guide.md"]) {
+      const local = name.replaceAll("/", "_");
+      writeFileSync(path.join(dir, local), "Synthetic process review\n");
+      files[name] = local;
+    }
+    const included = (
+      artifacts: readonly unknown[] = [],
+      ownedFiles: string[] = [],
+    ) => ({
+      status: "included",
+      artifacts,
+      files: ownedFiles,
+      dependencies: [],
+    });
+    const refs = fixture.refs;
+    const plan = {
+      ref: { packageId: "product/riverbend-process", version: "0.1.0" },
+      mode: "reference",
+      scope: {
+        level: "product",
+        ownerId: "product_riverbend",
+        parentId: "org_riverbend",
+      },
+      schemaVersion: "1.0.0",
+      approval: {
+        decisionId: "synthetic_process_release",
+        actorId: syntheticHuman.id,
+        at: new Date().toISOString(),
+      },
+      inventory: {
+        "product-foundation": included([
+          refs.product,
+          refs.users,
+          refs.current,
+        ]),
+        "experience-structure": included([
+          ...refs.domains,
+          refs.journey,
+          refs.profile,
+          refs.references,
+          refs.directionA,
+        ]),
+        "design-system": included(refs.assets),
+        "interface-system-boundary": included([refs.contract]),
+        prototype: included(
+          [],
+          names.map((name) => `prototype/${name}`),
+        ),
+        scenarios: included([refs.scenario]),
+        quality: included([], ["quality/limits.txt"]),
+        decisions: included([], ["decisions.txt"]),
+        handoff: included([], ["guide.md"]),
+      },
+      files,
+      dependencies: [],
+      quality: [
+        { report: inspected.reports[0]!.path, artifacts: [refs.scenario] },
+      ],
+    };
+    writeFileSync(path.join(dir, "release-plan.json"), JSON.stringify(plan));
+    mkdirSync(path.join(dir, "packages"));
+    const inspection = invoke(
+      "release",
+      "inspect",
+      "--root",
+      dir,
+      "--file",
+      "release-plan.json",
+      "--json",
+    );
+    expect(inspection.status, inspection.stderr).toBe(0);
+    const matrix = JSON.parse(inspection.stdout) as {
+      planDigest: string;
+      reports: {
+        reportDigest: string;
+        findings: { criterion: string; state: string; severity: string }[];
+      }[];
+    };
+    writeFileSync(
+      path.join(dir, "local-policy.json"),
+      JSON.stringify({
+        version: 1,
+        action: "release-policy",
+        hostId: "synthetic-process-host",
+        confirmedAt: new Date().toISOString(),
+        planDigest: matrix.planDigest,
+        decisions: matrix.reports.flatMap(({ reportDigest, findings }) =>
+          findings.map((finding) => ({
+            reportDigest,
+            ...finding,
+            blockRelease: finding.state === "FAIL",
+            reason: `Synthetic process policy for ${finding.criterion}`,
+          })),
+        ),
+      }),
+    );
+    const prepared = syntheticSeedHostInvoke(
+      "release",
+      "prepare",
+      "--id",
+      "candidate",
+      "--root",
+      dir,
+      "--file",
+      "release-plan.json",
+      "--destination",
+      "packages",
+      "--policy-confirmation",
+      "local-policy.json",
+      "--json",
+    );
+    expect(prepared.status, prepared.stderr).toBe(0);
+    const reviewPath = (JSON.parse(prepared.stdout) as { reviewPath: string })
+      .reviewPath;
+    const review = JSON.parse(
+      readFileSync(path.join(dir, reviewPath), "utf8"),
+    ) as {
+      request: {
+        ref: { packageId: string; version: string };
+        mode: string;
+        digest: string;
+      };
+      destination: string;
+      requestDigest: string;
+    };
+    writeFileSync(
+      path.join(dir, "confirmation.json"),
+      JSON.stringify({
+        version: 1,
+        action: "release",
+        hostId: "synthetic-process-host",
+        humanActorId: syntheticHuman.id,
+        confirmedAt: new Date().toISOString(),
+        requestId: "synthetic_process_release",
+        requestDigest: review.requestDigest,
+        packageId: review.request.ref.packageId,
+        packageVersion: review.request.ref.version,
+        mode: review.request.mode,
+        digest: review.request.digest,
+        destination: review.destination,
+      }),
+    );
+    const published = syntheticSeedHostInvoke(
+      "release",
+      "publish",
+      "candidate",
+      "--root",
+      dir,
+      "--confirmation",
+      "confirmation.json",
+      "--json",
+    );
+    expect(published.status, published.stderr).toBe(0);
+    const readback = syntheticSeedHostInvoke(
+      "release",
+      "publish",
+      "candidate",
+      "--root",
+      dir,
+      "--confirmation",
+      "confirmation.json",
+      "--json",
+    );
+    expect(readback.status, readback.stderr).toBe(0);
+    expect(JSON.parse(readback.stdout).status).toBe("recovered");
+  } finally {
+    await fixture.close();
+  }
+}, 30_000);
 
 test("built submit routes file work through the merged Skill harness and leaves a durable decision packet", () => {
   const dir = root();
