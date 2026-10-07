@@ -41,7 +41,8 @@ export type PrototypeTag =
   | "span"
   | "strong"
   | "button"
-  | "a";
+  | "a"
+  | "input";
 export interface PrototypeNode {
   readonly tag: PrototypeTag;
   readonly id?: string;
@@ -50,6 +51,9 @@ export interface PrototypeNode {
   readonly fixtureKey?: string;
   readonly href?: string;
   readonly targetState?: PrototypeState;
+  /** Journey-only, labeled text control; absent in legacy plans. */
+  readonly inputKind?: "text" | "search";
+  readonly ariaLabel?: string;
   readonly children?: readonly PrototypeNode[];
 }
 export interface PrototypeStatePlan {
@@ -132,6 +136,7 @@ const TAGS: readonly PrototypeTag[] = [
   "strong",
   "button",
   "a",
+  "input",
 ];
 const ID = /^[A-Za-z][A-Za-z0-9_-]*$/;
 const REF_ID = /^art_[A-Za-z0-9_-]+$/;
@@ -333,6 +338,11 @@ function validatePlan(plan: PrototypeBuilderInput): void {
     }
   }
 }
+export interface PrototypeCompileOptions {
+  readonly journeyControls?: ReadonlySet<string>;
+  readonly journeyInputs?: ReadonlySet<string>;
+}
+
 function renderNode(
   node: PrototypeNode,
   state: PrototypeState,
@@ -343,6 +353,7 @@ function renderNode(
   depth: number,
   budget: { count: number },
   interactiveAncestor: boolean,
+  options: PrototypeCompileOptions,
 ): { html: string; hasText: boolean } {
   if (
     !node ||
@@ -364,13 +375,19 @@ function renderNode(
       "fixtureKey",
       "href",
       "targetState",
+      "inputKind",
+      "ariaLabel",
       "children",
     ],
     "node",
   );
-  if (!TAGS.includes(node.tag))
+  if (
+    !TAGS.includes(node.tag) ||
+    (node.tag === "input" && !options.journeyInputs)
+  )
     revision(`Unsupported semantic element: ${String(node.tag)}`);
-  const interactive = node.tag === "button" || node.tag === "a";
+  const interactive =
+    node.tag === "button" || node.tag === "a" || node.tag === "input";
   if (interactiveAncestor && interactive)
     revision("Nested interactive controls are unsupported");
   if (node.id !== undefined) {
@@ -407,13 +424,41 @@ function renderNode(
     fail("INVALID", "Only local fragment URLs are allowed");
   if (node.tag === "a" && !node.href)
     revision("Link needs a local fragment target");
-  if (node.tag === "button" && !node.targetState)
+  if (
+    node.tag === "button" &&
+    !node.targetState &&
+    !options.journeyControls?.has(node.id ?? "")
+  )
     revision("Button needs a declared state transition");
+  if (node.tag === "input") {
+    if (
+      !node.id ||
+      !options.journeyInputs?.has(node.id) ||
+      !["text", "search"].includes(node.inputKind ?? "") ||
+      !node.ariaLabel ||
+      node.children?.length ||
+      node.text !== undefined ||
+      node.fixtureKey !== undefined ||
+      node.targetState !== undefined ||
+      node.href !== undefined
+    )
+      fail(
+        "INVALID",
+        "Journey input requires an ID, supported kind, and accessible label",
+      );
+    assertText(node.ariaLabel, "input ariaLabel");
+  } else if (node.inputKind !== undefined || node.ariaLabel !== undefined)
+    fail("INVALID", "Input attributes require an input node");
   if (node.targetState !== undefined && !renderedStates.has(node.targetState))
     revision(`Missing transition target state ${node.targetState}`);
   if (node.children !== undefined && !Array.isArray(node.children))
     fail("INVALID", "children must be an array");
-  const attrs = `${node.id ? ` id="${node.id}"` : ""}${node.componentId ? ` data-component="${escapeHtml(node.componentId)}"` : ""}${node.href ? ` href="${node.href}"` : ""}${node.targetState ? ` type="button" data-target-state="${node.targetState}"` : ""}`;
+  const attrs = `${node.id ? ` id="${node.id}"` : ""}${node.componentId ? ` data-component="${escapeHtml(node.componentId)}"` : ""}${node.href ? ` href="${node.href}"` : ""}${node.targetState ? ` type="button" data-target-state="${node.targetState}"` : options.journeyControls?.has(node.id ?? "") ? ` type="button"` : ""}`;
+  if (node.tag === "input")
+    return {
+      html: `<input${attrs} type="${node.inputKind}" aria-label="${escapeHtml(node.ariaLabel!)}"/>`,
+      hasText: false,
+    };
   const renderedChildren =
     node.children?.map((child) =>
       renderNode(
@@ -426,6 +471,7 @@ function renderNode(
         depth + 1,
         budget,
         interactiveAncestor || interactive,
+        options,
       ),
     ) ?? [];
   const hasText =
@@ -460,11 +506,27 @@ function linksExactCompositionRef(
   );
 }
 /** Compile a reviewable, deterministic specification prototype from explicit composition input. */
-export async function buildPrototype(
+export interface CompiledPrototypeBundle {
+  readonly plan: PrototypeBuilderInput;
+  readonly planDigest: string;
+  readonly files: Readonly<Record<string, string>>;
+  readonly sections: readonly string[];
+  readonly css: string;
+  readonly responsiveProgram:
+    | readonly {
+        readonly state: string;
+        readonly operations: readonly unknown[];
+      }[]
+    | undefined;
+  readonly tokenCss: string;
+}
+
+/** Compile without publishing so journey views reuse the same validator and renderer. */
+export async function compilePrototypeBundle(
   store: ArtifactStore,
   supplied: PrototypeBuilderInput,
-  outputRoot: string,
-): Promise<PrototypeBuildResult> {
+  options: PrototypeCompileOptions = {},
+): Promise<CompiledPrototypeBundle> {
   // JSON copy freezes the caller's intent before any asynchronous read; canonicalJson rejects non-JSON inputs.
   const plan = jsonCopy(
     supplied as unknown as JsonValue,
@@ -566,6 +628,7 @@ export async function buildPrototype(
       0,
       budget,
       false,
+      options,
     );
     return `<div data-state="${state.name}"${state.name === plan.initialState ? "" : " hidden"}>${rendered.html}</div>`;
   });
@@ -574,7 +637,11 @@ export async function buildPrototype(
   ].map((match) => match[1]!);
   for (const fragment of referencedFragments)
     if (!ids.has(fragment)) revision(`Fragment target ${fragment} is absent`);
-  const responsiveProblems = responsiveErrors(plan);
+  const responsiveProblems = responsiveErrors(
+    plan,
+    options.journeyControls,
+    options.journeyInputs,
+  );
   if (responsiveProblems.length)
     fail(
       "INVALID",
@@ -594,6 +661,7 @@ export async function buildPrototype(
         0,
         budget,
         false,
+        options,
       );
       return { ...operation, html: replacement.html };
     }),
@@ -625,12 +693,30 @@ export async function buildPrototype(
     "manifest.json": `${canonicalJson(manifest as unknown as JsonValue)}\n`,
     "plan.json": `${canonicalJson(plan as unknown as JsonValue)}\n`,
   };
+  return {
+    plan,
+    planDigest,
+    files,
+    sections,
+    css,
+    responsiveProgram,
+    tokenCss: compiled.css,
+  };
+}
+
+/** Publish the legacy single-view bundle without changing its saved bytes. */
+export async function buildPrototype(
+  store: ArtifactStore,
+  supplied: PrototypeBuilderInput,
+  outputRoot: string,
+): Promise<PrototypeBuildResult> {
+  const built = await compilePrototypeBundle(store, supplied);
   let directory: string;
   try {
     directory = await publishPrototypeBundle(
       outputRoot,
-      plan.outputPath,
-      files,
+      built.plan.outputPath,
+      built.files,
     );
   } catch (error) {
     if (error instanceof PrototypeOutputError) fail("PATH", error.message);
@@ -638,7 +724,7 @@ export async function buildPrototype(
   }
   return Object.freeze({
     directory,
-    planDigest,
-    files: Object.freeze(Object.keys(files)),
+    planDigest: built.planDigest,
+    files: Object.freeze(Object.keys(built.files)),
   });
 }

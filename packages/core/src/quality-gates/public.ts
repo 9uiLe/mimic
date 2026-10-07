@@ -21,3 +21,17 @@ export async function runBrowserQualityGates(
     suppliedBrowser,
   );
 }
+
+export async function runStaticJourneyQualityGates(input: GateInput) {
+  return (await import("./journey.js")).runStaticJourneyQualityGates(input);
+}
+
+export async function runBrowserJourneyQualityGates(
+  input: GateInput,
+  suppliedBrowser?: Browser,
+) {
+  return (await import("./journey-browser.js")).runBrowserJourneyQualityGates(
+    input,
+    suppliedBrowser,
+  );
+}

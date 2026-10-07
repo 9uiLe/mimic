@@ -5,6 +5,8 @@ import { artifactDigest } from "../artifact-canonical.js";
 import { parseArtifactYaml } from "../artifact-codec.js";
 import type { ArtifactSnapshot } from "../artifact-store.js";
 import { buildPrototype } from "../prototype-builder/index.js";
+import { buildPrototypeJourney } from "../prototype-journey/index.js";
+import { authoredJourneyPlan } from "../../../../fixtures/prototype-journey/plan.js";
 import {
   inspectBundle,
   runStaticQualityGates,
@@ -895,4 +897,46 @@ test("one canonical Experience-first artifact set compiles as exact Reference an
       }),
     ).rejects.toMatchObject({ code: "UNVERIFIED" });
   }
+});
+
+test("C-204 acceptance compiles Queue and Review as one exact, uncommitted journey", async () => {
+  const fixture = await setup();
+  const journeyPlan = authoredJourneyPlan(fixture);
+  const output = await buildPrototypeJourney(
+    fixture.store,
+    journeyPlan,
+    fixture.root,
+  );
+  const bundle = await inspectBundle({
+    trustedRoot: fixture.root,
+    directory: output.directory,
+  });
+  const manifest = bundle.manifest;
+  expect(manifest?.kind).toBe("mimic-prototype-journey");
+  expect(manifest?.contract).toEqual(fixture.contract.ref);
+  expect(manifest?.journey).toEqual(fixture.journey.ref);
+  expect(
+    (manifest?.views as { id: string; scenario: unknown }[]).map(
+      (view) => view.id,
+    ),
+  ).toEqual(["queue", "review"]);
+  const { report } = await runStaticQualityGates({
+    trustedRoot: fixture.root,
+    directory: output.directory,
+    store: fixture.store,
+    uiContract: fixture.contract.ref,
+  });
+  expect(
+    report.findings.find((item) => item.criterion === "source-locks")?.state,
+  ).toBe("PASS");
+  expect(
+    report.findings.find((item) => item.criterion === "finite-actions")?.state,
+  ).toBe("PASS");
+  expect(
+    journeyPlan.entities.every(
+      (entity) =>
+        entity.fields.approvalStatus === "pending" &&
+        entity.fields.committedDecision === "none",
+    ),
+  ).toBe(true);
 });
