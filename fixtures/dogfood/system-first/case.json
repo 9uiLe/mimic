@@ -1,0 +1,90 @@
+{
+  "caseId": "riverbend-repairs-synthetic",
+  "privacy": "Entirely synthetic. No resident, employee, or production system data.",
+  "system": {
+    "name": "Riverbend Repairs",
+    "purpose": "A city repair desk triages public water-leak work orders.",
+    "evidence": [
+      {
+        "id": "fixture:rb-work-orders-v1",
+        "source": "Synthetic read-only API response and screen inventory authored for 9UI-124",
+        "observed": "GET /work-orders lists ID, address zone, severity, age, and assigned crew; a dispatcher can open a detail and assign a crew.",
+        "limitations": "Describes a constructed system, not an external deployment. No comparison or bulk assignment endpoint exists in this inventory."
+      }
+    ],
+    "sampleOrders": [
+      {
+        "id": "WO-1042",
+        "zone": "North",
+        "severity": "urgent",
+        "ageHours": 3,
+        "crew": "unassigned"
+      },
+      {
+        "id": "WO-1043",
+        "zone": "West",
+        "severity": "routine",
+        "ageHours": 18,
+        "crew": "Crew B"
+      }
+    ]
+  },
+  "task": "Before assigning a crew, inspect work-order severity and age without losing the work-order ID across list and detail.",
+  "currentCapability": "Read work-order list and assign one crew from detail.",
+  "proposedCapability": "Compare two open work orders side by side before assignment; mock only.",
+  "contract": {
+    "navigation": ["Work orders", "Work-order detail", "Return to work orders"],
+    "terminology": ["Work order", "Crew", "Severity"],
+    "entityContext": [
+      "Preserve exact work-order ID, zone, and assignment state across list and detail"
+    ],
+    "accessibilityBaseline": "WCAG 2.2 AA"
+  },
+  "domains": [
+    {
+      "name": "Triage",
+      "goal": "Compare urgency among open orders",
+      "interaction": "List and inspect",
+      "time": "Repeated short sessions"
+    },
+    {
+      "name": "Dispatch",
+      "goal": "Assign a crew to one order",
+      "interaction": "Review and commit",
+      "time": "One consequential action"
+    }
+  ],
+  "directions": [
+    {
+      "id": "queue-detail",
+      "mechanism": "Queue with persistent selected-order detail",
+      "risk": "Comparison requires memory across selections"
+    },
+    {
+      "id": "paired-inspection",
+      "mechanism": "Explicit two-order inspection tray",
+      "risk": "Requires a capability absent from the current system"
+    }
+  ],
+  "referenceSpace": {
+    "case": "Synthetic incident triage board",
+    "classification": "far",
+    "structuralRelevance": "high",
+    "contextDistance": "high",
+    "mechanism": "Persistent entity context while inspecting candidates",
+    "doNotBorrow": "Do not copy incident severity labels or assume the external domain's evidence model."
+  },
+  "review": {
+    "candidate": "paired-inspection",
+    "options": [
+      "Approve a provisional paired-inspection direction",
+      "Retain queue-detail",
+      "Request revision"
+    ],
+    "evidenceLimits": [
+      "No real dispatcher observation",
+      "No human decision",
+      "Comparison capability remains proposed"
+    ]
+  }
+}
