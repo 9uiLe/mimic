@@ -25,14 +25,12 @@ async function readMetadata(directory: string, name: string): Promise<unknown> {
   return JSON.parse(contents.toString("utf8")) as unknown;
 }
 
-function matchesProposedPlan(
-  rendered: PrototypeBuilderInput,
+function expectedProposedPlan(
   authored: PrototypeBuilderInput,
   choices: readonly unknown[],
   historical: boolean,
-): boolean {
-  if (!Array.isArray(rendered.states) || !Array.isArray(authored.states))
-    return false;
+): PrototypeBuilderInput | undefined {
+  if (!Array.isArray(authored.states)) return undefined;
   const notices = choices
     .filter((choice) => record(choice) && choice.status !== "current")
     .map((choice) => {
@@ -44,8 +42,8 @@ function matchesProposedPlan(
           : "Proposed, not implemented";
       return `${status}: ${choice.id}; System Request ${request.artifactId}@${request.revision}; digest ${String(request.lockDigest).slice(0, 19)}…`;
     });
-  if (notices.some((notice) => notice === undefined)) return false;
-  const expected = {
+  if (notices.some((notice) => notice === undefined)) return undefined;
+  return {
     ...authored,
     states: authored.states.map((state) => ({
       ...state,
@@ -70,8 +68,53 @@ function matchesProposedPlan(
       },
     })),
   };
-  return same(rendered, expected);
 }
+
+const comparisonKeys = [
+  "kind",
+  "productionReady",
+  "modePlanDigest",
+  "contract",
+  "scenario",
+  "choices",
+  "decisionContext",
+  "current",
+  "proposed",
+  "fallback",
+  "review",
+].sort();
+const slotKeys = ["path", "planDigest"].sort();
+const refKeys = ["artifactId", "revision", "lockDigest"].sort();
+const exactKeys = (value: Record<string, unknown>, keys: string[]): boolean =>
+  same(Object.keys(value).sort(), [...keys].sort());
+const exactRef = (value: unknown): boolean =>
+  record(value) &&
+  exactKeys(value, refKeys) &&
+  typeof value.artifactId === "string" &&
+  /^art_[A-Za-z0-9_-]+$/.test(value.artifactId) &&
+  Number.isSafeInteger(value.revision) &&
+  Number(value.revision) > 0 &&
+  typeof value.lockDigest === "string" &&
+  /^sha256:[0-9a-f]{64}$/.test(value.lockDigest);
+const decisionContext = (value: unknown): boolean =>
+  record(value) &&
+  exactKeys(value, ["kind", "requests"]) &&
+  ["live", "historical"].includes(value.kind as string) &&
+  Array.isArray(value.requests) &&
+  value.requests.every(exactRef) &&
+  (value.kind !== "historical" || value.requests.length === 0);
+const modeChoice = (value: unknown): boolean =>
+  record(value) &&
+  typeof value.id === "string" &&
+  /^[A-Za-z][A-Za-z0-9_-]*$/.test(value.id) &&
+  ["current", "required", "proposed", "unresolved"].includes(
+    value.status as string,
+  ) &&
+  exactRef(value.capability) &&
+  (value.status === "current"
+    ? exactKeys(value, ["id", "status", "capability"])
+    : exactKeys(value, ["id", "status", "capability", "systemRequest"]) &&
+      exactRef(value.systemRequest));
 
 /** A mode bundle keeps its authored relative path after the comparison is published. */
 export async function matchesOutputLocation(
@@ -102,6 +145,10 @@ export async function matchesOutputLocation(
     if (
       !record(current) ||
       !record(proposed) ||
+      !exactRef(modePlan.contract) ||
+      !exactRef(current.scenario) ||
+      !exactRef(proposed.scenario) ||
+      !decisionContext(modePlan.decisionContext) ||
       !directoryName(modePlan.comparisonPath) ||
       modePlan.comparisonPath !== comparisonName ||
       !directoryName(current.outputPath) ||
@@ -109,8 +156,10 @@ export async function matchesOutputLocation(
       current.outputPath === proposed.outputPath ||
       comparisonName === current.outputPath ||
       comparisonName === proposed.outputPath ||
+      !exactKeys(comparison, comparisonKeys) ||
       comparison.kind !== "mimic-prototype-mode-comparison" ||
       comparison.productionReady !== false ||
+      typeof comparison.review !== "string" ||
       comparison.modePlanDigest !== digest(modePlan) ||
       ![
         null,
@@ -123,11 +172,8 @@ export async function matchesOutputLocation(
       !same(current.scenario, plan.scenario) ||
       !same(comparison.contract, modePlan.contract) ||
       !same(comparison.decisionContext, modePlan.decisionContext) ||
-      !record(modePlan.decisionContext) ||
-      !["live", "historical"].includes(
-        modePlan.decisionContext.kind as string,
-      ) ||
       !Array.isArray(modePlan.choices) ||
+      !modePlan.choices.every(modeChoice) ||
       !Array.isArray(modePlan.currentUses) ||
       !Array.isArray(modePlan.proposedUses) ||
       !same(
@@ -144,33 +190,38 @@ export async function matchesOutputLocation(
     const isCurrent = slotName === current.outputPath;
     const isProposed = slotName === proposed.outputPath;
     const slot = comparison[isCurrent ? "current" : "proposed"];
+    const comparisonCurrent = comparison.current;
+    const comparisonProposed = comparison.proposed;
+    const hasProposed = comparison.fallback === null;
+    const renderedProposed = hasProposed
+      ? expectedProposedPlan(
+          proposed as unknown as PrototypeBuilderInput,
+          comparison.choices as unknown[],
+          (modePlan.decisionContext as Record<string, unknown>).kind ===
+            "historical",
+        )
+      : undefined;
     if (
       (!isCurrent && !isProposed) ||
       !record(slot) ||
+      !exactKeys(slot, slotKeys) ||
       slot.path !== slotName ||
       slot.planDigest !== digest(plan) ||
-      !record(comparison.current) ||
-      comparison.current.path !== current.outputPath ||
-      comparison.current.planDigest !== digest(current) ||
-      (comparison.fallback === null) !== record(comparison.proposed) ||
-      (record(comparison.proposed) &&
-        (comparison.proposed.path !== proposed.outputPath ||
-          !/^sha256:[0-9a-f]{64}$/.test(
-            String(comparison.proposed.planDigest),
-          )))
+      !record(comparisonCurrent) ||
+      !exactKeys(comparisonCurrent, slotKeys) ||
+      comparisonCurrent.path !== current.outputPath ||
+      comparisonCurrent.planDigest !== digest(current) ||
+      (hasProposed
+        ? !record(comparisonProposed) ||
+          !exactKeys(comparisonProposed, slotKeys) ||
+          comparisonProposed.path !== proposed.outputPath ||
+          !renderedProposed ||
+          comparisonProposed.planDigest !== digest(renderedProposed)
+        : comparisonProposed !== null)
     )
       return false;
     if (isCurrent) return same(plan, current);
-    return (
-      comparison.fallback === null &&
-      matchesProposedPlan(
-        plan,
-        proposed as unknown as PrototypeBuilderInput,
-        comparison.choices as unknown[],
-        record(modePlan.decisionContext) &&
-          modePlan.decisionContext.kind === "historical",
-      )
-    );
+    return hasProposed && same(plan, renderedProposed);
   } catch {
     return false;
   }

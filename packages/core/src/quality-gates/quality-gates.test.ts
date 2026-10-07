@@ -221,6 +221,14 @@ test.each([
     },
   },
   {
+    name: "well-shaped Proposed bundle digest while inspecting Current",
+    file: "comparison.json",
+    change: (value: Record<string, unknown>) => {
+      (value.proposed as Record<string, unknown>).planDigest =
+        `sha256:${"0".repeat(64)}`;
+    },
+  },
+  {
     name: "authored mode path",
     file: "mode-plan.json",
     change: (value: Record<string, unknown>) => {
@@ -240,6 +248,56 @@ test.each([
   const metadata = JSON.parse(await readFile(metadataFile, "utf8"));
   change(metadata);
   await writeFile(metadataFile, `${canonicalJson(metadata)}\n`);
+  const input = {
+    trustedRoot: fixture.root,
+    directory: modes.current.directory,
+    store: fixture.store,
+  };
+  const { report } = await runStaticQualityGates(input);
+  expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
+  const browser = await runBrowserQualityGates(input);
+  expect(state(browser.findings, "navigation-state")).toBe("FAIL");
+});
+
+test.each([
+  {
+    name: "missing Proposed field",
+    change: (value: Record<string, unknown>) => {
+      delete value.proposed;
+    },
+  },
+  {
+    name: "malformed Proposed field",
+    change: (value: Record<string, unknown>) => {
+      value.proposed = 42;
+    },
+  },
+  {
+    name: "published Proposed slot",
+    change: (value: Record<string, unknown>) => {
+      value.proposed = {
+        path: "proposed",
+        planDigest: `sha256:${"0".repeat(64)}`,
+      };
+    },
+  },
+])("fallback Current rejects $name", async ({ change }) => {
+  const fixture = await setupPrototypeModesFixture({
+    requestStatus: "rejected",
+  });
+  roots.push(fixture.root);
+  const modes = await buildPrototypeModes(
+    fixture.store,
+    fixture.modePlan,
+    fixture.root,
+  );
+  const comparisonFile = path.join(
+    modes.comparisonDirectory,
+    "comparison.json",
+  );
+  const comparison = JSON.parse(await readFile(comparisonFile, "utf8"));
+  change(comparison);
+  await writeFile(comparisonFile, `${canonicalJson(comparison)}\n`);
   const input = {
     trustedRoot: fixture.root,
     directory: modes.current.directory,
@@ -298,6 +356,76 @@ test("mode bundle rejects a changed authored path even with a matching mode-plan
   });
   expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
 });
+
+test.each([
+  {
+    name: "null exact UI Contract",
+    change: (
+      modePlan: Record<string, unknown>,
+      comparison: Record<string, unknown>,
+    ) => {
+      modePlan.contract = null;
+      comparison.contract = null;
+    },
+  },
+  {
+    name: "null decision-context requests",
+    change: (
+      modePlan: Record<string, unknown>,
+      comparison: Record<string, unknown>,
+    ) => {
+      (modePlan.decisionContext as Record<string, unknown>).requests = null;
+      (comparison.decisionContext as Record<string, unknown>).requests = null;
+    },
+  },
+  {
+    name: "non-exact decision-context request",
+    change: (
+      modePlan: Record<string, unknown>,
+      comparison: Record<string, unknown>,
+    ) => {
+      (modePlan.decisionContext as Record<string, unknown>).requests = [
+        { artifactId: "art_request", revision: 1 },
+      ];
+      (comparison.decisionContext as Record<string, unknown>).requests = [
+        { artifactId: "art_request", revision: 1 },
+      ];
+    },
+  },
+])(
+  "mode bundle rejects $name with recomputed mode digest",
+  async ({ change }) => {
+    const fixture = await setupPrototypeModesFixture();
+    roots.push(fixture.root);
+    const modes = await buildPrototypeModes(
+      fixture.store,
+      fixture.modePlan,
+      fixture.root,
+    );
+    const modePlanFile = path.join(modes.comparisonDirectory, "mode-plan.json");
+    const comparisonFile = path.join(
+      modes.comparisonDirectory,
+      "comparison.json",
+    );
+    const modePlan = JSON.parse(await readFile(modePlanFile, "utf8"));
+    const comparison = JSON.parse(await readFile(comparisonFile, "utf8"));
+    change(modePlan, comparison);
+    comparison.modePlanDigest = `sha256:${createHash("sha256")
+      .update(canonicalJson(modePlan))
+      .digest("hex")}`;
+    await writeFile(modePlanFile, `${canonicalJson(modePlan)}\n`);
+    await writeFile(comparisonFile, `${canonicalJson(comparison)}\n`);
+    const input = {
+      trustedRoot: fixture.root,
+      directory: modes.current.directory,
+      store: fixture.store,
+    };
+    const { report } = await runStaticQualityGates(input);
+    expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
+    const browser = await runBrowserQualityGates(input);
+    expect(state(browser.findings, "navigation-state")).toBe("FAIL");
+  },
+);
 
 test("generated single-main HTML passes and an extra main fails lint", async () => {
   const { input, output } = await built();
