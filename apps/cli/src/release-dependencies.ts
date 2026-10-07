@@ -73,10 +73,13 @@ async function sourceRoot(root: string, name: string): Promise<string> {
 export interface DependencyNodeReview {
   readonly ref: PackageRef;
   readonly digest: string;
-  readonly locations: readonly string[];
+  readonly locations: readonly DependencyLocation[];
   readonly manifest: Pick<PackageManifest, "mode" | "scope" | "approval">;
   readonly lockDigest: string;
 }
+export type DependencyLocation =
+  | { readonly kind: "source"; readonly path: string }
+  | { readonly kind: "bundled"; readonly parent: PackageRef };
 export interface DependencyEdgeReview extends LockedDependency {
   readonly parent: PackageRef;
 }
@@ -119,7 +122,7 @@ interface Loaded {
   readonly snapshot: PackageSnapshot;
   readonly manifest: PackageManifest;
   readonly digest: string;
-  readonly locations: Set<string>;
+  readonly locations: Map<string, DependencyLocation>;
 }
 export interface DependencyReview {
   readonly context: DependencyContext;
@@ -145,12 +148,22 @@ export async function reviewDependencies(
     check(refLike(edge.ref), "Invalid dependency identity");
     const id = identity(edge.ref);
     check(!visiting.has(id), "Dependency cycle");
-    const location = bundled
-      ? `bundled:${identity(parent)}`
-      : path.relative(root, await sourceRoot(root, edge.source));
-    const snapshot =
-      bundled ??
-      (await new FilePackageSource(path.join(root, location)).read(edge.ref));
+    const location: DependencyLocation = bundled
+      ? { kind: "bundled", parent }
+      : {
+          kind: "source",
+          path: path.relative(root, await sourceRoot(root, edge.source)),
+        };
+    let snapshot = bundled;
+    if (!snapshot) {
+      check(
+        location.kind === "source",
+        "Dependency source classification changed",
+      );
+      snapshot = await new FilePackageSource(
+        path.join(root, location.path),
+      ).read(edge.ref);
+    }
     check(snapshot, `Dependency bytes unavailable: ${id}`, "UNSUPPORTED");
     check(
       packageDigest(snapshot) === edge.digest,
@@ -168,14 +181,14 @@ export async function reviewDependencies(
         prior.digest === edge.digest,
         `Conflicting dependency bytes: ${id}`,
       );
-      prior.locations.add(location);
+      prior.locations.set(canonicalJson(location), location);
       return;
     }
     loaded.set(id, {
       snapshot,
       manifest,
       digest: edge.digest,
-      locations: new Set([location]),
+      locations: new Map([[canonicalJson(location), location]]),
     });
     visiting.add(id);
     for (const child of manifest.dependencies) {
@@ -216,7 +229,9 @@ export async function reviewDependencies(
     .map(({ snapshot, manifest, digest: bytesDigest, locations }) => ({
       ref: manifest.ref,
       digest: bytesDigest,
-      locations: [...locations].sort(),
+      locations: [...locations.values()].sort((a, b) =>
+        canonicalJson(a).localeCompare(canonicalJson(b)),
+      ),
       manifest: {
         mode: manifest.mode,
         scope: manifest.scope,

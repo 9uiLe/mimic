@@ -733,7 +733,13 @@ test("main executable authors, locally approves, previews, and publishes an exac
         nodes: {
           ref: { packageId: string; version: string };
           digest: string;
-          locations: string[];
+          locations: (
+            | { kind: "source"; path: string }
+            | {
+                kind: "bundled";
+                parent: { packageId: string; version: string };
+              }
+          )[];
         }[];
         edges: unknown[];
       };
@@ -991,6 +997,24 @@ test("main executable authors, locally approves, previews, and publishes an exac
     path.join(root, "imports", "product", "main-e2e", "0.1.0"),
     { recursive: true },
   );
+  mkdirSync(path.join(root, "bundled:imports", "product", "main-e2e"), {
+    recursive: true,
+  });
+  cpSync(
+    path.join(root, "packages", "product", "main-e2e", "0.1.0"),
+    path.join(root, "bundled:imports", "product", "main-e2e", "0.1.0"),
+    { recursive: true },
+  );
+  const prefixSource = dependentRelease(
+    "main_prefix_source",
+    "reference",
+    "bundled:imports",
+    "local-publication",
+  );
+  expect(prefixSource.matrix.dependencyContext.nodes[0]!.locations).toEqual([
+    { kind: "source", path: "bundled:imports" },
+  ]);
+  expect(invoke(root, ...prefixSource.prepareArgs).status).toBe(4);
   const copied = dependentRelease(
     "main_imported",
     "reference",
@@ -1104,7 +1128,12 @@ test("main executable authors, locally approves, previews, and publishes an exac
     validPortable.matrix.dependencyContext.nodes.find(
       (node) => node.ref.packageId === baseDependency.ref.packageId,
     )?.locations,
-  ).toEqual(["bundled:product/main_portable@0.1.0"]);
+  ).toEqual([
+    {
+      kind: "bundled",
+      parent: { packageId: "product/main_portable", version: "0.1.0" },
+    },
+  ]);
   const missingTransitiveGrant = {
     ...validPortable.dependencyDecision,
     redistribution: validPortable.dependencyDecision.redistribution.filter(

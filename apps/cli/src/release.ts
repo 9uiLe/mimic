@@ -412,16 +412,16 @@ async function verifiedLocalPublication(
     if (!idPattern.test(id)) continue;
     try {
       const prepared = await readPrepared(root, id);
-      const externalLocations = node.locations.filter(
-        (location) => !location.startsWith("bundled:"),
-      );
+      const externalLocations = node.locations
+        .filter((location) => location.kind === "source")
+        .map((location) => location.path);
       if (
         prepared.request.digest !== node.digest ||
         !same(prepared.request.ref, node.ref) ||
         (externalLocations.length > 0 &&
           !externalLocations.includes(prepared.destination)) ||
         (externalLocations.length === 0 &&
-          !node.locations.some((location) => location.startsWith("bundled:")))
+          !node.locations.some((location) => location.kind === "bundled"))
       )
         continue;
       const intent = JSON.parse(
