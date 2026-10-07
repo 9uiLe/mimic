@@ -1,4 +1,18 @@
 /** Emit only fixed browser operations over the validated authored tree. */
+export function stateFocusRuntime(): string {
+  return `
+function focusAfterStateChange(state) {
+  const active = document.activeElement;
+  if (active && active !== document.body && active.getClientRects().length && !active.closest('[hidden],details:not([open])')) return;
+  const view = [...document.querySelectorAll('[data-state]')].find((item) => item.getAttribute('data-state') === state);
+  const heading = [...view.querySelectorAll('h1,h2,h3')].find((item) => item.getClientRects().length && !item.closest('[hidden],details:not([open])'));
+  const target = heading || view;
+  target.tabIndex = -1;
+  target.focus();
+}
+`;
+}
+
 export function responsiveRuntime(
   program: readonly {
     readonly state: string;
@@ -14,12 +28,21 @@ const disclosureOpen = new Map();
 let mobileApplied = false;
 function responsiveFocus(id, fallback) {
   const target = id && document.getElementById(id);
-  if (target && target.getClientRects().length && !target.closest('details:not([open])')) {
+  if (target && target.getClientRects().length && !target.closest('[hidden],details:not([open])')) {
     target.focus();
     return;
   }
-  const details = target?.closest('details:not([open])');
-  (details?.querySelector('summary') || fallback)?.focus();
+  const details = (target || fallback)?.closest('details:not([open])');
+  if (details && details.getClientRects().length && !details.closest('[hidden]')) {
+    details.querySelector('summary').focus();
+    return;
+  }
+  if (fallback?.isConnected && fallback.getClientRects().length && !fallback.closest('[hidden]')) {
+    fallback.focus();
+    return;
+  }
+  const state = document.querySelector('[data-state]:not([hidden])');
+  if (state) focusAfterStateChange(state.getAttribute('data-state'));
 }
 function applyResponsive() {
   const focused = document.activeElement;
@@ -57,7 +80,7 @@ function applyResponsive() {
     }
   }
   mobileApplied = true;
-  if (focused && focused !== document.body) responsiveFocus(nextFocus);
+  if (focused && focused !== document.body) responsiveFocus(nextFocus, focused);
 }
 function restoreResponsive() {
   const focused = document.activeElement;
@@ -76,7 +99,7 @@ function restoreResponsive() {
     const target = group?.querySelector('button,a[href]') || group;
     if (group && target === group) group.tabIndex = -1;
     target?.focus();
-  } else if (focused && focused !== document.body) responsiveFocus(nextFocus);
+  } else if (focused && focused !== document.body) responsiveFocus(nextFocus, focused);
 }
 function reconcileResponsive() {
   if (responsiveQuery.matches && !mobileApplied) applyResponsive();

@@ -72,6 +72,9 @@ test("generated prototype supports desktop/mobile states and repeated interactio
     await page.keyboard.press("Enter");
     await expect(page.getByText("Synthetic candidate ready")).toBeVisible();
     await expect(
+      page.getByRole("heading", { name: "success view" }),
+    ).toBeFocused();
+    await expect(
       page.getByRole("button", { name: "Choose candidate" }),
     ).toBeVisible();
     await expect(
@@ -94,9 +97,19 @@ test("generated prototype supports desktop/mobile states and repeated interactio
         page.getByRole("heading", { name: `${state} view` }),
       ).toBeVisible();
       await expect(page.getByRole("status")).toHaveText(`${state} state`);
+      await expect(
+        page.getByRole("heading", { name: `${state} view` }),
+      ).toBeFocused();
       await assertAccessible();
-      await page.getByRole("button", { name: "Show success" }).click();
+      await page.keyboard.press("Tab");
+      await expect(
+        page.getByRole("button", { name: "Show success" }),
+      ).toBeFocused();
+      await page.keyboard.press("Enter");
       await expect(page.getByRole("status")).toHaveText("success state");
+      await expect(
+        page.getByRole("heading", { name: "success view" }),
+      ).toBeFocused();
     }
     await page.getByRole("button", { name: "Choose candidate" }).click();
     await expect(
