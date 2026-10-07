@@ -14,11 +14,17 @@ import {
   CliReleaseError,
   prepareRelease,
   publishRelease,
+  releaseReview,
   type ReleaseConfirmation,
   type ReleaseHost,
   type ReleasePlan,
   type LocalReleasePolicyConfirmation,
 } from "./release.js";
+import {
+  CliDependencyError,
+  reviewDependencies,
+  type DependencyConfirmation,
+} from "./release-dependencies.js";
 import { PlanError, preflightPlan, scopeChain } from "./plan.js";
 import {
   ReceiptAuthority,
@@ -154,6 +160,7 @@ function parse(argv: readonly string[]) {
           "acceptance",
           "destination",
           "policy-confirmation",
+          "dependency-confirmation",
         ]).has(arg.slice(2))
       )
         throw new CliError(EXIT.USAGE, `Unknown option ${arg}`);
@@ -1084,12 +1091,48 @@ export async function runCli(
             }),
           });
         }
+        if (
+          plan.dependencies.length > 0 &&
+          (!plan.ref ||
+            typeof plan.ref.packageId !== "string" ||
+            typeof plan.ref.version !== "string" ||
+            !["reference", "portable"].includes(plan.mode))
+        )
+          throw new CliError(EXIT.INVALID, "Invalid dependency consumer");
+        const dependencyReview = plan.dependencies.length
+          ? await reviewDependencies(
+              root,
+              `sha256:${jsonDigest(plan)}`,
+              { ref: plan.ref, mode: plan.mode },
+              plan.dependencies,
+            )
+          : undefined;
         emit(
           io,
           {
             planDigest: `sha256:${jsonDigest(plan)}`,
             dependencyCount: plan.dependencies?.length ?? 0,
             reports,
+            ...(dependencyReview
+              ? {
+                  dependencyContext: dependencyReview.context,
+                  dependencyContextDigest: dependencyReview.contextDigest,
+                  missingDecisions: {
+                    packages: dependencyReview.context.nodes.map((node) => ({
+                      ref: node.ref,
+                      digest: node.digest,
+                    })),
+                    licenses: dependencyReview.context.edges,
+                    redistribution:
+                      plan.mode === "portable"
+                        ? dependencyReview.context.nodes.map((node) => ({
+                            ref: node.ref,
+                            digest: node.digest,
+                          }))
+                        : [],
+                  },
+                }
+              : {}),
           },
           json,
         );
@@ -1106,6 +1149,14 @@ export async function runCli(
           : undefined;
         if (options["policy-confirmation"] && !localPolicy)
           throw new CliError(EXIT.INVALID, "Invalid local policy confirmation");
+        const dependencyConfirmation = options["dependency-confirmation"]
+          ? ((await readJson(
+              root,
+              options["dependency-confirmation"],
+            )) as DependencyConfirmation)
+          : undefined;
+        if (options["dependency-confirmation"] && !dependencyConfirmation)
+          throw new CliError(EXIT.INVALID, "Invalid dependency confirmation");
         const prepared = await prepareRelease(
           root,
           safeId(required(options.id, "--id"), "release ID"),
@@ -1117,14 +1168,12 @@ export async function runCli(
           schemas,
           config.scopes,
           localPolicy,
+          dependencyConfirmation,
         );
+        const review = releaseReview(prepared);
         const reviewPath = await outputFile(root, {
-          request: prepared.request,
-          destination: prepared.destination,
-          requestDigest: `sha256:${jsonDigest({
-            request: prepared.request,
-            destination: prepared.destination,
-          })}`,
+          ...review,
+          requestDigest: `sha256:${jsonDigest(review)}`,
         });
         emit(
           io,
@@ -1165,7 +1214,7 @@ export async function runCli(
       }
       throw new CliError(
         EXIT.USAGE,
-        "Usage: mimic release inspect --file <plan> | release prepare --id <id> --file <plan> --destination <directory> [--policy-confirmation <file>] | release publish <id> --confirmation <file>",
+        "Usage: mimic release inspect --file <plan> | release prepare --id <id> --file <plan> --destination <directory> [--policy-confirmation <file>] [--dependency-confirmation <file>] | release publish <id> --confirmation <file>",
       );
     }
     throw new CliError(EXIT.USAGE, "Unknown command");
@@ -1184,7 +1233,8 @@ export async function runCli(
               ? error.code === "CONFLICT"
                 ? EXIT.CONFLICT
                 : EXIT.INVALID
-              : error instanceof CliReleaseError
+              : error instanceof CliReleaseError ||
+                  error instanceof CliDependencyError
                 ? error.code === "CONFLICT"
                   ? EXIT.CONFLICT
                   : error.code === "UNSUPPORTED"

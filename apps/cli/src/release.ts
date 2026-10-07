@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, realpath } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import {
   canonicalJson,
@@ -9,6 +9,8 @@ import {
   INVENTORY_CATEGORIES,
   packageDigest,
   PackageRegistry,
+  parseDesignLock,
+  parseManifest,
   type ArtifactStore,
   type CompileInput,
   type InventoryCategory,
@@ -24,6 +26,14 @@ import {
   type ScopeNode,
 } from "@mimic/core";
 import { atomicCreateJson } from "./atomic-file.js";
+import {
+  authorizeDependencies,
+  reviewDependencies,
+  type AuthorizedDependencies,
+  type DependencyConfirmation,
+  type DependencyContext,
+  type DependencyNodeReview,
+} from "./release-dependencies.js";
 
 /** All policy callbacks and redistribution grants come from a trusted embedding host. */
 export interface ReleaseHost {
@@ -96,6 +106,8 @@ interface Prepared {
   readonly frozen: FrozenInput;
   readonly request: ReleaseApprovalRequest;
   readonly localPolicy?: LocalReleasePolicyConfirmation;
+  readonly dependencyContext?: DependencyContext;
+  readonly dependencyConfirmation?: DependencyConfirmation;
 }
 export class CliReleaseError extends Error {
   constructor(
@@ -172,18 +184,41 @@ function registry(
     licenseAllowed: host.licenseAllowed,
   });
 }
+const identity = (ref: PackageRef): string => `${ref.packageId}@${ref.version}`;
+function combinedSource(
+  destination: string,
+  root: PackageRef,
+  dependency?: PackageSource,
+): PackageSource {
+  const published = new FilePackageSource(destination);
+  return {
+    read: (ref) =>
+      identity(ref) === identity(root)
+        ? published.read(ref)
+        : (dependency?.read(ref) ?? published.read(ref)),
+    versions: (packageId) =>
+      packageId === root.packageId
+        ? published.versions(packageId)
+        : (dependency?.versions(packageId) ?? published.versions(packageId)),
+  };
+}
 function localHost(
   policy: LocalReleasePolicyConfirmation,
   prepared?: Prepared,
+  dependencies?: AuthorizedDependencies,
 ): ReleaseHost {
   const positions = new Map<string, number>();
   return {
     packageAuthority: {
       verifyRelease: async (manifest) =>
-        !!prepared && same(manifest, prepared.request.manifest),
+        (!!prepared && same(manifest, prepared.request.manifest)) ||
+        (!!dependencies?.manifests.has(identity(manifest.ref)) &&
+          same(dependencies.manifests.get(identity(manifest.ref)), manifest)),
       verifyPromotion: async () => false,
     },
-    licenseAllowed: async () => false,
+    licenseAllowed: async (license, distribution) =>
+      dependencies?.licensePairs.has(`${license}\0${distribution}`) ?? false,
+    redistribution: dependencies?.redistribution,
     policy: {
       assess: async (finding, report) => {
         const reportDigest = digest(report);
@@ -218,13 +253,7 @@ function checkLocalPolicy(
   policy: LocalReleasePolicyConfirmation,
   planDigest: string,
   quality: readonly QualityEvidence[],
-  dependencies: CompileInput["dependencies"],
 ): void {
-  check(
-    dependencies.length === 0,
-    "Standalone local policy cannot authorize external dependencies",
-    "UNSUPPORTED",
-  );
   check(
     policy &&
       Object.keys(policy).every((key) =>
@@ -318,6 +347,7 @@ async function compile(
   schemas: SchemaRegistry,
   scopes: readonly ScopeNode[],
   destination: string,
+  dependencySource?: PackageSource,
 ) {
   const input: CompileInput = {
     ...frozen,
@@ -328,7 +358,7 @@ async function compile(
       ]),
     ),
   };
-  const source = new FilePackageSource(destination);
+  const source = dependencySource ?? new FilePackageSource(destination);
   const existing = registry(source, host, schemas, scopes);
   return compilePackage(input, store, existing, host.policy, (overlay) =>
     registry(overlay, host, schemas, scopes),
@@ -364,6 +394,86 @@ async function readPrepared(root: string, id: string): Promise<Prepared> {
   );
   return data;
 }
+async function verifiedLocalPublication(
+  root: string,
+  node: DependencyNodeReview,
+  supplied?: ReleaseConfirmation,
+): Promise<boolean> {
+  let names: string[];
+  try {
+    names = await readdir(releaseFolder(root));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw error;
+  }
+  for (const name of names.filter((item) => item.endsWith(".completed.json"))) {
+    const id = name.slice(0, -".completed.json".length);
+    if (!idPattern.test(id)) continue;
+    try {
+      const prepared = await readPrepared(root, id);
+      if (
+        prepared.request.digest !== node.digest ||
+        !same(prepared.request.ref, node.ref) ||
+        !node.locations.includes(prepared.destination)
+      )
+        continue;
+      const intent = JSON.parse(
+        await readFile(
+          await contained(
+            root,
+            path.relative(root, fileFor(root, id, "intent")),
+          ),
+          "utf8",
+        ),
+      ) as unknown;
+      const completion = JSON.parse(
+        await readFile(
+          await contained(
+            root,
+            path.relative(root, fileFor(root, id, "completed")),
+          ),
+          "utf8",
+        ),
+      ) as unknown;
+      if (!record(intent) || !record(completion)) continue;
+      const confirmation =
+        intent.format === 2
+          ? (intent.confirmation as ReleaseConfirmation)
+          : supplied;
+      if (!confirmation) continue;
+      checkConfirmation(prepared, confirmation);
+      if (
+        intent.preparedDigest !== digest(prepared) ||
+        intent.confirmationDigest !== digest(confirmation) ||
+        !same(
+          completion,
+          intent.format === 2
+            ? { ...intent, ref: node.ref, digest: node.digest }
+            : { ...intent, digest: node.digest },
+        ) ||
+        (intent.format !== 2 && intent.format !== undefined) ||
+        (supplied && !same(supplied, confirmation))
+      )
+        continue;
+      const source = await contained(root, prepared.destination, true);
+      const snapshot = await new FilePackageSource(source).read(node.ref);
+      if (
+        snapshot &&
+        packageDigest(snapshot) === node.digest &&
+        same(
+          parseManifest(snapshot.manifestBytes),
+          prepared.request.manifest,
+        ) &&
+        same(parseDesignLock(snapshot.lockBytes), prepared.request.lock)
+      )
+        return true;
+    } catch {
+      // An incomplete, changed, or legacy record without its exact confirmation
+      // cannot authorize another release.
+    }
+  }
+  return false;
+}
 async function fileExists(file: string): Promise<boolean> {
   try {
     await lstat(file);
@@ -397,6 +507,7 @@ export async function prepareRelease(
   schemas: SchemaRegistry,
   scopes: readonly ScopeNode[],
   localPolicy?: LocalReleasePolicyConfirmation,
+  dependencyConfirmation?: DependencyConfirmation,
 ): Promise<Prepared> {
   check(
     plan && typeof plan === "object" && !Object.hasOwn(plan, "redistribution"),
@@ -464,6 +575,11 @@ export async function prepareRelease(
     !(host && localPolicy),
     "Local and injected release policies cannot be mixed",
   );
+  check(
+    !(host && dependencyConfirmation) &&
+      (plan.dependencies.length > 0 || !dependencyConfirmation),
+    "Dependency confirmation does not match the release path",
+  );
   const destination = await contained(root, destinationName, true);
   const files: Record<string, string> = {};
   for (const [name, file] of Object.entries(plan.files))
@@ -515,9 +631,27 @@ export async function prepareRelease(
     );
     quality.push({ report, artifacts: item.artifacts });
   }
-  if (localPolicy)
-    checkLocalPolicy(localPolicy, planDigest, quality, plan.dependencies);
-  const authority = host ?? localHost(localPolicy!);
+  if (localPolicy) checkLocalPolicy(localPolicy, planDigest, quality);
+  const dependencyReview =
+    !host && plan.dependencies.length
+      ? await reviewDependencies(
+          root,
+          planDigest,
+          { ref: plan.ref, mode: plan.mode },
+          plan.dependencies,
+        )
+      : undefined;
+  const dependencyAuthority = dependencyReview
+    ? await authorizeDependencies(
+        dependencyReview,
+        dependencyConfirmation,
+        path.relative(root, destination),
+        localPolicy!.hostId,
+        (node, supplied) => verifiedLocalPublication(root, node, supplied),
+      )
+    : undefined;
+  const authority =
+    host ?? localHost(localPolicy!, undefined, dependencyAuthority);
   const frozen: FrozenInput = {
     ref: plan.ref,
     mode: plan.mode,
@@ -537,6 +671,7 @@ export async function prepareRelease(
     schemas,
     scopes,
     destination,
+    dependencyAuthority?.source,
   );
   if (
     !(await fileExists(fileFor(root, id, "prepared"))) &&
@@ -552,6 +687,12 @@ export async function prepareRelease(
     frozen,
     request: requestOf(candidate),
     ...(localPolicy ? { localPolicy } : {}),
+    ...(dependencyReview
+      ? {
+          dependencyContext: dependencyReview.context,
+          dependencyConfirmation,
+        }
+      : {}),
   };
   const folder = releaseFolder(root);
   await mkdir(folder, { recursive: true });
@@ -564,7 +705,9 @@ export async function prepareRelease(
         prior.destination === prepared.destination &&
         same(prior.frozen, frozen) &&
         same(prior.request, prepared.request) &&
-        same(prior.localPolicy, prepared.localPolicy),
+        same(prior.localPolicy, prepared.localPolicy) &&
+        same(prior.dependencyContext, prepared.dependencyContext) &&
+        same(prior.dependencyConfirmation, prepared.dependencyConfirmation),
       "Release preparation ID changed input",
       "CONFLICT",
     );
@@ -617,10 +760,26 @@ function checkConfirmation(
       confirmation.mode === request.mode &&
       confirmation.digest === request.digest &&
       confirmation.destination === prepared.destination &&
-      confirmation.requestDigest ===
-        digest({ request, destination: prepared.destination }),
+      confirmation.requestDigest === digest(releaseReview(prepared)),
     "Confirmation does not bind exact release request and destination",
   );
+}
+export function releaseReview(prepared: Prepared): {
+  request: ReleaseApprovalRequest;
+  destination: string;
+  dependencyContext?: DependencyContext;
+  dependencyConfirmation?: DependencyConfirmation;
+} {
+  return {
+    request: prepared.request,
+    destination: prepared.destination,
+    ...(prepared.dependencyContext
+      ? {
+          dependencyContext: prepared.dependencyContext,
+          dependencyConfirmation: prepared.dependencyConfirmation,
+        }
+      : {}),
+  };
 }
 export async function publishRelease(
   root: string,
@@ -652,15 +811,39 @@ export async function publishRelease(
       prepared.localPolicy,
       prepared.planDigest,
       prepared.frozen.quality,
-      prepared.frozen.dependencies,
     );
     check(
       confirmation.hostId === prepared.localPolicy.hostId,
       "Release confirmation changed controlling host",
     );
   }
-  const authority = host ?? localHost(prepared.localPolicy!, prepared);
   const destination = await contained(root, prepared.destination, true);
+  const dependencyReview = prepared.dependencyContext
+    ? await reviewDependencies(
+        root,
+        prepared.planDigest,
+        { ref: prepared.frozen.ref, mode: prepared.frozen.mode },
+        prepared.frozen.dependencies,
+      )
+    : undefined;
+  check(
+    !!dependencyReview === (prepared.frozen.dependencies.length > 0 && !host) &&
+      (!dependencyReview ||
+        same(dependencyReview.context, prepared.dependencyContext)),
+    "Prepared dependency context changed",
+    "CONFLICT",
+  );
+  const dependencyAuthority = dependencyReview
+    ? await authorizeDependencies(
+        dependencyReview,
+        prepared.dependencyConfirmation,
+        prepared.destination,
+        prepared.localPolicy!.hostId,
+        (node, supplied) => verifiedLocalPublication(root, node, supplied),
+      )
+    : undefined;
+  const authority =
+    host ?? localHost(prepared.localPolicy!, prepared, dependencyAuthority);
   const candidate = await compile(
     prepared.frozen,
     store,
@@ -668,27 +851,44 @@ export async function publishRelease(
     schemas,
     scopes,
     destination,
+    dependencyAuthority?.source,
   );
   check(
     same(requestOf(candidate), prepared.request),
     "Prepared candidate changed",
     "CONFLICT",
   );
-  const intent = {
+  const newIntent = {
+    format: 2,
     preparedDigest: digest(prepared),
     confirmationDigest: digest(confirmation),
+    confirmation,
   };
   const intentFile = fileFor(root, id, "intent");
-  if (!(await atomicCreateJson(intentFile, intent))) {
+  let intent: Record<string, unknown> = newIntent;
+  if (!(await atomicCreateJson(intentFile, newIntent))) {
     const prior = JSON.parse(
       await readFile(
         await contained(root, path.relative(root, intentFile)),
         "utf8",
       ),
     ) as unknown;
-    check(same(prior, intent), "Release intent changed", "CONFLICT");
+    check(
+      same(prior, newIntent) ||
+        (record(prior) &&
+          prior.format === undefined &&
+          prior.preparedDigest === newIntent.preparedDigest &&
+          prior.confirmationDigest === newIntent.confirmationDigest),
+      "Release intent changed",
+      "CONFLICT",
+    );
+    intent = prior as Record<string, unknown>;
   }
-  const source = new FilePackageSource(destination);
+  const source = combinedSource(
+    destination,
+    candidate.ref,
+    dependencyAuthority?.source,
+  );
   const existing = await source.read(candidate.ref);
   if (existing) {
     check(
@@ -700,7 +900,11 @@ export async function publishRelease(
       candidate.ref,
       candidate.digest,
     );
-    await completed(root, id, { ...intent, digest: candidate.digest });
+    await completed(root, id, {
+      ...intent,
+      ...(intent.format === 2 ? { ref: candidate.ref } : {}),
+      digest: candidate.digest,
+    });
     return {
       ref: candidate.ref,
       digest: candidate.digest,
@@ -723,7 +927,11 @@ export async function publishRelease(
     candidate.ref,
     candidate.digest,
   );
-  await completed(root, id, { ...intent, digest: candidate.digest });
+  await completed(root, id, {
+    ...intent,
+    ...(intent.format === 2 ? { ref: candidate.ref } : {}),
+    digest: candidate.digest,
+  });
   return { ...published, recovered: false };
 }
 export function releaseRequestDigest(

@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cpSync,
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -663,4 +664,545 @@ test("main executable authors, locally approves, previews, and publishes an exac
     "local-policy.json",
   );
   expect(missingReport.status, missingReport.stderr).toBe(6);
-}, 45_000);
+
+  const baseDependency = {
+    ref: review.request.ref,
+    digest: review.request.digest,
+    source: "packages",
+    license: "Synthetic-Reviewed-License",
+  };
+  const consumer = (
+    id: string,
+    mode: "reference" | "portable",
+    source: string,
+  ) => ({
+    ...releasePlan,
+    ref: { packageId: `product/${id}`, version: "0.1.0" },
+    mode,
+    approval: {
+      decisionId: `synthetic_${id}_release`,
+      actorId: "synthetic_human_main",
+      at: new Date().toISOString(),
+    },
+    inventory: {
+      ...releasePlan.inventory,
+      "product-foundation": {
+        status: "included",
+        artifacts: [],
+        files: ["foundation.txt"],
+        dependencies: [baseDependency.ref],
+      },
+    },
+    dependencies: [{ ...baseDependency, source }],
+  });
+  put(
+    root,
+    "escaped-dependency.json",
+    consumer("escaped", "reference", "../outside-workspace"),
+  );
+  expect(
+    invoke(root, "release", "inspect", "--file", "escaped-dependency.json")
+      .status,
+  ).toBe(3);
+  const dependentRelease = (
+    id: string,
+    mode: "reference" | "portable",
+    source: string,
+    kind: "local-publication" | "imported-acceptance",
+    extras: (typeof baseDependency)[] = [],
+  ) => {
+    const planFile = `${id}-plan.json`;
+    const policyFile = `${id}-policy.json`;
+    const dependencyFile = `${id}-dependencies.json`;
+    const confirmationFile = `${id}-release.json`;
+    const authored = consumer(id, mode, source);
+    authored.dependencies.push(...extras);
+    authored.inventory["product-foundation"].dependencies.push(
+      ...extras.map((item) => item.ref),
+    );
+    put(root, planFile, authored);
+    const inspected = invoke(root, "release", "inspect", "--file", planFile);
+    expect(inspected.status, inspected.stderr).toBe(0);
+    const matrix = JSON.parse(inspected.stdout) as {
+      planDigest: string;
+      dependencyContextDigest: string;
+      dependencyContext: {
+        consumer: { ref: { packageId: string; version: string }; mode: string };
+        nodes: {
+          ref: { packageId: string; version: string };
+          digest: string;
+        }[];
+        edges: unknown[];
+      };
+    };
+    const policy = {
+      ...localPolicy,
+      planDigest: matrix.planDigest,
+      confirmedAt: new Date().toISOString(),
+    };
+    put(root, policyFile, policy);
+    const dependencyDecision = {
+      version: 1,
+      action: "release-dependencies",
+      hostId: "synthetic-main-host",
+      humanActorId: "synthetic_human_main",
+      confirmedAt: new Date().toISOString(),
+      contextDigest: matrix.dependencyContextDigest,
+      consumer: matrix.dependencyContext.consumer,
+      destination: "packages",
+      packages: matrix.dependencyContext.nodes.map((node) => ({
+        ref: node.ref,
+        digest: node.digest,
+        kind,
+        allowed: true,
+        evidence: "Explicit synthetic per-consumer exact package review",
+      })),
+      licenses: matrix.dependencyContext.edges.map((edge) => ({
+        edge,
+        allowed: true,
+        evidence: "Explicit synthetic exact edge license review",
+      })),
+      redistribution:
+        mode === "portable"
+          ? matrix.dependencyContext.nodes.map((node) => ({
+              ref: node.ref,
+              digest: node.digest,
+              allowed: true,
+              evidence: "Explicit synthetic exact redistribution grant",
+            }))
+          : [],
+    };
+    put(root, dependencyFile, dependencyDecision);
+    const prepareArgs = [
+      "release",
+      "prepare",
+      "--id",
+      id,
+      "--file",
+      planFile,
+      "--destination",
+      "packages",
+      "--policy-confirmation",
+      policyFile,
+      "--dependency-confirmation",
+      dependencyFile,
+    ];
+    return {
+      authored,
+      matrix,
+      dependencyDecision,
+      prepareArgs,
+      publish: () =>
+        invoke(
+          root,
+          "release",
+          "publish",
+          id,
+          "--confirmation",
+          confirmationFile,
+        ),
+      confirm: () => {
+        const prepared = invoke(root, ...prepareArgs);
+        expect(prepared.status, prepared.stderr).toBe(0);
+        const envelope = JSON.parse(
+          readFileSync(
+            path.join(root, JSON.parse(prepared.stdout).reviewPath),
+            "utf8",
+          ),
+        ) as {
+          request: {
+            ref: { packageId: string; version: string };
+            mode: string;
+            digest: string;
+          };
+          destination: string;
+          requestDigest: string;
+          dependencyContext: unknown;
+          dependencyConfirmation: unknown;
+        };
+        expect(envelope.dependencyContext).toBeDefined();
+        expect(envelope.dependencyConfirmation).toEqual(
+          JSON.parse(readFileSync(path.join(root, dependencyFile), "utf8")),
+        );
+        put(root, confirmationFile, {
+          version: 1,
+          action: "release",
+          hostId: "synthetic-main-host",
+          humanActorId: "synthetic_human_main",
+          confirmedAt: new Date().toISOString(),
+          requestId: authored.approval.decisionId,
+          requestDigest: envelope.requestDigest,
+          packageId: envelope.request.ref.packageId,
+          packageVersion: envelope.request.ref.version,
+          mode: envelope.request.mode,
+          digest: envelope.request.digest,
+          destination: envelope.destination,
+        });
+        const published = invoke(
+          root,
+          "release",
+          "publish",
+          id,
+          "--confirmation",
+          confirmationFile,
+        );
+        expect(published.status, published.stderr).toBe(0);
+        return published;
+      },
+    };
+  };
+  const reference = dependentRelease(
+    "main_reference",
+    "reference",
+    "packages",
+    "local-publication",
+  );
+  expect(
+    invoke(
+      root,
+      ...reference.prepareArgs.filter(
+        (item, index, all) =>
+          item !== "--dependency-confirmation" &&
+          all[index - 1] !== "--dependency-confirmation",
+      ),
+    ).status,
+  ).toBe(4);
+  const referencePublished = JSON.parse(reference.confirm().stdout) as {
+    digest: string;
+  };
+  expect(JSON.parse(reference.publish().stdout).status).toBe("recovered");
+  const portable = dependentRelease(
+    "main_portable",
+    "portable",
+    "packages",
+    "local-publication",
+  );
+  portable.confirm();
+  expect(JSON.parse(portable.publish().stdout).status).toBe("recovered");
+
+  const preparedOnly = dependentRelease(
+    "main_prepared_only",
+    "reference",
+    "packages",
+    "local-publication",
+  );
+  const pending = invoke(root, ...preparedOnly.prepareArgs);
+  expect(pending.status, pending.stderr).toBe(0);
+  const pendingReview = JSON.parse(
+    readFileSync(
+      path.join(root, JSON.parse(pending.stdout).reviewPath),
+      "utf8",
+    ),
+  ) as { request: { ref: typeof baseDependency.ref; digest: string } };
+  const consumingPrepared = consumer(
+    "main_uses_prepared",
+    "reference",
+    "packages",
+  );
+  consumingPrepared.dependencies[0] = {
+    ref: pendingReview.request.ref,
+    digest: pendingReview.request.digest,
+    source: "packages",
+    license: baseDependency.license,
+  };
+  consumingPrepared.inventory["product-foundation"].dependencies[0] =
+    pendingReview.request.ref;
+  put(root, "uses-prepared.json", consumingPrepared);
+  expect(
+    invoke(root, "release", "inspect", "--file", "uses-prepared.json").status,
+  ).toBe(4);
+  expect(
+    existsSync(
+      path.join(
+        root,
+        ".mimic",
+        "releases",
+        "main_prepared_only.completed.json",
+      ),
+    ),
+  ).toBe(false);
+
+  const changedAfterPrepare = dependentRelease(
+    "main_changed_after_prepare",
+    "reference",
+    "packages",
+    "local-publication",
+  );
+  const pendingPublish = invoke(root, ...changedAfterPrepare.prepareArgs);
+  expect(pendingPublish.status, pendingPublish.stderr).toBe(0);
+  const frozenEnvelope = JSON.parse(
+    readFileSync(
+      path.join(root, JSON.parse(pendingPublish.stdout).reviewPath),
+      "utf8",
+    ),
+  ) as {
+    request: { ref: typeof baseDependency.ref; mode: string; digest: string };
+    destination: string;
+    requestDigest: string;
+  };
+  put(root, "main_changed_after_prepare-release.json", {
+    version: 1,
+    action: "release",
+    hostId: "synthetic-main-host",
+    humanActorId: "synthetic_human_main",
+    confirmedAt: new Date().toISOString(),
+    requestId: changedAfterPrepare.authored.approval.decisionId,
+    requestDigest: frozenEnvelope.requestDigest,
+    packageId: frozenEnvelope.request.ref.packageId,
+    packageVersion: frozenEnvelope.request.ref.version,
+    mode: frozenEnvelope.request.mode,
+    digest: frozenEnvelope.request.digest,
+    destination: frozenEnvelope.destination,
+  });
+  const baseFile = path.join(
+    root,
+    "packages",
+    "product",
+    "main-e2e",
+    "0.1.0",
+    "foundation.txt",
+  );
+  const baseBytes = readFileSync(baseFile);
+  writeFileSync(baseFile, "Changed after candidate review");
+  expect(changedAfterPrepare.publish().status).toBe(3);
+  writeFileSync(baseFile, baseBytes);
+  expect(
+    existsSync(
+      path.join(
+        root,
+        "packages",
+        "product",
+        "main_changed_after_prepare",
+        "0.1.0",
+      ),
+    ),
+  ).toBe(false);
+
+  mkdirSync(path.join(root, "imports", "product", "main-e2e"), {
+    recursive: true,
+  });
+  cpSync(
+    path.join(root, "packages", "product", "main-e2e", "0.1.0"),
+    path.join(root, "imports", "product", "main-e2e", "0.1.0"),
+    { recursive: true },
+  );
+  const copied = dependentRelease(
+    "main_imported",
+    "reference",
+    "imports",
+    "local-publication",
+  );
+  expect(invoke(root, ...copied.prepareArgs).status).toBe(4);
+  const accepted = {
+    ...copied.dependencyDecision,
+    packages: copied.dependencyDecision.packages.map((item) => ({
+      ...item,
+      kind: "imported-acceptance",
+      evidence:
+        "Synthetic host accepts these imported exact bytes for this consumer only",
+    })),
+  };
+  put(root, "main_imported-dependencies.json", accepted);
+  copied.confirm();
+
+  const referenceDependency = {
+    ref: reference.authored.ref,
+    digest: referencePublished.digest,
+    source: "packages",
+    license: baseDependency.license,
+  };
+  const transitive = dependentRelease(
+    "main_transitive",
+    "reference",
+    "packages",
+    "local-publication",
+    [referenceDependency],
+  );
+  expect(transitive.matrix.dependencyContext.nodes).toHaveLength(2);
+  expect(transitive.matrix.dependencyContext.edges).toHaveLength(3);
+  expect(
+    new Set(
+      transitive.matrix.dependencyContext.edges.map(
+        (edge) => (edge as { license: string }).license,
+      ),
+    ).size,
+  ).toBe(1);
+  const transitiveFile = "main_transitive-dependencies.json";
+  for (const [changed, exit] of [
+    {
+      ...transitive.dependencyDecision,
+      licenses: transitive.dependencyDecision.licenses.slice(1),
+    },
+    {
+      ...transitive.dependencyDecision,
+      licenses: transitive.dependencyDecision.licenses.map((item, index) => ({
+        ...item,
+        allowed: index !== 1,
+      })),
+    },
+    {
+      ...transitive.dependencyDecision,
+      packages: transitive.dependencyDecision.packages.slice(1),
+    },
+  ].map((changed, index) => [changed, index === 1 ? 4 : 3] as const)) {
+    put(root, transitiveFile, changed);
+    expect(invoke(root, ...transitive.prepareArgs).status).toBe(exit);
+  }
+  put(root, transitiveFile, transitive.dependencyDecision);
+  transitive.confirm();
+  const badPortable = dependentRelease(
+    "main_bad_portable",
+    "portable",
+    "packages",
+    "local-publication",
+    [referenceDependency],
+  );
+  expect(invoke(root, ...badPortable.prepareArgs).status).toBe(3);
+  const missingGrant = {
+    ...badPortable.dependencyDecision,
+    redistribution: badPortable.dependencyDecision.redistribution.slice(1),
+  };
+  put(root, "main_bad_portable-dependencies.json", missingGrant);
+  expect(invoke(root, ...badPortable.prepareArgs).status).toBe(3);
+
+  const sourceChanged = structuredClone(reference.authored);
+  sourceChanged.ref.packageId = "product/main_changed_consumer";
+  put(root, "main_reference-plan.json", sourceChanged);
+  const changedInspection = invoke(
+    root,
+    "release",
+    "inspect",
+    "--file",
+    "main_reference-plan.json",
+  );
+  expect(changedInspection.status, changedInspection.stderr).toBe(0);
+  put(root, "main_reference-policy.json", {
+    ...localPolicy,
+    planDigest: JSON.parse(changedInspection.stdout).planDigest,
+    confirmedAt: new Date().toISOString(),
+  });
+  expect(invoke(root, ...reference.prepareArgs).status).toBe(3);
+  sourceChanged.ref.packageId = reference.authored.ref.packageId;
+  sourceChanged.dependencies[0]!.source = "imports";
+  put(root, "main_reference-plan.json", sourceChanged);
+  const sourceInspection = invoke(
+    root,
+    "release",
+    "inspect",
+    "--file",
+    "main_reference-plan.json",
+  );
+  expect(sourceInspection.status, sourceInspection.stderr).toBe(0);
+  put(root, "main_reference-policy.json", {
+    ...localPolicy,
+    planDigest: JSON.parse(sourceInspection.stdout).planDigest,
+    confirmedAt: new Date().toISOString(),
+  });
+  expect(invoke(root, ...reference.prepareArgs).status).toBe(3);
+  put(root, "main_reference-plan.json", reference.authored);
+  put(root, "main_reference-policy.json", {
+    ...localPolicy,
+    planDigest: reference.matrix.planDigest,
+    confirmedAt: new Date().toISOString(),
+  });
+  mkdirSync(path.join(root, "other-packages"));
+  const destinationChanged = reference.prepareArgs.map((item) =>
+    item === "packages" ? "other-packages" : item,
+  );
+  expect(invoke(root, ...destinationChanged).status).toBe(3);
+  const packageFile = path.join(
+    root,
+    "packages",
+    "product",
+    "main-e2e",
+    "0.1.0",
+    "foundation.txt",
+  );
+  const originalBytes = readFileSync(packageFile);
+  writeFileSync(packageFile, "Changed source bytes");
+  expect(
+    invoke(root, "release", "inspect", "--file", "main_reference-plan.json")
+      .status,
+  ).toBe(3);
+  writeFileSync(packageFile, originalBytes);
+
+  const intentFile = path.join(
+    root,
+    ".mimic",
+    "releases",
+    "main_candidate.intent.json",
+  );
+  const completedFile = path.join(
+    root,
+    ".mimic",
+    "releases",
+    "main_candidate.completed.json",
+  );
+  const originalIntent = readFileSync(intentFile, "utf8");
+  const originalCompleted = readFileSync(completedFile, "utf8");
+  const tamperedIntent = JSON.parse(originalIntent) as {
+    confirmation: { requestDigest: string };
+  };
+  tamperedIntent.confirmation.requestDigest = `sha256:${"0".repeat(64)}`;
+  writeFileSync(intentFile, JSON.stringify(tamperedIntent));
+  const tampered = dependentRelease(
+    "main_tampered",
+    "reference",
+    "packages",
+    "local-publication",
+  );
+  expect(invoke(root, ...tampered.prepareArgs).status).toBe(4);
+  writeFileSync(intentFile, originalIntent);
+  const completion = JSON.parse(originalCompleted) as { digest: string };
+  const legacyIntent = JSON.parse(originalIntent) as {
+    preparedDigest: string;
+    confirmationDigest: string;
+  };
+  writeFileSync(completedFile, "{}");
+  const incomplete = dependentRelease(
+    "main_incomplete",
+    "reference",
+    "packages",
+    "local-publication",
+  );
+  expect(invoke(root, ...incomplete.prepareArgs).status).toBe(4);
+  writeFileSync(
+    intentFile,
+    JSON.stringify({
+      preparedDigest: legacyIntent.preparedDigest,
+      confirmationDigest: legacyIntent.confirmationDigest,
+    }),
+  );
+  writeFileSync(
+    completedFile,
+    JSON.stringify({
+      preparedDigest: legacyIntent.preparedDigest,
+      confirmationDigest: legacyIntent.confirmationDigest,
+      digest: completion.digest,
+    }),
+  );
+  const legacy = dependentRelease(
+    "main_legacy",
+    "reference",
+    "packages",
+    "local-publication",
+  );
+  expect(invoke(root, ...legacy.prepareArgs).status).toBe(4);
+  put(root, "main_legacy-dependencies.json", {
+    ...legacy.dependencyDecision,
+    packages: legacy.dependencyDecision.packages.map((item) => ({
+      ...item,
+      publicationConfirmation: JSON.parse(
+        readFileSync(path.join(root, "release-confirmation.json"), "utf8"),
+      ),
+    })),
+  });
+  expect(invoke(root, ...legacy.prepareArgs).status).toBe(0);
+  writeFileSync(intentFile, originalIntent);
+  writeFileSync(completedFile, originalCompleted);
+  expect(
+    existsSync(
+      path.join(root, ".mimic", "releases", "main_bad_portable.prepared.json"),
+    ),
+  ).toBe(false);
+}, 120_000);
