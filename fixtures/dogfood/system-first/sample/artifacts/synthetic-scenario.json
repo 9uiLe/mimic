@@ -1,0 +1,119 @@
+{
+  "approval": {
+    "actorId": "synthetic_human_fixture",
+    "at": "2026-10-07T12:00:00Z",
+    "decisionId": "decision_rb_scenario_synthetic",
+    "status": "approved"
+  },
+  "content": {
+    "actor": "Repair dispatcher",
+    "context": "Inspect WO-1042 and WO-1043 before assignment",
+    "expectedOutcome": "Identify the work order for a crew without losing its ID",
+    "steps": [
+      "Open work-order queue",
+      "Inspect severity and age",
+      "Keep work-order ID visible",
+      "Choose one order for crew assignment"
+    ],
+    "summary": "Synthetic work-order triage"
+  },
+  "dependencies": [
+    {
+      "artifactId": "art_rb_fixture_pattern",
+      "lockDigest": "sha256:507cf1989f2d2d17bab84342ebe916432c612706b5eabb3e57f876dbd30f572f",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_fixture_layout",
+      "lockDigest": "sha256:c5ba01c27a57483942ff0f1c6ab6158ceec7e938f6f415a736b4eee96439f1bd",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_fixture_button",
+      "lockDigest": "sha256:e1b85f72845ba04b21d5cdac3269ae0c82664a4f7bad50076d9374b7e7ab1613",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_fixture_responsive",
+      "lockDigest": "sha256:8e6418ab63d8a939f1ac5aa74080ff6a48d6d93a6693c7fa1365466752346251",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_fixture_accessibility",
+      "lockDigest": "sha256:ff926ce0182707f75ddc7149ac6d0bc62ef1ad330c32b3059877f9a2eaa76d34",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_fixture_tokens",
+      "lockDigest": "sha256:e793410885f4541f87cad9dbba9f34835d50b6a405946b8994460b513f698dbd",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_contract",
+      "lockDigest": "sha256:9c5931ae2bf8e9e20cf1140804ca3b0951e871a2a5f16d4c7563a95d4974303e",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_journey",
+      "lockDigest": "sha256:6f547cd6f34bbd9c52561f9471279541fd087106f88da23394d7e4dc54118652",
+      "onChange": "validate",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_rb_direction_pair",
+      "lockDigest": "sha256:1bc76e3d5448878c91e6b2470d11129f45a6d50bcdc8bd46145234c5cfc5de95",
+      "onChange": "validate",
+      "revision": 2
+    }
+  ],
+  "lifecycle": { "freshness": "valid", "status": "approved" },
+  "meta": {
+    "contentDigest": "sha256:b6c06851674539738ea10c4a676f837bd1b11270f79f7b890478b808bbcb6226",
+    "createdAt": "2026-10-07T12:00:00Z",
+    "id": "art_rb_scenario",
+    "revision": 3,
+    "schemaVersion": "1.0.0",
+    "supersedesRevision": 2,
+    "title": "art_rb_scenario",
+    "type": "scenario"
+  },
+  "origin": {
+    "actorId": "agent_system_first_fixture",
+    "actorKind": "agent",
+    "createdAt": "2026-10-07T12:00:00Z",
+    "runId": "run_system_first_fixture"
+  },
+  "provenance": [
+    {
+      "inputRefs": [
+        "art_rb_fixture_pattern@1#sha256:507cf1989f2d2d17bab84342ebe916432c612706b5eabb3e57f876dbd30f572f",
+        "art_rb_fixture_layout@1#sha256:c5ba01c27a57483942ff0f1c6ab6158ceec7e938f6f415a736b4eee96439f1bd",
+        "art_rb_fixture_button@1#sha256:e1b85f72845ba04b21d5cdac3269ae0c82664a4f7bad50076d9374b7e7ab1613",
+        "art_rb_contract@1#sha256:9c5931ae2bf8e9e20cf1140804ca3b0951e871a2a5f16d4c7563a95d4974303e"
+      ],
+      "kind": "derived",
+      "path": "/content/steps",
+      "rationale": "Task → pattern → layout → components; preserve list/detail entity context"
+    },
+    {
+      "inputRefs": [
+        "art_rb_direction_pair@2#sha256:1bc76e3d5448878c91e6b2470d11129f45a6d50bcdc8bd46145234c5cfc5de95"
+      ],
+      "kind": "derived",
+      "path": "/content/expectedOutcome",
+      "rationale": "Provisional paired-inspection direction chosen only by synthetic test authority"
+    }
+  ],
+  "scope": {
+    "level": "domain",
+    "ownerId": "domain_triage",
+    "parentId": "product_riverbend"
+  }
+}
