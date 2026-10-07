@@ -457,7 +457,7 @@ test("main executable authors, locally approves, previews, and publishes an exac
     artifacts: readonly ExactArtifactRef[] = [],
     ownedFiles: string[] = [],
   ) => ({ status: "included", artifacts, files: ownedFiles, dependencies: [] });
-  put(root, "release-plan.json", {
+  const releasePlan = {
     ref: { packageId: "product/main-e2e", version: "0.1.0" },
     mode: "reference",
     scope: {
@@ -494,7 +494,8 @@ test("main executable authors, locally approves, previews, and publishes an exac
     files,
     dependencies: [],
     quality: [{ report: inspected.reports[0]!.path, artifacts: [scenarioRef] }],
-  });
+  };
+  put(root, "release-plan.json", releasePlan);
   mkdirSync(path.join(root, "packages"));
   const inspection = invoke(
     root,
@@ -516,7 +517,7 @@ test("main executable authors, locally approves, previews, and publishes an exac
       }[];
     }[];
   };
-  put(root, "local-policy.json", {
+  const localPolicy = {
     version: 1,
     action: "release-policy",
     hostId: "synthetic-main-host",
@@ -530,7 +531,8 @@ test("main executable authors, locally approves, previews, and publishes an exac
         reason: "Synthetic exact finding review",
       })),
     ),
-  });
+  };
+  put(root, "local-policy.json", localPolicy);
   const prepared = invoke(
     root,
     "release",
@@ -587,4 +589,78 @@ test("main executable authors, locally approves, previews, and publishes an exac
   const retry = publish();
   expect(retry.status, retry.stderr).toBe(0);
   expect(JSON.parse(retry.stdout).status).toBe("recovered");
+  for (const [index, category, field, value] of [
+    [0, "design-system", "artifacts", undefined],
+    [1, "design-system", "artifacts", {}],
+    [2, "design-system", "files", undefined],
+    [3, "design-system", "files", {}],
+    [4, "design-system", "dependencies", undefined],
+    [5, "design-system", "dependencies", {}],
+    [6, "experience-structure", "reason", undefined],
+    [7, "experience-structure", "reason", {}],
+  ] as const) {
+    const changed = structuredClone(releasePlan) as unknown as {
+      inventory: Record<string, Record<string, unknown>>;
+    };
+    const entry = changed.inventory[category]!;
+    if (value === undefined) delete entry[field];
+    else entry[field] = value;
+    const planFile = `invalid-inventory-${index}.json`;
+    const policyFile = `invalid-policy-${index}.json`;
+    put(root, planFile, changed);
+    const inspection = invoke(root, "release", "inspect", "--file", planFile);
+    expect(inspection.status, inspection.stderr).toBe(0);
+    put(root, policyFile, {
+      ...localPolicy,
+      planDigest: JSON.parse(inspection.stdout).planDigest,
+    });
+    const rejected = invoke(
+      root,
+      "release",
+      "prepare",
+      "--id",
+      `invalid_${index}`,
+      "--file",
+      planFile,
+      "--destination",
+      "packages",
+      "--policy-confirmation",
+      policyFile,
+    );
+    expect(rejected.status, rejected.stderr).toBe(3);
+  }
+  writeFileSync(path.join(root, "bad-report.json"), "{broken JSON");
+  const badReportPlan = structuredClone(releasePlan);
+  badReportPlan.quality[0]!.report = "bad-report.json";
+  put(root, "bad-report-plan.json", badReportPlan);
+  const malformedReport = invoke(
+    root,
+    "release",
+    "prepare",
+    "--id",
+    "invalid_report",
+    "--file",
+    "bad-report-plan.json",
+    "--destination",
+    "packages",
+    "--policy-confirmation",
+    "local-policy.json",
+  );
+  expect(malformedReport.status, malformedReport.stderr).toBe(3);
+  badReportPlan.quality[0]!.report = "missing-report.json";
+  put(root, "missing-report-plan.json", badReportPlan);
+  const missingReport = invoke(
+    root,
+    "release",
+    "prepare",
+    "--id",
+    "missing_report",
+    "--file",
+    "missing-report-plan.json",
+    "--destination",
+    "packages",
+    "--policy-confirmation",
+    "local-policy.json",
+  );
+  expect(missingReport.status, missingReport.stderr).toBe(6);
 }, 45_000);

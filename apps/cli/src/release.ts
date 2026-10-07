@@ -119,6 +119,17 @@ const same = (a: unknown, b: unknown): boolean =>
   a === undefined || b === undefined
     ? a === b
     : canonicalJson(a) === canonicalJson(b);
+const record = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+const artifactRef = (value: unknown): boolean =>
+  record(value) &&
+  typeof value.artifactId === "string" &&
+  Number.isSafeInteger(value.revision) &&
+  typeof value.lockDigest === "string";
+const packageRef = (value: unknown): boolean =>
+  record(value) &&
+  typeof value.packageId === "string" &&
+  typeof value.version === "string";
 const idPattern = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
 function fileFor(root: string, id: string, suffix: string): string {
   check(idPattern.test(id), "Invalid release ID");
@@ -409,10 +420,16 @@ export async function prepareRelease(
       !Array.isArray(plan.inventory) &&
       INVENTORY_CATEGORIES.every((category) => {
         const item = plan.inventory[category];
+        if (!record(item)) return false;
+        if (item.status === "absent") return typeof item.reason === "string";
         return (
-          !!item &&
-          typeof item === "object" &&
-          (item.status === "included" || item.status === "absent")
+          item.status === "included" &&
+          Array.isArray(item.artifacts) &&
+          item.artifacts.every(artifactRef) &&
+          Array.isArray(item.files) &&
+          item.files.every((file) => typeof file === "string") &&
+          Array.isArray(item.dependencies) &&
+          item.dependencies.every(packageRef)
         );
       }),
     "Invalid release plan structure",
@@ -425,7 +442,18 @@ export async function prepareRelease(
     Object.values(plan.files).every((file) => typeof file === "string"),
     "Invalid release file path",
   );
-  check(Array.isArray(plan.dependencies), "Invalid release dependencies");
+  check(
+    Array.isArray(plan.dependencies) &&
+      plan.dependencies.every(
+        (item) =>
+          record(item) &&
+          packageRef(item.ref) &&
+          typeof item.digest === "string" &&
+          typeof item.source === "string" &&
+          typeof item.license === "string",
+      ),
+    "Invalid release dependencies",
+  );
   check(Array.isArray(plan.quality), "Invalid release evidence");
   check(
     host || localPolicy,
@@ -447,27 +475,40 @@ export async function prepareRelease(
     check(
       !!item &&
         typeof item.report === "string" &&
-        Array.isArray(item.artifacts),
+        Array.isArray(item.artifacts) &&
+        item.artifacts.every(artifactRef),
       "Invalid release quality entry",
     );
-    const report = JSON.parse(
-      await readFile(await contained(root, item.report), "utf8"),
-    ) as QualityEvidence["report"];
+    const reportJson = await readFile(
+      await contained(root, item.report),
+      "utf8",
+    );
+    let report: QualityEvidence["report"];
+    try {
+      report = JSON.parse(reportJson) as QualityEvidence["report"];
+    } catch (error) {
+      if (error instanceof SyntaxError)
+        throw new CliReleaseError(
+          "INVALID",
+          "Invalid release quality report JSON",
+        );
+      throw error;
+    }
     check(
-      !!report &&
-        typeof report === "object" &&
-        !!report.target &&
-        typeof report.target === "object" &&
-        !!report.target.files &&
-        typeof report.target.files === "object" &&
+      record(report) &&
+        record(report.target) &&
+        record(report.target.files) &&
+        Object.values(report.target.files).every(
+          (file) => typeof file === "string",
+        ) &&
         Array.isArray(report.findings) &&
         report.findings.every(
           (finding) =>
-            !!finding &&
-            typeof finding === "object" &&
+            record(finding) &&
             typeof finding.criterion === "string" &&
             typeof finding.state === "string" &&
-            typeof finding.severity === "string",
+            typeof finding.severity === "string" &&
+            typeof finding.reason === "string",
         ) &&
         typeof report.inspectedAt === "string",
       "Invalid release quality report",
