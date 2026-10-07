@@ -1,0 +1,51 @@
+{
+  "runId": "run_9ui157_live_corrected",
+  "taskId": "task_contract",
+  "workRevisionRequests": [
+    {
+      "runId": "run_9ui157_live_corrected",
+      "source": {
+        "artifactId": "art_rb157_current_inspection",
+        "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+        "revision": 1
+      },
+      "request": {
+        "artifactId": "art_rb157_detail_freshness_request",
+        "revision": 1,
+        "lockDigest": "sha256:dfaa5eaab6547d305df6ec1c0aa7bf2303a2a51f6904e169f804e44940cd4723"
+      },
+      "affectedLocks": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_dispatch_task",
+          "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1
+        }
+      ],
+      "evidenceRefs": [
+        "art_rb157_current_inspection@1#/content/description",
+        "art_rb157_dispatch_task@1#/content/tasks/0"
+      ],
+      "reason": "Clarify or propose detail freshness before treating pre-assignment values as current"
+    }
+  ],
+  "submit": "accepted, exit 0; see attempts/corrected/commands.jsonl",
+  "readbackEventActions": [
+    "produce-provisional",
+    "produce-provisional",
+    "set-work"
+  ],
+  "readbackRequestArtifactPresent": true,
+  "readbackDedicatedUpstreamRouteEvent": false,
+  "readbackCanonicalSourceApproved": false,
+  "analysis": "The file-backed work carries revisionRequests and the request artifact is produced, but CLI passes only work.result through Orchestrator accept. No separate upstream routing occurs. Core requestUpstream additionally requires an approved source, whereas this live run intentionally keeps S04 provisional."
+}

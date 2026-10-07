@@ -1,0 +1,42 @@
+[
+  {
+    "directory": "skills/s04-system-capability-extractor",
+    "packageVersion": "0.1.0",
+    "manifestVersion": "1.0.0",
+    "fileSha256": {
+      "manifest.yaml": "4a54724c0cb0531bef1756f1090c3c18cf2a22a27c9acfe132391810a681b3e2",
+      "SKILL.md": "39c8cad60126f97685fc574c4ba99b4e181db391e558674cd1c57000ac4d39b0"
+    },
+    "runtimePackageDigest": "b9c1f5c1daaaf440d7aa4e73b6d4094767da014ec540fb8633bbde914b830836"
+  },
+  {
+    "directory": "skills/s01-product-definition",
+    "packageVersion": "0.1.0",
+    "manifestVersion": "1.0.0",
+    "fileSha256": {
+      "manifest.yaml": "e6b185cf227ab9333a384a536c00b322e8f965cf1fe2fcd761be477fb687d911",
+      "SKILL.md": "0ca6839891c054595892db3f88ff34ab5f9d2e459991be0cc89abfe662beff42"
+    },
+    "runtimePackageDigest": "9db9bbc9ef051a08f7c90287d08a35254c8c6d051c7c2882ad30cf2f61cc8e2c"
+  },
+  {
+    "directory": "skills/s02-user-task-modeling",
+    "packageVersion": "0.1.0",
+    "manifestVersion": "1.0.0",
+    "fileSha256": {
+      "manifest.yaml": "bf441ddf27906c24448baab1eef1c50fc3c6218a17a0517fec7ff076bc770264",
+      "SKILL.md": "f7cb55d7ffd8b72601544932215c5af2e99f7d78a7074cdc3b70423fa87f1b60"
+    },
+    "runtimePackageDigest": "d04676d85a51d5dd64face4d0836081ed8f239f7b24e12a1b3b7b9fa1f1bdc20"
+  },
+  {
+    "directory": "skills/s05-ui-contract-manager",
+    "packageVersion": "0.1.0",
+    "manifestVersion": "1.0.0",
+    "fileSha256": {
+      "manifest.yaml": "5fc39276eb1b7a359ebba1fcc69321be69eaa3eeac397f68f45999726d95fd9d",
+      "SKILL.md": "0f6cdeb9024eeb6f475b5456175a0d2618565c370eb5784064ebad9b3fceae29"
+    },
+    "runtimePackageDigest": "9a132e0665cff0a562e84bb6f775f9225ccae67508f59b3545eaf179fb2a16cd"
+  }
+]

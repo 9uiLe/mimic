@@ -1,0 +1,100 @@
+{
+  "runId": "run_9ui157_live_20261007",
+  "state": "active",
+  "actions": [
+    {
+      "taskId": "task_capability",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_product",
+      "action": "GENERATE",
+      "reason": "No applicable approved target",
+      "invocation": {
+        "runId": "run_9ui157_live_20261007",
+        "taskId": "task_product",
+        "skillId": "mimic.s01.product-definition",
+        "allowedOutputTypes": [
+          "product-definition"
+        ],
+        "intent": "create",
+        "scopeOwnerId": "org_local",
+        "inputRefs": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "revision": 1
+          }
+        ],
+        "inputBindings": [
+          {
+            "name": "system-context",
+            "refs": [
+              {
+                "artifactId": "art_rb157_current_inspection",
+                "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "evidenceFiles": [],
+        "assumptions": [
+          "No market or user research provided.",
+          "Provisional input art_rb157_current_inspection@1 is not approved canonical state"
+        ],
+        "authority": "PROPOSE_ONLY",
+        "humanBrief": "Provisional Riverbend repair-desk product intent: support a dispatcher in inspecting severity and age of one public water-leak work order before crew assignment while preserving work-order identity between list and detail. This is a synthetic brief, not market validation."
+      },
+      "gaps": [
+        "Optional user-tasks (user-task-model) unavailable",
+        "Optional research unavailable"
+      ]
+    },
+    {
+      "taskId": "task_users",
+      "action": "BLOCK",
+      "reason": "Required upstream task is not available yet",
+      "blockKind": "transient"
+    },
+    {
+      "taskId": "task_contract",
+      "action": "BLOCK",
+      "reason": "Required upstream task is not available yet",
+      "blockKind": "transient"
+    }
+  ],
+  "commitPoints": [],
+  "blockers": {
+    "task_users": "Required upstream task is not available yet",
+    "task_contract": "Required upstream task is not available yet"
+  },
+  "evidenceGaps": [
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/availability",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/capabilityId",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/description",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/supportingEvidence",
+      "reason": "References require verification"
+    }
+  ]
+}

@@ -1,0 +1,776 @@
+{
+  "version": 1,
+  "registry": {
+    "canonical": {},
+    "commits": {},
+    "decisions": {},
+    "events": [
+      {
+        "action": "start",
+        "actor": {
+          "id": "cli",
+          "kind": "agent"
+        },
+        "at": "2026-10-07T13:25:52.704Z",
+        "canonicalAfter": {},
+        "freshnessAfter": {},
+        "inputs": [],
+        "outputs": [],
+        "reason": "Start from verified applicable canonical selection",
+        "runAfter": {
+          "artifacts": [],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {},
+          "reused": [],
+          "safeActions": [
+            "task_capability",
+            "task_product",
+            "task_users",
+            "task_contract"
+          ],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 1
+      },
+      {
+        "action": "produce-provisional",
+        "actor": {
+          "id": "mimic.s04.system-capability-extractor",
+          "kind": "skill"
+        },
+        "at": "2026-10-07T13:26:52.876Z",
+        "canonicalAfter": {},
+        "freshnessAfter": {},
+        "inputs": [],
+        "outputs": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "revision": 1
+          }
+        ],
+        "reason": "Skill task \"task_capability\" by \"mimic.s04.system-capability-extractor\" returned exact provisional output",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {},
+          "reused": [],
+          "safeActions": [
+            "task_capability",
+            "task_product",
+            "task_users",
+            "task_contract"
+          ],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 2
+      },
+      {
+        "action": "set-work",
+        "actor": {
+          "id": "orchestrator",
+          "kind": "agent"
+        },
+        "at": "2026-10-07T13:26:52.876Z",
+        "canonicalAfter": {},
+        "details": {
+          "resolutions": {}
+        },
+        "freshnessAfter": {},
+        "inputs": [],
+        "outputs": [],
+        "reason": "Skill task \"task_capability\" completed with verified exact outputs",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {},
+          "reused": [],
+          "safeActions": ["task_product", "task_users", "task_contract"],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 3
+      },
+      {
+        "action": "produce-provisional",
+        "actor": {
+          "id": "mimic.s01.product-definition",
+          "kind": "skill"
+        },
+        "at": "2026-10-07T13:27:22.849Z",
+        "canonicalAfter": {},
+        "freshnessAfter": {},
+        "inputs": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "revision": 1
+          }
+        ],
+        "outputs": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+            "revision": 1
+          }
+        ],
+        "reason": "Skill task \"task_product\" by \"mimic.s01.product-definition\" returned exact provisional output",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_product_intent",
+              "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {},
+          "reused": [],
+          "safeActions": ["task_product", "task_users", "task_contract"],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 4
+      },
+      {
+        "action": "submit-proposal",
+        "actor": {
+          "id": "orchestrator",
+          "kind": "agent"
+        },
+        "at": "2026-10-07T13:27:22.849Z",
+        "canonicalAfter": {},
+        "freshnessAfter": {},
+        "inputs": [],
+        "outputs": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+            "revision": 1
+          }
+        ],
+        "reason": "Review provisional synthetic product intent without approving it in this run",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_product_intent",
+              "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {
+            "proposal_rb157_product": {
+              "alternatives": [
+                "approve exact intent after review",
+                "request revision",
+                "reject"
+              ],
+              "dependents": ["task_users", "task_contract"],
+              "evidenceLimits": [
+                "Synthetic brief and constructed inventory only; no dispatcher or market research."
+              ],
+              "id": "proposal_rb157_product",
+              "packetId": "packet_rb157_product",
+              "rationale": "Product intent is PROPOSE_ONLY and must be reviewed before canonical use.",
+              "readiness": "ready",
+              "ref": {
+                "artifactId": "art_rb157_product_intent",
+                "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+                "revision": 1
+              },
+              "status": "pending"
+            }
+          },
+          "reused": [],
+          "safeActions": ["task_product", "task_users", "task_contract"],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 5
+      },
+      {
+        "action": "set-work",
+        "actor": {
+          "id": "orchestrator",
+          "kind": "agent"
+        },
+        "at": "2026-10-07T13:27:22.849Z",
+        "canonicalAfter": {},
+        "details": {
+          "resolutions": {}
+        },
+        "freshnessAfter": {},
+        "inputs": [],
+        "outputs": [],
+        "reason": "Skill task \"task_product\" completed with verified exact outputs",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_product_intent",
+              "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {
+            "proposal_rb157_product": {
+              "alternatives": [
+                "approve exact intent after review",
+                "request revision",
+                "reject"
+              ],
+              "dependents": ["task_users", "task_contract"],
+              "evidenceLimits": [
+                "Synthetic brief and constructed inventory only; no dispatcher or market research."
+              ],
+              "id": "proposal_rb157_product",
+              "packetId": "packet_rb157_product",
+              "rationale": "Product intent is PROPOSE_ONLY and must be reviewed before canonical use.",
+              "readiness": "ready",
+              "ref": {
+                "artifactId": "art_rb157_product_intent",
+                "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+                "revision": 1
+              },
+              "status": "pending"
+            }
+          },
+          "reused": [],
+          "safeActions": ["task_users", "task_contract"],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 6
+      },
+      {
+        "action": "produce-provisional",
+        "actor": {
+          "id": "mimic.s02.user-task-modeling",
+          "kind": "skill"
+        },
+        "at": "2026-10-07T13:27:50.426Z",
+        "canonicalAfter": {},
+        "freshnessAfter": {},
+        "inputs": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "revision": 1
+          }
+        ],
+        "outputs": [
+          {
+            "artifactId": "art_rb157_dispatch_task",
+            "lockDigest": "sha256:5e4143aed4352daaaa2fb560e27059b1858960ac32fecb1cfde2ab9e1bab2fe9",
+            "revision": 1
+          }
+        ],
+        "reason": "Skill task \"task_users\" by \"mimic.s02.user-task-modeling\" returned exact provisional output",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_product_intent",
+              "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_dispatch_task",
+              "lockDigest": "sha256:5e4143aed4352daaaa2fb560e27059b1858960ac32fecb1cfde2ab9e1bab2fe9",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {
+            "proposal_rb157_product": {
+              "alternatives": [
+                "approve exact intent after review",
+                "request revision",
+                "reject"
+              ],
+              "dependents": ["task_users", "task_contract"],
+              "evidenceLimits": [
+                "Synthetic brief and constructed inventory only; no dispatcher or market research."
+              ],
+              "id": "proposal_rb157_product",
+              "packetId": "packet_rb157_product",
+              "rationale": "Product intent is PROPOSE_ONLY and must be reviewed before canonical use.",
+              "readiness": "ready",
+              "ref": {
+                "artifactId": "art_rb157_product_intent",
+                "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+                "revision": 1
+              },
+              "status": "pending"
+            }
+          },
+          "reused": [],
+          "safeActions": ["task_users", "task_contract"],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 7
+      },
+      {
+        "action": "set-work",
+        "actor": {
+          "id": "orchestrator",
+          "kind": "agent"
+        },
+        "at": "2026-10-07T13:27:50.426Z",
+        "canonicalAfter": {},
+        "details": {
+          "resolutions": {}
+        },
+        "freshnessAfter": {},
+        "inputs": [],
+        "outputs": [],
+        "reason": "Skill task \"task_users\" completed with verified exact outputs",
+        "runAfter": {
+          "artifacts": [
+            {
+              "artifactId": "art_rb157_current_inspection",
+              "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_product_intent",
+              "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+              "revision": 1
+            },
+            {
+              "artifactId": "art_rb157_dispatch_task",
+              "lockDigest": "sha256:5e4143aed4352daaaa2fb560e27059b1858960ac32fecb1cfde2ab9e1bab2fe9",
+              "revision": 1
+            }
+          ],
+          "base": [],
+          "blockers": {},
+          "entryMode": "system-first",
+          "id": "run_9ui157_live_20261007",
+          "proposals": {
+            "proposal_rb157_product": {
+              "alternatives": [
+                "approve exact intent after review",
+                "request revision",
+                "reject"
+              ],
+              "dependents": ["task_users", "task_contract"],
+              "evidenceLimits": [
+                "Synthetic brief and constructed inventory only; no dispatcher or market research."
+              ],
+              "id": "proposal_rb157_product",
+              "packetId": "packet_rb157_product",
+              "rationale": "Product intent is PROPOSE_ONLY and must be reviewed before canonical use.",
+              "readiness": "ready",
+              "ref": {
+                "artifactId": "art_rb157_product_intent",
+                "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+                "revision": 1
+              },
+              "status": "pending"
+            }
+          },
+          "reused": [],
+          "safeActions": ["task_contract"],
+          "scope": "org_local"
+        },
+        "runId": "run_9ui157_live_20261007",
+        "sequence": 8
+      }
+    ],
+    "freshness": {},
+    "packets": {
+      "packet_rb157_product": {
+        "createdAt": "2026-10-07T13:27:22.849Z",
+        "id": "packet_rb157_product",
+        "proposalIds": ["proposal_rb157_product"],
+        "reason": "Review provisional synthetic product intent without approving it in this run",
+        "runId": "run_9ui157_live_20261007"
+      }
+    },
+    "runs": {
+      "run_9ui157_live_20261007": {
+        "artifacts": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_dispatch_task",
+            "lockDigest": "sha256:5e4143aed4352daaaa2fb560e27059b1858960ac32fecb1cfde2ab9e1bab2fe9",
+            "revision": 1
+          }
+        ],
+        "base": [],
+        "blockers": {},
+        "entryMode": "system-first",
+        "id": "run_9ui157_live_20261007",
+        "proposals": {
+          "proposal_rb157_product": {
+            "alternatives": [
+              "approve exact intent after review",
+              "request revision",
+              "reject"
+            ],
+            "dependents": ["task_users", "task_contract"],
+            "evidenceLimits": [
+              "Synthetic brief and constructed inventory only; no dispatcher or market research."
+            ],
+            "id": "proposal_rb157_product",
+            "packetId": "packet_rb157_product",
+            "rationale": "Product intent is PROPOSE_ONLY and must be reviewed before canonical use.",
+            "readiness": "ready",
+            "ref": {
+              "artifactId": "art_rb157_product_intent",
+              "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+              "revision": 1
+            },
+            "status": "pending"
+          }
+        },
+        "reused": [],
+        "safeActions": ["task_contract"],
+        "scope": "org_local"
+      }
+    }
+  },
+  "snapshots": {
+    "art_rb157_current_inspection@1": {
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "availability": "current",
+          "capabilityId": "riverbend.single_order_inspection_assignment",
+          "description": "The synthetic GET /work-orders response supplies ID, zone, severity, age, and assigned crew. The screen inventory permits opening a work-order detail and assigning one crew there. No comparison or bulk-assignment endpoint is inventoried. Authorization, error, persistence, and lifecycle semantics remain unknown.",
+          "summary": "Current only within the constructed Riverbend inventory: list work orders, open one detail, and assign one crew from detail. This is not evidence of a deployed service.",
+          "supportingEvidence": [
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1",
+            "inputs/input-packet.json#/system/observedInventory/2"
+          ]
+        },
+        "dependencies": [],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-07T13:26:43.507620Z",
+          "id": "art_rb157_current_inspection",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Riverbend constructed single-order inspection capability",
+          "type": "system-capability"
+        },
+        "origin": {
+          "actorId": "mimic.s04.system-capability-extractor",
+          "actorKind": "skill",
+          "createdAt": "2026-10-07T13:26:43.507620Z",
+          "runId": "run_9ui157_live_20261007"
+        },
+        "provenance": [
+          {
+            "evidenceRefs": [
+              "inputs/input-packet.json#/system/observedInventory/0",
+              "inputs/input-packet.json#/system/observedInventory/1"
+            ],
+            "kind": "fact",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": ["inputs/input-packet.json#/system"],
+            "kind": "derived",
+            "path": "/content/capabilityId"
+          },
+          {
+            "evidenceRefs": [
+              "inputs/input-packet.json#/system/observedInventory/0",
+              "inputs/input-packet.json#/system/observedInventory/1"
+            ],
+            "kind": "fact",
+            "path": "/content/availability"
+          },
+          {
+            "evidenceRefs": [
+              "inputs/input-packet.json#/system/observedInventory/0",
+              "inputs/input-packet.json#/system/observedInventory/1",
+              "inputs/input-packet.json#/system/observedInventory/2"
+            ],
+            "kind": "fact",
+            "path": "/content/description"
+          },
+          {
+            "inputRefs": ["inputs/input-packet.json#/system/observedInventory"],
+            "kind": "derived",
+            "path": "/content/supportingEvidence"
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      },
+      "canonicalization": "mimic-json-v1",
+      "digest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402"
+    },
+    "art_rb157_dispatch_task@1": {
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "summary": "A synthetic dispatcher task model for inspecting one water-leak work order before crew assignment. Actor behavior is inferred from the brief, not observed in field use.",
+          "tasks": [
+            "From the work-order list, select one exact ID and open its detail; completion is that the detail identifies the same ID and exposes severity and age before assignment.",
+            "Review the one order's severity and age and decide whether to proceed to the available single-crew assignment action; completion is an explicit decision on that same ID, while authorization and persistence of any assignment remain unverified.",
+            "If inspection is interrupted or the dispatcher returns to the list, re-identify the order before any assignment; whether state is retained automatically is unknown and must be tested rather than assumed."
+          ],
+          "users": [
+            "Dispatcher: when preparing one crew assignment, opens an identified work order from the queue, checks its severity and age, and needs its ID to remain visible so the inspected order can be distinguished from other orders. This behavior is a task assumption, not an interview finding."
+          ]
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4",
+            "onChange": "revise",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "onChange": "revise",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-07T13:27:50.175714Z",
+          "id": "art_rb157_dispatch_task",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Riverbend provisional dispatcher inspection task",
+          "type": "user-task-model"
+        },
+        "origin": {
+          "actorId": "mimic.s02.user-task-modeling",
+          "actorKind": "skill",
+          "createdAt": "2026-10-07T13:27:50.175714Z",
+          "runId": "run_9ui157_live_20261007"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "task_users/humanBrief",
+              "art_rb157_product_intent@1"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "kind": "assumption",
+            "path": "/content/users/0",
+            "rationale": "The actor and behavior are bounded by the synthetic task brief; no real dispatcher observation exists."
+          },
+          {
+            "inputRefs": [
+              "task_users/humanBrief",
+              "art_rb157_current_inspection@1"
+            ],
+            "kind": "derived",
+            "path": "/content/tasks/0"
+          },
+          {
+            "inputRefs": [
+              "task_users/humanBrief",
+              "art_rb157_current_inspection@1"
+            ],
+            "kind": "derived",
+            "path": "/content/tasks/1"
+          },
+          {
+            "kind": "hypothesis",
+            "path": "/content/tasks/2",
+            "rationale": "Interruption handling is a relevant safety case, but automatic retention behavior was not supplied."
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      },
+      "canonicalization": "mimic-json-v1",
+      "digest": "sha256:5e4143aed4352daaaa2fb560e27059b1858960ac32fecb1cfde2ab9e1bab2fe9"
+    },
+    "art_rb157_product_intent@1": {
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "goals": [
+            "Show the work-order ID, severity, and age before the dispatcher reaches the assignment action.",
+            "Preserve the exact work-order ID between list and detail so the dispatcher can confirm which order is being inspected.",
+            "Keep any proposed interface behavior distinguishable from the constructed list/detail/assignment inventory."
+          ],
+          "nonGoals": [
+            "Claim market demand, field research, or a deployed Riverbend backend.",
+            "Introduce multi-order comparison or bulk assignment as an approved product requirement.",
+            "Treat an interface proposal as authorization to change backend behavior or to assign a real crew."
+          ],
+          "summary": "Proposed synthetic repair-desk interface for a dispatcher to inspect one public water-leak work order before assigning a crew. The brief establishes a design task, not validated demand or a deployed product.",
+          "vision": "Let a dispatcher carry the identity and relevant urgency cues of one work order from the queue into its detail before a consequential crew assignment."
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402",
+            "onChange": "revise",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "proposed"
+        },
+        "meta": {
+          "createdAt": "2026-10-07T13:27:22.591773Z",
+          "id": "art_rb157_product_intent",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Riverbend single-order repair-desk intent",
+          "type": "product-definition"
+        },
+        "origin": {
+          "actorId": "mimic.s01.product-definition",
+          "actorKind": "skill",
+          "createdAt": "2026-10-07T13:27:22.591773Z",
+          "runId": "run_9ui157_live_20261007"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "task_product/humanBrief",
+              "art_rb157_current_inspection@1"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "kind": "hypothesis",
+            "path": "/content/vision",
+            "rationale": "A bounded expression of the synthetic brief's desired outcome; no dispatcher validation exists."
+          },
+          {
+            "inputRefs": ["task_product/humanBrief"],
+            "kind": "derived",
+            "path": "/content/goals/0"
+          },
+          {
+            "inputRefs": ["task_product/humanBrief"],
+            "kind": "derived",
+            "path": "/content/goals/1"
+          },
+          {
+            "inputRefs": ["art_rb157_current_inspection@1"],
+            "kind": "derived",
+            "path": "/content/goals/2"
+          },
+          {
+            "inputRefs": ["inputs/input-packet.json#/limits/0"],
+            "kind": "derived",
+            "path": "/content/nonGoals/0"
+          },
+          {
+            "inputRefs": ["inputs/input-packet.json#/limits/1"],
+            "kind": "derived",
+            "path": "/content/nonGoals/1"
+          },
+          {
+            "inputRefs": ["inputs/input-packet.json#/limits/2"],
+            "kind": "derived",
+            "path": "/content/nonGoals/2"
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      },
+      "canonicalization": "mimic-json-v1",
+      "digest": "sha256:b326b62b1216d0e806fd05e4fbf73972a44a381419c2e8d44a53160883f23af4"
+    }
+  }
+}
