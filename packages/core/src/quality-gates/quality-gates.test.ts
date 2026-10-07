@@ -299,25 +299,6 @@ test("mode bundle rejects a changed authored path even with a matching mode-plan
   expect(state(report.findings, "bundle-manifest")).toBe("FAIL");
 });
 
-test("controlled browser checks run on generated mode bundles", async () => {
-  const fixture = await setupPrototypeModesFixture();
-  roots.push(fixture.root);
-  const modes = await buildPrototypeModes(
-    fixture.store,
-    fixture.modePlan,
-    fixture.root,
-  );
-  for (const output of [modes.current, modes.proposed!]) {
-    const report = await runBrowserQualityGates({
-      trustedRoot: fixture.root,
-      directory: output.directory,
-      store: fixture.store,
-    });
-    expect(state(report.findings, "browser-render")).toBe("PASS");
-    expect(state(report.findings, "navigation-state")).toBe("PASS");
-  }
-}, 30_000);
-
 test("generated single-main HTML passes and an extra main fails lint", async () => {
   const { input, output } = await built();
   const baseline = await runStaticQualityGates(input);

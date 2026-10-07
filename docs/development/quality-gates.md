@@ -8,4 +8,6 @@ The static runner checks plan/manifest identity, source locks, approved artifact
 
 These runners only inspect. They do not publish or approve an artifact. Synthetic fixture results do not establish actual user success, visual quality, full keyboard accessibility, or WCAG 2.2 AA conformance. Re-run checks after any byte changes because the bundle digest changes. Use `pnpm exec vitest run packages/core/src/quality-gates/quality-gates.test.ts` and `pnpm exec playwright test apps/demo-lab/tests/quality-gates.spec.ts --project=chromium-desktop --project=chromium-mobile` to verify the generated-output gates.
 
+The mode-bundle browser regression uses an installed Chromium browser: `pnpm exec playwright test --config packages/core/src/quality-gates/mode-bundles.playwright.config.mjs`. It inspects actual generated Current and Proposed bundles on both desktop and mobile viewports. This separate browser check keeps the unit suite runnable before browser binaries are installed.
+
 The current builder emits one document `<main>` landmark containing its generated state views. The generated fixture passes `html-lint`; a second `<main>` in the saved output produces a `no-multiple-main` failure. Both runners are exported from `@mimic/core`.
