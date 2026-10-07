@@ -1,4 +1,5 @@
-import { afterEach, expect, test } from "vitest";
+import { expect, test } from "vitest";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -24,14 +25,22 @@ const packages = [
   "s17-knowledge-curator",
   "s18-experience-validation",
 ] as const;
-const temporaryRoots: string[] = [];
-afterEach(async () => {
-  await Promise.all(
-    temporaryRoots
-      .splice(0)
-      .map((root) => rm(root, { recursive: true, force: true })),
+const testRoots = new AsyncLocalStorage<string[]>();
+function catalogTest(name: string, run: () => Promise<void>) {
+  test(name, () =>
+    testRoots.run([], async () => {
+      try {
+        await run();
+      } finally {
+        await Promise.all(
+          testRoots
+            .getStore()!
+            .map((root) => rm(root, { recursive: true, force: true })),
+        );
+      }
+    }),
   );
-});
+}
 
 type Scenario = {
   id: string;
@@ -96,7 +105,9 @@ const declaredCases: Record<
 
 async function setup(packageName: (typeof packages)[number]) {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-quality-skills-"));
-  temporaryRoots.push(root);
+  const roots = testRoots.getStore();
+  if (!roots) throw new Error("setup must run inside catalogTest");
+  roots.push(root);
   const schemas = await loadSchemaDirectory(
     path.join(schemasRoot, "artifacts"),
   );
@@ -389,47 +400,57 @@ function observationState(
 }
 
 for (const packageName of packages) {
-  test(`${packageName} executes every declared alternative and productive scenario`, async () => {
-    const declared = await setup(packageName);
-    expect(declared.skill.instructions.length).toBeGreaterThan(500);
-    expect(declared.schemas.validate(declared.output)).toEqual({
-      valid: true,
-      diagnostics: [],
-    });
-    expect(
-      Object.fromEntries(declared.scenarios.map(({ id, mode }) => [id, mode])),
-    ).toEqual(declaredCases[packageName]);
-    expect(declared.scenarios.length).toBe(
-      Object.keys(declaredCases[packageName]).length,
-    );
-    const productive = declared.scenarios.filter(
-      (scenario) => scenario.mode === "produce",
-    );
-    expect(new Set(productive.map((scenario) => scenario.inputType))).toEqual(
-      new Set(
-        declared.skill.manifest.inputs.alternatives[0]!.oneOf.filter(
-          (input) => input.kind === "artifact",
-        ).map((input) => input.artifactType),
-      ),
-    );
-    if (packageName === "s16-design-critic") {
+  catalogTest(
+    `${packageName} declares every alternative and productive scenario`,
+    async () => {
+      const declared = await setup(packageName);
+      expect(declared.skill.instructions.length).toBeGreaterThan(500);
+      expect(declared.schemas.validate(declared.output)).toEqual({
+        valid: true,
+        diagnostics: [],
+      });
       expect(
-        new Set(
-          productive.flatMap((scenario) =>
-            scenario.contextType ? [scenario.contextType] : [],
-          ),
+        Object.fromEntries(
+          declared.scenarios.map(({ id, mode }) => [id, mode]),
         ),
-      ).toEqual(
+      ).toEqual(declaredCases[packageName]);
+      expect(declared.scenarios.length).toBe(
+        Object.keys(declaredCases[packageName]).length,
+      );
+      const productive = declared.scenarios.filter(
+        (scenario) => scenario.mode === "produce",
+      );
+      expect(new Set(productive.map((scenario) => scenario.inputType))).toEqual(
         new Set(
-          declared.skill.manifest.inputs.alternatives[1]!.oneOf.filter(
+          declared.skill.manifest.inputs.alternatives[0]!.oneOf.filter(
             (input) => input.kind === "artifact",
           ).map((input) => input.artifactType),
         ),
       );
-      expect(productive.some((scenario) => !scenario.contextType)).toBe(true);
-    }
-    for (const scenario of productive) {
+      if (packageName === "s16-design-critic") {
+        expect(
+          new Set(
+            productive.flatMap((scenario) =>
+              scenario.contextType ? [scenario.contextType] : [],
+            ),
+          ),
+        ).toEqual(
+          new Set(
+            declared.skill.manifest.inputs.alternatives[1]!.oneOf.filter(
+              (input) => input.kind === "artifact",
+            ).map((input) => input.artifactType),
+          ),
+        );
+        expect(productive.some((scenario) => !scenario.contextType)).toBe(true);
+      }
+    },
+  );
+  for (const [scenarioId, mode] of Object.entries(declaredCases[packageName])) {
+    if (mode !== "produce") continue;
+    catalogTest(`${packageName} executes ${scenarioId}`, async () => {
       const x = await setup(packageName);
+      const scenario = x.scenarios.find((item) => item.id === scenarioId)!;
+      expect(scenario.mode).toBe("produce");
       const selected = await boundInputs(
         x,
         [],
@@ -638,15 +659,164 @@ for (const packageName of packages) {
       }
       if (output.meta.type === "decision")
         expect(output.approval.status).toBe("pending");
-    }
-  });
+    });
+  }
 }
 
-test("blocked scenarios return zero outputs and retain a specific reason", async () => {
-  for (const packageName of packages) {
-    const x = await setup(packageName);
+catalogTest(
+  "blocked scenarios return zero outputs and retain a specific reason",
+  async () => {
+    for (const packageName of packages) {
+      const x = await setup(packageName);
+      await boundInputs(x);
+      const scenario = x.scenarios.find((item) => item.mode === "blocked")!;
+      const work = await runSkillPackage({
+        orchestrator: x.orchestrator,
+        package: x.skill,
+        runId: "run_quality",
+        tasks: [x.task],
+        taskId: "quality",
+        at,
+        executor: async ({ invocation }) => ({
+          result: {
+            runId: invocation.runId,
+            taskId: invocation.taskId,
+            skillId: invocation.skillId,
+            inputRefs: invocation.inputRefs,
+            outputRefs: [],
+            blocked: {
+              reason: scenario.reason!,
+              affectedTaskIds: [invocation.taskId],
+            },
+          },
+        }),
+      });
+      expect(work.result.outputRefs).toHaveLength(scenario.expectOutputs!);
+      expect(
+        (await x.registry.run("run_quality")).run.blockers.quality,
+      ).toContain(scenario.reason);
+    }
+  },
+);
+
+catalogTest(
+  "undeclared output and self approval cannot cross the runtime boundary",
+  async () => {
+    const undeclared = await setup("s16-design-critic");
+    await boundInputs(undeclared);
+    const undeclaredCase = undeclared.scenarios.find(
+      (scenario) => scenario.mode === "reject-output-type",
+    )!;
+    expect(undeclaredCase.id).toBe("undeclared-output");
+    await expect(
+      runSkillPackage({
+        orchestrator: undeclared.orchestrator,
+        package: undeclared.skill,
+        runId: "run_quality",
+        tasks: [{ ...undeclared.task, outputType: undeclaredCase.output! }],
+        taskId: "quality",
+        at,
+        executor: async () => {
+          throw new Error("unreachable");
+        },
+      }),
+    ).rejects.toThrow(/undeclared output type/);
+    const x = await setup("s17-knowledge-curator");
     await boundInputs(x);
-    const scenario = x.scenarios.find((item) => item.mode === "blocked")!;
+    const selfApprovalCase = x.scenarios.find(
+      (scenario) => scenario.mode === "reject-self-approval",
+    )!;
+    const candidateOutput = candidate(x, selfApprovalCase.id);
+    expect(candidateOutput.meta.type).toBe(selfApprovalCase.output);
+    const selfApproved: ArtifactSnapshot = {
+      ...candidateOutput,
+      lifecycle: { status: "approved", freshness: "valid" },
+      approval: {
+        status: "approved",
+        actorId: x.skill.manifest.skillId,
+        decisionId: "self",
+        at,
+      },
+    };
+    const signed: ArtifactSnapshot = {
+      ...selfApproved,
+      meta: {
+        ...selfApproved.meta,
+        contentDigest: artifactDigest(selfApproved),
+      },
+    };
+    await expect(x.artifacts.create(signed)).rejects.toThrow(
+      /Human approval is not verified/,
+    );
+  },
+);
+
+catalogTest(
+  "S18 rejects an unsupported verified state and wrong Run origin",
+  async () => {
+    const x = await setup("s18-experience-validation");
+    await boundInputs(x);
+    const noEvidence = x.scenarios.find(
+      (scenario) => scenario.mode === "reject-no-evidence",
+    )!;
+    const wrongRun = x.scenarios.find(
+      (scenario) => scenario.mode === "reject-run",
+    )!;
+    const invalid = candidate(x, noEvidence.id, {
+      ...(x.output.content as Record<string, unknown>),
+      state: "PASS",
+      evidenceRefs: [],
+    } as ArtifactSnapshot["content"]);
+    await expect(x.artifacts.create(invalid)).rejects.toThrow();
+    expect(invalid.meta.type).toBe(noEvidence.output);
+    const draft = candidate(x, wrongRun.id);
+    expect(draft.meta.type).toBe(wrongRun.output);
+    const wrong: ArtifactSnapshot = {
+      ...draft,
+      origin: {
+        actorKind: "skill",
+        actorId: x.skill.manifest.skillId,
+        runId: "other_run",
+        createdAt: at,
+      },
+    };
+    await x.artifacts.create(wrong);
+    await expect(
+      runSkillPackage({
+        orchestrator: x.orchestrator,
+        package: x.skill,
+        runId: "run_quality",
+        tasks: [x.task],
+        taskId: "quality",
+        at,
+        executor: async ({ invocation }) => ({
+          result: {
+            runId: invocation.runId,
+            taskId: invocation.taskId,
+            skillId: invocation.skillId,
+            inputRefs: invocation.inputRefs,
+            outputRefs: [exact(wrong)],
+          },
+        }),
+      }),
+    ).rejects.toThrow(/Output origin mismatch/);
+  },
+);
+
+catalogTest(
+  "S17 returns an unchanged approved asset from exact Run context",
+  async () => {
+    const x = await setup("s17-knowledge-curator");
+    const reuseCase = x.scenarios.find(
+      (scenario) => scenario.mode === "reuse-approved",
+    )!;
+    await boundInputs(x, ["design-system-asset"]);
+    const before = await x.registry.snapshot();
+    const approved = before.canonical.art_extra_design_system_asset!.ref;
+    expect(
+      (await x.artifacts.read(approved.artifactId, approved.revision)).artifact
+        .meta.type,
+    ).toBe(reuseCase.output);
     const work = await runSkillPackage({
       orchestrator: x.orchestrator,
       package: x.skill,
@@ -654,242 +824,67 @@ test("blocked scenarios return zero outputs and retain a specific reason", async
       tasks: [x.task],
       taskId: "quality",
       at,
-      executor: async ({ invocation }) => ({
-        result: {
-          runId: invocation.runId,
-          taskId: invocation.taskId,
-          skillId: invocation.skillId,
-          inputRefs: invocation.inputRefs,
-          outputRefs: [],
-          blocked: {
-            reason: scenario.reason!,
-            affectedTaskIds: [invocation.taskId],
+      executor: async ({ invocation, inputs }) => {
+        expect(
+          inputs.find((input) => input.name === "existing-asset")?.ref,
+        ).toEqual(approved);
+        return {
+          result: {
+            runId: invocation.runId,
+            taskId: invocation.taskId,
+            skillId: invocation.skillId,
+            inputRefs: invocation.inputRefs,
+            outputRefs: [approved],
           },
-        },
-      }),
+        };
+      },
     });
-    expect(work.result.outputRefs).toHaveLength(scenario.expectOutputs!);
+    expect(work.result.outputRefs).toEqual([approved]);
+    expect((await x.registry.run("run_quality")).run.artifacts).toEqual([]);
     expect(
-      (await x.registry.run("run_quality")).run.blockers.quality,
-    ).toContain(scenario.reason);
-  }
-});
+      (await x.registry.snapshot()).canonical.art_extra_design_system_asset!
+        .ref,
+    ).toEqual(approved);
+  },
+);
 
-test("undeclared output and self approval cannot cross the runtime boundary", async () => {
-  const undeclared = await setup("s16-design-critic");
-  await boundInputs(undeclared);
-  const undeclaredCase = undeclared.scenarios.find(
-    (scenario) => scenario.mode === "reject-output-type",
-  )!;
-  expect(undeclaredCase.id).toBe("undeclared-output");
-  await expect(
-    runSkillPackage({
-      orchestrator: undeclared.orchestrator,
-      package: undeclared.skill,
-      runId: "run_quality",
-      tasks: [{ ...undeclared.task, outputType: undeclaredCase.output! }],
-      taskId: "quality",
-      at,
-      executor: async () => {
-        throw new Error("unreachable");
-      },
-    }),
-  ).rejects.toThrow(/undeclared output type/);
-  const x = await setup("s17-knowledge-curator");
-  await boundInputs(x);
-  const selfApprovalCase = x.scenarios.find(
-    (scenario) => scenario.mode === "reject-self-approval",
-  )!;
-  const candidateOutput = candidate(x, selfApprovalCase.id);
-  expect(candidateOutput.meta.type).toBe(selfApprovalCase.output);
-  const selfApproved: ArtifactSnapshot = {
-    ...candidateOutput,
-    lifecycle: { status: "approved", freshness: "valid" },
-    approval: {
-      status: "approved",
-      actorId: x.skill.manifest.skillId,
-      decisionId: "self",
-      at,
-    },
-  };
-  const signed: ArtifactSnapshot = {
-    ...selfApproved,
-    meta: { ...selfApproved.meta, contentDigest: artifactDigest(selfApproved) },
-  };
-  await expect(x.artifacts.create(signed)).rejects.toThrow(
-    /Human approval is not verified/,
-  );
-});
-
-test("S18 rejects an unsupported verified state and wrong Run origin", async () => {
-  const x = await setup("s18-experience-validation");
-  await boundInputs(x);
-  const noEvidence = x.scenarios.find(
-    (scenario) => scenario.mode === "reject-no-evidence",
-  )!;
-  const wrongRun = x.scenarios.find(
-    (scenario) => scenario.mode === "reject-run",
-  )!;
-  const invalid = candidate(x, noEvidence.id, {
-    ...(x.output.content as Record<string, unknown>),
-    state: "PASS",
-    evidenceRefs: [],
-  } as ArtifactSnapshot["content"]);
-  await expect(x.artifacts.create(invalid)).rejects.toThrow();
-  expect(invalid.meta.type).toBe(noEvidence.output);
-  const draft = candidate(x, wrongRun.id);
-  expect(draft.meta.type).toBe(wrongRun.output);
-  const wrong: ArtifactSnapshot = {
-    ...draft,
-    origin: {
-      actorKind: "skill",
-      actorId: x.skill.manifest.skillId,
-      runId: "other_run",
-      createdAt: at,
-    },
-  };
-  await x.artifacts.create(wrong);
-  await expect(
-    runSkillPackage({
-      orchestrator: x.orchestrator,
-      package: x.skill,
-      runId: "run_quality",
-      tasks: [x.task],
-      taskId: "quality",
-      at,
-      executor: async ({ invocation }) => ({
-        result: {
-          runId: invocation.runId,
-          taskId: invocation.taskId,
-          skillId: invocation.skillId,
-          inputRefs: invocation.inputRefs,
-          outputRefs: [exact(wrong)],
+catalogTest(
+  "S17 cannot replay a rejected proposal or produce after its task closes",
+  async () => {
+    const x = await setup("s17-knowledge-curator");
+    const replayCase = x.scenarios.find(
+      (scenario) => scenario.mode === "reject-replay",
+    )!;
+    const second: RoutedTask = { ...x.task, id: "second" };
+    const tasks = [x.task, second];
+    await boundInputs(x, [], tasks);
+    const draft = candidate(x, replayCase.id);
+    expect(draft.meta.type).toBe(replayCase.output);
+    const proposed: ArtifactSnapshot = {
+      ...draft,
+      lifecycle: { status: "proposed", freshness: "valid" },
+    };
+    await x.artifacts.create(proposed);
+    const proposal = {
+      packetId: "packet_replay",
+      items: [
+        {
+          id: "proposal_replay",
+          ref: exact(proposed),
+          alternatives: ["approve", "reject"],
+          rationale: "Review disposition",
+          evidenceLimits: ["Illustrative fixture"],
+          dependents: [],
         },
-      }),
-    }),
-  ).rejects.toThrow(/Output origin mismatch/);
-});
-
-test("S17 returns an unchanged approved asset from exact Run context", async () => {
-  const x = await setup("s17-knowledge-curator");
-  const reuseCase = x.scenarios.find(
-    (scenario) => scenario.mode === "reuse-approved",
-  )!;
-  await boundInputs(x, ["design-system-asset"]);
-  const before = await x.registry.snapshot();
-  const approved = before.canonical.art_extra_design_system_asset!.ref;
-  expect(
-    (await x.artifacts.read(approved.artifactId, approved.revision)).artifact
-      .meta.type,
-  ).toBe(reuseCase.output);
-  const work = await runSkillPackage({
-    orchestrator: x.orchestrator,
-    package: x.skill,
-    runId: "run_quality",
-    tasks: [x.task],
-    taskId: "quality",
-    at,
-    executor: async ({ invocation, inputs }) => {
-      expect(
-        inputs.find((input) => input.name === "existing-asset")?.ref,
-      ).toEqual(approved);
-      return {
-        result: {
-          runId: invocation.runId,
-          taskId: invocation.taskId,
-          skillId: invocation.skillId,
-          inputRefs: invocation.inputRefs,
-          outputRefs: [approved],
-        },
-      };
-    },
-  });
-  expect(work.result.outputRefs).toEqual([approved]);
-  expect((await x.registry.run("run_quality")).run.artifacts).toEqual([]);
-  expect(
-    (await x.registry.snapshot()).canonical.art_extra_design_system_asset!.ref,
-  ).toEqual(approved);
-});
-
-test("S17 cannot replay a rejected proposal or produce after its task closes", async () => {
-  const x = await setup("s17-knowledge-curator");
-  const replayCase = x.scenarios.find(
-    (scenario) => scenario.mode === "reject-replay",
-  )!;
-  const second: RoutedTask = { ...x.task, id: "second" };
-  const tasks = [x.task, second];
-  await boundInputs(x, [], tasks);
-  const draft = candidate(x, replayCase.id);
-  expect(draft.meta.type).toBe(replayCase.output);
-  const proposed: ArtifactSnapshot = {
-    ...draft,
-    lifecycle: { status: "proposed", freshness: "valid" },
-  };
-  await x.artifacts.create(proposed);
-  const proposal = {
-    packetId: "packet_replay",
-    items: [
-      {
-        id: "proposal_replay",
-        ref: exact(proposed),
-        alternatives: ["approve", "reject"],
-        rationale: "Review disposition",
-        evidenceLimits: ["Illustrative fixture"],
-        dependents: [],
-      },
-    ],
-    reason: "Human review of promotion",
-  };
-  await runSkillPackage({
-    orchestrator: x.orchestrator,
-    package: x.skill,
-    runId: "run_quality",
-    tasks,
-    taskId: "quality",
-    at,
-    executor: async ({ invocation }) => ({
-      result: {
-        runId: invocation.runId,
-        taskId: invocation.taskId,
-        skillId: invocation.skillId,
-        inputRefs: invocation.inputRefs,
-        outputRefs: [exact(proposed)],
-        proposal,
-      },
-    }),
-  });
-  const rejected: ArtifactSnapshot = {
-    ...proposed,
-    meta: { ...proposed.meta, revision: 2, supersedesRevision: 1 },
-    lifecycle: { status: "rejected", freshness: "valid" },
-    approval: {
-      status: "rejected",
-      decisionId: "decision_replay",
-      actorId: "human_1",
-      at,
-    },
-  };
-  const rejectedEnvelope: ArtifactSnapshot = {
-    ...rejected,
-    meta: { ...rejected.meta, contentDigest: artifactDigest(rejected) },
-  };
-  await x.registry.decide({
-    id: "decision_replay",
-    packetId: "packet_replay",
-    proposalId: "proposal_replay",
-    outcome: "rejected",
-    actor: { kind: "human", id: "human_1" },
-    at,
-    rationale: "Reject fixture",
-    output: { ref: exact(rejectedEnvelope), artifact: rejectedEnvelope },
-  });
-  await expect(
-    runSkillPackage({
+      ],
+      reason: "Human review of promotion",
+    };
+    await runSkillPackage({
       orchestrator: x.orchestrator,
       package: x.skill,
       runId: "run_quality",
       tasks,
-      taskId: "second",
+      taskId: "quality",
       at,
       executor: async ({ invocation }) => ({
         result: {
@@ -898,21 +893,66 @@ test("S17 cannot replay a rejected proposal or produce after its task closes", a
           skillId: invocation.skillId,
           inputRefs: invocation.inputRefs,
           outputRefs: [exact(proposed)],
+          proposal,
         },
       }),
-    }),
-  ).rejects.toThrow(/Rejected or resolved output|Existing output belongs/);
-  await expect(
-    runSkillPackage({
-      orchestrator: x.orchestrator,
-      package: x.skill,
-      runId: "run_quality",
-      tasks,
-      taskId: "quality",
-      at,
-      executor: async () => {
-        throw new Error("closed task executed");
+    });
+    const rejected: ArtifactSnapshot = {
+      ...proposed,
+      meta: { ...proposed.meta, revision: 2, supersedesRevision: 1 },
+      lifecycle: { status: "rejected", freshness: "valid" },
+      approval: {
+        status: "rejected",
+        decisionId: "decision_replay",
+        actorId: "human_1",
+        at,
       },
-    }),
-  ).rejects.toThrow(/not routable|not available|closed/i);
-});
+    };
+    const rejectedEnvelope: ArtifactSnapshot = {
+      ...rejected,
+      meta: { ...rejected.meta, contentDigest: artifactDigest(rejected) },
+    };
+    await x.registry.decide({
+      id: "decision_replay",
+      packetId: "packet_replay",
+      proposalId: "proposal_replay",
+      outcome: "rejected",
+      actor: { kind: "human", id: "human_1" },
+      at,
+      rationale: "Reject fixture",
+      output: { ref: exact(rejectedEnvelope), artifact: rejectedEnvelope },
+    });
+    await expect(
+      runSkillPackage({
+        orchestrator: x.orchestrator,
+        package: x.skill,
+        runId: "run_quality",
+        tasks,
+        taskId: "second",
+        at,
+        executor: async ({ invocation }) => ({
+          result: {
+            runId: invocation.runId,
+            taskId: invocation.taskId,
+            skillId: invocation.skillId,
+            inputRefs: invocation.inputRefs,
+            outputRefs: [exact(proposed)],
+          },
+        }),
+      }),
+    ).rejects.toThrow(/Rejected or resolved output|Existing output belongs/);
+    await expect(
+      runSkillPackage({
+        orchestrator: x.orchestrator,
+        package: x.skill,
+        runId: "run_quality",
+        tasks,
+        taskId: "quality",
+        at,
+        executor: async () => {
+          throw new Error("closed task executed");
+        },
+      }),
+    ).rejects.toThrow(/not routable|not available|closed/i);
+  },
+);
