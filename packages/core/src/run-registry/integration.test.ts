@@ -995,6 +995,32 @@ describe("reviewed Run contract regressions", () => {
   });
 });
 describe("shared artifact and Run transaction", () => {
+  test("registry verifier gives authority callbacks copies of session state", async () => {
+    const { backend, registry, makeDecision } = await setup();
+    const decision = makeDecision("approved");
+    await registry.decide(decision);
+    await registry.commit(commit);
+    const before = await backend.read();
+    const authority: RegistryAuthority = {
+      async verify(record, proposal) {
+        Object.assign(record, { rationale: "mutated by callback" });
+        Object.assign(proposal, { rationale: "mutated by callback" });
+        return true;
+      },
+      async allowCommit() {
+        return false;
+      },
+    };
+    const verifier = new RegistryAuthorityVerifier(backend, authority);
+    const verified = await backend.snapshots.withReadSession!(() =>
+      verifier.verifyApproval(
+        decision.output!.artifact.approval,
+        decision.output!.artifact,
+      ),
+    );
+    expect(verified).toBe(true);
+    expect(await backend.read()).toEqual(before);
+  });
   test("approved revision and canonical selection become visible together; old snapshots stay immutable", async () => {
     const { store, registry, base, candidate, makeDecision } = await setup();
     const decision = makeDecision("approved");

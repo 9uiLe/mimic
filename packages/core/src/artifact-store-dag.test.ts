@@ -274,3 +274,198 @@ test("rechecks unversioned authority when a completed dependency is revisited", 
   });
   expect(checks).toBe(2);
 });
+
+test.each(["success", "failure"] as const)(
+  "a deferred descendant starts a fresh verification after %s closes its session",
+  async (outcome) => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), "mimic-session-"));
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let descendant:
+      | Promise<{ digest: string; freshnessStatus: string | undefined }>
+      | undefined;
+    try {
+      const base = JSON.parse(
+        await readFile(
+          path.join(
+            repository,
+            "fixtures/artifacts/valid/product-definition.json",
+          ),
+          "utf8",
+        ),
+      ) as ArtifactSnapshot;
+      const first: ArtifactSnapshot = {
+        ...base,
+        meta: { ...base.meta, id: "art_session_lifecycle" },
+      };
+      const second: ArtifactSnapshot = {
+        ...first,
+        meta: { ...first.meta, revision: 2, supersedesRevision: 1 },
+        content: { ...(first.content as object), summary: "Published later" },
+      };
+      const record = (artifact: ArtifactSnapshot) =>
+        canonicalJson({
+          canonicalization: CANONICALIZATION_VERSION,
+          digest: artifactDigest(artifact),
+          artifact,
+        });
+      const workspace = new FileWorkspaceStorage(
+        path.join(directory, "workspace.json"),
+      );
+      const schemas = await loadSchemaDirectory(
+        path.join(repository, "schemas/artifacts"),
+      );
+      const store = new ArtifactStore(workspace.snapshots, schemas, [
+        { level: "organization", ownerId: "org_9uile" },
+        { level: "product", ownerId: "product_mimic", parentId: "org_9uile" },
+      ]);
+      expect(
+        await workspace.snapshots.writeIfAbsent(
+          first.meta.id,
+          1,
+          record(first),
+        ),
+      ).toBe(true);
+
+      const outer = workspace.snapshots.withReadSession!(async () => {
+        descendant = Promise.resolve().then(async () => {
+          await gate;
+          const snapshot = await store.read(first.meta.id, 2);
+          const state = await workspace.readVerificationState();
+          return {
+            digest: snapshot.digest,
+            freshnessStatus: state.freshness[first.meta.id]?.status,
+          };
+        });
+        expect((await store.read(first.meta.id, 1)).digest).toBe(
+          artifactDigest(first),
+        );
+        if (outcome === "failure") throw new Error("planned failure");
+      });
+      if (outcome === "failure")
+        await expect(outer).rejects.toThrow("planned failure");
+      else await outer;
+
+      expect(
+        await workspace.snapshots.writeIfAbsent(
+          second.meta.id,
+          2,
+          record(second),
+        ),
+      ).toBe(true);
+      await workspace.transact(async (registry) => {
+        registry.freshness[first.meta.id] = {
+          ref: {
+            artifactId: second.meta.id,
+            revision: 2,
+            lockDigest: artifactDigest(second),
+          },
+          status: "stale",
+          reason: "Updated after the first read",
+        };
+      });
+      release();
+      expect(await descendant!).toEqual({
+        digest: artifactDigest(second),
+        freshnessStatus: "stale",
+      });
+    } finally {
+      release();
+      if (descendant) await Promise.allSettled([descendant]);
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
+
+test.each([
+  { name: "wrong lock", error: "Dependency lock digest mismatch" },
+  {
+    name: "invalid consuming scope",
+    error: "Dependency scope is not an ancestor",
+  },
+] as const)(
+  "checks the second incoming edge to a completed node: $name",
+  async ({ name, error }) => {
+    const base = JSON.parse(
+      await readFile(
+        path.join(
+          repository,
+          "fixtures/artifacts/valid/product-definition.json",
+        ),
+        "utf8",
+      ),
+    ) as ArtifactSnapshot;
+    const leaf: ArtifactSnapshot = {
+      ...base,
+      meta: { ...base.meta, id: "art_shared_leaf" },
+    };
+    const edge = (artifact: ArtifactSnapshot) => ({
+      artifactId: artifact.meta.id,
+      revision: 1,
+      lockDigest: artifactDigest(artifact),
+      onChange: "validate",
+    });
+    const left: ArtifactSnapshot = {
+      ...base,
+      meta: { ...base.meta, id: "art_first_consumer" },
+      dependencies: [edge(leaf)],
+    };
+    const right: ArtifactSnapshot = {
+      ...base,
+      meta: { ...base.meta, id: "art_second_consumer" },
+      scope:
+        name === "invalid consuming scope"
+          ? { level: "organization", ownerId: "org_9uile" }
+          : base.scope,
+      dependencies: [
+        {
+          ...edge(leaf),
+          lockDigest:
+            name === "wrong lock"
+              ? `sha256:${"0".repeat(64)}`
+              : artifactDigest(leaf),
+        },
+      ],
+    };
+    const root: ArtifactSnapshot = {
+      ...base,
+      meta: { ...base.meta, id: "art_two_consumers" },
+      dependencies: [edge(left), edge(right)],
+    };
+    const records = new Map(
+      [leaf, left, right, root].map((artifact) => [
+        `${artifact.meta.id}@1`,
+        canonicalJson({
+          canonicalization: CANONICALIZATION_VERSION,
+          digest: artifactDigest(artifact),
+          artifact,
+        }),
+      ]),
+    );
+    const reads = new Map<string, number>();
+    const storage: SnapshotStorage = {
+      read: async (id, revision) => {
+        const key = `${id}@${revision}`;
+        reads.set(key, (reads.get(key) ?? 0) + 1);
+        return records.get(key);
+      },
+      revisions: async () => [1],
+      writeIfAbsent: async () => false,
+      withReadSession: async (read) => read(),
+    };
+    const schemas = await loadSchemaDirectory(
+      path.join(repository, "schemas/artifacts"),
+    );
+    const store = new ArtifactStore(storage, schemas, [
+      { level: "organization", ownerId: "org_9uile" },
+      { level: "product", ownerId: "product_mimic", parentId: "org_9uile" },
+    ]);
+    await expect(store.read(root.meta.id, 1)).rejects.toMatchObject({
+      code: "CORRUPT",
+      message: expect.stringContaining(error),
+    });
+    expect(reads.get("art_shared_leaf@1")).toBe(1);
+  },
+);

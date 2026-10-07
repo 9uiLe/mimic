@@ -22,6 +22,10 @@ interface WorkspaceData {
   snapshots: Record<string, string>;
   registry: RegistryState;
 }
+interface ReadSession {
+  readonly data: WorkspaceData;
+  active: boolean;
+}
 export interface AtomicRegistryStorage extends TransactionalRegistryStorage {
   readonly snapshots: SnapshotStorage;
   transactWorkspace<T>(
@@ -76,7 +80,7 @@ function view(data: WorkspaceData): SnapshotStorage {
 }
 /** A single visibility unit for artifact records and Run/Decision/canonical state. */
 export class FileWorkspaceStorage implements AtomicRegistryStorage {
-  private readonly readSession = new AsyncLocalStorage<WorkspaceData>();
+  private readonly readSession = new AsyncLocalStorage<ReadSession>();
   readonly snapshots: SnapshotStorage = {
     read: async (id, revision) =>
       (await this.load()).snapshots[key(id, revision)],
@@ -90,15 +94,26 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
         return snapshots.writeIfAbsent(id, revision, record);
       }),
     withReadSession: async (read) => {
-      if (this.readSession.getStore()) return read();
+      const inherited = this.readSession.getStore();
+      if (inherited?.active) {
+        const result = await read();
+        if (!inherited.active)
+          throw new Error("Workspace verification session ended");
+        return result;
+      }
       const source = await this.readSource();
       freezeEvidence(source.data.registry);
-      return this.readSession.run(source.data, async () => {
-        const result = await read();
-        const current = await this.readSource();
-        if (current.raw !== source.raw)
-          throw new Error("Workspace changed during verification");
-        return result;
+      const session: ReadSession = { data: source.data, active: true };
+      return this.readSession.run(session, async () => {
+        try {
+          const result = await read();
+          const current = await this.readSource();
+          if (current.raw !== source.raw)
+            throw new Error("Workspace changed during verification");
+          return result;
+        } finally {
+          session.active = false;
+        }
       });
     },
   };
@@ -122,14 +137,16 @@ export class FileWorkspaceStorage implements AtomicRegistryStorage {
     }
   }
   private async load(): Promise<WorkspaceData> {
-    return this.readSession.getStore() ?? (await this.readSource()).data;
+    const session = this.readSession.getStore();
+    return session?.active ? session.data : (await this.readSource()).data;
   }
   async read(): Promise<RegistryState> {
     return jsonCopy((await this.load()).registry);
   }
   /** Pinned, frozen evidence for internal verifiers; callbacks receive their own copies. */
   async readVerificationState(): Promise<RegistryState> {
-    return this.readSession.getStore()?.registry ?? this.read();
+    const session = this.readSession.getStore();
+    return session?.active ? session.data.registry : this.read();
   }
   async transact<T>(
     change: (registry: RegistryState) => Promise<T>,
