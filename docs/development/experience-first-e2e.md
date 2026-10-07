@@ -1,0 +1,68 @@
+# Experience-first cross-domain dogfood (9UI-125)
+
+This is a synthetic, inspectable case review exercise. It does not establish a user outcome, a real human design decision, a production release, or WCAG 2.2 AA compliance. The source is [`fixtures/dogfood/experience-first/case.json`](../../fixtures/dogfood/experience-first/case.json); the fixture authority accepts only `decision_fixture` and `human_fixture` in temporary storage.
+
+## Desired experience and canonical path
+
+An operator opens C-204 from a filtered queue, reviews evidence in a separate review domain, returns to the same queue filter, and resumes the case without accidentally approving it. Queue and review differ in primary goal, interaction model, information structure, time behavior, risk, and session model. The journey declares five retained context fields: entity, terminology, navigation, return path, and draft state. The Experience-first Run begins from the desired behavior and an exact reused journey; it proposes a revision of the same Product UI Contract type that System-first uses. The Run API has no mode-specific output schema. This demonstrates canonical type and package-format convergence, not equivalence of two independently executed full projects.
+
+The fixture writes approved snapshots only through `ArtifactStore` with explicit fixture authority. Organization identity, product context, and review-domain context are separate design-system assets with exact dependency locks. `DependencyGraph` verifies their closure. The review scenario locks the Product UI Contract, review domain, journey, selected pattern, layout, component, responsive and accessibility rules, and token source. Its S14-style composition provenance names the selected pattern, layout, and component with exact digests. The queue domain is a sibling; a queue-scoped artifact cannot lock the review-domain artifact. The journey at product scope records the cross-domain relationship without violating ancestry.
+
+`buildPrototype` consumes the approved exact scenario and an **authored, non-artifact** render plan. Its generated HTML/CSS/JS and manifest are verified by static gates and by Playwright in desktop and mobile Chromium. The browser tests inspect visible case identity and return context across loading, success, partial, error, permission, empty, and disabled states, repeated transitions, and actual section positions. Browser gate results remain inspection results. The static gate's UI Contract semantic match is a `CONCERN`; its source identity and approval checks do not prove that the authored text faithfully represents the contract.
+
+The fixture Run submits a candidate with alternatives `adopt` and `retain`, then simulates rejection in temporary storage. It verifies that the rejected revision remains immutable, canonical selection does not move, and a renewed proposal must cite the rejection ID. These simulated records exercise the registry's mechanics. They are not owner decisions.
+
+The package test compiles the same exact selected review artifacts, generated prototype bytes, and static quality report into Reference and Portable **candidates**. A synthetic organization package is an exact external dependency; Portable uses an explicit fixture redistribution grant and bundles its bytes. `PackageRegistry.reconstruct` verifies each candidate with the same schema, scope, lock, approval, and license checks. A publisher with no trusted release decision refuses both candidates. No production directory, provider credential, or network publication is used. The sibling queue-domain artifact is not included in the review-domain package because the registry rejects it as out of scope. The test also compiles a product-scope candidate that includes both domain artifacts and confirms `PackageRegistry.reconstruct` rejects it with `Artifact is out of package scope`. The product journey remains in the valid review package; a complete product-wide package spanning both domain-owned artifacts needs a separate scope/package design decision.
+
+## Current findings and limits
+
+| Item                                                    | Observed state                          | Evidence and limit                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Exact approved fixture locks and inheritance            | PASS in tests                           | Fixture authority only. The low-level property policy blocks a changed locked case identity; callers still must verify the applicable parent rule at publication.                                                                                                                                                                                                                            |
+| Cross-domain journey model                              | PASS in tests                           | Both domain artifacts and the product journey are read from the store; browser output represents the review view, not a complete working queue/review navigation system.                                                                                                                                                                                                                     |
+| Generated desktop/mobile state transitions              | PASS in Chromium tests                  | Actual generated files and section positions are observed. Data is synthetic.                                                                                                                                                                                                                                                                                                                |
+| Authored mobile interaction transformation              | **FAIL / unsupported contract**         | `PrototypeBuilderInput` permits one node tree per state and only `breakpointPx`, `desktopColumns`, `mobileColumns` for layout. An added `mobileTransformation` field is rejected with `INVALID: unsupported field mobileTransformation`; generated CSS only changes the column count. The one-column browser state is not evidence of reorder, collapse, replace, or progressive disclosure. |
+| Static UI Contract semantic relevance                   | CONCERN                                 | Gate verifies exact identity, type, and approval; semantic alignment needs review.                                                                                                                                                                                                                                                                                                           |
+| Real human direction, contract, and release decisions   | UNVERIFIED                              | All fixture decisions and redistribution grants are synthetic. A reviewable render plan and exact package candidates are prepared; no release approval is inferred.                                                                                                                                                                                                                          |
+| Complete product package across sibling domains         | FAIL for attempted product-scope bundle | `PackageRegistry` rejects a product package containing domain-scoped artifacts as out of package scope. The valid review-domain candidate omits the sibling queue artifact.                                                                                                                                                                                                                  |
+| CLI preview/release command path                        | UNVERIFIED                              | The tests exercise core APIs directly. The CLI preview/release stubs exit 4, so this is not a CLI end-to-end claim.                                                                                                                                                                                                                                                                          |
+| Empirical usability, visual quality, full accessibility | UNVERIFIED                              | No user study or complete manual accessibility review was performed. Automated gate PASS values are kept as measured, without a synthetic design score.                                                                                                                                                                                                                                      |
+
+## Minimal mobile reproduction and owner choices
+
+The regression test copies the valid authored plan, adds `mobileTransformation: { reorder, collapse, replace, progressiveDisclose }`, and calls `buildPrototype`. The builder refuses the unsupported field before output. Building the unchanged plan emits a mobile media rule that only changes `grid-template-columns` from two to one. A real solution needs a reviewable breakpoint-specific structure or interaction plan and corresponding generated behavior and browser assertions.
+
+Owner decision options for the controlling 9UI-125 workstream:
+
+1. Extend the builder's authored plan contract with explicit responsive operations, generated semantic behavior, and quality checks. Keep the canonical scenario prose unchanged until an approved composition artifact exists. This enables the requested transformation but changes a shared core contract owned outside this branch.
+2. Make responsive structure a separate approved composition artifact and require the builder to consume its exact lock. This gives stronger review and reuse semantics but requires schema, lifecycle, and migration work.
+
+Recommendation: pursue option 1 as the smallest testable contract increment, with exact source and plan digests retained. This shared-contract follow-up is [9UI-143](https://linear.app/9uile/issue/9UI-143). A possible **typed non-artifact** extension to the authored plan is:
+
+```ts
+mobile: {
+  breakpointPx: 640,
+  preserve: ["case-identity", "primary-review-goal", "return-path"],
+  operations: [
+    { kind: "reorder", nodeId: "decision-summary", before: "evidence-list" },
+    { kind: "collapse", nodeId: "evidence-list", summaryId: "evidence-summary" },
+    { kind: "replace", nodeId: "desktop-context", withNodeId: "focused-case-nav" },
+    { kind: "progressive-disclose", nodeId: "decision-history", triggerId: "show-history" },
+  ],
+}
+```
+
+This is a proposal, not a supported input. It would need stable node IDs, explicit desktop and mobile semantics, retained-primary-goal checks, keyboard and state-transition checks, and a plan digest covering every operation. The approved responsive rule must still provide the exact breakpoint and allowed policy boundary; the builder must validate that the authored operations conform to it. A caller cannot gain permission by attaching a `mobile` label to prose.
+
+The owner should also decide whether a complete cross-domain product release uses separate domain packages plus a product assembly manifest, or whether package scope rules should permit a product package to include its descendant domains. The cross-domain package follow-up is [9UI-144](https://linear.app/9uile/issue/9UI-144). This branch makes neither shared contract change.
+
+## Reproduction
+
+Use Node 24.21.0 and pnpm 12.9.1. Targeted commands:
+
+```sh
+pnpm exec vitest run packages/core/src/dogfood-tests/experience-first.test.ts
+pnpm exec playwright test apps/demo-lab/tests/experience-first-e2e.spec.ts --project=chromium-desktop --project=chromium-mobile --project=webkit-desktop --project=webkit-mobile --workers=1
+```
+
+Run `pnpm check` and the exact-head CI checks. An all-project `pnpm run test:browser` attempt on this macOS host was stopped after 180-second Firefox launch timeouts, so it remains unverified here. Do not mark 9UI-125 Done until its primary PR merges and the open acceptance items have been resolved or explicitly re-scoped by the owner.
