@@ -152,6 +152,62 @@ test("built executable uses compact stdout and file-backed detail across process
   ).toBe("GENERATE");
 });
 
+test("built executable classifies malformed preview and release objects as invalid input", () => {
+  const dir = root();
+  expect(invoke("init", "--root", dir, "--json").status).toBe(0);
+  for (const value of [
+    null,
+    {},
+    { kind: "unknown", plan: {} },
+    { kind: "standalone", plan: null },
+  ]) {
+    writeFileSync(path.join(dir, "bad-preview.json"), JSON.stringify(value));
+    const result = invoke(
+      "preview",
+      "--root",
+      dir,
+      "--file",
+      "bad-preview.json",
+      "--json",
+    );
+    expect(result.status, result.stderr).toBe(3);
+    expect(result.stderr).toMatch(/^MIMIC_3:/);
+  }
+  for (const value of [
+    null,
+    {},
+    { quality: null },
+    { quality: [null], dependencies: [], files: {} },
+    { quality: [], files: {} },
+  ]) {
+    writeFileSync(path.join(dir, "bad-release.json"), JSON.stringify(value));
+    const inspect = invoke(
+      "release",
+      "inspect",
+      "--root",
+      dir,
+      "--file",
+      "bad-release.json",
+      "--json",
+    );
+    expect(inspect.status, inspect.stderr).toBe(3);
+    const prepare = invoke(
+      "release",
+      "prepare",
+      "--id",
+      "bad",
+      "--root",
+      dir,
+      "--file",
+      "bad-release.json",
+      "--destination",
+      ".mimic",
+      "--json",
+    );
+    expect(prepare.status, prepare.stderr).toBe(3);
+  }
+});
+
 test("built executable rejects malformed plans before state, permits correction, and reports errors on stderr", () => {
   const dir = root();
   expect(invoke("init", "--root", dir).status).toBe(0);

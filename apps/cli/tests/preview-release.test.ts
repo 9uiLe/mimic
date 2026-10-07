@@ -825,3 +825,209 @@ test("cooperative local host can use the standalone release commands for a depen
   expect(published.code, published.stderr.join("\n")).toBe(EXIT.OK);
   expect(published.value?.status).toBe("published");
 }, 20_000);
+
+test("local policy distinguishes browser-style viewport findings with the same criterion, state and severity", async () => {
+  const value = await setup();
+  const preview = await previewCase(value, "standalone");
+  await releasePlan(value, preview, "reference");
+  const reportPath = (preview.reports as { path: string }[])[0]!.path;
+  const reportFile = path.join(value.root, reportPath);
+  const report = JSON.parse(await readFile(reportFile, "utf8")) as {
+    findings: {
+      criterion: string;
+      state: string;
+      severity: string;
+      conditions: Record<string, string>;
+    }[];
+  };
+  const first = report.findings[0]!;
+  report.findings.splice(1, 0, {
+    ...first,
+    conditions: { ...first.conditions, viewport: "synthetic-mobile" },
+  });
+  await writeFile(reportFile, JSON.stringify(report));
+  const host: CliHost = { seedAuthority: value.host.seedAuthority };
+  const inspected = await call(
+    value.root,
+    ["release", "inspect", "--file", "release-plan.json"],
+    host,
+  );
+  expect(inspected.code).toBe(EXIT.OK);
+  const matrix = inspected.value!.reports as {
+    reportDigest: string;
+    findings: {
+      findingIndex: number;
+      findingDigest: string;
+      criterion: string;
+      state: string;
+      severity: string;
+    }[];
+  }[];
+  expect(matrix[0]!.findings[0]!.criterion).toBe(
+    matrix[0]!.findings[1]!.criterion,
+  );
+  expect(matrix[0]!.findings[0]!.state).toBe(matrix[0]!.findings[1]!.state);
+  expect(matrix[0]!.findings[0]!.severity).toBe(
+    matrix[0]!.findings[1]!.severity,
+  );
+  expect(matrix[0]!.findings[0]!.findingDigest).not.toBe(
+    matrix[0]!.findings[1]!.findingDigest,
+  );
+  const policy = {
+    version: 1,
+    action: "release-policy",
+    hostId: "synthetic-local-host",
+    confirmedAt: new Date().toISOString(),
+    planDigest: inspected.value!.planDigest,
+    decisions: matrix.flatMap(({ reportDigest, findings }) =>
+      findings.map((finding) => ({
+        reportDigest,
+        ...finding,
+        blockRelease: false,
+        reason: `Synthetic review of finding ${finding.findingIndex}`,
+      })),
+    ),
+  };
+  await writeFile(
+    path.join(value.root, "local-policy.json"),
+    JSON.stringify(policy),
+  );
+  const prepare = [
+    "release",
+    "prepare",
+    "--id",
+    "candidate",
+    "--file",
+    "release-plan.json",
+    "--destination",
+    "packages",
+    "--policy-confirmation",
+    "local-policy.json",
+  ];
+  const changed = structuredClone(policy);
+  changed.decisions[1]!.findingDigest = `sha256:${"0".repeat(64)}`;
+  await writeFile(
+    path.join(value.root, "local-policy.json"),
+    JSON.stringify(changed),
+  );
+  expect((await call(value.root, prepare, host)).code).toBe(EXIT.INVALID);
+  await writeFile(
+    path.join(value.root, "local-policy.json"),
+    JSON.stringify(policy),
+  );
+  const prepared = await call(value.root, prepare, host);
+  expect(prepared.code, prepared.stderr.join("\n")).toBe(EXIT.OK);
+  const review = JSON.parse(
+    await readFile(
+      path.join(value.root, prepared.value!.reviewPath as string),
+      "utf8",
+    ),
+  ) as {
+    request: {
+      qualityDecisions: {
+        criterion: string;
+        state: string;
+        severity: string;
+      }[];
+    };
+  };
+  expect(
+    review.request.qualityDecisions.filter(
+      (item) =>
+        item.criterion === first.criterion &&
+        item.state === first.state &&
+        item.severity === first.severity,
+    ),
+  ).toHaveLength(2);
+}, 20_000);
+
+test("real CLI browser report can be included in local candidate preparation", async () => {
+  const value = await setup();
+  await writeFile(
+    path.join(value.root, "preview.json"),
+    JSON.stringify({
+      kind: "standalone",
+      plan: { ...value.modePlan.current, outputPath: "real-browser-cli" },
+      uiContract: value.refs.contract,
+    }),
+  );
+  const result = await call(
+    value.root,
+    ["preview", "--file", "preview.json", "--browser"],
+    value.host,
+  );
+  expect(result.code, result.stderr.join("\n")).toBe(EXIT.OK);
+  const reports = result.value!.reports as { path: string }[];
+  expect(reports).toHaveLength(2);
+  const plan = await releasePlan(value, result.value!, "reference");
+  plan.quality.push({
+    report: reports[1]!.path,
+    artifacts: [value.refs.scenario],
+  });
+  await writeFile(
+    path.join(value.root, "release-plan.json"),
+    JSON.stringify(plan),
+  );
+  const host: CliHost = { seedAuthority: value.host.seedAuthority };
+  const inspected = await call(
+    value.root,
+    ["release", "inspect", "--file", "release-plan.json"],
+    host,
+  );
+  expect(inspected.code).toBe(EXIT.OK);
+  const matrix = inspected.value!.reports as {
+    reportDigest: string;
+    findings: {
+      findingIndex: number;
+      findingDigest: string;
+      criterion: string;
+      state: string;
+      severity: string;
+    }[];
+  }[];
+  const repeated = matrix[1]!.findings.filter((a, index, all) =>
+    all.some(
+      (b, other) =>
+        other !== index &&
+        a.criterion === b.criterion &&
+        a.state === b.state &&
+        a.severity === b.severity,
+    ),
+  );
+  expect(repeated.length).toBeGreaterThan(0);
+  await writeFile(
+    path.join(value.root, "local-policy.json"),
+    JSON.stringify({
+      version: 1,
+      action: "release-policy",
+      hostId: "synthetic-local-host",
+      confirmedAt: new Date().toISOString(),
+      planDigest: inspected.value!.planDigest,
+      decisions: matrix.flatMap(({ reportDigest, findings }) =>
+        findings.map((finding) => ({
+          reportDigest,
+          ...finding,
+          blockRelease: false,
+          reason: "Explicit synthetic browser finding review",
+        })),
+      ),
+    }),
+  );
+  const prepared = await call(
+    value.root,
+    [
+      "release",
+      "prepare",
+      "--id",
+      "candidate",
+      "--file",
+      "release-plan.json",
+      "--destination",
+      "packages",
+      "--policy-confirmation",
+      "local-policy.json",
+    ],
+    host,
+  );
+  expect(prepared.code, prepared.stderr.join("\n")).toBe(EXIT.OK);
+}, 360_000);

@@ -9,7 +9,7 @@ import {
   type LocalConfirmation,
 } from "./local-confirmation-authority.js";
 import { runSkillCli } from "./skill/index.js";
-import { createPreview, type PreviewPlan } from "./preview.js";
+import { CliPreviewError, createPreview, type PreviewPlan } from "./preview.js";
 import {
   CliReleaseError,
   prepareRelease,
@@ -1054,18 +1054,29 @@ export async function runCli(
           root,
           required(options.file, "--file"),
         )) as ReleasePlan;
-        if (!Array.isArray(plan.quality))
+        if (
+          !plan ||
+          typeof plan !== "object" ||
+          !Array.isArray(plan.quality) ||
+          !Array.isArray(plan.dependencies) ||
+          !plan.files ||
+          typeof plan.files !== "object"
+        )
           throw new CliError(EXIT.INVALID, "Invalid release evidence");
         const reports = [];
         for (const item of plan.quality) {
+          if (!item || typeof item.report !== "string")
+            throw new CliError(EXIT.INVALID, "Invalid release quality entry");
           const report = object(await readJson(root, item.report));
           if (!Array.isArray(report.findings))
             throw new CliError(EXIT.INVALID, "Invalid quality report");
           reports.push({
             reportDigest: `sha256:${jsonDigest(report)}`,
-            findings: report.findings.map((finding) => {
+            findings: report.findings.map((finding, findingIndex) => {
               const value = object(finding);
               return {
+                findingIndex,
+                findingDigest: `sha256:${jsonDigest(finding)}`,
                 criterion: value.criterion,
                 state: value.state,
                 severity: value.severity,
@@ -1093,6 +1104,8 @@ export async function runCli(
               options["policy-confirmation"],
             )) as LocalReleasePolicyConfirmation)
           : undefined;
+        if (options["policy-confirmation"] && !localPolicy)
+          throw new CliError(EXIT.INVALID, "Invalid local policy confirmation");
         const prepared = await prepareRelease(
           root,
           safeId(required(options.id, "--id"), "release ID"),
@@ -1181,7 +1194,8 @@ export async function runCli(
                   ? error.code === "CONFLICT"
                     ? EXIT.CONFLICT
                     : EXIT.INVALID
-                  : error instanceof PackageRegistryError ||
+                  : error instanceof CliPreviewError ||
+                      error instanceof PackageRegistryError ||
                       error instanceof PrototypeBuilderError ||
                       error instanceof PrototypeModeError
                     ? EXIT.INVALID

@@ -6,6 +6,7 @@ import {
   compilePackage,
   FilePackagePublisher,
   FilePackageSource,
+  INVENTORY_CATEGORIES,
   packageDigest,
   PackageRegistry,
   type ArtifactStore,
@@ -74,6 +75,8 @@ export interface LocalReleasePolicyConfirmation {
   readonly planDigest: string;
   readonly decisions: readonly {
     readonly reportDigest: string;
+    readonly findingIndex: number;
+    readonly findingDigest: string;
     readonly criterion: string;
     readonly state: "PASS" | "CONCERN" | "FAIL" | "UNVERIFIED" | "N/A";
     readonly severity: "BLOCKER" | "MAJOR" | "MINOR" | "NOTE";
@@ -162,6 +165,7 @@ function localHost(
   policy: LocalReleasePolicyConfirmation,
   prepared?: Prepared,
 ): ReleaseHost {
+  const positions = new Map<string, number>();
   return {
     packageAuthority: {
       verifyRelease: async (manifest) =>
@@ -171,9 +175,18 @@ function localHost(
     licenseAllowed: async () => false,
     policy: {
       assess: async (finding, report) => {
+        const reportDigest = digest(report);
+        const findingIndex = positions.get(reportDigest) ?? 0;
+        positions.set(reportDigest, findingIndex + 1);
+        check(
+          same(report.findings[findingIndex], finding),
+          "Local policy finding order or bytes changed",
+        );
         const matches = policy.decisions.filter(
           (decision) =>
-            decision.reportDigest === digest(report) &&
+            decision.reportDigest === reportDigest &&
+            decision.findingIndex === findingIndex &&
+            decision.findingDigest === digest(finding) &&
             decision.criterion === finding.criterion &&
             decision.state === finding.state &&
             decision.severity === finding.severity,
@@ -231,9 +244,16 @@ function checkLocalPolicy(
     ),
     "Local policy predates inspected quality evidence",
   );
+  const reportDigests = quality.map(({ report }) => digest(report));
+  check(
+    new Set(reportDigests).size === reportDigests.length,
+    "Duplicate exact quality report",
+  );
   const expected = quality.flatMap(({ report }) =>
-    report.findings.map((finding) => ({
+    report.findings.map((finding, findingIndex) => ({
       reportDigest: digest(report),
+      findingIndex,
+      findingDigest: digest(finding),
       criterion: finding.criterion,
       state: finding.state,
       severity: finding.severity,
@@ -245,22 +265,29 @@ function checkLocalPolicy(
   );
   for (const decision of policy.decisions) {
     check(
-      Object.keys(decision).every((key) =>
-        [
-          "reportDigest",
-          "criterion",
-          "state",
-          "severity",
-          "blockRelease",
-          "reason",
-        ].includes(key),
-      ) &&
+      !!decision &&
+        typeof decision === "object" &&
+        Object.keys(decision).every((key) =>
+          [
+            "reportDigest",
+            "findingIndex",
+            "findingDigest",
+            "criterion",
+            "state",
+            "severity",
+            "blockRelease",
+            "reason",
+          ].includes(key),
+        ) &&
         typeof decision.blockRelease === "boolean" &&
+        Number.isSafeInteger(decision.findingIndex) &&
         typeof decision.reason === "string" &&
         decision.reason.trim() !== "" &&
         expected.filter(
           (item) =>
             item.reportDigest === decision.reportDigest &&
+            item.findingIndex === decision.findingIndex &&
+            item.findingDigest === decision.findingDigest &&
             item.criterion === decision.criterion &&
             item.state === decision.state &&
             item.severity === decision.severity,
@@ -269,8 +296,7 @@ function checkLocalPolicy(
     );
   }
   const keys = policy.decisions.map(
-    (item) =>
-      `${item.reportDigest}:${item.criterion}:${item.state}:${item.severity}`,
+    (item) => `${item.reportDigest}:${item.findingIndex}:${item.findingDigest}`,
   );
   check(new Set(keys).size === keys.length, "Duplicate local policy decision");
 }
@@ -362,6 +388,46 @@ export async function prepareRelease(
   localPolicy?: LocalReleasePolicyConfirmation,
 ): Promise<Prepared> {
   check(
+    plan && typeof plan === "object" && !Object.hasOwn(plan, "redistribution"),
+    "Invalid release plan",
+  );
+  check(
+    !!plan.ref &&
+      typeof plan.ref.packageId === "string" &&
+      typeof plan.ref.version === "string" &&
+      ["reference", "portable"].includes(plan.mode) &&
+      !!plan.scope &&
+      typeof plan.scope === "object" &&
+      typeof plan.scope.ownerId === "string" &&
+      typeof plan.schemaVersion === "string" &&
+      !!plan.approval &&
+      typeof plan.approval === "object" &&
+      typeof plan.approval.decisionId === "string" &&
+      typeof plan.approval.actorId === "string" &&
+      !!plan.inventory &&
+      typeof plan.inventory === "object" &&
+      !Array.isArray(plan.inventory) &&
+      INVENTORY_CATEGORIES.every((category) => {
+        const item = plan.inventory[category];
+        return (
+          !!item &&
+          typeof item === "object" &&
+          (item.status === "included" || item.status === "absent")
+        );
+      }),
+    "Invalid release plan structure",
+  );
+  check(
+    plan.files && typeof plan.files === "object" && !Array.isArray(plan.files),
+    "Invalid release files",
+  );
+  check(
+    Object.values(plan.files).every((file) => typeof file === "string"),
+    "Invalid release file path",
+  );
+  check(Array.isArray(plan.dependencies), "Invalid release dependencies");
+  check(Array.isArray(plan.quality), "Invalid release evidence");
+  check(
     host || localPolicy,
     "Release policy and package authority are unavailable",
     "UNSUPPORTED",
@@ -371,15 +437,6 @@ export async function prepareRelease(
     "Local and injected release policies cannot be mixed",
   );
   const destination = await contained(root, destinationName, true);
-  check(
-    plan && typeof plan === "object" && !Object.hasOwn(plan, "redistribution"),
-    "Invalid release plan",
-  );
-  check(
-    plan.files && typeof plan.files === "object" && !Array.isArray(plan.files),
-    "Invalid release files",
-  );
-  check(Array.isArray(plan.quality), "Invalid release evidence");
   const files: Record<string, string> = {};
   for (const [name, file] of Object.entries(plan.files))
     files[name] = (await readFile(await contained(root, file))).toString(
@@ -387,9 +444,34 @@ export async function prepareRelease(
     );
   const quality: QualityEvidence[] = [];
   for (const item of plan.quality) {
+    check(
+      !!item &&
+        typeof item.report === "string" &&
+        Array.isArray(item.artifacts),
+      "Invalid release quality entry",
+    );
     const report = JSON.parse(
       await readFile(await contained(root, item.report), "utf8"),
     ) as QualityEvidence["report"];
+    check(
+      !!report &&
+        typeof report === "object" &&
+        !!report.target &&
+        typeof report.target === "object" &&
+        !!report.target.files &&
+        typeof report.target.files === "object" &&
+        Array.isArray(report.findings) &&
+        report.findings.every(
+          (finding) =>
+            !!finding &&
+            typeof finding === "object" &&
+            typeof finding.criterion === "string" &&
+            typeof finding.state === "string" &&
+            typeof finding.severity === "string",
+        ) &&
+        typeof report.inspectedAt === "string",
+      "Invalid release quality report",
+    );
     quality.push({ report, artifacts: item.artifacts });
   }
   if (localPolicy)

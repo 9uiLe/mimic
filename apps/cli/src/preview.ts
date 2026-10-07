@@ -18,6 +18,12 @@ export interface PreviewPlan {
     readonly lockDigest: string;
   };
 }
+export class CliPreviewError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CliPreviewError";
+  }
+}
 
 export async function createPreview(
   root: string,
@@ -33,9 +39,10 @@ export async function createPreview(
     !input ||
     !["standalone", "modes"].includes(input.kind) ||
     !input.plan ||
-    typeof input.plan !== "object"
+    typeof input.plan !== "object" ||
+    Array.isArray(input.plan)
   )
-    throw new Error("Invalid authored preview plan");
+    throw new CliPreviewError("Invalid authored preview plan");
   const result =
     input.kind === "standalone"
       ? {
