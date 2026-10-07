@@ -21,8 +21,8 @@ test("mode classification covers responsive behavior and keeps Proposed notice",
   expect(saved.responsive.states[0].operations[0].summary).toBe(
     "Candidate identity",
   );
-  expect(saved.responsive.states[0].operations[1].with.text).toBe(
-    "Choose mobile candidate",
+  expect(saved.responsive.states[0].operations[1].with.fixtureKey).toBe(
+    "mobileLabel",
   );
   expect(
     await readFile(path.join(result.proposed!.directory, "index.html"), "utf8"),
@@ -47,6 +47,26 @@ test("mode classification covers responsive behavior and keeps Proposed notice",
   );
   expect(fallback.fallback).toBe("rejected-system-request");
   expect(fallback.proposed).toBeUndefined();
+});
+test("Current-classified mobile replacement cannot change only its resolved fixture text", async () => {
+  const value = await fixture();
+  const plan = withResponsiveMode(value.modePlan);
+  const changed = {
+    ...plan,
+    proposed: {
+      ...plan.proposed,
+      fixtures: {
+        ...plan.proposed.fixtures,
+        success: {
+          ...plan.proposed.fixtures.success,
+          mobileLabel: "Different mobile action",
+        },
+      },
+    },
+  };
+  await expect(
+    buildPrototypeModes(value.store, changed, value.root),
+  ).rejects.toMatchObject({ code: "INVALID" });
 });
 
 const roots: string[] = [];

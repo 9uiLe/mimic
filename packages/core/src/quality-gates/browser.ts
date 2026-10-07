@@ -29,6 +29,12 @@ const devices = [
   { width: 1280, height: 800, mobile: false },
   { width: 390, height: 844, mobile: true },
 ] as const;
+function responsiveDevices(breakpointPx: number) {
+  return [
+    { width: Math.max(1280, breakpointPx + 1), height: 800, mobile: false },
+    { width: Math.min(390, breakpointPx), height: 844, mobile: true },
+  ] as const;
+}
 interface Edge {
   from: string;
   to: string;
@@ -197,6 +203,34 @@ async function clickEdge(page: Page, edge: Edge): Promise<void> {
       `${edge.from} → ${edge.to} ${edge.label}: status ${status}`,
     );
 }
+async function expectResponsiveFocus(
+  page: Page,
+  actionId: string,
+  summaryTarget: string | null,
+): Promise<string | null> {
+  await page.waitForFunction(
+    ({ actionId, summaryTarget }) => {
+      const action = document.getElementById(actionId);
+      const group = summaryTarget && document.getElementById(summaryTarget);
+      const expected = group
+        ? group.closest("details:not([open])")?.querySelector("summary") ||
+          group.querySelector("button,a[href]") ||
+          group
+        : action?.closest("details:not([open])")?.querySelector("summary") ||
+          action;
+      return !!expected && document.activeElement === expected;
+    },
+    { actionId, summaryTarget },
+    { timeout: 2_000 },
+  );
+  return page.evaluate(() => {
+    const focused = document.activeElement;
+    return focused?.tagName === "SUMMARY"
+      ? ((focused.parentElement as HTMLElement).dataset.responsiveTarget ??
+          null)
+      : null;
+  });
+}
 
 /** Execute Chromium checks on a controlled in-memory copy of the inspected local bundle. */
 export async function runBrowserQualityGates(
@@ -258,6 +292,9 @@ export async function runBrowserQualityGates(
       ),
     };
   }
+  const testedDevices = plan!.responsive
+    ? responsiveDevices(plan!.layout.breakpointPx)
+    : devices;
   const files = new Map([
     ["/", { value: bundle.html, mime: "text/html; charset=utf-8" }],
     ["/prototype.css", { value: bundle.css, mime: "text/css; charset=utf-8" }],
@@ -294,7 +331,7 @@ export async function runBrowserQualityGates(
       launched = true;
     }
     engine = browser.browserType().name();
-    for (const device of devices) {
+    for (const device of testedDevices) {
       const graph = transitions(plan!, device.mobile);
       const plannedFragments = fragments(plan!, device.mobile);
       const routes = paths(graph, plan!.initialState);
@@ -629,19 +666,19 @@ export async function runBrowserQualityGates(
                           (child as HTMLElement).dataset.responsiveTarget,
                       ),
                     );
-                  const original = plan!.states.find(
-                    (state) => state.name === entry.state,
-                  )!.root;
-                  const source = (function find(
-                    node: typeof original,
-                  ): typeof original | undefined {
+                  const finalRoot = effectiveRoot(
+                    plan!,
+                    entry.state,
+                    device.mobile,
+                  );
+                  const parent = (function find(
+                    node: typeof finalRoot,
+                  ): typeof finalRoot | undefined {
                     return node.id === operation.parentId
                       ? node
                       : node.children?.map(find).find(Boolean);
-                  })(original)!;
-                  const expected = device.mobile
-                    ? operation.childIds
-                    : source.children!.map((child) => child.id);
+                  })(finalRoot)!;
+                  const expected = parent.children!.map((child) => child.id);
                   if (canonicalJson(order) !== canonicalJson(expected))
                     failures.push(`${entry.state}: DOM reading order differs`);
                 } else if (operation.kind === "replace") {
@@ -705,15 +742,29 @@ export async function runBrowserQualityGates(
               const after = device.mobile
                 ? entry.continuity.primaryAction.desktopId
                 : entry.continuity.primaryAction.mobileId;
-              await page.locator(`#${before}`).focus();
+              const initialSummary = await page
+                .locator(`#${before}`)
+                .evaluate((action) => {
+                  const details = action.closest("details:not([open])");
+                  const summary = details?.querySelector(":scope > summary");
+                  if (summary) (summary as HTMLElement).focus();
+                  else (action as HTMLElement).focus();
+                  return (
+                    (details as HTMLElement | null)?.dataset.responsiveTarget ??
+                    null
+                  );
+                });
+              await expectResponsiveFocus(page, before, initialSummary);
               await page.setViewportSize({
-                width: device.mobile ? 1280 : 390,
+                width: device.mobile
+                  ? testedDevices[0].width
+                  : testedDevices[1].width,
                 height: device.height,
               });
-              await page.waitForFunction(
-                (id) => document.activeElement?.id === id,
+              const returnSummary = await expectResponsiveFocus(
+                page,
                 after,
-                { timeout: 2000 },
+                initialSummary,
               );
               if (
                 (await page.locator("#prototype-status").textContent()) !==
@@ -721,11 +772,7 @@ export async function runBrowserQualityGates(
               )
                 failures.push(`${entry.state}: state changed on resize`);
               await page.setViewportSize({ width, height: device.height });
-              await page.waitForFunction(
-                (id) => document.activeElement?.id === id,
-                before,
-                { timeout: 2000 },
-              );
+              await expectResponsiveFocus(page, before, returnSummary);
             } catch (error) {
               (executionUnavailable(error, page, browser)
                 ? unknown
@@ -780,7 +827,7 @@ export async function runBrowserQualityGates(
       }
     }
   } catch (error) {
-    for (const device of devices)
+    for (const device of testedDevices)
       for (const criterion of criteria)
         findings.push(
           finding(

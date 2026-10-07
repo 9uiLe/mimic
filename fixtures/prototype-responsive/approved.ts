@@ -1,11 +1,16 @@
 import { setupApprovedPrototypeFixture } from "../prototypes/approved.js";
+import { artifactDigest } from "../../packages/core/src/artifact-canonical.js";
+import type { ArtifactSnapshot } from "../../packages/core/src/artifact-store.js";
+import type { ExactArtifactRef } from "../../packages/core/src/runtime-engines/dependency.js";
 import type {
   PrototypeBuilderInput,
   PrototypeNode,
 } from "../../packages/core/src/prototype-builder/index.js";
 
 /** Synthetic approved locks plus a separately authored, reviewable responsive plan. */
-export async function setupResponsiveFixture() {
+export async function setupResponsiveFixture(
+  options: { breakpointPx?: number } = {},
+) {
   const fixture = await setupApprovedPrototypeFixture();
   const success = fixture.input.states.find(
     (state) => state.name === "success",
@@ -120,5 +125,74 @@ export async function setupResponsiveFixture() {
       ],
     },
   };
-  return { ...fixture, input };
+  if (options.breakpointPx === undefined || options.breakpointPx === 640)
+    return { ...fixture, input };
+  const sourceRule = (
+    await fixture.store.read(fixture.refs.responsiveRule.artifactId, 1)
+  ).artifact;
+  const { contentDigest: _ruleDigest, ...ruleMeta } = sourceRule.meta;
+  void _ruleDigest;
+  const ruleBare: ArtifactSnapshot = {
+    ...sourceRule,
+    meta: {
+      ...ruleMeta,
+      id: "art_fixture_responsive_variant",
+      title: "Responsive variant",
+    },
+    content: {
+      ...(sourceRule.content as Record<string, unknown>),
+      definition: {
+        ...(sourceRule.content as { definition: Record<string, unknown> })
+          .definition,
+        breakpointPx: options.breakpointPx,
+      },
+    } as ArtifactSnapshot["content"],
+  };
+  const savedRule = await fixture.store.create({
+    ...ruleBare,
+    meta: { ...ruleBare.meta, contentDigest: artifactDigest(ruleBare) },
+  });
+  const rule: ExactArtifactRef = {
+    artifactId: ruleBare.meta.id,
+    revision: 1,
+    lockDigest: savedRule.digest,
+  };
+  const sourceScenario = (
+    await fixture.store.read(fixture.refs.scenario.artifactId, 1)
+  ).artifact;
+  const { contentDigest: _scenarioDigest, ...scenarioMeta } =
+    sourceScenario.meta;
+  void _scenarioDigest;
+  const scenarioBare: ArtifactSnapshot = {
+    ...sourceScenario,
+    meta: { ...scenarioMeta, revision: 2, supersedesRevision: 1 },
+    dependencies: sourceScenario.dependencies.map((dependency) =>
+      dependency.artifactId === fixture.refs.responsiveRule.artifactId
+        ? { ...rule, onChange: dependency.onChange }
+        : dependency,
+    ),
+  };
+  const savedScenario = await fixture.store.create({
+    ...scenarioBare,
+    meta: { ...scenarioBare.meta, contentDigest: artifactDigest(scenarioBare) },
+  });
+  const scenario: ExactArtifactRef = {
+    artifactId: scenarioBare.meta.id,
+    revision: 2,
+    lockDigest: savedScenario.digest,
+  };
+  return {
+    ...fixture,
+    refs: { ...fixture.refs, responsiveRule: rule, scenario },
+    input: {
+      ...input,
+      scenario,
+      selection: { ...input.selection, responsiveRule: rule },
+      layout: { ...input.layout, breakpointPx: options.breakpointPx },
+      responsive: {
+        ...input.responsive!,
+        states: input.responsive!.states.map((entry) => ({ ...entry, rule })),
+      },
+    },
+  };
 }

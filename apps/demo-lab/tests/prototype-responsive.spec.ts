@@ -4,7 +4,10 @@ import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { HtmlValidate } from "html-validate";
-import { buildPrototype } from "../../../packages/core/src/prototype-builder/index.js";
+import {
+  buildPrototype,
+  type PrototypeBuilderInput,
+} from "../../../packages/core/src/prototype-builder/index.js";
 import { buildPrototypeModes } from "../../../packages/core/src/prototype-modes/index.js";
 import { runBrowserQualityGates } from "../../../packages/core/src/quality-gates/browser.js";
 import { runStaticQualityGates } from "../../../packages/core/src/quality-gates/index.js";
@@ -157,6 +160,140 @@ test("generated mobile plan changes interaction structure and survives viewport 
     await rm(fixture.root, { recursive: true, force: true });
   }
 });
+
+function reorderedDirectReplacement(
+  input: PrototypeBuilderInput,
+): PrototypeBuilderInput {
+  const auxiliary = {
+    tag: "section" as const,
+    id: "auxiliary",
+    children: [{ tag: "p" as const, text: "Desktop auxiliary" }],
+  };
+  return {
+    ...input,
+    states: input.states.map((state) =>
+      state.name === "success"
+        ? {
+            ...state,
+            root: {
+              ...state.root,
+              children: [...state.root.children!, auxiliary],
+            },
+          }
+        : state,
+    ),
+    responsive: {
+      ...input.responsive!,
+      states: input.responsive!.states.map((entry) => ({
+        ...entry,
+        operations: [
+          {
+            kind: "reorder" as const,
+            parentId: "candidate-root",
+            childIds: [
+              "candidate-actions",
+              "candidate-context",
+              "candidate-evidence",
+              "auxiliary",
+            ],
+          },
+          ...entry.operations.slice(1),
+          {
+            kind: "replace" as const,
+            targetId: "auxiliary",
+            with: {
+              tag: "section" as const,
+              id: "mobile-auxiliary",
+              children: [{ tag: "p" as const, text: "Mobile auxiliary" }],
+            },
+            focusMap: [],
+          },
+        ],
+      })),
+    },
+  };
+}
+function collapsedPrimaryAction(
+  input: PrototypeBuilderInput,
+): PrototypeBuilderInput {
+  return {
+    ...input,
+    responsive: {
+      ...input.responsive!,
+      states: input.responsive!.states.map((entry) => ({
+        ...entry,
+        operations: [
+          entry.operations[0]!,
+          {
+            kind: "collapse" as const,
+            targetId: "candidate-actions",
+            summary: "Candidate decision",
+          },
+          ...entry.operations.slice(1),
+        ],
+      })),
+    },
+  };
+}
+for (const [name, variant] of [
+  ["reordered direct-child replacement", reorderedDirectReplacement],
+  ["primary action with summary focus fallback", collapsedPrimaryAction],
+] as const) {
+  test(`browser gate accepts ${name}`, async ({ browser }) => {
+    test.setTimeout(90_000);
+    const fixture = await setupResponsiveFixture();
+    try {
+      const output = await buildPrototype(
+        fixture.store,
+        variant(fixture.input),
+        fixture.root,
+      );
+      const report = await runBrowserQualityGates(
+        {
+          trustedRoot: fixture.root,
+          directory: output.directory,
+          store: fixture.store,
+        },
+        browser,
+      );
+      for (const item of report.findings.filter((item) =>
+        ["responsive-transform", "navigation-state"].includes(item.criterion),
+      ))
+        expect(item.state, `${item.criterion}: ${item.reason}`).toBe("PASS");
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+}
+for (const breakpointPx of [320, 1600]) {
+  test(`browser gate follows locked ${breakpointPx}px breakpoint`, async ({
+    browser,
+  }) => {
+    test.setTimeout(90_000);
+    const fixture = await setupResponsiveFixture({ breakpointPx });
+    try {
+      const output = await buildPrototype(
+        fixture.store,
+        fixture.input,
+        fixture.root,
+      );
+      const report = await runBrowserQualityGates(
+        {
+          trustedRoot: fixture.root,
+          directory: output.directory,
+          store: fixture.store,
+        },
+        browser,
+      );
+      for (const item of report.findings.filter((item) =>
+        ["responsive-transform", "navigation-state"].includes(item.criterion),
+      ))
+        expect(item.state, `${item.criterion}: ${item.reason}`).toBe("PASS");
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+}
 
 test("Current and Proposed responsive bundles retain classification and visible notice", async ({
   page,

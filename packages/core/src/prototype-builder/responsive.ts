@@ -361,6 +361,10 @@ export function responsiveErrors(plan: PrototypeBuilderInput): string[] {
           errors.push(`${at}: replacement needs non-root subtree`);
           continue;
         }
+        if (!mobile.has(op.targetId)) {
+          errors.push(`${at}: replacement removes another operation target`);
+          continue;
+        }
         const replacement = new Map<string, Info>();
         collect(
           op.with as unknown as PrototypeNode,
@@ -386,9 +390,11 @@ export function responsiveErrors(plan: PrototypeBuilderInput): string[] {
           )
         )
           errors.push(`${at}: replacement removes another operation target`);
-        for (const id of [...mobile.keys()])
-          if (id === op.targetId || inside(id, op.targetId as string, mobile))
-            mobile.delete(id);
+        const removed = [...mobile.keys()].filter(
+          (id) =>
+            id === op.targetId || inside(id, op.targetId as string, mobile),
+        );
+        for (const id of removed) mobile.delete(id);
         for (const [id, info] of replacement) mobile.set(id, info);
         if (!Array.isArray(op.focusMap))
           errors.push(`${at}: focus map required`);

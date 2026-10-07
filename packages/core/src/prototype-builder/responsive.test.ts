@@ -42,6 +42,76 @@ function at(
 }
 const operation = (plan: unknown, index: number) =>
   at(plan, ["responsive", "states", 0, "operations", index]);
+function withNestedReplacements(
+  input: PrototypeBuilderInput,
+  order: "ancestor-first" | "descendant-first" | "independent",
+): PrototypeBuilderInput {
+  return changed(input, (plan) => {
+    const root = at(plan, ["states", 3, "root"]);
+    (root.children as unknown[]).push({
+      tag: "section",
+      id: "auxiliary",
+      children: [
+        {
+          tag: "article",
+          id: "nested-parent",
+          children: [
+            {
+              tag: "p",
+              id: "nested-child",
+              children: [
+                {
+                  tag: "span",
+                  id: "nested-grandchild",
+                  text: "Auxiliary context",
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tag: "article",
+          id: "sibling-parent",
+          children: [{ tag: "p", text: "Independent context" }],
+        },
+      ],
+    });
+    (operation(plan, 0).childIds as unknown[]).push("auxiliary");
+    const ancestor = {
+      kind: "replace",
+      targetId: "nested-parent",
+      with: {
+        tag: "article",
+        id: "mobile-parent",
+        children: [{ tag: "p", text: "Mobile context" }],
+      },
+      focusMap: [],
+    };
+    const descendant = {
+      kind: "replace",
+      targetId: "nested-child",
+      with: { tag: "p", id: "mobile-child", text: "Mobile child" },
+      focusMap: [],
+    };
+    const independent = {
+      kind: "replace",
+      targetId: "sibling-parent",
+      with: {
+        tag: "article",
+        id: "mobile-sibling",
+        children: [{ tag: "p", text: "Independent mobile context" }],
+      },
+      focusMap: [],
+    };
+    (at(plan, ["responsive", "states", 0]).operations as unknown[]).push(
+      ...(order === "ancestor-first"
+        ? [ancestor, descendant]
+        : order === "descendant-first"
+          ? [descendant, ancestor]
+          : [ancestor, independent]),
+    );
+  });
+}
 test("versioned mobile operations are saved, digested and statically verified", async () => {
   const value = await fixture();
   const before = canonicalJson(value.input);
@@ -171,6 +241,45 @@ test("responsive declarations are snapshotted before the first asynchronous read
   expect(saved.responsive.states[0].operations[1].summary).toBe(
     "Candidate identity",
   );
+});
+test.each(["ancestor-first", "descendant-first"] as const)(
+  "rejects overlapping replacement targets in %s order",
+  async (order) => {
+    const value = await fixture();
+    const input = withNestedReplacements(value.input, order);
+    expect(responsiveErrors(input)).toContainEqual(
+      expect.stringContaining("replacement removes another operation target"),
+    );
+    await expect(
+      buildPrototype(value.store, input, value.root),
+    ).rejects.toMatchObject({ code: "INVALID" });
+  },
+);
+test("independent replacement targets remain valid", async () => {
+  const value = await fixture();
+  const input = withNestedReplacements(value.input, "independent");
+  expect(responsiveErrors(input)).toEqual([]);
+  await expect(
+    buildPrototype(value.store, input, value.root),
+  ).resolves.toMatchObject({ planDigest: expect.stringMatching(/^sha256:/) });
+});
+test("an outer replacement cannot leave a removed grandchild as mobile critical information", async () => {
+  const value = await fixture();
+  const input = changed(
+    withNestedReplacements(value.input, "independent"),
+    (plan) => {
+      (at(plan, ["responsive", "states", 0]).operations as unknown[]).pop();
+      at(plan, ["responsive", "states", 0, "continuity"]).criticalInfo = [
+        { desktopId: "nested-grandchild", mobileId: "nested-grandchild" },
+      ];
+    },
+  );
+  expect(responsiveErrors(input)).toContainEqual(
+    expect.stringContaining("missing mapped node"),
+  );
+  await expect(
+    buildPrototype(value.store, input, value.root),
+  ).rejects.toMatchObject({ code: "INVALID" });
 });
 test("saved-plan tampering fails static gate even if digest is recomputed", async () => {
   const value = await fixture();

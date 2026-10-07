@@ -51,6 +51,13 @@ export function withResponsiveMode(
             }
           : state,
       ),
+      fixtures: {
+        ...render.fixtures,
+        success: {
+          ...render.fixtures.success,
+          mobileLabel: "Choose mobile candidate",
+        },
+      },
       responsive: {
         version: 1,
         states: [
@@ -81,7 +88,7 @@ export function withResponsiveMode(
                   tag: "button",
                   id: "mode-mobile-primary",
                   componentId: render.selection.components[0]!.artifactId,
-                  text: "Choose mobile candidate",
+                  fixtureKey: "mobileLabel",
                   targetState: "disabled",
                 },
                 focusMap: [

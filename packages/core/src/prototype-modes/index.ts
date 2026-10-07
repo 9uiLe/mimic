@@ -263,20 +263,31 @@ function boundValues(
         "responsiveOperation",
         index,
       );
+      const resolvedFixtures: unknown[] = [];
+      if (operation.kind === "replace") {
+        const visit = (node: PrototypeNode, nodePath: number[]): void => {
+          if (node.fixtureKey) {
+            const value = render.fixtures[responsive.state]?.[node.fixtureKey];
+            if (value === undefined)
+              fail(
+                "INVALID",
+                `Missing responsive fixture ${responsive.state}.${node.fixtureKey}`,
+              );
+            fixtureUses.add(`${responsive.state}/${node.fixtureKey}`);
+            resolvedFixtures.push([nodePath, node.fixtureKey, value]);
+          }
+          node.children?.forEach((child, childIndex) =>
+            visit(child, [...nodePath, childIndex]),
+          );
+        };
+        visit(operation.with, []);
+      }
       actual.set(key, {
-        value: canonicalJson(operation),
+        value: canonicalJson([operation, resolvedFixtures]),
         field: "responsiveOperation",
         state: responsive.state,
         tag: "section",
       });
-      if (operation.kind === "replace") {
-        const visit = (node: PrototypeNode): void => {
-          if (node.fixtureKey)
-            fixtureUses.add(`${responsive.state}/${node.fixtureKey}`);
-          node.children?.forEach(visit);
-        };
-        visit(operation.with);
-      }
     });
   }
   for (const [state, fixtures] of Object.entries(render.fixtures)) {
