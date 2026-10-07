@@ -20,7 +20,7 @@ const criteria = [
 
 function requireObservedGateCoverage(
   report: QualityReport,
-  engine: "chromium" | "webkit",
+  engine: "chromium" | "firefox" | "webkit",
   bundleDigest: string,
 ): void {
   if (
@@ -149,9 +149,10 @@ test("Experience-first generated case states retain context on desktop and mobil
       trustedRoot: fixture.root,
       directory: output.directory,
     });
-    const engine = test.info().project.name.startsWith("webkit")
-      ? "webkit"
-      : "chromium";
+    const engineName = browser.browserType().name();
+    if (!["chromium", "firefox", "webkit"].includes(engineName))
+      throw new Error(`Unexpected browser engine: ${engineName}`);
+    const engine = engineName as "chromium" | "firefox" | "webkit";
     requireObservedGateCoverage(report, engine, inspected.target.bundleDigest);
     const unavailable: QualityReport = {
       ...report,

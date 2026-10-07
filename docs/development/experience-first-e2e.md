@@ -38,7 +38,7 @@ The regression test copies the valid authored plan, adds `mobileTransformation: 
 
 Owner decision options for the controlling 9UI-125 workstream:
 
-1. Extend the builder's authored plan contract with explicit responsive operations, generated semantic behavior, and quality checks. Keep the canonical scenario prose unchanged until an approved composition artifact exists. This enables the requested transformation but changes a shared core contract owned outside this branch.
+1. Extend the builder's authored plan contract with explicit responsive operations, generated semantic behavior, and quality checks. Keep approved scenario snapshots immutable. When a responsive adaptation changes task steps, propose a new scenario revision with exact selected-asset dependencies and provenance; keep the executable structure in a separately authored digest-bound plan. This enables the requested transformation but changes a shared core contract owned outside this branch.
 2. Make responsive structure a separate approved composition artifact and require the builder to consume its exact lock. This gives stronger review and reuse semantics but requires schema, lifecycle, and migration work.
 
 Recommendation: pursue option 1 as the smallest testable contract increment, with exact source and plan digests retained. This shared-contract follow-up is [9UI-143](https://linear.app/9uile/issue/9UI-143). A possible **typed non-artifact** extension to the authored plan is:
