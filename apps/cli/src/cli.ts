@@ -1,5 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readFile, writeFile, mkdir, realpath, lstat } from "node:fs/promises";
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  realpath,
+  lstat,
+  readdir,
+} from "node:fs/promises";
 import { atomicCreateJson } from "./atomic-file.js";
 import {
   LOCAL_MARKER,
@@ -55,6 +62,8 @@ import {
   type SkillInvocation,
   type SkillResult,
   type SkillWork,
+  type RegistryState,
+  type UpstreamRevisionRequest,
   PackageCompilerError,
   PackageRegistryError,
   PrototypeBuilderError,
@@ -93,6 +102,7 @@ const commands = new Set([
   "run",
   "next",
   "submit",
+  "revision-requests",
   "decisions",
   "decide",
   "preview",
@@ -123,7 +133,7 @@ function parse(argv: readonly string[]) {
   if (!command || !commands.has(command))
     throw new CliError(
       EXIT.USAGE,
-      "Usage: mimic <init|status|run|next|submit|decisions|decide|preview|validate|release> [options]",
+      "Usage: mimic <init|status|run|next|submit|revision-requests|decisions|decide|preview|validate|release> [options]",
     );
   const options: Record<string, string> = {};
   const positionals: string[] = [];
@@ -306,6 +316,315 @@ function summarizeNext(
     path: file,
   };
 }
+type RevisionBinding = {
+  version: 2;
+  runId: string;
+  taskId: string;
+  packageDigest: string;
+  workDigest: string;
+  baselineSequence: number;
+  result: SkillResult;
+  revisionRequests: readonly UpstreamRevisionRequest[];
+  revisionDigest: string;
+};
+function revisionDigest(
+  binding: Omit<RevisionBinding, "revisionDigest">,
+): string {
+  return jsonDigest(binding);
+}
+async function optionalRecord(root: string, name: string) {
+  try {
+    return object(await readJson(root, name));
+  } catch (error) {
+    if (
+      error instanceof CliError &&
+      error.code === EXIT.INVALID &&
+      error.message === "Input file does not exist"
+    )
+      return undefined;
+    throw error;
+  }
+}
+function acceptedSubmission(
+  state: RegistryState,
+  binding: Pick<RevisionBinding, "runId" | "taskId" | "baselineSequence">,
+  result: SkillResult,
+): "accepted" | "blocked" | undefined {
+  const terminal = state.events.find((event) => {
+    if (
+      event.sequence <= binding.baselineSequence ||
+      event.runId !== binding.runId ||
+      event.action !== "set-work" ||
+      event.actor.kind !== "agent" ||
+      event.actor.id !== "orchestrator" ||
+      event.runAfter.safeActions.includes(binding.taskId) ||
+      !result.outputRefs.every((ref) =>
+        event.runAfter.artifacts.some(
+          (recorded) => canonicalJson(recorded) === canonicalJson(ref),
+        ),
+      )
+    )
+      return false;
+    if (result.proposal) {
+      const proposed = result.proposal.items.every((item) => {
+        const stored = event.runAfter.proposals[item.id];
+        if (!stored || stored.packetId !== result.proposal?.packetId)
+          return false;
+        const declared = Object.fromEntries(
+          Object.entries(stored).filter(
+            ([key]) =>
+              ![
+                "packetId",
+                "status",
+                "readiness",
+                "readinessReason",
+                "deferred",
+              ].includes(key),
+          ),
+        );
+        return canonicalJson(declared) === canonicalJson(item);
+      });
+      if (!proposed) return false;
+    }
+    return result.blocked
+      ? event.reason === "Skill reported a genuine affected-work blocker" &&
+          result.blocked.reason === event.runAfter.blockers[binding.taskId]
+      : event.reason ===
+          `Skill task ${JSON.stringify(binding.taskId)} completed with verified exact outputs`;
+  });
+  return terminal ? (result.blocked ? "blocked" : "accepted") : undefined;
+}
+async function revisionRecords(
+  root: string,
+  runId: string,
+  runtime: ReturnType<typeof createOrchestratorRuntime>,
+) {
+  const folder = path.join(await metadata(root), "submissions");
+  let files: string[];
+  try {
+    if (!inside(root, await realpath(folder)))
+      throw new CliError(EXIT.INVALID, "Submission directory escapes root");
+    files = await readdir(folder);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw error;
+  }
+  const state = await runtime.registry.snapshot();
+  const records = [];
+  for (const name of files.sort()) {
+    if (
+      !name.startsWith(`${runId}-`) ||
+      !/^[a-f0-9]{64}\.json$/.test(name.slice(runId.length + 1))
+    )
+      continue;
+    const marker = object(
+      await readJson(root, path.join(".mimic/submissions", name)),
+    );
+    if (
+      marker.runId !== runId ||
+      typeof marker.taskId !== "string" ||
+      name !== `${runId}-${jsonDigest(marker.taskId)}.json`
+    )
+      throw new CliError(
+        EXIT.CONFLICT,
+        "Submission reservation filename changed",
+      );
+    let value = marker;
+    let recordPath = path.join(".mimic/submissions", name);
+    if (marker.version === 1) {
+      const recovered = await optionalRecord(
+        root,
+        path.join(".mimic/submissions", `${name.slice(0, -5)}.revision.json`),
+      );
+      if (!recovered) {
+        if (
+          Object.hasOwn(marker, "revisionRequests") ||
+          Object.hasOwn(marker, "result")
+        )
+          throw new CliError(
+            EXIT.CONFLICT,
+            "Unsealed revision request reservation",
+          );
+        continue;
+      }
+      if (
+        [
+          "runId",
+          "taskId",
+          "packageDigest",
+          "workDigest",
+          "baselineSequence",
+        ].some((key) => marker[key] !== recovered[key])
+      )
+        throw new CliError(EXIT.CONFLICT, "Recovered revision binding changed");
+      value = recovered;
+      recordPath = path.join(
+        ".mimic/submissions",
+        `${name.slice(0, -5)}.revision.json`,
+      );
+    }
+    const binding = value as RevisionBinding;
+    if (
+      binding.version !== 2 ||
+      binding.runId !== runId ||
+      binding.taskId !== marker.taskId ||
+      !/^[a-f0-9]{64}$/.test(binding.workDigest) ||
+      !/^[a-f0-9]{64}$/.test(binding.packageDigest) ||
+      !Number.isSafeInteger(binding.baselineSequence) ||
+      !binding.result ||
+      binding.result.runId !== runId ||
+      binding.result.taskId !== binding.taskId ||
+      typeof binding.result.skillId !== "string" ||
+      !Array.isArray(binding.result.inputRefs) ||
+      !Array.isArray(binding.result.outputRefs) ||
+      !Array.isArray(binding.revisionRequests)
+    )
+      throw new CliError(EXIT.CONFLICT, "Invalid revision request binding");
+    const { revisionDigest: savedDigest, ...sealed } = binding;
+    if (savedDigest !== revisionDigest(sealed))
+      throw new CliError(
+        EXIT.CONFLICT,
+        "Revision request binding digest changed",
+      );
+    if (
+      !binding.revisionRequests.every(
+        (request) =>
+          request &&
+          request.runId === runId &&
+          binding.result.inputRefs.some(
+            (ref) => canonicalJson(ref) === canonicalJson(request.source),
+          ) &&
+          binding.result.outputRefs.some(
+            (ref) => canonicalJson(ref) === canonicalJson(request.request),
+          ) &&
+          Array.isArray(request.affectedLocks) &&
+          request.affectedLocks.some(
+            (ref: unknown) =>
+              canonicalJson(ref) === canonicalJson(request.source),
+          ),
+      )
+    )
+      throw new CliError(
+        EXIT.CONFLICT,
+        "Invalid revision request exact binding",
+      );
+    if (!binding.revisionRequests.length) continue;
+    if (!acceptedSubmission(state, binding, binding.result)) continue;
+    const requests = [];
+    for (let index = 0; index < binding.revisionRequests.length; index++) {
+      const request = binding.revisionRequests[index]!;
+      const routePath = path.join(
+        ".mimic/submissions",
+        `${name.slice(0, -5)}.route-${index}.json`,
+      );
+      const route = await optionalRecord(root, routePath);
+      if (
+        route &&
+        (route.version !== 1 ||
+          route.runId !== runId ||
+          route.taskId !== binding.taskId ||
+          route.workDigest !== binding.workDigest ||
+          route.requestDigest !== jsonDigest(request))
+      )
+        throw new CliError(EXIT.CONFLICT, "Revision route receipt changed");
+      let status:
+        | "pending-source-approval"
+        | "pending-routing"
+        | "routed"
+        | "source-unavailable"
+        | "unroutable-source";
+      try {
+        const source = await runtime.artifacts.read(
+          request.source.artifactId,
+          request.source.revision,
+        );
+        status =
+          source.digest !== request.source.lockDigest
+            ? "source-unavailable"
+            : source.artifact.lifecycle.status === "approved"
+              ? route
+                ? "routed"
+                : "pending-routing"
+              : source.artifact.lifecycle.status === "provisional"
+                ? "pending-source-approval"
+                : "unroutable-source";
+      } catch {
+        status = "source-unavailable";
+      }
+      requests.push({ request, state: status });
+    }
+    records.push({
+      runId,
+      taskId: binding.taskId,
+      workDigest: binding.workDigest,
+      packageDigest: binding.packageDigest,
+      skillId: binding.result.skillId,
+      inputRefs: binding.result.inputRefs,
+      outputRefs: binding.result.outputRefs,
+      path: recordPath,
+      requests,
+    });
+  }
+  return records;
+}
+function revisionOverview(
+  records: Awaited<ReturnType<typeof revisionRecords>>,
+) {
+  const requests = records.flatMap((record) => record.requests);
+  if (!requests.length) return undefined;
+  const states = [...new Set(requests.map((item) => item.state))];
+  return {
+    count: requests.length,
+    state: states.length === 1 ? states[0] : "mixed",
+    path: records.length === 1 ? records[0]!.path : undefined,
+    paths: records.map((record) => record.path),
+  };
+}
+async function routeRevisionRequests(
+  root: string,
+  markerFile: string,
+  binding: RevisionBinding,
+  runtime: ReturnType<typeof createOrchestratorRuntime>,
+) {
+  for (let index = 0; index < binding.revisionRequests.length; index++) {
+    const request = binding.revisionRequests[index]!;
+    const source = await runtime.artifacts.read(
+      request.source.artifactId,
+      request.source.revision,
+    );
+    if (source.digest !== request.source.lockDigest)
+      throw new CliError(EXIT.INVALID, "Revision source exact lock mismatch");
+    if (source.artifact.lifecycle.status === "provisional") continue;
+    if (source.artifact.lifecycle.status !== "approved")
+      throw new CliError(EXIT.INVALID, "Revision source is not approvable");
+    try {
+      await runtime.orchestrator.requestUpstream(
+        request,
+        { kind: "skill", id: binding.result.skillId },
+        new Date().toISOString(),
+      );
+    } catch (error) {
+      throw new CliError(
+        EXIT.INVALID,
+        `Revision routing rejected: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    const routeFile = markerFile.replace(/\.json$/, `.route-${index}.json`);
+    const receipt = {
+      version: 1,
+      runId: binding.runId,
+      taskId: binding.taskId,
+      workDigest: binding.workDigest,
+      requestDigest: jsonDigest(request),
+    };
+    if (!(await atomicCreateJson(routeFile, receipt))) {
+      const stored = await readJson(root, path.relative(root, routeFile));
+      if (canonicalJson(stored) !== canonicalJson(receipt))
+        throw new CliError(EXIT.CONFLICT, "Revision route receipt changed");
+    }
+  }
+}
+
 async function load(root: string, host: CliHost) {
   await metadata(root);
   const config = configFrom(await readJson(root, ".mimic/config.json"));
@@ -572,7 +891,43 @@ export async function runCli(
         id,
         await savedTasks(root, id, config, run.scope),
       );
-      emit(io, summarizeNext(plan, await outputFile(root, plan)), json);
+      const revisionRequests = revisionOverview(
+        await revisionRecords(root, id, runtime),
+      );
+      emit(
+        io,
+        {
+          ...summarizeNext(plan, await outputFile(root, plan)),
+          ...(revisionRequests ? { revisionRequests } : {}),
+        },
+        json,
+      );
+      return EXIT.OK;
+    }
+    if (command === "revision-requests") {
+      if (positionals.length !== 1)
+        throw new CliError(
+          EXIT.USAGE,
+          "Usage: mimic revision-requests <run-id>",
+        );
+      const id = safeId(positionals[0]!, "run ID");
+      await runtime.registry.run(id);
+      const records = await revisionRecords(root, id, runtime);
+      emit(
+        io,
+        {
+          runId: id,
+          count: records.reduce(
+            (sum, record) => sum + record.requests.length,
+            0,
+          ),
+          records,
+          requests: records.flatMap((record) =>
+            record.requests.map((item) => item.request),
+          ),
+        },
+        json,
+      );
       return EXIT.OK;
     }
     if (command === "submit") {
@@ -633,6 +988,39 @@ export async function runCli(
             EXIT.INVALID,
             "Invalid Skill result identity or references",
           );
+        if (work.revisionRequests !== undefined) {
+          const exact = (a: unknown, b: unknown) =>
+            canonicalJson(a) === canonicalJson(b);
+          if (
+            !Array.isArray(work.revisionRequests) ||
+            !work.revisionRequests.every(
+              (request) =>
+                request &&
+                request.runId === id &&
+                typeof request.reason === "string" &&
+                request.reason.trim() &&
+                Array.isArray(request.evidenceRefs) &&
+                request.evidenceRefs.length > 0 &&
+                request.evidenceRefs.every(
+                  (ref: unknown) => typeof ref === "string" && ref.length > 0,
+                ) &&
+                Array.isArray(request.affectedLocks) &&
+                request.affectedLocks.some((ref: unknown) =>
+                  exact(ref, request.source),
+                ) &&
+                work.result.inputRefs.some((ref) =>
+                  exact(ref, request.source),
+                ) &&
+                work.result.outputRefs.some((ref) =>
+                  exact(ref, request.request),
+                ),
+            )
+          )
+            throw new CliError(
+              EXIT.INVALID,
+              "Invalid revision request exact bindings",
+            );
+        }
         for (const artifact of submission.artifacts as ArtifactSnapshot[]) {
           const origin = artifact?.origin as
             Record<string, unknown> | undefined;
@@ -670,20 +1058,26 @@ export async function runCli(
           `${id}-${jsonDigest(taskId)}.json`,
         );
         const before = await runtime.registry.snapshot();
-        const binding = {
-          version: 1,
+        const unsealed: Omit<RevisionBinding, "revisionDigest"> = {
+          version: 2,
           runId: id,
           taskId,
           packageDigest: jsonDigest(skill),
           workDigest: jsonDigest(submission),
           baselineSequence: before.events.at(-1)?.sequence ?? 0,
+          result: work.result,
+          revisionRequests: work.revisionRequests ?? [],
+        };
+        const binding: RevisionBinding = {
+          ...unsealed,
+          revisionDigest: revisionDigest(unsealed),
         };
         const created = await atomicCreateJson(markerFile, binding);
         const reservation = created
           ? binding
           : object(await readJson(root, path.relative(root, markerFile)));
         if (
-          reservation.version !== binding.version ||
+          ![1, 2].includes(reservation.version as number) ||
           reservation.runId !== binding.runId ||
           reservation.taskId !== binding.taskId ||
           reservation.packageDigest !== binding.packageDigest ||
@@ -691,60 +1085,30 @@ export async function runCli(
           !Number.isSafeInteger(reservation.baselineSequence)
         )
           throw new CliError(EXIT.CONFLICT, "Submission retry changed input");
-        const acceptedState = async () => {
-          const state = await runtime.registry.snapshot();
-          const terminal = state.events.find((event) => {
-            if (
-              event.sequence <= (reservation.baselineSequence as number) ||
-              event.runId !== id ||
-              event.action !== "set-work" ||
-              event.actor.kind !== "agent" ||
-              event.actor.id !== "orchestrator" ||
-              event.runAfter.safeActions.includes(taskId) ||
-              !work.result.outputRefs.every((ref) =>
-                event.runAfter.artifacts.some(
-                  (recorded) => canonicalJson(recorded) === canonicalJson(ref),
-                ),
-              )
-            )
-              return false;
-            if (work.result.proposal) {
-              const proposed = work.result.proposal.items.every((item) => {
-                const stored = event.runAfter.proposals[item.id];
-                if (
-                  !stored ||
-                  stored.packetId !== work.result.proposal?.packetId
-                )
-                  return false;
-                const declared = Object.fromEntries(
-                  Object.entries(stored).filter(
-                    ([key]) =>
-                      ![
-                        "packetId",
-                        "status",
-                        "readiness",
-                        "readinessReason",
-                        "deferred",
-                      ].includes(key),
-                  ),
-                );
-                return canonicalJson(declared) === canonicalJson(item);
-              });
-              if (!proposed) return false;
-            }
-            return work.result.blocked
-              ? event.reason ===
-                  "Skill reported a genuine affected-work blocker" &&
-                  work.result.blocked.reason === event.runAfter.blockers[taskId]
-              : event.reason ===
-                  `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`;
-          });
-          return terminal
-            ? work.result.blocked
-              ? "blocked"
-              : "accepted"
-            : undefined;
-        };
+        if (reservation.version === 2) {
+          const stored = reservation as RevisionBinding;
+          const { revisionDigest: savedDigest, ...sealed } = stored;
+          if (
+            savedDigest !== revisionDigest(sealed) ||
+            canonicalJson(stored.result) !== canonicalJson(work.result) ||
+            canonicalJson(stored.revisionRequests) !==
+              canonicalJson(work.revisionRequests ?? [])
+          )
+            throw new CliError(
+              EXIT.CONFLICT,
+              "Submission retry changed revision binding",
+            );
+        }
+        const acceptedState = async () =>
+          acceptedSubmission(
+            await runtime.registry.snapshot(),
+            {
+              runId: id,
+              taskId,
+              baselineSequence: reservation.baselineSequence as number,
+            },
+            work.result,
+          );
         submissionState = await acceptedState();
         if (!submissionState) {
           const current = await runtime.registry.snapshot();
@@ -768,7 +1132,7 @@ export async function runCli(
               `Submission ${effects() ? "partial" : "pending"}; no routable invocation for exact retry`,
             );
           try {
-            await runSkillPackage({
+            const acceptedWork = await runSkillPackage({
               orchestrator: runtime.orchestrator,
               package: skill,
               runId: id,
@@ -786,6 +1150,14 @@ export async function runCli(
                 return work;
               },
             });
+            if (
+              canonicalJson(acceptedWork.revisionRequests ?? []) !==
+              canonicalJson(work.revisionRequests ?? [])
+            )
+              throw new CliError(
+                EXIT.CONFLICT,
+                "Skill revision request side-channel changed",
+              );
           } catch (error) {
             const latest = await runtime.registry.snapshot();
             if (
@@ -811,6 +1183,41 @@ export async function runCli(
               "Submission remains partial after Core invocation",
             );
         }
+        if (work.revisionRequests?.length) {
+          let handoff = reservation as RevisionBinding;
+          if (reservation.version === 1) {
+            const recovered: Omit<RevisionBinding, "revisionDigest"> = {
+              version: 2,
+              runId: id,
+              taskId,
+              packageDigest: reservation.packageDigest as string,
+              workDigest: reservation.workDigest as string,
+              baselineSequence: reservation.baselineSequence as number,
+              result: work.result,
+              revisionRequests: work.revisionRequests,
+            };
+            handoff = {
+              ...recovered,
+              revisionDigest: revisionDigest(recovered),
+            };
+            const recoveryFile = markerFile.replace(
+              /\.json$/,
+              ".revision.json",
+            );
+            if (!(await atomicCreateJson(recoveryFile, handoff))) {
+              const stored = await readJson(
+                root,
+                path.relative(root, recoveryFile),
+              );
+              if (canonicalJson(stored) !== canonicalJson(handoff))
+                throw new CliError(
+                  EXIT.CONFLICT,
+                  "Recovered revision binding changed",
+                );
+            }
+          }
+          await routeRevisionRequests(root, markerFile, handoff, runtime);
+        }
       } else {
         await runtime.orchestrator.invoke(
           id,
@@ -821,11 +1228,15 @@ export async function runCli(
         );
       }
       const plan = await runtime.orchestrator.next(id, tasks);
+      const revisionRequests = revisionOverview(
+        await revisionRecords(root, id, runtime),
+      );
       emit(
         io,
         {
           ...summarizeNext(plan, await outputFile(root, plan)),
           ...(submissionState ? { submissionState } : {}),
+          ...(revisionRequests ? { revisionRequests } : {}),
         },
         json,
       );
