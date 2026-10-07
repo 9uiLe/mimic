@@ -1,0 +1,164 @@
+{
+  "artifacts": [
+    {
+      "meta": {
+        "id": "art_rb157_product_intent",
+        "type": "product-definition",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Riverbend single-order repair-desk intent",
+        "createdAt": "2026-10-07T13:29:06.319791Z"
+      },
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      },
+      "lifecycle": {
+        "status": "proposed",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s01.product-definition",
+        "runId": "run_9ui157_live_corrected",
+        "createdAt": "2026-10-07T13:29:06.319791Z"
+      },
+      "dependencies": [
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1,
+          "onChange": "revise"
+        }
+      ],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content/summary",
+          "kind": "derived",
+          "inputRefs": [
+            "task_product/humanBrief",
+            "art_rb157_current_inspection@1"
+          ]
+        },
+        {
+          "path": "/content/vision",
+          "kind": "hypothesis",
+          "rationale": "A bounded expression of the synthetic brief's desired outcome; no dispatcher validation exists."
+        },
+        {
+          "path": "/content/goals/0",
+          "kind": "derived",
+          "inputRefs": ["task_product/humanBrief"]
+        },
+        {
+          "path": "/content/goals/1",
+          "kind": "derived",
+          "inputRefs": ["task_product/humanBrief"]
+        },
+        {
+          "path": "/content/goals/2",
+          "kind": "derived",
+          "inputRefs": ["art_rb157_current_inspection@1"]
+        },
+        {
+          "path": "/content/nonGoals/0",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/limits/0"]
+        },
+        {
+          "path": "/content/nonGoals/1",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/limits/1"]
+        },
+        {
+          "path": "/content/nonGoals/2",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/limits/2"]
+        }
+      ],
+      "content": {
+        "summary": "Proposed synthetic repair-desk interface for a dispatcher to inspect one public water-leak work order before assigning a crew. The brief establishes a design task, not validated demand or a deployed product.",
+        "vision": "Let a dispatcher carry the identity and relevant urgency cues of one work order from the queue into its detail before a consequential crew assignment.",
+        "goals": [
+          "Show the work-order ID, severity, and age before the dispatcher reaches the assignment action.",
+          "Preserve the exact work-order ID between list and detail so the dispatcher can confirm which order is being inspected.",
+          "Keep any proposed interface behavior distinguishable from the constructed list/detail/assignment inventory."
+        ],
+        "nonGoals": [
+          "Claim market demand, field research, or a deployed Riverbend backend.",
+          "Introduce multi-order comparison or bulk assignment as an approved product requirement.",
+          "Treat an interface proposal as authorization to change backend behavior or to assign a real crew."
+        ]
+      }
+    }
+  ],
+  "work": {
+    "result": {
+      "runId": "run_9ui157_live_corrected",
+      "taskId": "task_product",
+      "skillId": "mimic.s01.product-definition",
+      "inputRefs": [
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1
+        }
+      ],
+      "outputRefs": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "revision": 1,
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82"
+        }
+      ],
+      "proposal": {
+        "packetId": "packet_rb157_product",
+        "reason": "Review provisional synthetic product intent without approving it in this run",
+        "items": [
+          {
+            "id": "proposal_rb157_product",
+            "ref": {
+              "artifactId": "art_rb157_product_intent",
+              "revision": 1,
+              "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82"
+            },
+            "alternatives": [
+              "approve exact intent after review",
+              "request revision",
+              "reject"
+            ],
+            "rationale": "Product intent is PROPOSE_ONLY and must be reviewed before canonical use.",
+            "evidenceLimits": [
+              "Synthetic brief and constructed inventory only; no dispatcher or market research."
+            ],
+            "dependents": ["task_users", "task_contract"]
+          }
+        ]
+      }
+    },
+    "findings": [
+      {
+        "claim": "The goal follows the bounded synthetic brief and current single-order capability.",
+        "evidenceRefs": [
+          "task_product/humanBrief",
+          "art_rb157_current_inspection@1"
+        ],
+        "status": "PASS"
+      },
+      {
+        "claim": "Market need and actual dispatcher behavior have not been studied.",
+        "evidenceRefs": [],
+        "status": "UNVERIFIED"
+      }
+    ],
+    "unknowns": [
+      {
+        "question": "Does a real dispatcher need additional information or decision steps before assignment?",
+        "affectedTaskIds": ["task_product"]
+      }
+    ]
+  }
+}

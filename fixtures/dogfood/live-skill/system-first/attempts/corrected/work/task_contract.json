@@ -1,0 +1,312 @@
+{
+  "artifacts": [
+    {
+      "meta": {
+        "id": "art_rb157_ui_contract",
+        "type": "product-ui-contract",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Riverbend selected-order inspection UI contract",
+        "createdAt": "2026-10-07T13:30:26.265944Z"
+      },
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s05.ui-contract-manager",
+        "runId": "run_9ui157_live_corrected",
+        "createdAt": "2026-10-07T13:30:26.265944Z"
+      },
+      "dependencies": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+          "revision": 1,
+          "onChange": "revise"
+        },
+        {
+          "artifactId": "art_rb157_dispatch_task",
+          "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+          "revision": 1,
+          "onChange": "revise"
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1,
+          "onChange": "revise"
+        }
+      ],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content/summary",
+          "kind": "derived",
+          "inputRefs": [
+            "art_rb157_current_inspection@1",
+            "art_rb157_product_intent@1",
+            "art_rb157_dispatch_task@1"
+          ]
+        },
+        {
+          "path": "/content/navigation/0",
+          "kind": "fact",
+          "evidenceRefs": [
+            "art_rb157_current_inspection@1#/content/description"
+          ]
+        },
+        {
+          "path": "/content/navigation/1",
+          "kind": "hypothesis",
+          "rationale": "Return navigation is a proposed UI commitment, not observed in the inventory."
+        },
+        {
+          "path": "/content/terminology/0",
+          "kind": "derived",
+          "inputRefs": [
+            "art_rb157_product_intent@1",
+            "art_rb157_dispatch_task@1"
+          ]
+        },
+        {
+          "path": "/content/terminology/1",
+          "kind": "derived",
+          "inputRefs": ["art_rb157_current_inspection@1"]
+        },
+        {
+          "path": "/content/entityContext/0",
+          "kind": "derived",
+          "inputRefs": [
+            "art_rb157_dispatch_task@1",
+            "art_rb157_product_intent@1"
+          ]
+        },
+        {
+          "path": "/content/entityContext/1",
+          "kind": "derived",
+          "inputRefs": [
+            "art_rb157_dispatch_task@1",
+            "art_rb157_current_inspection@1"
+          ]
+        },
+        {
+          "path": "/content/entityContext/2",
+          "kind": "hypothesis",
+          "rationale": "Supporting context and freshness treatment are proposed pending system and user validation."
+        },
+        {
+          "path": "/content/accessibilityBaseline",
+          "kind": "derived",
+          "inputRefs": [
+            "skills/s05-ui-contract-manager/SKILL.md",
+            "Mimic v1 architecture and operating reference"
+          ]
+        }
+      ],
+      "content": {
+        "summary": "CURRENT in the constructed inventory: the list exposes work-order ID, zone, severity, age, and crew; one detail can be opened and one crew assigned there. REQUIRED by the synthetic task: preserve the selected ID and expose severity and age before assignment, with WCAG 2.2 AA. PROPOSED UI: show a selected-order context header in detail and a return path to the list. UNRESOLVED: whether detail refreshes severity, age, or assignment and how errors or authorization work; no deployed behavior is established.",
+        "navigation": [
+          "Current: work-order list → selected work-order detail; assignment action is present in detail.",
+          "Proposed: detail → work-order list return action retaining a visible selected ID cue; test the actual return behavior before treating it as current."
+        ],
+        "terminology": [
+          "Work order means one identified water-leak service item; use its exact ID in list and detail.",
+          "Severity, age, and assigned crew use the inventory's terms and values; no new status taxonomy is defined."
+        ],
+        "entityContext": [
+          "Required: show the same exact work-order ID on the selected list item, detail header, and pre-assignment action context.",
+          "Required: show severity and age for that ID before enabling the crew assignment path; identify when values came from the list rather than claiming an unobserved detail refresh.",
+          "Proposed: keep zone and current crew visible as supporting context; unresolved freshness, authorization, and assignment result must be surfaced rather than assumed."
+        ],
+        "accessibilityBaseline": "WCAG 2.2 AA"
+      }
+    },
+    {
+      "meta": {
+        "id": "art_rb157_detail_freshness_request",
+        "type": "system-request",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Clarify or provide selected-order pre-assignment data freshness",
+        "createdAt": "2026-10-07T13:30:26.265944Z"
+      },
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s05.ui-contract-manager",
+        "runId": "run_9ui157_live_corrected",
+        "createdAt": "2026-10-07T13:30:26.265944Z"
+      },
+      "dependencies": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+          "revision": 1,
+          "onChange": "revise"
+        },
+        {
+          "artifactId": "art_rb157_dispatch_task",
+          "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+          "revision": 1,
+          "onChange": "revise"
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1,
+          "onChange": "revise"
+        }
+      ],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content/summary",
+          "kind": "hypothesis",
+          "rationale": "Detail freshness is unknown; this asks for clarification or a bounded proposed change."
+        },
+        {
+          "path": "/content/changeType",
+          "kind": "derived",
+          "inputRefs": [
+            "art_rb157_current_inspection@1",
+            "art_rb157_dispatch_task@1"
+          ]
+        },
+        {
+          "path": "/content/request",
+          "kind": "hypothesis",
+          "rationale": "A detail-level guarantee could resolve the task's pre-assignment uncertainty; an existing implementation may make a new endpoint unnecessary.",
+          "evidenceRefs": [
+            "art_rb157_current_inspection@1#/content/description",
+            "art_rb157_dispatch_task@1#/content/tasks/0"
+          ]
+        },
+        {
+          "path": "/content/rationale",
+          "kind": "derived",
+          "inputRefs": [
+            "art_rb157_dispatch_task@1",
+            "art_rb157_current_inspection@1"
+          ]
+        }
+      ],
+      "content": {
+        "summary": "Proposed, conditional upstream request: establish whether the detail view can verify the selected work order's severity, age, and assignment immediately before crew assignment. No such refresh or freshness guarantee is evidenced in the constructed inventory.",
+        "changeType": "capability",
+        "request": "For an exact work-order ID, document and expose the detail read's severity, age, assigned crew, update time, and relevant error/authorization behavior before crew assignment. If the existing detail already provides these, supply evidence and semantics instead of adding a new endpoint. If it does not, propose the smallest read or freshness mechanism; no comparison or bulk-assignment API is requested.",
+        "rationale": "The task requires inspecting severity and age for the same ID before assignment, while the only evidenced fields are on a synthetic list response. Echoing list values in detail could be stale, especially age. A detail-level freshness contract would resolve whether the proposed UI may present these values as current. This is a hypothesis requiring upstream review, not an implemented capability or blocker to provisional UI exploration."
+      }
+    }
+  ],
+  "work": {
+    "result": {
+      "runId": "run_9ui157_live_corrected",
+      "taskId": "task_contract",
+      "skillId": "mimic.s05.ui-contract-manager",
+      "inputRefs": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_dispatch_task",
+          "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1
+        }
+      ],
+      "outputRefs": [
+        {
+          "artifactId": "art_rb157_ui_contract",
+          "revision": 1,
+          "lockDigest": "sha256:66181b1ac4b7a2267b29d5e13ceab64ec9f122c84d78ac9e99f30d8fc2da8296"
+        },
+        {
+          "artifactId": "art_rb157_detail_freshness_request",
+          "revision": 1,
+          "lockDigest": "sha256:dfaa5eaab6547d305df6ec1c0aa7bf2303a2a51f6904e169f804e44940cd4723"
+        }
+      ]
+    },
+    "findings": [
+      {
+        "claim": "The selected ID, severity, and age task is supported by exact provisional inputs.",
+        "evidenceRefs": [
+          "art_rb157_dispatch_task@1",
+          "art_rb157_current_inspection@1"
+        ],
+        "status": "PASS"
+      },
+      {
+        "claim": "Detail refresh, errors, and authorization are not established.",
+        "evidenceRefs": [],
+        "status": "UNVERIFIED"
+      }
+    ],
+    "unknowns": [
+      {
+        "question": "Does existing detail provide authoritative pre-assignment values, or is a new read needed?",
+        "affectedTaskIds": ["task_contract"]
+      }
+    ],
+    "revisionRequests": [
+      {
+        "runId": "run_9ui157_live_corrected",
+        "source": {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+          "revision": 1
+        },
+        "request": {
+          "artifactId": "art_rb157_detail_freshness_request",
+          "revision": 1,
+          "lockDigest": "sha256:dfaa5eaab6547d305df6ec1c0aa7bf2303a2a51f6904e169f804e44940cd4723"
+        },
+        "affectedLocks": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_dispatch_task",
+            "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+            "revision": 1
+          }
+        ],
+        "evidenceRefs": [
+          "art_rb157_current_inspection@1#/content/description",
+          "art_rb157_dispatch_task@1#/content/tasks/0"
+        ],
+        "reason": "Clarify or propose detail freshness before treating pre-assignment values as current"
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "instancePath": "/meta/schemaVersion",
+    "schemaPath": "version",
+    "keyword": "schemaVersion",
+    "message": "Unsupported artifact schema version; expected 1.0.0",
+    "params": {
+      "supported": "1.0.0",
+      "actualType": "undefined"
+    }
+  }
+]

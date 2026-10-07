@@ -1,0 +1,59 @@
+{
+  "runId": "run_9ui157_live_corrected",
+  "state": "active",
+  "actions": [
+    {
+      "taskId": "task_capability",
+      "action": "GENERATE",
+      "reason": "No applicable approved target",
+      "invocation": {
+        "runId": "run_9ui157_live_corrected",
+        "taskId": "task_capability",
+        "skillId": "mimic.s04.system-capability-extractor",
+        "allowedOutputTypes": [
+          "system-capability"
+        ],
+        "intent": "create",
+        "scopeOwnerId": "org_local",
+        "inputRefs": [],
+        "inputBindings": [],
+        "evidenceFiles": [
+          "inputs/input-packet.json"
+        ],
+        "assumptions": [
+          "Constructed inventory only; endpoint semantics, authorization, errors, and deployment are unknown."
+        ],
+        "authority": "AUTONOMOUS"
+      },
+      "gaps": [
+        "Optional product-context (product-definition) unavailable",
+        "Optional user-tasks (user-task-model) unavailable"
+      ]
+    },
+    {
+      "taskId": "task_product",
+      "action": "BLOCK",
+      "reason": "Required upstream task is not available yet",
+      "blockKind": "transient"
+    },
+    {
+      "taskId": "task_users",
+      "action": "BLOCK",
+      "reason": "Required upstream task is not available yet",
+      "blockKind": "transient"
+    },
+    {
+      "taskId": "task_contract",
+      "action": "BLOCK",
+      "reason": "Required upstream task is not available yet",
+      "blockKind": "transient"
+    }
+  ],
+  "commitPoints": [],
+  "blockers": {
+    "task_product": "Required upstream task is not available yet",
+    "task_users": "Required upstream task is not available yet",
+    "task_contract": "Required upstream task is not available yet"
+  },
+  "evidenceGaps": []
+}

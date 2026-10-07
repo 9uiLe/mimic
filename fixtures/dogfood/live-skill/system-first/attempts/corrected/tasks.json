@@ -1,0 +1,227 @@
+[
+  {
+    "id": "task_capability",
+    "skillId": "mimic.s04.system-capability-extractor",
+    "outputType": "system-capability",
+    "scopeOwnerId": "org_local",
+    "intent": "create",
+    "authority": "AUTONOMOUS",
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "product-context",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "user-tasks",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "implementation-evidence",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "system-documentation",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "executable-evidence",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "existing-capability",
+              "kind": "artifact",
+              "artifactType": "system-capability",
+              "schemaVersion": "1.0.0"
+            }
+          ]
+        }
+      ]
+    },
+    "evidenceFiles": ["inputs/input-packet.json"],
+    "assumptions": [
+      "Constructed inventory only; endpoint semantics, authorization, errors, and deployment are unknown."
+    ]
+  },
+  {
+    "id": "task_product",
+    "skillId": "mimic.s01.product-definition",
+    "outputType": "product-definition",
+    "scopeOwnerId": "org_local",
+    "intent": "create",
+    "authority": "PROPOSE_ONLY",
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "user-tasks",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "system-context",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "research",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "human-intent",
+              "kind": "human-brief"
+            },
+            {
+              "name": "existing-definition",
+              "kind": "artifact",
+              "artifactType": "product-definition",
+              "schemaVersion": "1.0.0"
+            }
+          ]
+        }
+      ]
+    },
+    "dependsOn": ["task_capability"],
+    "humanBrief": "Provisional Riverbend repair-desk product intent: support a dispatcher in inspecting severity and age of one public water-leak work order before crew assignment while preserving work-order identity between list and detail. This is a synthetic brief, not market validation.",
+    "assumptions": ["No market or user research provided."]
+  },
+  {
+    "id": "task_users",
+    "skillId": "mimic.s02.user-task-modeling",
+    "outputType": "user-task-model",
+    "scopeOwnerId": "org_local",
+    "intent": "create",
+    "authority": "AUTONOMOUS",
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "system-context",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "existing-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "research",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "product-definition",
+              "kind": "artifact",
+              "artifactType": "product-definition",
+              "schemaVersion": "1.0.0"
+            },
+            {
+              "name": "bounded-product-brief",
+              "kind": "human-brief"
+            }
+          ]
+        },
+        {
+          "oneOf": [
+            {
+              "name": "task-evidence",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "explicit-task-assumptions",
+              "kind": "human-brief"
+            }
+          ]
+        }
+      ]
+    },
+    "dependsOn": ["task_product"],
+    "humanBrief": "Bounded synthetic task basis: a dispatcher inspects one water-leak work order severity and age before assigning a crew, retaining its exact ID from list into detail. Treat actor behavior beyond this as assumptions.",
+    "assumptions": [
+      "No observed dispatcher sessions, errors, accessibility study or validated handoff behavior."
+    ]
+  },
+  {
+    "id": "task_contract",
+    "skillId": "mimic.s05.ui-contract-manager",
+    "outputType": "product-ui-contract",
+    "scopeOwnerId": "org_local",
+    "intent": "create",
+    "authority": "PROPOSE_ONLY",
+    "inputs": {
+      "required": [
+        {
+          "name": "product-definition",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "user-task-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "system-capability",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0"
+        }
+      ],
+      "optional": [
+        {
+          "name": "brand",
+          "kind": "artifact",
+          "artifactType": "brand",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "existing-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "approved-rules",
+          "kind": "artifact",
+          "artifactType": "design-system-asset",
+          "schemaVersion": "1.0.0"
+        }
+      ],
+      "alternatives": []
+    },
+    "dependsOn": ["task_users"],
+    "assumptions": [
+      "Use only exact routed artifacts and the fixed WCAG 2.2 AA baseline; unspecified semantics remain unresolved."
+    ],
+    "additionalOutputTypes": ["system-request"]
+  }
+]

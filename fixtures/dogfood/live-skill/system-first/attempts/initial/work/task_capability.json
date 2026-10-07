@@ -1,0 +1,113 @@
+{
+  "artifacts": [
+    {
+      "meta": {
+        "id": "art_rb157_current_inspection",
+        "type": "system-capability",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Riverbend constructed single-order inspection capability",
+        "createdAt": "2026-10-07T13:26:43.507620Z"
+      },
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s04.system-capability-extractor",
+        "runId": "run_9ui157_live_20261007",
+        "createdAt": "2026-10-07T13:26:43.507620Z"
+      },
+      "dependencies": [],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content/summary",
+          "kind": "fact",
+          "evidenceRefs": [
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1"
+          ]
+        },
+        {
+          "path": "/content/capabilityId",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/system"]
+        },
+        {
+          "path": "/content/availability",
+          "kind": "fact",
+          "evidenceRefs": [
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1"
+          ]
+        },
+        {
+          "path": "/content/description",
+          "kind": "fact",
+          "evidenceRefs": [
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1",
+            "inputs/input-packet.json#/system/observedInventory/2"
+          ]
+        },
+        {
+          "path": "/content/supportingEvidence",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/system/observedInventory"]
+        }
+      ],
+      "content": {
+        "summary": "Current only within the constructed Riverbend inventory: list work orders, open one detail, and assign one crew from detail. This is not evidence of a deployed service.",
+        "capabilityId": "riverbend.single_order_inspection_assignment",
+        "availability": "current",
+        "description": "The synthetic GET /work-orders response supplies ID, zone, severity, age, and assigned crew. The screen inventory permits opening a work-order detail and assigning one crew there. No comparison or bulk-assignment endpoint is inventoried. Authorization, error, persistence, and lifecycle semantics remain unknown.",
+        "supportingEvidence": [
+          "inputs/input-packet.json#/system/observedInventory/0",
+          "inputs/input-packet.json#/system/observedInventory/1",
+          "inputs/input-packet.json#/system/observedInventory/2"
+        ]
+      }
+    }
+  ],
+  "work": {
+    "result": {
+      "runId": "run_9ui157_live_20261007",
+      "taskId": "task_capability",
+      "skillId": "mimic.s04.system-capability-extractor",
+      "inputRefs": [],
+      "outputRefs": [
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "revision": 1,
+          "lockDigest": "sha256:5ca707e578ea27669c35cf3e8e57d8f54aba9f0fbb0e0ee86f67f82a6371d402"
+        }
+      ]
+    },
+    "findings": [
+      {
+        "claim": "Constructed list and detail inventory supports a bounded current-capability label, not a deployed-backend claim.",
+        "evidenceRefs": ["inputs/input-packet.json#/system/observedInventory"],
+        "status": "PASS"
+      },
+      {
+        "claim": "Authorization, assignment persistence, errors, and lifecycle were not supplied.",
+        "evidenceRefs": [],
+        "status": "UNVERIFIED"
+      }
+    ],
+    "unknowns": [
+      {
+        "question": "What authorization, assignment-result, error, and lifecycle behavior does a deployed system provide?",
+        "affectedTaskIds": ["task_capability"]
+      }
+    ]
+  }
+}

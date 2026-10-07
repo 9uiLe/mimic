@@ -1,0 +1,152 @@
+{
+  "runId": "run_9ui157_live_reviewed",
+  "state": "review-ready",
+  "actions": [
+    {
+      "taskId": "task_capability",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_product",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_users",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_contract",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    }
+  ],
+  "commitPoints": [
+    {
+      "packetId": "packet_rb157_product",
+      "proposalIds": [
+        "proposal_rb157_product"
+      ]
+    }
+  ],
+  "blockers": {},
+  "evidenceGaps": [
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/availability",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/capabilityId",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/description",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/supportingEvidence",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/2",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_dispatch_task",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_dispatch_task",
+      "path": "/content/tasks/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_dispatch_task",
+      "path": "/content/tasks/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/accessibilityBaseline",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/entityContext/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/entityContext/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/navigation/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/terminology/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_ui_contract",
+      "path": "/content/terminology/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_detail_freshness_request",
+      "path": "/content/changeType",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_detail_freshness_request",
+      "path": "/content/rationale",
+      "reason": "References require verification"
+    }
+  ]
+}
