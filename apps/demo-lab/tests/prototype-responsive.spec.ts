@@ -295,39 +295,21 @@ for (const breakpointPx of [320, 1600]) {
   });
 }
 
-test("Current and Proposed responsive bundles retain classification and visible notice", async ({
-  page,
-  browser,
-}) => {
-  test.setTimeout(120_000);
-  const fixture = await setupPrototypeModesFixture();
-  const result = await buildPrototypeModes(
-    fixture.store,
-    withResponsiveMode(fixture.modePlan),
-    fixture.root,
-  );
-  const proposed = result.proposed!;
-  const server = createServer(async (request, response) => {
-    const name = request.url === "/" ? "index.html" : request.url?.slice(1);
-    if (
-      !name ||
-      !["index.html", "prototype.css", "prototype.js"].includes(name)
-    ) {
-      response.writeHead(404).end();
-      return;
-    }
-    response.writeHead(200, {
-      "content-type": name.endsWith(".js")
-        ? "text/javascript"
-        : name.endsWith(".css")
-          ? "text/css"
-          : "text/html",
-    });
-    response.end(await readFile(path.join(proposed.directory, name)));
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  try {
-    for (const output of [result.current, proposed]) {
+for (const mode of ["current", "proposed"] as const) {
+  test(`${mode} responsive bundle retains classification${mode === "proposed" ? " and visible notice" : ""}`, async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const fixture = await setupPrototypeModesFixture();
+    let server: ReturnType<typeof createServer> | undefined;
+    try {
+      const result = await buildPrototypeModes(
+        fixture.store,
+        withResponsiveMode(fixture.modePlan),
+        fixture.root,
+      );
+      const output = mode === "current" ? result.current : result.proposed!;
       const input = {
         trustedRoot: fixture.root,
         directory: output.directory,
@@ -347,29 +329,52 @@ test("Current and Proposed responsive bundles retain classification and visible 
         ))
           expect(item.state, `${item.criterion}: ${item.reason}`).toBe("PASS");
       }
+      if (mode === "current") return;
+      server = createServer(async (request, response) => {
+        const name = request.url === "/" ? "index.html" : request.url?.slice(1);
+        if (
+          !name ||
+          !["index.html", "prototype.css", "prototype.js"].includes(name)
+        ) {
+          response.writeHead(404).end();
+          return;
+        }
+        response.writeHead(200, {
+          "content-type": name.endsWith(".js")
+            ? "text/javascript"
+            : name.endsWith(".css")
+              ? "text/css"
+              : "text/html",
+        });
+        response.end(await readFile(path.join(output.directory, name)));
+      });
+      await new Promise<void>((resolve) =>
+        server!.listen(0, "127.0.0.1", resolve),
+      );
+      const address = server.address();
+      if (!address || typeof address === "string")
+        throw new Error("No local server address");
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(`http://127.0.0.1:${address.port}/`);
+      await page.getByRole("button", { name: "Show success" }).click();
+      await expect(
+        page.getByRole("heading", { name: "System mode: Proposed" }),
+      ).toBeVisible();
+      await expect(
+        page
+          .locator("#mode-notice-success")
+          .getByText("Proposed, not implemented", { exact: false }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Candidate identity", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Choose mobile candidate" }),
+      ).toBeVisible();
+    } finally {
+      if (server?.listening)
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      await rm(fixture.root, { recursive: true, force: true });
     }
-    const address = server.address();
-    if (!address || typeof address === "string")
-      throw new Error("No local server address");
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`http://127.0.0.1:${address.port}/`);
-    await page.getByRole("button", { name: "Show success" }).click();
-    await expect(
-      page.getByRole("heading", { name: "System mode: Proposed" }),
-    ).toBeVisible();
-    await expect(
-      page
-        .locator("#mode-notice-success")
-        .getByText("Proposed, not implemented", { exact: false }),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Candidate identity", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Choose mobile candidate" }),
-    ).toBeVisible();
-  } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    await rm(fixture.root, { recursive: true, force: true });
-  }
-});
+  });
+}
