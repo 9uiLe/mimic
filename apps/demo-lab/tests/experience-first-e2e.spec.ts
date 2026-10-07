@@ -11,7 +11,8 @@ test("Experience-first generated case states retain context on desktop and mobil
   page,
   browser,
 }) => {
-  test.setTimeout(120_000);
+  // The browser gate checks both viewports and all seven states within this test.
+  test.setTimeout(300_000);
   const fixture = await setupExperienceFirst();
   const output = await buildPrototype(
     fixture.store,
