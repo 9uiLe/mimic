@@ -1,0 +1,151 @@
+{
+  "runId": "run_9ui157_live_reviewed",
+  "state": "review-ready",
+  "actions": [
+    {
+      "taskId": "task_capability",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_product",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_users",
+      "action": "GENERATE",
+      "reason": "No applicable approved target",
+      "invocation": {
+        "runId": "run_9ui157_live_reviewed",
+        "taskId": "task_users",
+        "skillId": "mimic.s02.user-task-modeling",
+        "allowedOutputTypes": [
+          "user-task-model"
+        ],
+        "intent": "create",
+        "scopeOwnerId": "org_local",
+        "inputRefs": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+            "revision": 1
+          }
+        ],
+        "inputBindings": [
+          {
+            "name": "product-definition",
+            "refs": [
+              {
+                "artifactId": "art_rb157_product_intent",
+                "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "name": "system-context",
+            "refs": [
+              {
+                "artifactId": "art_rb157_current_inspection",
+                "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "evidenceFiles": [],
+        "assumptions": [
+          "No observed dispatcher sessions, errors, accessibility study or validated handoff behavior.",
+          "Provisional input art_rb157_product_intent@1 is not approved canonical state",
+          "Provisional input art_rb157_current_inspection@1 is not approved canonical state"
+        ],
+        "authority": "AUTONOMOUS",
+        "humanBrief": "Bounded synthetic task basis: a dispatcher inspects one water-leak work order severity and age before assigning a crew, retaining its exact ID from list into detail. Treat actor behavior beyond this as assumptions."
+      },
+      "gaps": [
+        "Optional existing-model (user-task-model) unavailable",
+        "Optional research unavailable"
+      ]
+    },
+    {
+      "taskId": "task_contract",
+      "action": "BLOCK",
+      "reason": "Required upstream task is not available yet",
+      "blockKind": "transient"
+    }
+  ],
+  "commitPoints": [
+    {
+      "packetId": "packet_rb157_product",
+      "proposalIds": [
+        "proposal_rb157_product"
+      ]
+    }
+  ],
+  "blockers": {
+    "task_contract": "Required upstream task is not available yet"
+  },
+  "evidenceGaps": [
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/availability",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/capabilityId",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/description",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/supportingEvidence",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/2",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    }
+  ]
+}

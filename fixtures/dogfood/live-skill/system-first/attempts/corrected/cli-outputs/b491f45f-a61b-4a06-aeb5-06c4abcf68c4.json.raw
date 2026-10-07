@@ -1,0 +1,186 @@
+{
+  "runId": "run_9ui157_live_corrected",
+  "state": "review-ready",
+  "actions": [
+    {
+      "taskId": "task_capability",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_product",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_users",
+      "action": "IGNORE",
+      "reason": "Task is not available on this Run"
+    },
+    {
+      "taskId": "task_contract",
+      "action": "GENERATE",
+      "reason": "No applicable approved target",
+      "invocation": {
+        "runId": "run_9ui157_live_corrected",
+        "taskId": "task_contract",
+        "skillId": "mimic.s05.ui-contract-manager",
+        "allowedOutputTypes": [
+          "product-ui-contract",
+          "system-request"
+        ],
+        "intent": "create",
+        "scopeOwnerId": "org_local",
+        "inputRefs": [
+          {
+            "artifactId": "art_rb157_product_intent",
+            "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_dispatch_task",
+            "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_rb157_current_inspection",
+            "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+            "revision": 1
+          }
+        ],
+        "inputBindings": [
+          {
+            "name": "product-definition",
+            "refs": [
+              {
+                "artifactId": "art_rb157_product_intent",
+                "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "name": "user-task-model",
+            "refs": [
+              {
+                "artifactId": "art_rb157_dispatch_task",
+                "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f",
+                "revision": 1
+              }
+            ]
+          },
+          {
+            "name": "system-capability",
+            "refs": [
+              {
+                "artifactId": "art_rb157_current_inspection",
+                "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
+                "revision": 1
+              }
+            ]
+          }
+        ],
+        "evidenceFiles": [],
+        "assumptions": [
+          "Use only exact routed artifacts and the fixed WCAG 2.2 AA baseline; unspecified semantics remain unresolved.",
+          "Provisional input art_rb157_product_intent@1 is not approved canonical state",
+          "Provisional input art_rb157_dispatch_task@1 is not approved canonical state",
+          "Provisional input art_rb157_current_inspection@1 is not approved canonical state"
+        ],
+        "authority": "PROPOSE_ONLY"
+      },
+      "gaps": [
+        "Optional brand (brand) unavailable",
+        "Optional existing-contract (product-ui-contract) unavailable",
+        "Optional journey (journey) unavailable",
+        "Optional approved-rules (design-system-asset) unavailable"
+      ]
+    }
+  ],
+  "commitPoints": [
+    {
+      "packetId": "packet_rb157_product",
+      "proposalIds": [
+        "proposal_rb157_product"
+      ]
+    }
+  ],
+  "blockers": {},
+  "evidenceGaps": [
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/availability",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/capabilityId",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/description",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_current_inspection",
+      "path": "/content/supportingEvidence",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/goals/2",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/1",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/nonGoals/2",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_product_intent",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_dispatch_task",
+      "path": "/content/summary",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_dispatch_task",
+      "path": "/content/tasks/0",
+      "reason": "References require verification"
+    },
+    {
+      "artifactId": "art_rb157_dispatch_task",
+      "path": "/content/tasks/1",
+      "reason": "References require verification"
+    }
+  ]
+}

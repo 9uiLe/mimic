@@ -1,0 +1,48 @@
+{
+  "repoStartSha": "2882fa665af7f23b5faa010fa2c27497cfe88c25",
+  "previousBranchSha": "a307bef1c88c37034bbdba019064a52dc7f55e6a",
+  "host": "Codex local executor on macOS; CLI on same machine",
+  "model": "Exact model identity not verifiable from CLI or task metadata; controlling AI is this Codex session",
+  "node": "24.21.0",
+  "pnpm": "12.9.1",
+  "runId": "run_9ui157_live_reviewed",
+  "initialRunId": "run_9ui157_live_20261007",
+  "artifactRefs": [
+    {
+      "id": "art_rb157_current_inspection@1",
+      "digest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+      "lifecycle": "provisional",
+      "approval": "pending"
+    },
+    {
+      "id": "art_rb157_detail_freshness_request@1",
+      "digest": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4",
+      "lifecycle": "provisional",
+      "approval": "pending"
+    },
+    {
+      "id": "art_rb157_dispatch_task@1",
+      "digest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+      "lifecycle": "provisional",
+      "approval": "pending"
+    },
+    {
+      "id": "art_rb157_product_intent@1",
+      "digest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+      "lifecycle": "proposed",
+      "approval": "pending"
+    },
+    {
+      "id": "art_rb157_ui_contract@1",
+      "digest": "sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38",
+      "lifecycle": "provisional",
+      "approval": "pending"
+    }
+  ],
+  "canonicalCount": 0,
+  "eventCount": 11,
+  "pendingPacketIds": ["packet_rb157_product"],
+  "priorCorrectedRunId": "run_9ui157_live_corrected",
+  "integratedMainSha": "2e7fded3010caa6f13fc4d670c40b49b79ae0db9",
+  "priorProvenanceCorrectionRunId": "run_9ui157_live_review_fix"
+}

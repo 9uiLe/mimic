@@ -1,0 +1,133 @@
+{
+  "artifacts": [
+    {
+      "meta": {
+        "id": "art_rb157_dispatch_task",
+        "type": "user-task-model",
+        "schemaVersion": "1.0.0",
+        "revision": 1,
+        "title": "Riverbend provisional dispatcher inspection task",
+        "createdAt": "2026-10-07T14:02:13.292441Z"
+      },
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      },
+      "lifecycle": {
+        "status": "provisional",
+        "freshness": "valid"
+      },
+      "origin": {
+        "actorKind": "skill",
+        "actorId": "mimic.s02.user-task-modeling",
+        "runId": "run_9ui157_live_reviewed",
+        "createdAt": "2026-10-07T14:02:13.292441Z"
+      },
+      "dependencies": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "revision": 1,
+          "onChange": "revise"
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "revision": 1,
+          "onChange": "revise"
+        }
+      ],
+      "approval": {
+        "status": "pending"
+      },
+      "provenance": [
+        {
+          "path": "/content/summary",
+          "kind": "derived",
+          "inputRefs": ["task_users/humanBrief", "art_rb157_product_intent@1"]
+        },
+        {
+          "path": "/content/users/0",
+          "kind": "assumption",
+          "rationale": "The actor and behavior are bounded by the synthetic task brief; no real dispatcher observation exists."
+        },
+        {
+          "path": "/content/tasks/0",
+          "kind": "derived",
+          "inputRefs": [
+            "task_users/humanBrief",
+            "art_rb157_current_inspection@1"
+          ]
+        },
+        {
+          "path": "/content/tasks/1",
+          "kind": "derived",
+          "inputRefs": [
+            "task_users/humanBrief",
+            "art_rb157_current_inspection@1"
+          ]
+        },
+        {
+          "path": "/content/tasks/2",
+          "kind": "hypothesis",
+          "rationale": "Interruption handling is a relevant safety case, but automatic retention behavior was not supplied."
+        }
+      ],
+      "content": {
+        "summary": "A synthetic dispatcher task model for inspecting one water-leak work order before crew assignment. Actor behavior is inferred from the brief, not observed in field use.",
+        "users": [
+          "Dispatcher: when preparing one crew assignment, opens an identified work order from the queue, checks its severity and age, and needs its ID to remain visible so the inspected order can be distinguished from other orders. This behavior is a task assumption, not an interview finding."
+        ],
+        "tasks": [
+          "From the work-order list, select one exact ID and open its detail; completion is that the detail identifies the same ID and exposes severity and age before assignment.",
+          "Review the one order's severity and age and decide whether to proceed to the available single-crew assignment action; completion is an explicit decision on that same ID, while authorization and persistence of any assignment remain unverified.",
+          "If inspection is interrupted or the dispatcher returns to the list, re-identify the order before any assignment; whether state is retained automatically is unknown and must be tested rather than assumed."
+        ]
+      }
+    }
+  ],
+  "work": {
+    "result": {
+      "runId": "run_9ui157_live_reviewed",
+      "taskId": "task_users",
+      "skillId": "mimic.s02.user-task-modeling",
+      "inputRefs": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "revision": 1
+        }
+      ],
+      "outputRefs": [
+        {
+          "artifactId": "art_rb157_dispatch_task",
+          "revision": 1,
+          "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1"
+        }
+      ]
+    },
+    "findings": [
+      {
+        "claim": "One dispatcher-like actor and an inspect-before-assignment task are identifiable in the synthetic brief.",
+        "evidenceRefs": ["task_users/humanBrief", "art_rb157_product_intent@1"],
+        "status": "PASS"
+      },
+      {
+        "claim": "Interruption behavior and any actual assignment result were not observed.",
+        "evidenceRefs": [],
+        "status": "UNVERIFIED"
+      }
+    ],
+    "unknowns": [
+      {
+        "question": "What does a dispatcher do after interruption, failed assignment, or a changed work-order record?",
+        "affectedTaskIds": ["task_users"]
+      }
+    ]
+  }
+}

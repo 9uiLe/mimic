@@ -1,0 +1,51 @@
+{
+  "runId": "run_9ui157_live_reviewed",
+  "taskId": "task_contract",
+  "workRevisionRequests": [
+    {
+      "runId": "run_9ui157_live_reviewed",
+      "source": {
+        "artifactId": "art_rb157_current_inspection",
+        "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+        "revision": 1
+      },
+      "request": {
+        "artifactId": "art_rb157_detail_freshness_request",
+        "revision": 1,
+        "lockDigest": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4"
+      },
+      "affectedLocks": [
+        {
+          "artifactId": "art_rb157_product_intent",
+          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_dispatch_task",
+          "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_rb157_current_inspection",
+          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "revision": 1
+        }
+      ],
+      "evidenceRefs": [
+        "art_rb157_current_inspection@1#/content/description",
+        "art_rb157_dispatch_task@1#/content/tasks/0"
+      ],
+      "reason": "Clarify or propose detail freshness before treating pre-assignment values as current"
+    }
+  ],
+  "submit": "accepted, exit 0; see attempts/final/commands.jsonl",
+  "readbackEventActions": [
+    "produce-provisional",
+    "produce-provisional",
+    "set-work"
+  ],
+  "readbackRequestArtifactPresent": true,
+  "readbackCanonicalSourceApproved": false,
+  "analysis": "Event absence alone cannot establish missing routing: Core requestUpstream validates an already-produced request and may return without a new event. The CLI submit implementation discards the runSkillPackage revisionRequests return value and provides no durable side-channel readback. Core requestUpstream additionally requires an approved source, whereas S04 remains provisional here.",
+  "separateUpstreamEventObserved": false
+}
