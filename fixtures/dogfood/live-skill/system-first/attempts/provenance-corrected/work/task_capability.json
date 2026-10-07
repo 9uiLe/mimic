@@ -7,7 +7,7 @@
         "schemaVersion": "1.0.0",
         "revision": 1,
         "title": "Riverbend constructed single-order inspection capability",
-        "createdAt": "2026-10-07T14:02:02.650039Z"
+        "createdAt": "2026-10-07T13:58:57.422814Z"
       },
       "scope": {
         "level": "organization",
@@ -20,8 +20,8 @@
       "origin": {
         "actorKind": "skill",
         "actorId": "mimic.s04.system-capability-extractor",
-        "runId": "run_9ui157_live_reviewed",
-        "createdAt": "2026-10-07T14:02:02.650039Z"
+        "runId": "run_9ui157_live_review_fix",
+        "createdAt": "2026-10-07T13:58:57.422814Z"
       },
       "dependencies": [],
       "approval": {
@@ -81,7 +81,7 @@
   ],
   "work": {
     "result": {
-      "runId": "run_9ui157_live_reviewed",
+      "runId": "run_9ui157_live_review_fix",
       "taskId": "task_capability",
       "skillId": "mimic.s04.system-capability-extractor",
       "inputRefs": [],
@@ -89,7 +89,7 @@
         {
           "artifactId": "art_rb157_current_inspection",
           "revision": 1,
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2"
+          "lockDigest": "sha256:b36da815da7270eb9c2b048b8829d1fdd0535ce1a495c81cf9bc9d5a88bf4bfe"
         }
       ]
     },

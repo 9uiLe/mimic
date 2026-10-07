@@ -7,7 +7,7 @@
         "schemaVersion": "1.0.0",
         "revision": 1,
         "title": "Riverbend selected-order inspection UI contract",
-        "createdAt": "2026-10-07T14:02:19.689286Z"
+        "createdAt": "2026-10-07T13:59:13.114042Z"
       },
       "scope": {
         "level": "organization",
@@ -20,25 +20,25 @@
       "origin": {
         "actorKind": "skill",
         "actorId": "mimic.s05.ui-contract-manager",
-        "runId": "run_9ui157_live_reviewed",
-        "createdAt": "2026-10-07T14:02:19.689286Z"
+        "runId": "run_9ui157_live_review_fix",
+        "createdAt": "2026-10-07T13:59:13.114042Z"
       },
       "dependencies": [
         {
           "artifactId": "art_rb157_product_intent",
-          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "lockDigest": "sha256:f3e9a510fb7b1df2296d53e9a5e5ec538d3db2d35b651d16bc48474d563904dc",
           "revision": 1,
           "onChange": "revise"
         },
         {
           "artifactId": "art_rb157_dispatch_task",
-          "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+          "lockDigest": "sha256:57d159ac6b330fcc428fe27398b8f04a44af694943fc31574a2c4dcfb3f2163f",
           "revision": 1,
           "onChange": "revise"
         },
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:b36da815da7270eb9c2b048b8829d1fdd0535ce1a495c81cf9bc9d5a88bf4bfe",
           "revision": 1,
           "onChange": "revise"
         }
@@ -98,7 +98,7 @@
           ]
         },
         {
-          "path": "/content/entityContext/3",
+          "path": "/content/entityContext/2",
           "kind": "hypothesis",
           "rationale": "Supporting context and freshness treatment are proposed pending system and user validation."
         },
@@ -106,11 +106,6 @@
           "path": "/content/accessibilityBaseline",
           "kind": "derived",
           "inputRefs": ["skills/s05-ui-contract-manager/SKILL.md"]
-        },
-        {
-          "path": "/content/entityContext/2",
-          "kind": "hypothesis",
-          "rationale": "Disabling assignment until task cues are visible is a proposed interface safeguard, not a supplied requirement or observed behavior."
         }
       ],
       "content": {
@@ -125,8 +120,7 @@
         ],
         "entityContext": [
           "Required: show the same exact work-order ID on the selected list item, detail header, and pre-assignment action context.",
-          "Required: show severity and age for that ID before crew assignment; identify when values came from the list rather than claiming an unobserved detail refresh.",
-          "Proposed UI safeguard: keep the assignment action unavailable until the ID, severity, and age cues are visible; validate whether this gate helps dispatchers.",
+          "Required: show severity and age for that ID before enabling the crew assignment path; identify when values came from the list rather than claiming an unobserved detail refresh.",
           "Proposed: keep zone and current crew visible as supporting context; unresolved freshness, authorization, and assignment result must be surfaced rather than assumed."
         ],
         "accessibilityBaseline": "WCAG 2.2 AA"
@@ -139,7 +133,7 @@
         "schemaVersion": "1.0.0",
         "revision": 1,
         "title": "Clarify or provide selected-order pre-assignment data freshness",
-        "createdAt": "2026-10-07T14:02:19.689286Z"
+        "createdAt": "2026-10-07T13:59:13.114042Z"
       },
       "scope": {
         "level": "organization",
@@ -152,25 +146,25 @@
       "origin": {
         "actorKind": "skill",
         "actorId": "mimic.s05.ui-contract-manager",
-        "runId": "run_9ui157_live_reviewed",
-        "createdAt": "2026-10-07T14:02:19.689286Z"
+        "runId": "run_9ui157_live_review_fix",
+        "createdAt": "2026-10-07T13:59:13.114042Z"
       },
       "dependencies": [
         {
           "artifactId": "art_rb157_product_intent",
-          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "lockDigest": "sha256:f3e9a510fb7b1df2296d53e9a5e5ec538d3db2d35b651d16bc48474d563904dc",
           "revision": 1,
           "onChange": "revise"
         },
         {
           "artifactId": "art_rb157_dispatch_task",
-          "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+          "lockDigest": "sha256:57d159ac6b330fcc428fe27398b8f04a44af694943fc31574a2c4dcfb3f2163f",
           "revision": 1,
           "onChange": "revise"
         },
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:b36da815da7270eb9c2b048b8829d1fdd0535ce1a495c81cf9bc9d5a88bf4bfe",
           "revision": 1,
           "onChange": "revise"
         }
@@ -220,23 +214,23 @@
   ],
   "work": {
     "result": {
-      "runId": "run_9ui157_live_reviewed",
+      "runId": "run_9ui157_live_review_fix",
       "taskId": "task_contract",
       "skillId": "mimic.s05.ui-contract-manager",
       "inputRefs": [
         {
           "artifactId": "art_rb157_product_intent",
-          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "lockDigest": "sha256:f3e9a510fb7b1df2296d53e9a5e5ec538d3db2d35b651d16bc48474d563904dc",
           "revision": 1
         },
         {
           "artifactId": "art_rb157_dispatch_task",
-          "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+          "lockDigest": "sha256:57d159ac6b330fcc428fe27398b8f04a44af694943fc31574a2c4dcfb3f2163f",
           "revision": 1
         },
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:b36da815da7270eb9c2b048b8829d1fdd0535ce1a495c81cf9bc9d5a88bf4bfe",
           "revision": 1
         }
       ],
@@ -244,12 +238,12 @@
         {
           "artifactId": "art_rb157_ui_contract",
           "revision": 1,
-          "lockDigest": "sha256:dfecdb85aa459ff53c7825715a6b906d9158f24c8f33e065fb73b09d9f036b38"
+          "lockDigest": "sha256:d3cce2c2d84d16c13d1feaa64772e7a710b1e3967c71c204f98910b0158a4ae8"
         },
         {
           "artifactId": "art_rb157_detail_freshness_request",
           "revision": 1,
-          "lockDigest": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4"
+          "lockDigest": "sha256:818e1df04fb28084d1d406886e8379bc53ca9bcb61576bac00df03c8ab819813"
         }
       ]
     },
@@ -276,31 +270,31 @@
     ],
     "revisionRequests": [
       {
-        "runId": "run_9ui157_live_reviewed",
+        "runId": "run_9ui157_live_review_fix",
         "source": {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:b36da815da7270eb9c2b048b8829d1fdd0535ce1a495c81cf9bc9d5a88bf4bfe",
           "revision": 1
         },
         "request": {
           "artifactId": "art_rb157_detail_freshness_request",
           "revision": 1,
-          "lockDigest": "sha256:1890967be5d1c6055f102a6d6c032de6e6ea4a7f02c7631484b828b1753601b4"
+          "lockDigest": "sha256:818e1df04fb28084d1d406886e8379bc53ca9bcb61576bac00df03c8ab819813"
         },
         "affectedLocks": [
           {
             "artifactId": "art_rb157_product_intent",
-            "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+            "lockDigest": "sha256:f3e9a510fb7b1df2296d53e9a5e5ec538d3db2d35b651d16bc48474d563904dc",
             "revision": 1
           },
           {
             "artifactId": "art_rb157_dispatch_task",
-            "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1",
+            "lockDigest": "sha256:57d159ac6b330fcc428fe27398b8f04a44af694943fc31574a2c4dcfb3f2163f",
             "revision": 1
           },
           {
             "artifactId": "art_rb157_current_inspection",
-            "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+            "lockDigest": "sha256:b36da815da7270eb9c2b048b8829d1fdd0535ce1a495c81cf9bc9d5a88bf4bfe",
             "revision": 1
           }
         ],

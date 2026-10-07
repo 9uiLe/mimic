@@ -7,7 +7,7 @@
         "schemaVersion": "1.0.0",
         "revision": 1,
         "title": "Riverbend single-order repair-desk intent",
-        "createdAt": "2026-10-07T14:02:07.933213Z"
+        "createdAt": "2026-10-07T13:29:06.319791Z"
       },
       "scope": {
         "level": "organization",
@@ -20,13 +20,13 @@
       "origin": {
         "actorKind": "skill",
         "actorId": "mimic.s01.product-definition",
-        "runId": "run_9ui157_live_reviewed",
-        "createdAt": "2026-10-07T14:02:07.933213Z"
+        "runId": "run_9ui157_live_corrected",
+        "createdAt": "2026-10-07T13:29:06.319791Z"
       },
       "dependencies": [
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
           "revision": 1,
           "onChange": "revise"
         }
@@ -66,12 +66,17 @@
         {
           "path": "/content/nonGoals/0",
           "kind": "derived",
-          "inputRefs": ["task_product/humanBrief"]
+          "inputRefs": ["inputs/input-packet.json#/limits/0"]
         },
         {
           "path": "/content/nonGoals/1",
           "kind": "derived",
-          "inputRefs": ["art_rb157_current_inspection@1"]
+          "inputRefs": ["inputs/input-packet.json#/limits/1"]
+        },
+        {
+          "path": "/content/nonGoals/2",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/limits/2"]
         }
       ],
       "content": {
@@ -83,21 +88,22 @@
           "Keep any proposed interface behavior distinguishable from the constructed list/detail/assignment inventory."
         ],
         "nonGoals": [
-          "Claim market demand or observed dispatcher needs without research.",
-          "Specify production authorization or assignment persistence that the constructed inventory does not establish."
+          "Claim market demand, field research, or a deployed Riverbend backend.",
+          "Introduce multi-order comparison or bulk assignment as an approved product requirement.",
+          "Treat an interface proposal as authorization to change backend behavior or to assign a real crew."
         ]
       }
     }
   ],
   "work": {
     "result": {
-      "runId": "run_9ui157_live_reviewed",
+      "runId": "run_9ui157_live_corrected",
       "taskId": "task_product",
       "skillId": "mimic.s01.product-definition",
       "inputRefs": [
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
           "revision": 1
         }
       ],
@@ -105,7 +111,7 @@
         {
           "artifactId": "art_rb157_product_intent",
           "revision": 1,
-          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7"
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82"
         }
       ],
       "proposal": {
@@ -117,7 +123,7 @@
             "ref": {
               "artifactId": "art_rb157_product_intent",
               "revision": 1,
-              "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7"
+              "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82"
             },
             "alternatives": [
               "approve exact intent after review",

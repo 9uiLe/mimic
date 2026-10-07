@@ -7,7 +7,7 @@
         "schemaVersion": "1.0.0",
         "revision": 1,
         "title": "Riverbend provisional dispatcher inspection task",
-        "createdAt": "2026-10-07T14:02:13.292441Z"
+        "createdAt": "2026-10-07T13:29:12.109601Z"
       },
       "scope": {
         "level": "organization",
@@ -20,19 +20,19 @@
       "origin": {
         "actorKind": "skill",
         "actorId": "mimic.s02.user-task-modeling",
-        "runId": "run_9ui157_live_reviewed",
-        "createdAt": "2026-10-07T14:02:13.292441Z"
+        "runId": "run_9ui157_live_corrected",
+        "createdAt": "2026-10-07T13:29:12.109601Z"
       },
       "dependencies": [
         {
           "artifactId": "art_rb157_product_intent",
-          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
           "revision": 1,
           "onChange": "revise"
         },
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
           "revision": 1,
           "onChange": "revise"
         }
@@ -88,18 +88,18 @@
   ],
   "work": {
     "result": {
-      "runId": "run_9ui157_live_reviewed",
+      "runId": "run_9ui157_live_corrected",
       "taskId": "task_users",
       "skillId": "mimic.s02.user-task-modeling",
       "inputRefs": [
         {
           "artifactId": "art_rb157_product_intent",
-          "lockDigest": "sha256:11cf252c1ad9061dd8caa85ce53d4747e35b7e90eeff590c120a36a7b84f70c7",
+          "lockDigest": "sha256:75825849851041db328b4c5cc97aa54e36432b3a0443b9ad2e4c99396f48dc82",
           "revision": 1
         },
         {
           "artifactId": "art_rb157_current_inspection",
-          "lockDigest": "sha256:279c7f4e919acae0715b668ed78920bf7ad6719355ba11db3546f5bc35d82aa2",
+          "lockDigest": "sha256:34d9358941edfdfefc8706bb1e46deee85043dce9d52f4960265af7125d21aca",
           "revision": 1
         }
       ],
@@ -107,7 +107,7 @@
         {
           "artifactId": "art_rb157_dispatch_task",
           "revision": 1,
-          "lockDigest": "sha256:5a2f596fafbaa90c0c23389665af798479087007ef0fa1d6aec1231fdeb653e1"
+          "lockDigest": "sha256:8202d6883c12b5aabf49d431df3390a3a3f8a6986fc4e7108c916244b4448a0f"
         }
       ]
     },
