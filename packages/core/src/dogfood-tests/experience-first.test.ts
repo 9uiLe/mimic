@@ -260,40 +260,67 @@ test("domain routing and draft editing are not representable by the current buil
   });
 });
 
-test("mobile transformation is rejected as unsupported structure, rather than fixture-label proof", async () => {
+test("C-204 saves an exact responsive plan and emits finite mobile transforms", async () => {
   const fixture = await setup();
-  const altered = structuredClone(fixture.input) as unknown as Record<
-    string,
-    unknown
-  >;
-  altered.mobileTransformation = {
-    reorder: ["decision-summary", "evidence-list"],
-    collapse: "evidence-list",
-    replace: "side-by-side-context",
-    progressiveDisclose: "decision-history",
-  };
-  await expect(
-    buildPrototype(
-      fixture.store,
-      altered as unknown as typeof fixture.input,
-      fixture.root,
+  expect(fixture.input.responsive?.states).toHaveLength(1);
+  expect(fixture.input.responsive?.states[0]?.rule).toEqual(
+    fixture.refs.responsiveRule,
+  );
+  expect(
+    fixture.input.responsive?.states[0]?.operations.map(
+      (operation) => operation.kind,
     ),
-  ).rejects.toMatchObject({
-    code: "INVALID",
-    message: expect.stringContaining("unsupported field mobileTransformation"),
-  });
+  ).toEqual(["reorder", "collapse", "progressive-disclose", "replace"]);
+  expect(fixture.scenario.artifact.dependencies).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining(fixture.refs.responsiveRule),
+    ]),
+  );
+  const rule = await fixture.store.read(
+    fixture.refs.responsiveRule.artifactId,
+    1,
+  );
+  expect(rule.digest).toBe(fixture.refs.responsiveRule.lockDigest);
+  expect(
+    (rule.artifact.content as { definition: { breakpointPx: number } })
+      .definition.breakpointPx,
+  ).toBe(fixture.input.layout.breakpointPx);
   const output = await buildPrototype(
     fixture.store,
     fixture.input,
     fixture.root,
   );
+  const inspected = await inspectBundle({
+    trustedRoot: fixture.root,
+    directory: output.directory,
+    store: fixture.store,
+  });
+  expect(inspected.plan?.responsive).toEqual(fixture.input.responsive);
+  expect(inspected.manifest?.planDigest).toMatch(/^sha256:[0-9a-f]{64}$/);
   const css = await readFile(
     path.join(output.directory, "prototype.css"),
     "utf8",
   );
   expect(css).toContain("grid-template-columns: repeat(1, minmax(0, 1fr))");
   expect(css).not.toContain("order:");
-  expect(css).toContain("[data-state][hidden] { display: none !important; }");
+  const js = await readFile(
+    path.join(output.directory, "prototype.js"),
+    "utf8",
+  );
+  expect(js).toContain('"mobile-case-nav"');
+  expect(js).toContain('"progressive-disclose"');
+  const invalid = structuredClone(fixture.input);
+  const reorder = invalid.responsive!.states[0]!.operations[0];
+  if (reorder?.kind !== "reorder") throw new Error("Missing authored reorder");
+  (reorder.childIds as string[]).pop();
+  await expect(
+    buildPrototype(fixture.store, invalid, fixture.root),
+  ).rejects.toMatchObject({
+    code: "INVALID",
+    message: expect.stringContaining(
+      "order must include every direct child ID once",
+    ),
+  });
 });
 
 test("Experience-first Run keeps rejection out of canonical selection and requires revision history", async () => {
@@ -677,13 +704,13 @@ test("one canonical Experience-first artifact set compiles as exact Reference an
     ),
   );
   files["quality/limits.md"] = new TextEncoder().encode(
-    "Automated checks inspect synthetic output only; mobile structure remains unsupported.\n",
+    "Automated checks inspect synthetic output and finite mobile structure only; semantic parity and real usability need review.\n",
   );
   files["decisions.txt"] = new TextEncoder().encode(
     "Fixture approval only. Real human direction and release decisions remain open.\n",
   );
   files["handoff.md"] = new TextEncoder().encode(
-    "Review the authored plan and mobile contract gap before release.\n",
+    "Review authored responsive semantics, cross-domain navigation, draft restoration and real decisions before release.\n",
   );
   const included = (
     artifacts: typeof all,

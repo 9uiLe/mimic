@@ -16,6 +16,7 @@ const criteria = [
   "keyboard-focus",
   "viewport-overflow",
   "navigation-state",
+  "responsive-transform",
 ] as const;
 
 function requireObservedGateCoverage(
@@ -25,7 +26,7 @@ function requireObservedGateCoverage(
 ): void {
   if (
     report.target.bundleDigest !== bundleDigest ||
-    report.findings.length !== 10
+    report.findings.length !== 12
   )
     throw new Error("Browser gate target or criterion coverage is incomplete");
   for (const viewport of ["desktop", "mobile"] as const) {
@@ -52,7 +53,7 @@ function requireObservedGateCoverage(
         )
       )
         throw new Error(
-          `Unverified or unexpected ${engine}-${viewport} ${criterion}: ${state}`,
+          `Unverified or unexpected ${engine}-${viewport} ${criterion}: ${state}: ${matches[0]!.reason}`,
         );
     }
   }
@@ -124,18 +125,90 @@ test("Experience-first generated case states retain context on desktop and mobil
       await page.getByRole("button", { name: "Show success" }).first().click();
       await expect(page.getByText("C-204 · success")).toBeVisible();
     }
-    const cards = page.locator('[data-state="success"] > div > section');
-    await expect(cards).toHaveCount(3);
+    for (const state of ["empty", "partial", "empty", "partial"] as const) {
+      await page.getByRole("button", { name: `Show ${state}` }).click();
+      await expect(page.getByRole("status")).toHaveText(`${state} state`);
+      await page.getByRole("button", { name: "Show success" }).first().click();
+      await expect(page.getByRole("status")).toHaveText("success state");
+    }
+    const cards = page.locator("#review-root > *");
+    await expect(cards).toHaveCount(4);
     const first = await cards.nth(0).boundingBox();
     const second = await cards.nth(1).boundingBox();
     if (!first || !second)
       throw new Error("Missing generated section position");
     if ((page.viewportSize()?.width ?? 1280) <= 640) {
+      await expect(cards.nth(0)).toHaveAttribute("id", "review-decision");
+      await expect(cards.nth(1)).toHaveAttribute("id", "mobile-case-nav");
       expect(Math.abs(first.x - second.x)).toBeLessThan(2);
       expect(second.y).toBeGreaterThan(first.y + first.height);
     } else {
+      await expect(cards.nth(0)).toHaveAttribute("id", "case-context");
+      await expect(cards.nth(1)).toHaveAttribute("id", "review-decision");
       expect(second.x).toBeGreaterThan(first.x + first.width);
     }
+    const order = () =>
+      page
+        .locator("#review-root")
+        .evaluate((root) =>
+          [...root.children].map(
+            (child) =>
+              child.id || (child as HTMLElement).dataset.responsiveTarget,
+          ),
+        );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(order)
+      .toEqual([
+        "review-decision",
+        "mobile-case-nav",
+        "evidence-list",
+        "decision-history",
+      ]);
+    await expect(page.locator("#case-context")).toHaveCount(0);
+    await expect(page.locator("#mobile-case-identity")).toHaveText(
+      "Case C-204",
+    );
+    await expect(page.locator("#choose-case")).toBeVisible();
+    const evidence = page.locator("#review-uncertainty");
+    const history = page.locator("#uncommitted-history");
+    await expect(evidence).toBeHidden();
+    await expect(history).toBeHidden();
+    for (const [summaryText, content] of [
+      ["Review evidence and uncertainty", evidence],
+      ["Show uncommitted decision history", history],
+    ] as const) {
+      const summary = page.getByText(summaryText, { exact: true });
+      await summary.focus();
+      await page.keyboard.press("Enter");
+      await expect(content).toBeVisible();
+      await page.keyboard.press("Enter");
+      await expect(content).toBeHidden();
+      await page.keyboard.press("Enter");
+      await expect(content).toBeVisible();
+    }
+    await page.locator("#mobile-overview-anchor").focus();
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect
+      .poll(order)
+      .toEqual([
+        "case-context",
+        "review-decision",
+        "evidence-list",
+        "decision-history",
+      ]);
+    await expect(page.locator("#overview-anchor")).toBeFocused();
+    await expect(page.getByRole("status")).toHaveText("success state");
+    await expect(evidence).toBeVisible();
+    await expect(history).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator("#mobile-overview-anchor")).toBeFocused();
+    await expect(evidence).toBeVisible();
+    await expect(history).toBeVisible();
+    await page.locator("#choose-case").click();
+    await expect(page.getByRole("status")).toHaveText("disabled state");
+    await page.getByRole("button", { name: "Show success" }).first().click();
+    await expect(page.getByRole("status")).toHaveText("success state");
     const report = await runBrowserQualityGates(
       {
         trustedRoot: fixture.root,
@@ -154,6 +227,17 @@ test("Experience-first generated case states retain context on desktop and mobil
       throw new Error(`Unexpected browser engine: ${engineName}`);
     const engine = engineName as "chromium" | "firefox" | "webkit";
     requireObservedGateCoverage(report, engine, inspected.target.bundleDigest);
+    if (engine === "chromium") {
+      const mobileKeyboard = report.findings.find(
+        (finding) =>
+          finding.criterion === "keyboard-focus" &&
+          finding.conditions.browser === "chromium-mobile",
+      );
+      expect(
+        mobileKeyboard?.state,
+        `Repeated routes must retain first-Tab coverage: ${mobileKeyboard?.reason}`,
+      ).toBe("PASS");
+    }
     const unavailable: QualityReport = {
       ...report,
       findings: report.findings.map((finding) => ({

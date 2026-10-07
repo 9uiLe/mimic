@@ -503,8 +503,13 @@ export async function runBrowserQualityGates(
                 )
                 .count();
               if (expected) {
+                await page.evaluate(() => {
+                  document.body.tabIndex = -1;
+                  document.body.focus({ preventScroll: true });
+                });
                 await page.keyboard.press("Tab");
                 const focus = await page.evaluate(() => {
+                  document.body.removeAttribute("tabindex");
                   const active = document.activeElement;
                   return (
                     !!active &&
