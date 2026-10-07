@@ -8,6 +8,14 @@ import type { ArtifactSnapshot, ArtifactStore } from "../artifact-store.js";
 import type { ExactArtifactRef } from "../runtime-engines/dependency.js";
 import { compileApprovedTokenAssets } from "../token-compiler/index.js";
 import { PrototypeOutputError, publishPrototypeBundle } from "./output.js";
+import { responsiveErrors, type ResponsivePlan } from "./responsive.js";
+import { responsiveRuntime } from "./runtime.js";
+export type {
+  ResponsivePlan,
+  ResponsiveStatePlan,
+  ResponsiveOperation,
+  ResponsiveIdentity,
+} from "./responsive.js";
 
 /** This authored render plan is a generation input, not a canonical artifact or an approval. */
 export type PrototypeState =
@@ -75,6 +83,8 @@ export interface PrototypeBuilderInput {
     readonly foreground: string;
     readonly background?: string;
   };
+  /** Optional versioned, authored mobile operation program. Legacy plans omit it. */
+  readonly responsive?: ResponsivePlan;
   readonly outputPath: string;
 }
 export interface PrototypeBuildResult {
@@ -231,6 +241,7 @@ function validatePlan(plan: PrototypeBuilderInput): void {
       "fixtures",
       "layout",
       "styleTokens",
+      "responsive",
       "outputPath",
     ],
     "plan",
@@ -563,6 +574,30 @@ export async function buildPrototype(
   ].map((match) => match[1]!);
   for (const fragment of referencedFragments)
     if (!ids.has(fragment)) revision(`Fragment target ${fragment} is absent`);
+  const responsiveProblems = responsiveErrors(plan);
+  if (responsiveProblems.length)
+    fail(
+      "INVALID",
+      `Invalid responsive plan: ${responsiveProblems.join("; ")}`,
+    );
+  const responsiveProgram = plan.responsive?.states.map((entry) => ({
+    state: entry.state,
+    operations: entry.operations.map((operation) => {
+      if (operation.kind !== "replace") return operation;
+      const replacement = renderNode(
+        operation.with,
+        entry.state,
+        plan.fixtures,
+        renderedStates,
+        componentIds,
+        ids,
+        0,
+        budget,
+        false,
+      );
+      return { ...operation, html: replacement.html };
+    }),
+  }));
   const planDigest = `sha256:${createHash("sha256")
     .update(canonicalJson(plan as unknown as JsonValue))
     .digest("hex")}`;
@@ -581,8 +616,8 @@ export async function buildPrototype(
     requiredStates: plan.requiredStates,
   };
   const html = `<!doctype html>\n<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${escapeHtml(plan.title)}</title><link rel="stylesheet" href="prototype.css"/><script type="module" src="prototype.js"></script></head><body><header><p>Specification prototype · synthetic fixture data · not a production app</p><h1>${escapeHtml(plan.title)}</h1></header><main>${sections.join("")}</main><p role="status" aria-live="polite" id="prototype-status">${escapeHtml(plan.initialState)} state</p></body></html>\n`;
-  const css = `${compiled.css}\nbody { color: var(--mimic-${plan.styleTokens.foreground.replaceAll(".", "-")});${plan.styleTokens.background ? ` background: var(--mimic-${plan.styleTokens.background.replaceAll(".", "-")});` : ""} }\n[data-state][hidden] { display: none !important; }\n[data-state] > div { display: grid; grid-template-columns: repeat(${plan.layout.desktopColumns}, minmax(0, 1fr)); gap: 1rem; }\n:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }\n@media (max-width: ${plan.layout.breakpointPx}px) { [data-state] > div { grid-template-columns: repeat(${plan.layout.mobileColumns}, minmax(0, 1fr)); } }\n`;
-  const js = `const allowed = new Set(${JSON.stringify(plan.requiredStates)});\nfunction show(state) {\n  if (!allowed.has(state)) return;\n  for (const section of document.querySelectorAll('[data-state]')) section.hidden = section.getAttribute('data-state') !== state;\n  document.getElementById('prototype-status').textContent = state + ' state';\n}\ndocument.addEventListener('click', (event) => {\n  const button = event.target.closest('button[data-target-state]');\n  if (button) show(button.getAttribute('data-target-state'));\n});\n`;
+  const css = `${compiled.css}\nbody { color: var(--mimic-${plan.styleTokens.foreground.replaceAll(".", "-")});${plan.styleTokens.background ? ` background: var(--mimic-${plan.styleTokens.background.replaceAll(".", "-")});` : ""} }\n[data-state][hidden] { display: none !important; }\n[data-state] > div { display: grid; grid-template-columns: repeat(${plan.layout.desktopColumns}, minmax(0, 1fr)); gap: 1rem; }\n:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }\n@media (max-width: ${plan.layout.breakpointPx}px) { [data-state] > div { grid-template-columns: repeat(${plan.layout.mobileColumns}, minmax(0, 1fr)); } }\n${plan.responsive ? "[data-responsive-details] { min-width: 0; }\n[data-responsive-details] > summary { cursor: pointer; }\n" : ""}`;
+  const js = `const allowed = new Set(${JSON.stringify(plan.requiredStates)});\nfunction show(state) {\n  if (!allowed.has(state)) return;\n  for (const section of document.querySelectorAll('[data-state]')) section.hidden = section.getAttribute('data-state') !== state;\n  document.getElementById('prototype-status').textContent = state + ' state';\n}\ndocument.addEventListener('click', (event) => {\n  const button = event.target.closest('button[data-target-state]');\n  if (button) show(button.getAttribute('data-target-state'));\n});\n${responsiveProgram ? responsiveRuntime(responsiveProgram, plan.layout.breakpointPx) : ""}`;
   const files = {
     "index.html": html,
     "prototype.css": css,

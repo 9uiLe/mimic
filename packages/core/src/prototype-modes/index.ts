@@ -23,6 +23,7 @@ import {
   type PrototypeState,
   type PrototypeStatePlan,
 } from "../prototype-builder/index.js";
+import { responsiveErrors } from "../prototype-builder/responsive.js";
 
 export type ModeChoiceStatus =
   "current" | "required" | "proposed" | "unresolved";
@@ -32,13 +33,16 @@ export interface ModeChoice {
   readonly capability: ExactArtifactRef;
   readonly systemRequest?: ExactArtifactRef;
 }
-export type ModeBindingField = "text" | "fixtureKey" | "targetState" | "href";
+export type ModeBindingField =
+  "text" | "fixtureKey" | "targetState" | "href" | "responsiveOperation";
 /** One authored claim tying an actual render-plan value or action to a capability. */
 export interface ModeBinding {
   readonly state: PrototypeState;
   readonly nodePath: readonly number[];
   readonly field: ModeBindingField;
   readonly choiceId: string;
+  /** Atomic classification of one finite responsive operation and its complete subtree. */
+  readonly responsiveOperation?: number;
 }
 /** Authored comparison input. Its digest records intent, not human approval. */
 export interface PrototypeModePlan {
@@ -85,12 +89,12 @@ const STATUSES: readonly ModeChoiceStatus[] = [
   "proposed",
   "unresolved",
 ];
-const BINDING_FIELDS: readonly ModeBindingField[] = [
+const BINDING_FIELDS = [
   "text",
   "fixtureKey",
   "targetState",
   "href",
-];
+] as const satisfies readonly ModeBindingField[];
 function fail(code: PrototypeModeError["code"], message: string): never {
   throw new PrototypeModeError(code, message);
 }
@@ -186,8 +190,9 @@ function bindingKey(
   state: string,
   nodePath: readonly number[],
   field: ModeBindingField,
+  operation?: number,
 ): string {
-  return `${state}/${nodePath.join("/")}/${field}`;
+  return `${state}/${operation === undefined ? nodePath.join("/") : `responsive/${operation}`}/${field}`;
 }
 function boundValues(
   render: PrototypeBuilderInput,
@@ -205,6 +210,12 @@ function boundValues(
     Array.isArray(render.fixtures)
   )
     fail("INVALID", `${mode} needs authored states and fixtures`);
+  const responsiveProblems = responsiveErrors(render);
+  if (responsiveProblems.length)
+    fail(
+      "INVALID",
+      `${mode} responsive plan: ${responsiveProblems.join("; ")}`,
+    );
   const actual = new Map<
     string,
     {
@@ -244,6 +255,41 @@ function boundValues(
     };
     visit(state.root, []);
   }
+  for (const responsive of render.responsive?.states ?? []) {
+    responsive.operations.forEach((operation, index) => {
+      const key = bindingKey(
+        responsive.state,
+        [],
+        "responsiveOperation",
+        index,
+      );
+      const resolvedFixtures: unknown[] = [];
+      if (operation.kind === "replace") {
+        const visit = (node: PrototypeNode, nodePath: number[]): void => {
+          if (node.fixtureKey) {
+            const value = render.fixtures[responsive.state]?.[node.fixtureKey];
+            if (value === undefined)
+              fail(
+                "INVALID",
+                `Missing responsive fixture ${responsive.state}.${node.fixtureKey}`,
+              );
+            fixtureUses.add(`${responsive.state}/${node.fixtureKey}`);
+            resolvedFixtures.push([nodePath, node.fixtureKey, value]);
+          }
+          node.children?.forEach((child, childIndex) =>
+            visit(child, [...nodePath, childIndex]),
+          );
+        };
+        visit(operation.with, []);
+      }
+      actual.set(key, {
+        value: canonicalJson([operation, resolvedFixtures]),
+        field: "responsiveOperation",
+        state: responsive.state,
+        tag: "section",
+      });
+    });
+  }
   for (const [state, fixtures] of Object.entries(render.fixtures)) {
     for (const key of Object.keys(fixtures ?? {}))
       if (!fixtureUses.has(`${state}/${key}`))
@@ -266,13 +312,26 @@ function boundValues(
   for (const binding of bindings) {
     if (!binding || typeof binding !== "object" || Array.isArray(binding))
       fail("INVALID", `Invalid ${mode} binding`);
-    keys(binding, ["state", "nodePath", "field", "choiceId"], "binding");
+    keys(
+      binding,
+      ["state", "nodePath", "field", "choiceId", "responsiveOperation"],
+      "binding",
+    );
     if (
       !Array.isArray(binding.nodePath) ||
       binding.nodePath.some(
         (index: number) => !Number.isSafeInteger(index) || index < 0,
       ) ||
-      !BINDING_FIELDS.includes(binding.field) ||
+      !(
+        BINDING_FIELDS.includes(binding.field) ||
+        binding.field === "responsiveOperation"
+      ) ||
+      (binding.field === "responsiveOperation" &&
+        (!Number.isSafeInteger(binding.responsiveOperation) ||
+          (binding.responsiveOperation ?? -1) < 0 ||
+          binding.nodePath.length !== 0)) ||
+      (binding.field !== "responsiveOperation" &&
+        binding.responsiveOperation !== undefined) ||
       typeof binding.choiceId !== "string" ||
       !uses.includes(binding.choiceId)
     )
@@ -282,7 +341,12 @@ function boundValues(
     );
     if (!choice || (mode === "current" && choice.status !== "current"))
       fail("INVALID", `${mode} binding claims unsupported capability`);
-    const key = bindingKey(binding.state, binding.nodePath, binding.field);
+    const key = bindingKey(
+      binding.state,
+      binding.nodePath,
+      binding.field,
+      binding.responsiveOperation,
+    );
     const entry = actual.get(key);
     if (!entry || seen.has(key))
       fail(
@@ -291,7 +355,7 @@ function boundValues(
       );
     seen.add(key);
     usedChoices.add(binding.choiceId);
-    const nodeKey = `${binding.state}/${binding.nodePath.join("/")}`;
+    const nodeKey = `${binding.state}/${binding.responsiveOperation === undefined ? binding.nodePath.join("/") : `responsive/${binding.responsiveOperation}`}`;
     const existing = nodes.get(nodeKey);
     if (existing && existing.choiceId !== binding.choiceId)
       fail("INVALID", `${mode} assigns one control to different capabilities`);
@@ -382,6 +446,31 @@ function markedPlan(
     });
   return {
     ...plan,
+    ...(plan.responsive
+      ? {
+          responsive: {
+            ...plan.responsive,
+            states: plan.responsive.states.map((entry) => ({
+              ...entry,
+              operations: entry.operations.map((operation) => {
+                const rootId = plan.states.find(
+                  (state) => state.name === entry.state,
+                )?.root.id;
+                return operation.kind === "reorder" &&
+                  operation.parentId === rootId
+                  ? {
+                      ...operation,
+                      childIds: [
+                        ...operation.childIds,
+                        `mode-notice-${entry.state}`,
+                      ],
+                    }
+                  : operation;
+              }),
+            })),
+          },
+        }
+      : {}),
     states: plan.states.map((state) => ({
       ...state,
       root: {

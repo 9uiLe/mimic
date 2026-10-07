@@ -1,4 +1,5 @@
 import type { PrototypeBuilderInput } from "../prototype-builder/index.js";
+import { responsiveErrors } from "../prototype-builder/responsive.js";
 import path from "node:path";
 
 const STATES = new Set([
@@ -81,6 +82,7 @@ export function qualityPlan(value: unknown): {
       "fixtures",
       "layout",
       "styleTokens",
+      "responsive",
       "outputPath",
     ],
     "plan",
@@ -323,6 +325,8 @@ export function qualityPlan(value: unknown): {
       if (!ids.has(fragment))
         errors.push(`fragment target ${fragment} is absent`);
   }
+  if (!errors.length)
+    errors.push(...responsiveErrors(value as unknown as PrototypeBuilderInput));
   return errors.length
     ? { errors }
     : { plan: value as unknown as PrototypeBuilderInput, errors };
