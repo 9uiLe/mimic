@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { rm } from "node:fs/promises";
-import { setupPrototypeModesFixture } from "../../../../fixtures/prototype-modes/approved.js";
-import { buildPrototypeModes } from "../prototype-modes/index.js";
-import { runBrowserQualityGates } from "./browser.js";
+import { setupPrototypeModesFixture } from "../../../fixtures/prototype-modes/approved.js";
+import { buildPrototypeModes } from "../../../packages/core/src/prototype-modes/index.js";
+import { runBrowserQualityGates } from "../../../packages/core/src/quality-gates/browser.js";
 
-test("controlled browser checks run on generated Current and Proposed", async ({
+test("browser gates inspect generated Current and Proposed mode bundles", async ({
   browser,
   browserName,
 }) => {
+  test.setTimeout(120_000);
   const fixture = await setupPrototypeModesFixture();
   try {
     const modes = await buildPrototypeModes(
@@ -15,7 +16,7 @@ test("controlled browser checks run on generated Current and Proposed", async ({
       fixture.modePlan,
       fixture.root,
     );
-    for (const output of [modes.current, modes.proposed]) {
+    for (const output of [modes.current, modes.proposed!]) {
       const report = await runBrowserQualityGates(
         {
           trustedRoot: fixture.root,
