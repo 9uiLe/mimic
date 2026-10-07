@@ -65,22 +65,26 @@ test("system-first synthetic case builds exact Current/Proposed outputs through 
   expect(current).not.toContain("Proposed, not implemented");
   expect(proposed).toContain("Proposed, not implemented");
   expect(proposed).toContain(x.refs.request.artifactId);
-  const report = await runStaticQualityGates({
-    trustedRoot: x.root,
-    directory: modes.current.directory,
-    store: x.runtime.artifacts,
-    uiContract: x.refs.contract,
-  });
-  expect(
-    report.report.findings.find(
-      (finding) => finding.criterion === "source-locks",
-    )?.state,
-  ).toBe("PASS");
-  expect(
-    report.report.findings
-      .filter((finding) => finding.state === "FAIL")
-      .map((finding) => finding.criterion),
-  ).toEqual(["bundle-manifest"]);
+  for (const output of [modes.current, modes.proposed!]) {
+    const { report } = await runStaticQualityGates({
+      trustedRoot: x.root,
+      directory: output.directory,
+      store: x.runtime.artifacts,
+      uiContract: x.refs.contract,
+    });
+    expect(report.target.planDigest).toBe(output.planDigest);
+    expect(
+      report.findings.find((finding) => finding.criterion === "bundle-manifest")
+        ?.state,
+    ).toBe("PASS");
+    expect(
+      report.findings.find((finding) => finding.criterion === "source-locks")
+        ?.state,
+    ).toBe("PASS");
+    expect(
+      report.findings.filter((finding) => finding.state === "FAIL"),
+    ).toEqual([]);
+  }
   const standalone = await buildPrototype(
     x.runtime.artifacts,
     { ...x.modePlan.current, outputPath: "standalone-current" },
@@ -600,19 +604,23 @@ test.each(["reference", "portable"] as const)(
         }
       }
     }
-    const modeQuality = (
-      await runStaticQualityGates({
+    for (const output of [modes.current, modes.proposed!]) {
+      const { report: modeQuality } = await runStaticQualityGates({
         trustedRoot: x.root,
-        directory: modes.current.directory,
+        directory: output.directory,
         store: x.runtime.artifacts,
         uiContract: x.refs.contract,
-      })
-    ).report;
-    expect(
-      modeQuality.findings.find(
-        (finding) => finding.criterion === "bundle-manifest",
-      )?.state,
-    ).toBe("FAIL");
+      });
+      expect(modeQuality.target.planDigest).toBe(output.planDigest);
+      expect(
+        modeQuality.findings.find(
+          (finding) => finding.criterion === "bundle-manifest",
+        )?.state,
+      ).toBe("PASS");
+      expect(
+        modeQuality.findings.filter((finding) => finding.state === "FAIL"),
+      ).toEqual([]);
+    }
     const built = await buildPrototype(
       x.runtime.artifacts,
       { ...chain.modePlan.current, outputPath: "release-prototype" },
