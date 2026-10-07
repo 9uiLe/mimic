@@ -18,7 +18,7 @@ Mimic's intended operating loop is canonical state → reversible Run → provis
 
 ## What a Design Package contains
 
-The target Design Package brings together machine-readable design decisions, design-system usage, an executable semantic HTML/CSS/JavaScript prototype, scenarios, system requirements, validation evidence, and decision history. Approved artifacts and released packages are intended to be versioned and immutable in place. The [package governance contract](docs/specifications/design-package-governance.md) describes the target format and lifecycle; the release backend is not yet implemented.
+The target Design Package brings together machine-readable design decisions, design-system usage, an executable semantic HTML/CSS/JavaScript prototype, scenarios, system requirements, validation evidence, and decision history. Approved artifacts and released packages are intended to be versioned and immutable in place. The [package governance contract](docs/specifications/design-package-governance.md) describes the target format and lifecycle. Core implements local package compilation and immutable publication to a trusted filesystem root. The CLI release flow is not yet connected to it; see the [compiler guide](docs/development/package-compiler.md).
 
 ## Start exploring
 
@@ -34,7 +34,7 @@ node apps/cli/dist/main.js skill show s01 --full
 
 ## Current status and architecture
 
-Mimic is **pre-alpha**. The repository has a local CLI, Core orchestration and artifact storage, schema contracts, static Skill packages, and a demo lab. `init`, `status`, `run`, `next`, `submit`, `decisions`, `decide`, `validate`, and `skill` are implemented with the documented constraints. `preview` and `release` have no implemented backend. The demo lab is a local preview surface, not a Design Package deployment path. Static Skill definitions and synthetic tests establish contracts; they do not establish live AI reasoning or empirical design quality.
+Mimic is **pre-alpha**. The repository has a local CLI, Core orchestration and artifact storage, schema contracts, static Skill packages, and a demo lab. `init`, `status`, `run`, `next`, `submit`, `decisions`, `decide`, `validate`, and `skill` are implemented with the documented constraints. The CLI `preview` and `release` commands remain unsupported. Core has a local package compiler and publisher, but this does not provide an end-to-end CLI release or production publication service. The demo lab is a local preview surface, not a Design Package deployment path. Static Skill definitions and synthetic tests establish contracts; they do not establish live AI reasoning or empirical design quality.
 
 The interaction boundary is **human → controlling AI agent → local CLI and filesystem → model-independent Core**. An Orchestrator routes file-backed artifacts between Skills; Skills do not call one another. Schema validation, registry checks, and human authority are separate from AI reasoning. Core does not require MCP or a hosted backend. The [onboarding guide](docs/onboarding/README.md) separates today's capabilities from the intended design flow; [technical architecture](docs/specifications/technical-baseline.md) gives the deeper boundaries.
 
