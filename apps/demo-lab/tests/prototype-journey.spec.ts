@@ -158,40 +158,113 @@ for (const width of [1280, 390]) {
   );
 }
 
+function journeyPhase(name: string) {
+  const started = performance.now();
+  let previous = started;
+  return (phase: string, detail: Record<string, unknown> = {}) => {
+    const now = performance.now();
+    console.log(
+      "9UI-155 phase " +
+        name +
+        " " +
+        phase +
+        ": " +
+        JSON.stringify({
+          totalMs: Math.round(now - started),
+          deltaMs: Math.round(now - previous),
+          ...detail,
+        }),
+    );
+    previous = now;
+  };
+}
+
+async function replacementBundle(log: ReturnType<typeof journeyPhase>) {
+  const fixture = await setupPrototypeJourney();
+  log("fixture ready");
+  try {
+    const plan = authoredReplacementSurfacePlan(fixture.journeyPlan);
+    const output = await buildPrototypeJourney(
+      fixture.store,
+      plan,
+      fixture.root,
+    );
+    log("bundle built");
+    return { fixture, output };
+  } catch (error) {
+    await rm(fixture.root, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function logJourneyFindings(
+  log: ReturnType<typeof journeyPhase>,
+  report: Awaited<ReturnType<typeof runBrowserQualityGates>>,
+) {
+  log("gate complete", {
+    findings: report.findings.map((finding) => ({
+      criterion: finding.criterion,
+      width: finding.conditions.viewportWidth,
+      state: finding.state,
+      observations: finding.conditions.observations,
+      ...(finding.state === "PASS"
+        ? {}
+        : { reason: finding.reason, evidence: finding.evidence }),
+    })),
+  });
+}
+
+async function removeReplacementFixture(
+  root: string,
+  log: ReturnType<typeof journeyPhase>,
+) {
+  await rm(root, { recursive: true, force: true });
+  log("fixture removed");
+}
+
 test("replacement return control survives desktop/mobile startup and both resize directions", async ({
   page,
-  browser,
+  context,
 }) => {
   test.setTimeout(120_000);
-  const fixture = await setupPrototypeJourney();
-  const plan = authoredReplacementSurfacePlan(fixture.journeyPlan);
-  const output = await buildPrototypeJourney(fixture.store, plan, fixture.root);
+  const log = journeyPhase("direct");
+  const { fixture, output } = await replacementBundle(log);
   const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  const server = createServer(async (request, response) => {
-    const name = request.url === "/" ? "index.html" : request.url?.slice(1);
-    if (
-      !name ||
-      !["index.html", "prototype.css", "prototype.js"].includes(name)
-    ) {
-      response.writeHead(404).end();
-      return;
-    }
-    response.writeHead(200, {
-      "content-type": name.endsWith(".css")
-        ? "text/css"
-        : name.endsWith(".js")
-          ? "text/javascript"
-          : "text/html",
-    });
-    response.end(await readFile(path.join(output.directory, name)));
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const consoleErrors: string[] = [];
+  let server: ReturnType<typeof createServer> | undefined;
+  const cleanupErrors: unknown[] = [];
   try {
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    server = createServer(async (request, response) => {
+      const name = request.url === "/" ? "index.html" : request.url?.slice(1);
+      if (
+        !name ||
+        !["index.html", "prototype.css", "prototype.js"].includes(name)
+      ) {
+        response.writeHead(404).end();
+        return;
+      }
+      response.writeHead(200, {
+        "content-type": name.endsWith(".css")
+          ? "text/css"
+          : name.endsWith(".js")
+            ? "text/javascript"
+            : "text/html",
+      });
+      response.end(await readFile(path.join(output.directory, name)));
+    });
+    await new Promise<void>((resolve) =>
+      server!.listen(0, "127.0.0.1", resolve),
+    );
+    log("server listening");
     const address = server.address();
     if (!address || typeof address === "string")
       throw new Error("No server address");
     for (const start of [1280, 390]) {
+      log("direct width start", { width: start });
       await page.setViewportSize({ width: start, height: 850 });
       await page.goto("http://127.0.0.1:" + address.port + "/");
       const filter = page.getByRole("searchbox", {
@@ -256,7 +329,65 @@ test("replacement return control survives desktop/mobile startup and both resize
         "C-204",
       );
       expect(errors).toEqual([]);
+      log("direct width complete", {
+        width: start,
+        pageErrors: errors,
+        consoleErrors,
+      });
     }
+  } catch (error) {
+    log("body failed", {
+      error: String(error),
+      pageErrors: errors,
+      consoleErrors,
+    });
+    throw error;
+  } finally {
+    const cleanup = async (phase: string, action: () => Promise<void>) => {
+      try {
+        await action();
+        log(phase);
+      } catch (error) {
+        cleanupErrors.push(error);
+        log(phase + " failed", { error: String(error) });
+      }
+    };
+    await cleanup("page closed", async () => {
+      await page.close();
+    });
+    await cleanup("context closed", async () => {
+      await context.close();
+    });
+    if (server?.listening) {
+      const ownedServer = server;
+      await cleanup("server closed", async () => {
+        const closed = new Promise<void>((resolve, reject) =>
+          ownedServer.close((error) => (error ? reject(error) : resolve())),
+        );
+        ownedServer.closeAllConnections();
+        await closed;
+      });
+    }
+    await cleanup("fixture removed", async () => {
+      await rm(fixture.root, { recursive: true, force: true });
+    });
+  }
+  if (cleanupErrors.length)
+    throw new AggregateError(
+      cleanupErrors,
+      "Replacement journey cleanup failed",
+    );
+});
+
+test("replacement journey normal gates pass at both widths", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const log = journeyPhase("normal gate");
+  const { fixture, output } = await replacementBundle(log);
+  let cleanupError: unknown;
+  try {
+    log("gate start");
     const report = await runBrowserQualityGates(
       {
         trustedRoot: fixture.root,
@@ -266,6 +397,7 @@ test("replacement return control survives desktop/mobile startup and both resize
       },
       browser,
     );
+    logJourneyFindings(log, report);
     for (const width of [1280, 390])
       for (const criterion of [
         "journey-render",
@@ -285,6 +417,29 @@ test("replacement return control survives desktop/mobile startup and both resize
           criterion + " " + width + ": " + finding?.reason,
         ).toBe("PASS");
       }
+  } catch (error) {
+    log("body failed", { error: String(error) });
+    throw error;
+  } finally {
+    try {
+      await removeReplacementFixture(fixture.root, log);
+    } catch (error) {
+      log("fixture removal failed", { error: String(error) });
+      cleanupError = error;
+    }
+  }
+  if (cleanupError) throw cleanupError;
+});
+
+test("replacement journey sabotage fails actions at both widths", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const log = journeyPhase("sabotaged gate");
+  const { fixture, output } = await replacementBundle(log);
+  let cleanupError: unknown;
+  try {
+    log("gate start");
     const sabotagedBrowser = new Proxy(browser, {
       get(target, property) {
         if (property === "newContext")
@@ -322,6 +477,7 @@ test("replacement return control survives desktop/mobile startup and both resize
       },
       sabotagedBrowser,
     );
+    logJourneyFindings(log, sabotaged);
     const actionFindings = sabotaged.findings.filter(
       (finding) => finding.criterion === "journey-actions",
     );
@@ -332,10 +488,18 @@ test("replacement return control survives desktop/mobile startup and both resize
     expect(actionFindings[0]!.reason).toContain("second-show-error");
     expect(actionFindings[1]!.reason).toContain("second-show-error");
     expect(actionFindings[1]!.reason).toContain("return-mobile");
+  } catch (error) {
+    log("body failed", { error: String(error) });
+    throw error;
   } finally {
-    await new Promise<void>((resolve) => server.close(() => resolve()));
-    await rm(fixture.root, { recursive: true, force: true });
+    try {
+      await removeReplacementFixture(fixture.root, log);
+    } catch (error) {
+      log("fixture removal failed", { error: String(error) });
+      cleanupError = error;
+    }
   }
+  if (cleanupError) throw cleanupError;
 });
 
 test("journey browser gates observe all declared actions on the exact bundle", async ({
