@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "vitest";
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { artifactDigest } from "../artifact-canonical.js";
+import { parseArtifactYaml } from "../artifact-codec.js";
 import type { ArtifactSnapshot } from "../artifact-store.js";
 import { buildPrototype } from "../prototype-builder/index.js";
 import {
@@ -781,33 +782,90 @@ test("one canonical Experience-first artifact set compiles as exact Reference an
       publisher.publish(compiled, { verifyRelease: async () => false }),
     ).rejects.toMatchObject({ code: "UNVERIFIED" });
   }
-  const wholeProduct: CompileInput = {
-    ...common,
-    mode: "reference",
-    scope: {
-      level: "product",
-      ownerId: "product_mimic",
-      parentId: "org_9uile",
-    },
-    inventory: {
-      ...inventory,
-      "experience-structure": included([
-        fixture.domains[0]!.ref,
-        ...categories["experience-structure"],
-      ]),
-    },
-  };
-  const invalidWhole = await compilePackage(
-    wholeProduct,
-    fixture.store,
-    registry,
-    policy,
-    registryForSource,
-  );
-  await expect(
-    registryForSource(source(invalidWhole.snapshot)).reconstruct(
+  for (const mode of ["reference", "portable"] as const) {
+    const wholeProduct: CompileInput = {
+      ...common,
+      mode,
+      scope: {
+        level: "product",
+        ownerId: "product_mimic",
+        parentId: "org_9uile",
+      },
+      inventory: {
+        ...inventory,
+        "experience-structure": included([
+          fixture.domains[0]!.ref,
+          ...categories["experience-structure"],
+        ]),
+      },
+      redistribution:
+        mode === "portable"
+          ? [
+              {
+                ref: childRef,
+                digest: childDigest,
+                allowed: true,
+                evidence: "Synthetic fixture redistribution grant",
+              },
+            ]
+          : [],
+    };
+    const compiled = await compilePackage(
+      wholeProduct,
+      fixture.store,
+      registry,
+      policy,
+      registryForSource,
+    );
+    await expect(compiled.verifyCurrent()).resolves.toBeUndefined();
+    await expect(compiled.verifyResolution()).resolves.toBeUndefined();
+    expect(packageDigest(compiled.snapshot)).toBe(compiled.digest);
+    const wholeRegistry = registryForSource(source(compiled.snapshot));
+    const reconstructed = await wholeRegistry.reconstruct(
       wholeProduct.ref,
-      invalidWhole.digest,
-    ),
-  ).rejects.toThrow("Artifact is out of package scope");
+      compiled.digest,
+    );
+    expect(reconstructed.map((item) => item.manifest.ref.packageId)).toEqual([
+      wholeProduct.ref.packageId,
+      childRef.packageId,
+    ]);
+    expect(reconstructed[0]!.manifest).toMatchObject({
+      kind: "design",
+      mode,
+      scope: wholeProduct.scope,
+    });
+    expect(reconstructed[0]!.manifest.artifacts).toEqual(
+      compiled.lock.artifacts,
+    );
+    expect(
+      reconstructed[0]!.manifest.artifacts
+        .map((entry) => entry.artifactId)
+        .sort(),
+    ).toEqual([...ids, fixture.domains[0]!.ref.artifactId].sort());
+    for (const domain of fixture.domains) {
+      const locked = await wholeRegistry.resolveArtifact(
+        wholeProduct.ref,
+        compiled.digest,
+        wholeProduct.ref,
+        domain!.ref.artifactId,
+        domain!.ref.revision,
+      );
+      expect(locked.entry.snapshotDigest).toBe(domain!.ref.lockDigest);
+      expect(
+        parseArtifactYaml(new TextDecoder().decode(locked.bytes)),
+      ).toMatchObject({
+        meta: { id: domain!.ref.artifactId, revision: domain!.ref.revision },
+        scope: domain!.artifact.scope,
+      });
+    }
+    expect(
+      reconstructed[0]!.snapshot.bundled?.["org%2Fexperience-tokens@1.0.0"] !==
+        undefined,
+    ).toBe(mode === "portable");
+    await expect(
+      new FilePackagePublisher(packages).publish(compiled, {
+        verifyRelease: async () => false,
+      }),
+    ).rejects.toMatchObject({ code: "UNVERIFIED" });
+  }
 });
