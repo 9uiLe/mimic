@@ -63,7 +63,7 @@ function requireObservedGateCoverage(
 test("Experience-first generated case states retain context on desktop and mobile", async ({
   page,
   browser,
-}) => {
+}, testInfo) => {
   // The browser gate checks both viewports and all seven states within this test.
   test.setTimeout(300_000);
   const fixture = await setupExperienceFirst();
@@ -103,6 +103,9 @@ test("Experience-first generated case states retain context on desktop and mobil
     await page.getByRole("button", { name: "Show success" }).first().click();
     await expect(page.getByText("C-204 · success")).toBeVisible();
     await expect(
+      page.locator('[data-state="success"] h2').first(),
+    ).toBeFocused();
+    await expect(
       page
         .locator('[data-state="success"]:not([hidden])')
         .getByText("Return to filtered queue; draft remains uncommitted"),
@@ -122,14 +125,75 @@ test("Experience-first generated case states retain context on desktop and mobil
           .locator(`[data-state="${state}"]:not([hidden])`)
           .getByText("Queue / Review · needs-review"),
       ).toBeVisible();
-      await page.getByRole("button", { name: "Show success" }).first().click();
+      await expect(
+        page.locator(`[data-state="${state}"] h2`).first(),
+      ).toBeFocused();
+      if (browser.browserType().name() === "chromium") {
+        await page.keyboard.press("Tab");
+        await expect(
+          page
+            .locator(`[data-state="${state}"]`)
+            .getByRole("button", {
+              name: "Show success",
+            })
+            .first(),
+        ).toBeFocused();
+        await page.keyboard.press("Enter");
+      } else {
+        await page
+          .getByRole("button", { name: "Show success" })
+          .first()
+          .click();
+      }
       await expect(page.getByText("C-204 · success")).toBeVisible();
+      await expect(
+        page.locator('[data-state="success"] h2').first(),
+      ).toBeFocused();
     }
     for (const state of ["empty", "partial", "empty", "partial"] as const) {
       await page.getByRole("button", { name: `Show ${state}` }).click();
       await expect(page.getByRole("status")).toHaveText(`${state} state`);
       await page.getByRole("button", { name: "Show success" }).first().click();
       await expect(page.getByRole("status")).toHaveText("success state");
+    }
+    if (browser.browserType().name() === "chromium") {
+      for (const state of ["empty", "partial"] as const) {
+        let reached = false;
+        for (let tab = 0; tab < 12; tab += 1) {
+          await page.keyboard.press("Tab");
+          if (
+            await page
+              .locator(`#show-${state}`)
+              .evaluate((button) => button === document.activeElement)
+          ) {
+            reached = true;
+            break;
+          }
+        }
+        expect(
+          reached,
+          `Tab must reach Show ${state} from the success context`,
+        ).toBe(true);
+        await page.keyboard.press("Enter");
+        await expect(page.getByRole("status")).toHaveText(`${state} state`);
+        await expect(
+          page.locator(`[data-state="${state}"] h2`).first(),
+        ).toBeFocused();
+        await page.keyboard.press("Tab");
+        await expect(
+          page
+            .locator(`[data-state="${state}"]`)
+            .getByRole("button", {
+              name: "Show success",
+            })
+            .first(),
+        ).toBeFocused();
+        await page.keyboard.press("Enter");
+        await expect(page.getByRole("status")).toHaveText("success state");
+        await expect(
+          page.locator('[data-state="success"] h2').first(),
+        ).toBeFocused();
+      }
     }
     const cards = page.locator("#review-root > *");
     await expect(cards).toHaveCount(4);
@@ -210,7 +274,7 @@ test("Experience-first generated case states retain context on desktop and mobil
     await page.getByRole("button", { name: "Show success" }).first().click();
     await expect(page.getByRole("status")).toHaveText("success state");
     if (browser.browserType().name() === "chromium") {
-      for (const state of ["empty", "partial"] as const) {
+      for (const state of ["empty", "partial", "empty", "partial"] as const) {
         await page.locator(`#show-${state}`).click();
         await expect(page.getByRole("status")).toHaveText(`${state} state`);
         const beforeTab = await page.evaluate(() => {
@@ -222,11 +286,17 @@ test("Experience-first generated case states retain context on desktop and mobil
             hidden: view?.hidden,
           };
         });
-        expect(beforeTab).toEqual({
-          id: `show-${state}`,
-          state: "success",
-          hidden: true,
+        expect(
+          beforeTab,
+          `${state}: focus must leave the hidden source`,
+        ).toEqual({
+          id: "",
+          state,
+          hidden: false,
         });
+        await expect(
+          page.locator(`[data-state="${state}"] h2`).first(),
+        ).toBeFocused();
         await page.keyboard.press("Tab");
         const naturalFocus = await page.evaluate(() => {
           const active = document.activeElement;
@@ -241,14 +311,44 @@ test("Experience-first generated case states retain context on desktop and mobil
         });
         expect(
           naturalFocus.visibleControl,
-          `${state}: natural post-route Tab currently misses a visible control (${naturalFocus.id || "body"}); this remains an open keyboard issue`,
-        ).toBe(false);
-        await page
-          .getByRole("button", { name: "Show success" })
-          .first()
-          .click();
+          `${state}: natural post-route Tab must reach a visible control (${naturalFocus.id || "body"})`,
+        ).toBe(true);
+        await expect(
+          page
+            .locator(`[data-state="${state}"]`)
+            .getByRole("button", {
+              name: "Show success",
+            })
+            .first(),
+        ).toBeFocused();
+        await page.keyboard.press("Enter");
         await expect(page.getByRole("status")).toHaveText("success state");
       }
+      await page.locator("#show-empty").click();
+      await expect(
+        page.locator('[data-state="empty"] h2').first(),
+      ).toBeFocused();
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await expect(page.getByRole("status")).toHaveText("empty state");
+      await expect(
+        page.locator('[data-state="empty"] h2').first(),
+      ).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(
+        page
+          .locator('[data-state="empty"]')
+          .getByRole("button", {
+            name: "Show success",
+          })
+          .first(),
+      ).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page.locator("#case-context h2")).toBeFocused();
+      await page.setViewportSize({ width: 390, height: 844 });
+      await expect(page.getByRole("status")).toHaveText("success state");
+      await expect(page.locator("#review-decision h2")).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(page.locator("#choose-case")).toBeFocused();
     }
     const report = await runBrowserQualityGates(
       {
@@ -263,6 +363,9 @@ test("Experience-first generated case states retain context on desktop and mobil
       trustedRoot: fixture.root,
       directory: output.directory,
     });
+    console.info(
+      `C-204 bundle ${inspected.target.bundleDigest} on ${testInfo.project.name} at 1280x800 and 390x844`,
+    );
     const engineName = browser.browserType().name();
     if (!["chromium", "firefox", "webkit"].includes(engineName))
       throw new Error(`Unexpected browser engine: ${engineName}`);
