@@ -33,3 +33,5 @@ Riverbend の**合成された画面・データ一覧**に限り、「作業指
 候補の `meta.createdAt=2026-10-07T23:25:00.000Z` はauthoring時に固定したenvelope値で、実測生成時刻ではない。CLIのproduce/packet eventは `23:23:54.004Z` で約66秒早い。保存済みartifactやイベントを遡及修正していない。
 
 実入力、stdout/exit、元path recoveryのsidecar、別root失敗、digest照合は `execution/` に保存した。planned approved artifactのCLI検証は**schema-only**でexit 0であり、人間のauthorityや最終publicationが通る証明ではない。
+
+新source proposalの実行状態は159の隔離コピー、旧requestのrecovery side-channelは157元workspaceにある。2つのworkspaceのcanonicalやrequest状態は自動で共有されない。後続の承認と新しいS01/S02/S05/requestのrebindは、選んだ同一workspaceで正規CLIから行う。元workspaceを選ぶ場合は新source Run自体を正規CLIで再現する必要があり、今回は実行していない。

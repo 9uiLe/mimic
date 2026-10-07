@@ -33,4 +33,6 @@ If the owner requests edits, produce another proposed revision with a new exact 
 
 Moving the old workspace to a different root changes `loadSkillPackage().directory` and therefore the package digest even when package file bytes match. `execution/recovery/relocated-conflict.json` records the separate-root v1 retry failing at exit 5 without changing that copy's state or marker. A clean-root execution with new Run and artifact envelopes is a replay, not a recovery of the old accepted submit. It has not been used as a substitute for the successful original-path recovery.
 
+The two runtime roots are separate: the new source proposal is in `/tmp/mimic-9ui-159-source-review`, while the recovered legacy request side-channel is in `/tmp/mimic-9ui-157-reviewed.SxJHia`. No cross-root selection or automatic rebind occurred. A later source decision and newly bound S01/S02/S05/request Run must execute in one chosen workspace through the regular CLI; if the original root is chosen, the new source Run itself must be reproduced there through normal CLI commands. That continuation has not been performed.
+
 The old source remains provisional, so the request remains pending source approval. Upstream response, new capability revision, downstream freshness assessment and 9UI-124 completion remain future work.
