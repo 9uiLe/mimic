@@ -10,7 +10,10 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
-import type { PrototypeBuilderInput } from "../prototype-builder/index.js";
+import type {
+  PrototypeBuilderInput,
+  PrototypeNode,
+} from "../prototype-builder/index.js";
 import { canonicalJson } from "../artifact-canonical.js";
 import {
   inspectBundle,
@@ -51,7 +54,54 @@ function finding(
     limitations,
   };
 }
-function transitions(plan: PrototypeBuilderInput): Map<string, Edge[]> {
+type MutableNode = Omit<PrototypeNode, "children"> & {
+  children?: MutableNode[];
+};
+function effectiveRoot(
+  plan: PrototypeBuilderInput,
+  stateName: string,
+  mobile: boolean,
+) {
+  const source = plan.states.find((state) => state.name === stateName)!.root;
+  const root = structuredClone(source) as MutableNode;
+  if (!mobile) return root;
+  const entry = plan.responsive?.states.find(
+    (item) => item.state === stateName,
+  );
+  const find = (id: string): typeof root | undefined => {
+    const visit = (node: typeof root): typeof root | undefined =>
+      node.id === id ? node : node.children?.map(visit).find(Boolean);
+    return visit(root);
+  };
+  const parentOf = (id: string): typeof root | undefined => {
+    const visit = (node: typeof root): typeof root | undefined =>
+      node.children?.some((child) => child.id === id)
+        ? node
+        : node.children?.map(visit).find(Boolean);
+    return visit(root);
+  };
+  for (const operation of entry?.operations ?? []) {
+    if (operation.kind === "reorder") {
+      const parent = find(operation.parentId)!;
+      const children = parent.children!;
+      parent.children = operation.childIds.map((id) =>
+        children.find((child) => child.id === id)!,
+      );
+    } else if (operation.kind === "replace") {
+      const parent = parentOf(operation.targetId)!;
+      parent.children = parent.children!.map((child) =>
+        child.id === operation.targetId
+          ? (structuredClone(operation.with) as MutableNode)
+          : child,
+      );
+    }
+  }
+  return root;
+}
+function transitions(
+  plan: PrototypeBuilderInput,
+  mobile = false,
+): Map<string, Edge[]> {
   const graph = new Map<string, Edge[]>();
   for (const state of plan.states) {
     const edges: Edge[] = [];
@@ -65,12 +115,15 @@ function transitions(plan: PrototypeBuilderInput): Map<string, Edge[]> {
         });
       for (const child of node.children ?? []) walk(child);
     };
-    walk(state.root);
+    walk(effectiveRoot(plan, state.name, mobile));
     graph.set(state.name, edges);
   }
   return graph;
 }
-function fragments(plan: PrototypeBuilderInput): Map<string, string[]> {
+function fragments(
+  plan: PrototypeBuilderInput,
+  mobile = false,
+): Map<string, string[]> {
   const result = new Map<string, string[]>();
   for (const state of plan.states) {
     const hrefs: string[] = [];
@@ -78,7 +131,7 @@ function fragments(plan: PrototypeBuilderInput): Map<string, string[]> {
       if (node.tag === "a" && node.href) hrefs.push(node.href);
       for (const child of node.children ?? []) walk(child);
     };
-    walk(state.root);
+    walk(effectiveRoot(plan, state.name, mobile));
     result.set(state.name, hrefs);
   }
   return result;
@@ -128,6 +181,12 @@ async function clickEdge(page: Page, edge: Edge): Promise<void> {
     throw new Error(
       `${edge.from} → ${edge.to} ${edge.label}: rendered target is ${actual}`,
     );
+  const closed = button.locator("xpath=ancestor::details[not(@open)]");
+  for (let index = (await closed.count()) - 1; index >= 0; index--) {
+    const summary = closed.nth(index).locator(":scope > summary");
+    await summary.focus();
+    await page.keyboard.press("Enter");
+  }
   await button.click({ timeout: 2_000 });
   await page
     .locator(`[data-state="${edge.to}"]:not([hidden])`)
@@ -157,6 +216,7 @@ export async function runBrowserQualityGates(
     "keyboard-focus",
     "viewport-overflow",
     "navigation-state",
+    ...(plan?.responsive ? ["responsive-transform"] : []),
   ];
   try {
     if (
@@ -234,10 +294,10 @@ export async function runBrowserQualityGates(
       launched = true;
     }
     engine = browser.browserType().name();
-    const graph = transitions(plan!);
-    const plannedFragments = fragments(plan!);
-    const routes = paths(graph, plan!.initialState);
     for (const device of devices) {
+      const graph = transitions(plan!, device.mobile);
+      const plannedFragments = fragments(plan!, device.mobile);
+      const routes = paths(graph, plan!.initialState);
       const deviceName = `${engine}-${device.mobile ? "mobile" : "desktop"}`;
       let context: BrowserContext | undefined;
       const conditions = {
@@ -542,6 +602,155 @@ export async function runBrowserQualityGates(
               limit,
             ),
           );
+        if (plan!.responsive) {
+          const failures: string[] = [];
+          const unknown: string[] = [];
+          let observed = 0;
+          for (const entry of plan!.responsive.states) {
+            const route = routes.get(entry.state);
+            if (!route) {
+              failures.push(`${entry.state}: state unreachable`);
+              continue;
+            }
+            try {
+              await servedPage(page, base, route);
+              const status = await page
+                .locator("#prototype-status")
+                .textContent();
+              const width = device.width;
+              for (const operation of entry.operations) {
+                if (operation.kind === "reorder") {
+                  const order = await page
+                    .locator(`#${operation.parentId}`)
+                    .evaluate((parent) =>
+                      [...parent.children].map(
+                        (child) =>
+                          child.id ||
+                          (child as HTMLElement).dataset.responsiveTarget,
+                      ),
+                    );
+                  const original = plan!.states.find(
+                    (state) => state.name === entry.state,
+                  )!.root;
+                  const source = (function find(
+                    node: typeof original,
+                  ): typeof original | undefined {
+                    return node.id === operation.parentId
+                      ? node
+                      : node.children?.map(find).find(Boolean);
+                  })(original)!;
+                  const expected = device.mobile
+                    ? operation.childIds
+                    : source.children!.map((child) => child.id);
+                  if (canonicalJson(order) !== canonicalJson(expected))
+                    failures.push(`${entry.state}: DOM reading order differs`);
+                } else if (operation.kind === "replace") {
+                  if (
+                    (await page
+                      .locator(
+                        `#${device.mobile ? operation.with.id : operation.targetId}`,
+                      )
+                      .count()) !== 1 ||
+                    (await page
+                      .locator(
+                        `#${device.mobile ? operation.targetId : operation.with.id}`,
+                      )
+                      .count()) !== 0
+                  )
+                    failures.push(
+                      `${entry.state}: replacement surface differs`,
+                    );
+                } else {
+                  const details = page.locator(
+                    `[data-responsive-target="${operation.targetId}"]`,
+                  );
+                  if (device.mobile) {
+                    if (
+                      (await details.count()) !== 1 ||
+                      (await details
+                        .locator(":scope > summary")
+                        .textContent()) !== operation.summary
+                    )
+                      failures.push(`${entry.state}: disclosure missing`);
+                    else {
+                      const summary = details.locator(":scope > summary");
+                      await summary.focus();
+                      await page.keyboard.press("Enter");
+                      if (
+                        !(await details.evaluate(
+                          (item) => (item as HTMLDetailsElement).open,
+                        ))
+                      )
+                        failures.push(
+                          `${entry.state}: keyboard did not open disclosure`,
+                        );
+                      await page.keyboard.press("Enter");
+                      if (
+                        await details.evaluate(
+                          (item) => (item as HTMLDetailsElement).open,
+                        )
+                      )
+                        failures.push(
+                          `${entry.state}: keyboard did not close disclosure`,
+                        );
+                    }
+                  } else if (await details.count())
+                    failures.push(`${entry.state}: desktop disclosure present`);
+                }
+                observed++;
+              }
+              const before = device.mobile
+                ? entry.continuity.primaryAction.mobileId
+                : entry.continuity.primaryAction.desktopId;
+              const after = device.mobile
+                ? entry.continuity.primaryAction.desktopId
+                : entry.continuity.primaryAction.mobileId;
+              await page.locator(`#${before}`).focus();
+              await page.setViewportSize({
+                width: device.mobile ? 1280 : 390,
+                height: device.height,
+              });
+              await page.waitForFunction(
+                (id) => document.activeElement?.id === id,
+                after,
+                { timeout: 2000 },
+              );
+              if (
+                (await page.locator("#prototype-status").textContent()) !==
+                status
+              )
+                failures.push(`${entry.state}: state changed on resize`);
+              await page.setViewportSize({ width, height: device.height });
+              await page.waitForFunction(
+                (id) => document.activeElement?.id === id,
+                before,
+                { timeout: 2000 },
+              );
+            } catch (error) {
+              (executionUnavailable(error, page, browser)
+                ? unknown
+                : failures
+              ).push(`${entry.state}: ${String(error)}`);
+            }
+          }
+          findings.push(
+            finding(
+              "responsive-transform",
+              failures.length
+                ? "FAIL"
+                : unknown.length || observed === 0
+                  ? "UNVERIFIED"
+                  : "PASS",
+              "MAJOR",
+              failures.join("; ") ||
+                unknown.join("; ") ||
+                `${observed} finite operations, keyboard disclosures, DOM order, focus and state across both resize directions checked`,
+              ["plan.json", "index.html", "prototype.js"],
+              { ...conditions, operationsChecked: observed },
+              "Synthetic structural and browser evidence; semantic equivalence and real task usability require author and user review",
+            ),
+          );
+        }
       } catch (error) {
         for (const criterion of criteria)
           if (
