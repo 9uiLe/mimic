@@ -6,6 +6,7 @@ import path from "node:path";
 import { buildPrototypeJourney } from "../../../packages/core/src/prototype-journey/index.js";
 import { runBrowserQualityGates } from "../../../packages/core/src/quality-gates/browser.js";
 import { setupPrototypeJourney } from "../../../fixtures/prototype-journey/setup.js";
+import { authoredReplacementSurfacePlan } from "../../../fixtures/prototype-journey/plan.js";
 import { authoredJourneyModes } from "../../../fixtures/prototype-journey/modes.js";
 import { buildPrototypeJourneyModes } from "../../../packages/core/src/prototype-modes/journey.js";
 
@@ -156,6 +157,155 @@ for (const width of [1280, 390]) {
     },
   );
 }
+
+test("replacement return control survives desktop/mobile startup and both resize directions", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const fixture = await setupPrototypeJourney();
+  const plan = authoredReplacementSurfacePlan(fixture.journeyPlan);
+  const output = await buildPrototypeJourney(fixture.store, plan, fixture.root);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  const server = createServer(async (request, response) => {
+    const name = request.url === "/" ? "index.html" : request.url?.slice(1);
+    if (
+      !name ||
+      !["index.html", "prototype.css", "prototype.js"].includes(name)
+    ) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, {
+      "content-type": name.endsWith(".css")
+        ? "text/css"
+        : name.endsWith(".js")
+          ? "text/javascript"
+          : "text/html",
+    });
+    response.end(await readFile(path.join(output.directory, name)));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("No server address");
+    for (const start of [1280, 390]) {
+      await page.setViewportSize({ width: start, height: 850 });
+      await page.goto("http://127.0.0.1:" + address.port + "/");
+      const filter = page.getByRole("searchbox", {
+        name: "Filter cases by status",
+      });
+      await filter.fill("not-present");
+      await expect(page.getByText("No matching cases")).toBeVisible();
+      await filter.fill("needs-review");
+      await page.getByRole("button", { name: "Open C-204" }).click();
+      const draft = page.getByRole("textbox", {
+        name: "Uncommitted review draft",
+      });
+      await draft.fill("Return replacement draft " + start);
+      await page.setViewportSize({
+        width: start === 1280 ? 390 : 1280,
+        height: 850,
+      });
+      const swappedReturn = page.locator(
+        start === 1280 ? "#review__return-mobile" : "#review__return-success",
+      );
+      await expect(swappedReturn).toBeVisible();
+      await swappedReturn.click();
+      await expect(filter).toHaveValue("needs-review");
+      await expect(filter).toBeFocused();
+      await filter.fill("not-present");
+      await expect(page.getByText("No matching cases")).toBeVisible();
+      await filter.fill("needs-review");
+      await page.getByRole("button", { name: "Open C-204" }).click();
+      await expect(draft).toHaveValue("Return replacement draft " + start);
+      await page.setViewportSize({ width: start, height: 850 });
+      const originalReturn = page.locator(
+        start === 1280 ? "#review__return-success" : "#review__return-mobile",
+      );
+      await expect(originalReturn).toBeVisible();
+      await originalReturn.click();
+      await page.getByRole("button", { name: "Open C-205" }).click();
+      await expect(draft).toHaveValue("");
+      await expect(page.locator('[data-view="review"]')).not.toContainText(
+        "C-204",
+      );
+      await page
+        .getByRole("button", { name: "Show error", exact: true })
+        .click();
+      await expect(page.locator('[data-view="review"]')).not.toContainText(
+        "C-204",
+      );
+      expect(errors).toEqual([]);
+    }
+    const report = await runBrowserQualityGates(
+      {
+        trustedRoot: fixture.root,
+        directory: output.directory,
+        store: fixture.store,
+        uiContract: fixture.contract.ref,
+      },
+      browser,
+    );
+    expect(
+      report.findings
+        .filter((finding) => finding.criterion === "journey-actions")
+        .map((finding) => finding.state),
+    ).toEqual(["PASS", "PASS"]);
+    const sabotagedBrowser = new Proxy(browser, {
+      get(target, property) {
+        if (property === "newContext")
+          return async (...args: Parameters<typeof browser.newContext>) => {
+            const context = await target.newContext(...args);
+            await context.addInitScript(() => {
+              document.addEventListener(
+                "click",
+                (event) => {
+                  const button =
+                    event.target instanceof Element
+                      ? event.target.closest("button[id]")
+                      : null;
+                  if (
+                    button?.id === "review__second-show-error" ||
+                    button?.id === "review__return-mobile"
+                  )
+                    event.stopImmediatePropagation();
+                },
+                true,
+              );
+            });
+            return context;
+          };
+        const value = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const sabotaged = await runBrowserQualityGates(
+      {
+        trustedRoot: fixture.root,
+        directory: output.directory,
+        store: fixture.store,
+        uiContract: fixture.contract.ref,
+      },
+      sabotagedBrowser,
+    );
+    const actionFindings = sabotaged.findings.filter(
+      (finding) => finding.criterion === "journey-actions",
+    );
+    expect(actionFindings.map((finding) => finding.state)).toEqual([
+      "FAIL",
+      "FAIL",
+    ]);
+    expect(actionFindings[0]!.reason).toContain("second-show-error");
+    expect(actionFindings[1]!.reason).toContain("second-show-error");
+    expect(actionFindings[1]!.reason).toContain("return-mobile");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
 
 test("journey browser gates observe all declared actions on the exact bundle", async ({
   browser,

@@ -14,6 +14,11 @@ import type {
   JourneyView,
   JourneyAction,
 } from "../prototype-journey/index.js";
+import {
+  journeyNodeSurfaces,
+  materializeJourneyTransitions,
+  type JourneyTransition,
+} from "../prototype-journey/index.js";
 import type {
   PrototypeNode,
   PrototypeState,
@@ -61,28 +66,21 @@ function stateOf(
         return entry.state;
   return undefined;
 }
-function stateButtons(
-  view: JourneyView,
-): { state: PrototypeState; target: PrototypeState; index: number }[] {
-  const result: {
-    state: PrototypeState;
-    target: PrototypeState;
-    index: number;
-  }[] = [];
-  for (const state of view.render.states) {
-    let index = 0;
-    const visit = (node: PrototypeNode) => {
-      if (node.tag === "button" && node.targetState)
-        result.push({
-          state: state.name,
-          target: node.targetState,
-          index: index++,
-        });
-      node.children?.forEach(visit);
-    };
-    visit(state.root);
-  }
-  return result;
+function stateButtons(view: JourneyView, width: number): JourneyTransition[] {
+  const surface = width === 390 ? "mobile" : "desktop";
+  return materializeJourneyTransitions(view).transitions.filter((item) =>
+    item.surfaces.includes(surface),
+  );
+}
+function available(
+  plan: PrototypeJourneyInput,
+  control: JourneyControl,
+  width: number,
+): boolean {
+  const view = plan.views.find((item) => item.id === control.viewId)!;
+  return journeyNodeSurfaces(view, control.nodeId).includes(
+    width === 390 ? "mobile" : "desktop",
+  );
 }
 function domId(viewId: string, nodeId: string): string {
   return viewId + "__" + nodeId;
@@ -96,6 +94,7 @@ async function enterView(
   page: Page,
   plan: PrototypeJourneyInput,
   target: string,
+  width: number,
 ): Promise<void> {
   if (target === plan.initialViewId) return;
   const source = plan.controls.find(
@@ -103,7 +102,8 @@ async function enterView(
       control.viewId === plan.initialViewId &&
       (control.action.kind === "select" ||
         control.action.kind === "navigate") &&
-      control.action.viewId === target,
+      control.action.viewId === target &&
+      available(plan, control, width),
   );
   if (!source) throw new Error("No executable route to view " + target);
   await page.locator("#" + domId(source.viewId, source.nodeId)).click();
@@ -118,14 +118,15 @@ async function enterState(
   page: Page,
   view: JourneyView,
   state: PrototypeState,
+  width: number,
 ): Promise<void> {
   if (view.render.initialState === state) return;
-  const edges = stateButtons(view);
-  const queue: { state: PrototypeState; path: PrototypeState[] }[] = [
+  const edges = stateButtons(view, width);
+  const queue: { state: PrototypeState; path: JourneyTransition[] }[] = [
     { state: view.render.initialState, path: [] },
   ];
   const seen = new Set<PrototypeState>([view.render.initialState]);
-  let route: PrototypeState[] | undefined;
+  let route: JourneyTransition[] | undefined;
   for (let i = 0; i < queue.length; i++) {
     const item = queue[i]!;
     if (item.state === state) {
@@ -137,34 +138,26 @@ async function enterState(
     ))
       if (!seen.has(edge.target)) {
         seen.add(edge.target);
-        queue.push({ state: edge.target, path: [...item.path, edge.target] });
+        queue.push({ state: edge.target, path: [...item.path, edge] });
       }
   }
   if (!route)
     throw new Error("Semantic status is unreachable: " + view.id + "/" + state);
   for (const next of route) {
-    const locator = page
-      .locator(
-        '[data-view="' +
-          view.id +
-          '"] [data-state]:not([hidden]) button[data-target-state="' +
-          next +
-          '"]',
-      )
-      .first();
-    await locator.click();
+    await page.locator("#" + domId(view.id, next.nodeId)).click();
   }
 }
 async function exerciseControl(
   page: Page,
   plan: PrototypeJourneyInput,
   control: JourneyControl,
+  width: number,
 ): Promise<void> {
   const view = plan.views.find((item) => item.id === control.viewId)!;
-  await enterView(page, plan, view.id);
+  await enterView(page, plan, view.id, width);
   const state = stateOf(view, control.nodeId);
   if (!state) throw new Error("No owning semantic state for " + control.nodeId);
-  await enterState(page, view, state);
+  await enterState(page, view, state, width);
   const element = page.locator("#" + domId(view.id, control.nodeId));
   if ((await element.count()) !== 1 || !(await element.isVisible()))
     throw new Error(
@@ -178,6 +171,13 @@ async function exerciseControl(
       if ((await element.inputValue()) !== value)
         throw new Error("Filter value not retained");
       for (const row of plan.rows) {
+        if (
+          !journeyNodeSurfaces(
+            plan.views.find((item) => item.id === row.viewId)!,
+            row.nodeId,
+          ).includes(width === 390 ? "mobile" : "desktop")
+        )
+          continue;
         const entity = plan.entities.find((item) => item.id === row.entityId)!;
         const expected = String(entity.fields[action.field])
           .toLowerCase()
@@ -188,6 +188,37 @@ async function exerciseControl(
             .isVisible()) !== expected
         )
           throw new Error("Filter result differs for " + row.entityId);
+      }
+      let absent = "__journey_gate_missing__";
+      while (
+        plan.entities.some((item) =>
+          item.fields[action.field]
+            ?.toLowerCase()
+            .includes(absent.toLowerCase()),
+        )
+      )
+        absent += "_";
+      await element.fill(absent);
+      const emptyId =
+        width === 390
+          ? (plan.filterEmpty.mobileNodeId ?? plan.filterEmpty.nodeId)
+          : plan.filterEmpty.nodeId;
+      if (
+        !(await page
+          .locator("#" + domId(plan.filterEmpty.viewId, emptyId))
+          .isVisible())
+      )
+        throw new Error("Authored empty-result feedback did not appear");
+      for (const row of plan.rows) {
+        if (
+          !journeyNodeSurfaces(
+            plan.views.find((item) => item.id === row.viewId)!,
+            row.nodeId,
+          ).includes(width === 390 ? "mobile" : "desktop")
+        )
+          continue;
+        if (await page.locator("#" + domId(row.viewId, row.nodeId)).isVisible())
+          throw new Error("Filtered row remained visible for absent status");
       }
       break;
     }
@@ -255,19 +286,24 @@ async function exerciseControl(
 async function sameSession(
   page: Page,
   plan: PrototypeJourneyInput,
+  width: number,
 ): Promise<void> {
   const filter = plan.controls.find(
-    (control) => control.action.kind === "set-filter",
+    (control) =>
+      control.action.kind === "set-filter" && available(plan, control, width),
   );
   const selects = plan.controls.filter(
-    (control) => control.action.kind === "select",
+    (control) =>
+      control.action.kind === "select" && available(plan, control, width),
   );
   const edit = plan.controls.find(
-    (control) => control.action.kind === "edit-draft",
+    (control) =>
+      control.action.kind === "edit-draft" && available(plan, control, width),
   );
   const ret = plan.controls.find(
     (control) =>
       control.action.kind === "return" &&
+      available(plan, control, width) &&
       stateOf(
         plan.views.find((view) => view.id === control.viewId)!,
         control.nodeId,
@@ -277,20 +313,35 @@ async function sameSession(
   );
   const discard = plan.controls.find(
     (control) =>
-      control.action.kind === "discard-draft" ||
-      control.action.kind === "reset-draft",
+      (control.action.kind === "discard-draft" ||
+        control.action.kind === "reset-draft") &&
+      available(plan, control, width),
   );
   if (!filter || selects.length < 2 || !edit || !ret || !discard)
     throw new Error(
       "Journey does not declare filter, two selections, edit, return and discard",
     );
-  const first = selects[0]!;
-  const second = selects.find(
-    (item) =>
-      item.action.kind === "select" &&
-      item.action.entityId !== (first.action as { entityId: string }).entityId,
+  const sameFilter = (left: JourneyControl, right: JourneyControl): boolean => {
+    if (left.action.kind !== "select" || right.action.kind !== "select")
+      return false;
+    const leftId = left.action.entityId;
+    const rightId = right.action.entityId;
+    return (
+      leftId !== rightId &&
+      plan.entities.find((item) => item.id === leftId)?.fields[
+        plan.filterField
+      ] ===
+        plan.entities.find((item) => item.id === rightId)?.fields[
+          plan.filterField
+        ]
+    );
+  };
+  const first = selects.find((item) =>
+    selects.some((other) => sameFilter(item, other)),
   );
+  const second = first && selects.find((item) => sameFilter(first, item));
   if (
+    !first ||
     !second ||
     first.action.kind !== "select" ||
     second.action.kind !== "select" ||
@@ -442,6 +493,15 @@ export async function runBrowserJourneyQualityGates(
         browser.browserType().name() + (width === 390 ? "-mobile" : "-desktop");
       let context: BrowserContext | undefined;
       let count = 0;
+      let observedControls = 0;
+      let observedTransitions = 0;
+      const expectedControls = plan.controls.filter((control) =>
+        available(plan, control, width),
+      ).length;
+      const expectedTransitions = plan.views.reduce(
+        (sum, view) => sum + stateButtons(view, width).length,
+        0,
+      );
       let rendered = false;
       let keyboardObserved = false;
       let axeObserved = 0;
@@ -478,12 +538,15 @@ export async function runBrowserJourneyQualityGates(
             .locator('[data-view="' + plan.initialViewId + '"]:not([hidden])')
             .count()) === 1;
         if (pageErrors.length) rendered = false;
-        for (const control of plan.controls) {
+        for (const control of plan.controls.filter((item) =>
+          available(plan, item, width),
+        )) {
           const probe = await context.newPage();
           try {
             await probe.goto(base);
-            await exerciseControl(probe, plan, control);
+            await exerciseControl(probe, plan, control, width);
             count++;
+            observedControls++;
           } catch (error) {
             actionErrors.push(
               control.viewId + "/" + control.nodeId + ": " + String(error),
@@ -493,34 +556,31 @@ export async function runBrowserJourneyQualityGates(
           }
         }
         for (const view of plan.views) {
-          for (const edge of stateButtons(view)) {
+          for (const edge of stateButtons(view, width)) {
             const probe = await context.newPage();
             try {
               await probe.goto(base);
-              await enterView(probe, plan, view.id);
-              await enterState(probe, view, edge.state);
-              const button = probe
-                .locator(
-                  '[data-view="' +
-                    view.id +
-                    '"] [data-state="' +
-                    edge.state +
-                    '"] button[data-target-state="' +
-                    edge.target +
-                    '"]',
-                )
-                .first();
+              await enterView(probe, plan, view.id, width);
+              await enterState(probe, view, edge.state, width);
+              const button = probe.locator("#" + domId(view.id, edge.nodeId));
+              if ((await button.count()) !== 1 || !(await button.isVisible()))
+                throw new Error(
+                  "Declared transition is not visible: " + edge.nodeId,
+                );
               await button.click();
               if (
                 (await activeState(probe, view.id, edge.target).count()) !== 1
               )
                 throw new Error("target state not reached");
               count++;
+              observedTransitions++;
             } catch (error) {
               actionErrors.push(
                 view.id +
                   "/" +
                   edge.state +
+                  "/" +
+                  edge.nodeId +
                   "→" +
                   edge.target +
                   ": " +
@@ -532,7 +592,7 @@ export async function runBrowserJourneyQualityGates(
           }
         }
         try {
-          await sameSession(page, plan);
+          await sameSession(page, plan, width);
           count += 8;
           const focused = await page.evaluate(
             () =>
@@ -561,8 +621,8 @@ export async function runBrowserJourneyQualityGates(
             const probe = await context.newPage();
             try {
               await probe.goto(base);
-              await enterView(probe, plan, view.id);
-              await enterState(probe, view, state);
+              await enterView(probe, plan, view.id, width);
+              await enterState(probe, view, state, width);
               if ((await activeState(probe, view.id, state).count()) !== 1)
                 throw new Error("State did not render");
               const links = await activeState(probe, view.id, state)
@@ -636,25 +696,14 @@ export async function runBrowserJourneyQualityGates(
             const review = plan.views.find(
               (view) => view.id !== plan.initialViewId,
             )!;
-            const edge = stateButtons(review).find(
+            const edge = stateButtons(review, width).find(
               (item) =>
                 item.state === review.render.initialState &&
                 item.target !== review.render.initialState,
             );
             if (!edge)
               throw new Error("No recovery transition for natural Tab probe");
-            await page
-              .locator(
-                '[data-view="' +
-                  review.id +
-                  '"] [data-state="' +
-                  edge.state +
-                  '"] button[data-target-state="' +
-                  edge.target +
-                  '"]',
-              )
-              .first()
-              .click();
+            await page.locator("#" + domId(review.id, edge.nodeId)).click();
             const focusedHeading = await page.evaluate(() => {
               const node = document.activeElement;
               return (
@@ -700,7 +749,21 @@ export async function runBrowserJourneyQualityGates(
         ],
         [
           "journey-actions",
-          count > 0 ? actionErrors : ["Zero actions observed", ...actionErrors],
+          observedControls === expectedControls &&
+          observedTransitions === expectedTransitions &&
+          count > 0
+            ? actionErrors
+            : [
+                "Declared action coverage incomplete: controls " +
+                  observedControls +
+                  "/" +
+                  expectedControls +
+                  ", transitions " +
+                  observedTransitions +
+                  "/" +
+                  expectedTransitions,
+                ...actionErrors,
+              ],
         ],
         ["journey-continuity", continuityErrors],
         [

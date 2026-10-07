@@ -86,6 +86,17 @@ test("journey Modes bind every visible action and keep notices in every Proposed
       value.root,
     ),
   ).rejects.toMatchObject({ code: "INVALID" });
+  const reversed = {
+    ...modes,
+    proposed: {
+      ...modes.proposed,
+      views: [...modes.proposed.views].reverse(),
+    },
+    comparisonPath: "reversed-mode",
+  };
+  await expect(
+    buildPrototypeJourneyModes(value.store, reversed, value.root),
+  ).rejects.toMatchObject({ code: "INVALID" });
 });
 test("rejected System Request cannot emit the Proposed action", async () => {
   const value = await fixture({ rejectedRequest: true });

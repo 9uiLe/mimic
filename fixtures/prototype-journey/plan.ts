@@ -80,6 +80,18 @@ export function authoredJourneyPlan(fixture: Fixture): PrototypeJourneyInput {
     ],
   };
   const { responsive: _reviewResponsive, ...baseInput } = fixture.input;
+  const neutralReviewText = (text: string): string =>
+    text
+      .replaceAll("Case C-204", "Selected case")
+      .replaceAll("C-204 ·", "Case review ·")
+      .replaceAll("for C-204", "for the selected case");
+  const neutralReviewNode = (node: PrototypeNode): PrototypeNode => ({
+    ...node,
+    ...(node.text ? { text: neutralReviewText(node.text) } : {}),
+    ...(node.children
+      ? { children: node.children.map(neutralReviewNode) }
+      : {}),
+  });
   const queue: PrototypeBuilderInput = {
     ...baseInput,
     scenario: fixture.queueScenario.ref,
@@ -115,15 +127,16 @@ export function authoredJourneyPlan(fixture: Fixture): PrototypeJourneyInput {
   };
   const review: PrototypeBuilderInput = {
     ...fixture.input,
+    title: "Synthetic case review",
     initialState: "success",
     states: fixture.input.states.map((state) => {
       if (state.name !== "success")
         return {
           ...state,
           root: {
-            ...state.root,
+            ...neutralReviewNode(state.root),
             children: [
-              ...(state.root.children ?? []),
+              ...(state.root.children ?? []).map(neutralReviewNode),
               {
                 tag: "section",
                 children: [
@@ -141,8 +154,9 @@ export function authoredJourneyPlan(fixture: Fixture): PrototypeJourneyInput {
       return {
         ...state,
         root: {
-          ...state.root,
-          children: (state.root.children ?? []).map((child) => {
+          ...neutralReviewNode(state.root),
+          children: (state.root.children ?? []).map((source) => {
+            const child = neutralReviewNode(source);
             if (child.id !== "review-decision") return child;
             return {
               ...child,
@@ -171,6 +185,17 @@ export function authoredJourneyPlan(fixture: Fixture): PrototypeJourneyInput {
         },
       };
     }),
+    responsive: {
+      ...fixture.input.responsive!,
+      states: fixture.input.responsive!.states.map((entry) => ({
+        ...entry,
+        operations: entry.operations.map((operation) =>
+          operation.kind === "replace"
+            ? { ...operation, with: neutralReviewNode(operation.with) }
+            : operation,
+        ),
+      })),
+    },
     outputPath: "review-view",
   };
   return {
@@ -307,5 +332,196 @@ export function authoredJourneyPlan(fixture: Fixture): PrototypeJourneyInput {
       status: "per-view",
     },
     outputPath: "journey-generated",
+  };
+}
+
+/** A valid alternate mobile return control used to verify DOM replacement lifecycle. */
+export function authoredReplacementReturnPlan(
+  source: PrototypeJourneyInput,
+): PrototypeJourneyInput {
+  return {
+    ...source,
+    outputPath: "journey-replacement",
+    views: source.views.map((view) =>
+      view.id !== "review"
+        ? view
+        : {
+            ...view,
+            render: {
+              ...view.render,
+              states: view.render.states.map((state) =>
+                state.name !== "success"
+                  ? state
+                  : {
+                      ...state,
+                      root: {
+                        ...state.root,
+                        children: state.root.children?.map((node) =>
+                          node.id !== "review-decision"
+                            ? node
+                            : {
+                                ...node,
+                                children: [
+                                  ...(node.children ?? []),
+                                  {
+                                    tag: "button" as const,
+                                    id: "second-show-error",
+                                    componentId:
+                                      view.render.selection.components[0]!
+                                        .artifactId,
+                                    text: "Show error again",
+                                    targetState: "error" as const,
+                                  },
+                                ],
+                              },
+                        ),
+                      },
+                    },
+              ),
+              responsive: {
+                ...view.render.responsive!,
+                states: view.render.responsive!.states.map((entry) =>
+                  entry.state !== "success"
+                    ? entry
+                    : {
+                        ...entry,
+                        operations: [
+                          ...entry.operations,
+                          {
+                            kind: "replace" as const,
+                            targetId: "return-success",
+                            with: {
+                              tag: "button" as const,
+                              id: "return-mobile",
+                              componentId:
+                                view.render.selection.components[0]!.artifactId,
+                              text: "Return to filtered queue",
+                            },
+                            focusMap: [
+                              {
+                                desktopId: "return-success",
+                                mobileId: "return-mobile",
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                ),
+              },
+            },
+          },
+    ),
+    controls: [
+      ...source.controls,
+      {
+        viewId: "review",
+        nodeId: "return-mobile",
+        action: { kind: "return" },
+      },
+    ],
+  };
+}
+
+/** Exercise alternate filter feedback and a filtered entity row on the mobile surface. */
+export function authoredReplacementSurfacePlan(
+  original: PrototypeJourneyInput,
+): PrototypeJourneyInput {
+  const source = authoredReplacementReturnPlan(original);
+  const queue = source.views.find((view) => view.id === "queue")!;
+  const componentId = queue.render.selection.components[0]!.artifactId;
+  const mobileRow: PrototypeNode = {
+    tag: "article",
+    id: "mobile-row-c204",
+    children: [
+      { tag: "h3", text: "C-204 · Riverside intake" },
+      { tag: "p", text: "needs-review · uncommitted" },
+      button("mobile-open-c204", "Open C-204", componentId),
+    ],
+  };
+  return {
+    ...source,
+    outputPath: "journey-surface-replacement",
+    filterEmpty: {
+      ...source.filterEmpty,
+      mobileNodeId: "mobile-no-results",
+    },
+    views: source.views.map((view) =>
+      view.id !== "queue"
+        ? view
+        : {
+            ...view,
+            render: {
+              ...view.render,
+              responsive: {
+                version: 1,
+                states: [
+                  {
+                    state: "success",
+                    rule: view.render.selection.responsiveRule,
+                    rationale:
+                      "Keep filter feedback and the selected case path on the mobile queue.",
+                    continuity: {
+                      entity: {
+                        desktopId: "row-c204",
+                        mobileId: "mobile-row-c204",
+                      },
+                      primaryAction: {
+                        desktopId: "open-c204",
+                        mobileId: "mobile-open-c204",
+                      },
+                      criticalInfo: [
+                        { desktopId: "row-c205", mobileId: "row-c205" },
+                      ],
+                      returnPath: {
+                        desktopId: "open-c204",
+                        mobileId: "mobile-open-c204",
+                      },
+                    },
+                    operations: [
+                      {
+                        kind: "replace" as const,
+                        targetId: "row-c204",
+                        with: mobileRow,
+                        focusMap: [
+                          {
+                            desktopId: "open-c204",
+                            mobileId: "mobile-open-c204",
+                          },
+                        ],
+                      },
+                      {
+                        kind: "replace" as const,
+                        targetId: "queue-no-results",
+                        with: {
+                          tag: "p" as const,
+                          id: "mobile-no-results",
+                          text: "No matching cases",
+                        },
+                        focusMap: [],
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+    ),
+    controls: [
+      ...source.controls,
+      {
+        viewId: "queue",
+        nodeId: "mobile-open-c204",
+        action: {
+          kind: "select",
+          entityId: "C-204",
+          viewId: "review",
+          returnFocusId: "queue-filter",
+        },
+      },
+    ],
+    rows: [
+      ...source.rows,
+      { viewId: "queue", nodeId: "mobile-row-c204", entityId: "C-204" },
+    ],
   };
 }

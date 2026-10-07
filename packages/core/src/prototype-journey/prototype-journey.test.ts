@@ -1,7 +1,12 @@
 import { afterEach, expect, test } from "vitest";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { canonicalJson } from "../artifact-canonical.js";
-import { buildPrototypeJourney, type PrototypeJourneyInput } from "./index.js";
+import {
+  buildPrototypeJourney,
+  checkPrototypeJourneyPlan,
+  materializeJourneyTransitions,
+  type PrototypeJourneyInput,
+} from "./index.js";
 import { runStaticQualityGates } from "../quality-gates/index.js";
 import { runBrowserQualityGates } from "../quality-gates/browser.js";
 import { setupPrototypeJourney } from "../../../../fixtures/prototype-journey/setup.js";
@@ -47,6 +52,93 @@ test("compiles an exact, deterministic two-domain journey without sibling scenar
       (entry) => entry.artifactId === fixture.domains[1]!.ref.artifactId,
     ),
   ).toBe(false);
+});
+test("distinct view nodes stay namespaced while ambiguous cross-view DOM IDs fail closed", async () => {
+  const fixture = await setup();
+  const base = fixture.journeyPlan;
+  const queue = base.views[0]!;
+  const sharedNode = {
+    tag: "p" as const,
+    id: "case-identity",
+    text: "Queue identity",
+  };
+  const shared = {
+    ...base,
+    outputPath: "shared-logical-id",
+    views: [
+      {
+        ...queue,
+        render: {
+          ...queue.render,
+          states: queue.render.states.map((state) =>
+            state.name === "success"
+              ? {
+                  ...state,
+                  root: {
+                    ...state.root,
+                    children: [...(state.root.children ?? []), sharedNode],
+                  },
+                }
+              : state,
+          ),
+        },
+      },
+      base.views[1]!,
+    ],
+  };
+  const output = await buildPrototypeJourney(
+    fixture.store,
+    shared,
+    fixture.root,
+  );
+  const html = await readFile(output.directory + "/index.html", "utf8");
+  expect(html).toContain('id="queue__case-identity"');
+  expect(html).toContain('id="review__case-identity"');
+  const colliding = {
+    ...shared,
+    views: [
+      {
+        ...shared.views[0]!,
+        render: {
+          ...shared.views[0]!.render,
+          states: shared.views[0]!.render.states.map((state) =>
+            state.name === "success"
+              ? {
+                  ...state,
+                  root: {
+                    ...state.root,
+                    children: [
+                      ...(state.root.children ?? []),
+                      {
+                        tag: "p" as const,
+                        id: "review__draft-note",
+                        text: "Collision",
+                      },
+                    ],
+                  },
+                }
+              : state,
+          ),
+        },
+      },
+      { ...base.views[1]!, id: "queue__review", route: "#queue-review" },
+    ],
+  };
+  expect(checkPrototypeJourneyPlan(colliding).errors.join(" ")).toContain(
+    "Rendered DOM ID collision",
+  );
+});
+test("same-target semantic transitions receive distinct stable emitted identities", async () => {
+  const fixture = await setup();
+  const review = fixture.journeyPlan.views[1]!;
+  const transitions = materializeJourneyTransitions(review).transitions;
+  expect(new Set(transitions.map((item) => item.nodeId)).size).toBe(
+    transitions.length,
+  );
+  expect(transitions.some((item) => item.nodeId === "show-error")).toBe(true);
+  expect(
+    transitions.some((item) => item.nodeId.startsWith("journey-transition-")),
+  ).toBe(true);
 });
 test("rejects malformed journey declarations, out-of-scope locks, and caller mutation", async () => {
   const fixture = await setup();

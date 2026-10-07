@@ -165,10 +165,16 @@ export function enumerateJourneyContributions(
     if (entries.has(key)) fail("INVALID", "Duplicate contribution key: " + key);
     entries.set(key, canonicalJson(value as JsonValue));
   };
+  put(
+    "views/order",
+    plan.views.map((view) => view.id),
+  );
+  put("document/title", plan.views[0]!.render.title + " journey");
   put("initial/view", plan.initialViewId);
   put("initial/entity", plan.initialEntityId);
   put("initial/filter", plan.initialFilter);
   put("filter/field", plan.filterField);
+  put("filter/empty", plan.filterEmpty);
   put("draft/fields", plan.draftFields);
   put("retention", plan.retention);
   const controls = new Map(

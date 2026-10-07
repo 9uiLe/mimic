@@ -71,7 +71,11 @@ export interface PrototypeJourneyInput {
   readonly initialEntityId: string | null;
   readonly filterField: string;
   readonly initialFilter: string;
-  readonly filterEmpty: { readonly viewId: string; readonly nodeId: string };
+  readonly filterEmpty: {
+    readonly viewId: string;
+    readonly nodeId: string;
+    readonly mobileNodeId?: string;
+  };
   readonly draftFields: readonly string[];
   readonly entities: readonly JourneyEntity[];
   readonly controls: readonly JourneyControl[];
@@ -195,6 +199,126 @@ function nodes(render: PrototypeBuilderInput): Map<string, PrototypeNode> {
   );
   return result;
 }
+function hasNode(node: PrototypeNode, id: string): boolean {
+  return (
+    node.id === id ||
+    (node.children?.some((child) => hasNode(child, id)) ?? false)
+  );
+}
+function baseNode(
+  render: PrototypeBuilderInput,
+  id: string,
+): PrototypeNode | undefined {
+  const find = (node: PrototypeNode): PrototypeNode | undefined =>
+    node.id === id ? node : node.children?.map(find).find(Boolean);
+  return render.states.map((state) => find(state.root)).find(Boolean);
+}
+export function journeyNodeSurfaces(
+  view: JourneyView,
+  nodeId: string,
+): readonly ("desktop" | "mobile")[] {
+  for (const entry of view.render.responsive?.states ?? [])
+    for (const operation of entry.operations)
+      if (operation.kind === "replace" && hasNode(operation.with, nodeId))
+        return ["mobile"];
+  for (const entry of view.render.responsive?.states ?? [])
+    for (const operation of entry.operations)
+      if (operation.kind === "replace") {
+        const target = baseNode(view.render, operation.targetId);
+        if (target && hasNode(target, nodeId)) return ["desktop"];
+      }
+  return ["desktop", "mobile"];
+}
+export interface JourneyTransition {
+  readonly state: PrototypeState;
+  readonly target: PrototypeState;
+  readonly nodeId: string;
+  readonly surfaces: readonly ("desktop" | "mobile")[];
+}
+/** Give every authored semantic transition a stable ID, including unnamed base buttons. */
+export function materializeJourneyTransitions(view: JourneyView): {
+  render: PrototypeBuilderInput;
+  transitions: readonly JourneyTransition[];
+} {
+  const used = new Set(nodes(view.render).keys());
+  const transitions: JourneyTransition[] = [];
+  let sequence = 0;
+  const visit = (
+    node: PrototypeNode,
+    state: PrototypeState,
+    surface: readonly ("desktop" | "mobile")[],
+    removedTargets: ReadonlySet<string>,
+    removed = false,
+  ): PrototypeNode => {
+    let id = node.id;
+    if (node.tag === "button" && node.targetState) {
+      if (!id) {
+        id = "journey-transition-" + state + "-" + sequence++;
+        if (used.has(id))
+          fail("INVALID", "Generated transition ID collision: " + id);
+        used.add(id);
+      }
+      transitions.push({
+        state,
+        target: node.targetState,
+        nodeId: id,
+        surfaces:
+          surface.length === 1
+            ? surface
+            : removed || removedTargets.has(node.id ?? "")
+              ? ["desktop"]
+              : id === node.id
+                ? journeyNodeSurfaces(view, id)
+                : ["desktop", "mobile"],
+      });
+    }
+    const underReplacement = removed || removedTargets.has(node.id ?? "");
+    return {
+      ...node,
+      ...(id ? { id } : {}),
+      ...(node.children
+        ? {
+            children: node.children.map((child) =>
+              visit(child, state, surface, removedTargets, underReplacement),
+            ),
+          }
+        : {}),
+    };
+  };
+  const states = view.render.states.map((state) => {
+    const targets = new Set(
+      view.render.responsive?.states
+        .filter((entry) => entry.state === state.name)
+        .flatMap((entry) =>
+          entry.operations
+            .filter((operation) => operation.kind === "replace")
+            .map((operation) => operation.targetId),
+        ) ?? [],
+    );
+    return {
+      ...state,
+      root: visit(state.root, state.name, ["desktop", "mobile"], targets),
+    };
+  });
+  const responsive = view.render.responsive && {
+    ...view.render.responsive,
+    states: view.render.responsive.states.map((entry) => ({
+      ...entry,
+      operations: entry.operations.map((operation) =>
+        operation.kind === "replace"
+          ? {
+              ...operation,
+              with: visit(operation.with, entry.state, ["mobile"], new Set()),
+            }
+          : operation,
+      ),
+    })),
+  };
+  return {
+    render: { ...view.render, states, ...(responsive ? { responsive } : {}) },
+    transitions,
+  };
+}
 function domId(viewId: string, nodeId: string): string {
   return viewId + "__" + nodeId;
 }
@@ -305,6 +429,7 @@ function validate(
     fail("INVALID", "Journey requires two to eight authored views");
   const viewIds = new Set<string>();
   const routes = new Set<string>();
+  const domIds = new Set<string>(["prototype-status"]);
   const viewNodes = new Map<string, Map<string, PrototypeNode>>();
   for (const view of plan.views) {
     if (!object(view)) fail("INVALID", "Invalid view");
@@ -321,7 +446,21 @@ function validate(
     viewIds.add(view.id);
     routes.add(view.route);
     ref(view.domain);
-    viewNodes.set(view.id, nodes(view.render));
+    const declaredNodes = nodes(view.render);
+    for (const nodeId of declaredNodes.keys()) {
+      const rendered = domId(view.id, nodeId);
+      if (domIds.has(rendered))
+        fail("INVALID", "Rendered DOM ID collision: " + rendered);
+      domIds.add(rendered);
+    }
+    for (const transition of materializeJourneyTransitions(view).transitions) {
+      if (declaredNodes.has(transition.nodeId)) continue;
+      const rendered = domId(view.id, transition.nodeId);
+      if (domIds.has(rendered))
+        fail("INVALID", "Rendered DOM ID collision: " + rendered);
+      domIds.add(rendered);
+    }
+    viewNodes.set(view.id, declaredNodes);
   }
   if (
     !viewIds.has(plan.initialViewId) ||
@@ -337,12 +476,48 @@ function validate(
     fail("INVALID", "Invalid initial view, filter, or draft field list");
   if (!object(plan.filterEmpty))
     fail("INVALID", "Filter empty feedback must be authored");
-  keys(plan.filterEmpty, ["viewId", "nodeId"], "filter empty feedback");
+  keys(
+    plan.filterEmpty,
+    ["viewId", "nodeId", "mobileNodeId"],
+    "filter empty feedback",
+  );
   const filterEmptyNode = viewNodes
     .get(plan.filterEmpty.viewId)
     ?.get(plan.filterEmpty.nodeId);
-  if (!filterEmptyNode || filterEmptyNode.tag !== "p")
+  const filterView = plan.views.find(
+    (view) => view.id === plan.filterEmpty.viewId,
+  );
+  if (
+    !filterView ||
+    !filterEmptyNode ||
+    filterEmptyNode.tag !== "p" ||
+    !journeyNodeSurfaces(filterView, plan.filterEmpty.nodeId).includes(
+      "desktop",
+    )
+  )
     fail("INVALID", "Filter empty feedback needs a known paragraph");
+  if (plan.filterEmpty.mobileNodeId !== undefined) {
+    const mobileNode = viewNodes
+      .get(plan.filterEmpty.viewId)
+      ?.get(plan.filterEmpty.mobileNodeId);
+    if (
+      !mobileNode ||
+      mobileNode.tag !== "p" ||
+      !journeyNodeSurfaces(filterView, plan.filterEmpty.mobileNodeId).includes(
+        "mobile",
+      ) ||
+      journeyNodeSurfaces(filterView, plan.filterEmpty.nodeId).includes(
+        "mobile",
+      )
+    )
+      fail(
+        "INVALID",
+        "Mobile filter feedback must replace the desktop paragraph",
+      );
+  } else if (
+    !journeyNodeSurfaces(filterView, plan.filterEmpty.nodeId).includes("mobile")
+  )
+    fail("INVALID", "Mobile filter feedback is missing");
   if (
     !Array.isArray(plan.entities) ||
     !plan.entities.length ||
@@ -496,6 +671,19 @@ function validate(
       fail("INVALID", "Dangling or duplicate entity row");
     rowIds.add(key);
   }
+  for (const entityId of new Set(plan.rows.map((row) => row.entityId)))
+    for (const surface of ["desktop", "mobile"] as const)
+      if (
+        !plan.rows.some(
+          (row) =>
+            row.entityId === entityId &&
+            journeyNodeSurfaces(
+              plan.views.find((view) => view.id === row.viewId)!,
+              row.nodeId,
+            ).includes(surface),
+        )
+      )
+        fail("INVALID", "Filtered entity row is missing on " + surface);
   const textIds = new Set<string>();
   for (const binding of plan.texts) {
     if (!object(binding)) fail("INVALID", "Invalid text binding");
@@ -565,19 +753,37 @@ function runtime(
     initialEntityId: plan.initialEntityId,
     initialFilter: plan.initialFilter,
     filterField: plan.filterField,
-    filterEmpty: domId(plan.filterEmpty.viewId, plan.filterEmpty.nodeId),
+    filterEmpty: {
+      desktop: domId(plan.filterEmpty.viewId, plan.filterEmpty.nodeId),
+      mobile: domId(
+        plan.filterEmpty.viewId,
+        plan.filterEmpty.mobileNodeId ?? plan.filterEmpty.nodeId,
+      ),
+    },
     entities: plan.entities,
     controls: plan.controls.map((control) => ({
       ...control,
       domId: domId(control.viewId, control.nodeId),
+      surfaces: journeyNodeSurfaces(
+        plan.views.find((view) => view.id === control.viewId)!,
+        control.nodeId,
+      ),
     })),
     rows: plan.rows.map((row) => ({
       ...row,
       domId: domId(row.viewId, row.nodeId),
+      surfaces: journeyNodeSurfaces(
+        plan.views.find((view) => view.id === row.viewId)!,
+        row.nodeId,
+      ),
     })),
     texts: plan.texts.map((binding) => ({
       ...binding,
       domId: domId(binding.viewId, binding.nodeId),
+      surfaces: journeyNodeSurfaces(
+        plan.views.find((view) => view.id === binding.viewId)!,
+        binding.nodeId,
+      ),
     })),
   };
   return `const journey = ${JSON.stringify(program)};
@@ -592,6 +798,13 @@ let returnContext = null;
 let focusAnchor = null;
 const byId = (id) => document.getElementById(id);
 const visible = (element) => element && element.getClientRects().length && !element.closest('[hidden],details:not([open])');
+const activeSurface = () => window.matchMedia('(max-width: ${breakpoint}px)').matches ? 'mobile' : 'desktop';
+function surfaceNode(binding) {
+  if (!binding.surfaces.includes(activeSurface())) return null;
+  const element = byId(binding.domId);
+  if (!element) throw new Error('Declared journey node is absent: ' + binding.domId);
+  return element;
+}
 function focusAfterStateChange() {
   const active = document.activeElement;
   if (active && active !== document.body && visible(active)) return;
@@ -629,24 +842,31 @@ function refresh() {
     for (const state of wrapper.querySelectorAll('[data-state]'))
       state.hidden = state.getAttribute('data-state') !== statuses.get(view.id);
   }
-  let matching = 0;
+  const matching = new Set();
   for (const row of journey.rows) {
+    const element = surfaceNode(row);
+    if (!element) continue;
     const item = entities.get(row.entityId);
     const match = String(item.fields[journey.filterField]).toLocaleLowerCase().includes(filterValue.toLocaleLowerCase());
-    byId(row.domId).hidden = !match;
-    if (match) matching += 1;
+    element.hidden = !match;
+    if (match) matching.add(row.entityId);
   }
-  byId(journey.filterEmpty).hidden = matching !== 0;
+  const emptyId = journey.filterEmpty[activeSurface()];
+  const empty = byId(emptyId);
+  if (!empty) throw new Error('Declared journey node is absent: ' + emptyId);
+  empty.hidden = matching.size !== 0;
   for (const binding of journey.texts) {
+    const target = surfaceNode(binding);
+    if (!target) continue;
     const item = binding.source === 'entity-field' ? entities.get(binding.entityId) : current();
     const value = !item ? '' : binding.source === 'selected-draft'
       ? drafts.get(item.id)[binding.field]
       : binding.field === 'id' ? item.id : item.fields[binding.field];
-    const target = byId(binding.domId);
-    if (target) target.textContent = value;
+    target.textContent = value;
   }
   for (const control of journey.controls) {
-    const input = byId(control.domId);
+    const input = surfaceNode(control);
+    if (!input) continue;
     if (input.tagName !== 'INPUT' || input === document.activeElement) continue;
     if (control.action.kind === 'set-filter') input.value = filterValue;
     else if (control.action.kind === 'edit-draft') input.value = current() ? drafts.get(entityId)[control.action.field] : '';
@@ -692,11 +912,20 @@ function run(action, input) {
     focusAfterStateChange();
   }
 }
-for (const control of journey.controls) {
-  const element = byId(control.domId);
-  const eventName = element.tagName === 'INPUT' ? 'input' : 'click';
-  element.addEventListener(eventName, () => run(control.action, element));
+const controlsById = new Map(journey.controls.map((control) => [control.domId, control]));
+function runBoundControl(element, kind) {
+  if (!element || !visible(element)) return;
+  const control = controlsById.get(element.id);
+  if (!control || !control.surfaces.includes(activeSurface()) || control.viewId !== viewId ||
+      element.closest('[data-view]')?.dataset.view !== control.viewId ||
+      element.closest('[data-state]')?.getAttribute('data-state') !== statuses.get(viewId)) return;
+  const input = control.action.kind === 'set-filter' || control.action.kind === 'edit-draft';
+  if ((kind === 'input') !== input || element.tagName !== (input ? 'INPUT' : 'BUTTON')) return;
+  run(control.action, element);
 }
+document.addEventListener('input', (event) => runBoundControl(event.target, 'input'));
+document.addEventListener('click', (event) =>
+  runBoundControl(event.target.closest?.('button[id]'), 'click'));
 document.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-target-state]');
   if (!button) return;
@@ -719,8 +948,8 @@ window.addEventListener('hashchange', () => {
   refresh();
   focusAfterStateChange();
 });
-refresh();
-${responsive.length ? responsiveRuntime(responsive, breakpoint) + "\nresponsiveQuery.addEventListener('change', () => queueMicrotask(refresh));\nqueueMicrotask(refresh);\n" : ""}`;
+${responsive.length ? responsiveRuntime(responsive, breakpoint) + "\nresponsiveQuery.addEventListener('change', () => queueMicrotask(refresh));\n" : ""}
+refresh();`;
 }
 export function checkPrototypeJourneyPlan(value: unknown): {
   plan?: PrototypeJourneyInput;
@@ -791,7 +1020,10 @@ export async function compilePrototypeJourney(
         "INVALID",
         "View scenario must lock its own domain, journey and contract",
       );
-    const transformed = namespaced(view.render, view.id);
+    const transformed = namespaced(
+      materializeJourneyTransitions(view).render,
+      view.id,
+    );
     const controls = new Set(
       plan.controls
         .filter(
