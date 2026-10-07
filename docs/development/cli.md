@@ -13,7 +13,68 @@ Use Node 24.21.0. All commands accept `--root <workspace-directory>` (default: c
 5. `mimic submit <run-id> --task <task-id> --package <directory> --work <file>` loads a static Skill package through the Core Skill harness, creates its output artifacts in the same Artifact Store, and passes its result to the Orchestrator. The package directory and work file must reside inside the workspace. The package manifest must match the routed task. No package text is run as code or as a shell command. The JSON work file has `{ "artifacts": [<ArtifactSnapshot>], "work": <SkillWork> }`; `work.result` is the Core `SkillResult` with exact output references. Artifacts must have the invoked Skill and Run as origin and match the output digests. The compact result points to the next-actions file and reports `submissionState` as `accepted` or `blocked`. Exact retries after Core acceptance are idempotent; changed package or work content conflicts.
 6. `mimic decisions [run-id]` lists Decision Packet IDs, proposal IDs, status, readiness, and the active authority mode.
 7. `mimic decide --file <decision.json> --confirmation <confirmation.json> [--commit <commit.json> --commit-confirmation <confirmation.json>]` records an explicitly confirmed human decision and optionally publishes its approved exact output. The controlling host must show the actual proposal, exact candidate revision, expected canonical revision, scope, decision outcome, and any named commit effects to the human and obtain an explicit answer before writing either confirmation. Decision confirmation alone does not authorize a commit. All input files must reside inside the workspace. Identical requests can be retried after a lost response.
-8. `mimic validate --file <artifact.json>` runs JSON Schema validation only. It does not assert provenance, empirical evidence, accessibility, or release readiness. The input must reside inside the workspace.
+8. `mimic preview --file <preview.json> [--browser]` consumes an authored JSON object with `kind: "standalone" | "modes"`, `plan` (the corresponding Core `PrototypeBuilderInput` or `PrototypeModePlan`), and optional exact `uiContract` reference. Core resolves every source through the trusted workspace artifact store and checks exact locks and approval. The CLI builds under the workspace, runs static quality gates, and writes a separate full report per bundle to `.mimic/outputs/`. `--browser` also runs the inspect-only browser gates. The compact response retains every finding's criterion, state, and severity. A Modes fallback is reported explicitly. The authored plan remains an input for review, not an approved artifact.
+9. `mimic validate --file <artifact.json>` runs JSON Schema validation only. It does not assert provenance, empirical evidence, accessibility, or release readiness. The input must reside inside the workspace.
+
+## Local package release
+
+`mimic release inspect --file <release-plan.json>` reports the plan digest, each quality report digest, and each finding without creating a candidate. For a plan with dependencies, it also reads workspace-contained local package sources, traverses the complete exact package and edge closure (including bundled children), and returns `dependencyContext`, its digest, and required package, edge-license, and Portable redistribution decisions. Each node discloses its package ID, version, digest, locations, mode, scope, manifest approval claim, and lock digest; each edge discloses its parent, exact child, source, license, and distribution. A location is a structured `{ "kind": "source", "path": "<workspace-relative directory>" }` or `{ "kind": "bundled", "parent": <exact package ref> }`; an ordinary directory name cannot claim bundled provenance by its spelling. An acquisition hint is not proof of authority or rights.
+
+`mimic release prepare --id <release-id> --file <release-plan.json> --destination <existing-workspace-directory> [--policy-confirmation <file>] [--dependency-confirmation <file>]` constructs a byte-exact candidate without publishing it. The plan has Core `CompileInput` fields except that `files` maps package paths to workspace-relative source file paths and each `quality` entry maps a workspace-relative report path to exact selected artifact refs. Direct dependency `source` names a local package storage directory inside the workspace; external transitive edges in acquired manifests follow the same rule. Bundled transitive bytes are read from their parent snapshot. File and report bytes are frozen under `.mimic/releases/<release-id>.prepared.json`. The returned `reviewPath` contains the full `ReleaseApprovalRequest`, local destination, complete dependency context and confirmation when applicable, and `requestDigest` over that envelope. Inspect its manifest, lock, inventory, individual quality decisions, dependency and grant evidence, and final digest before asking the human for release approval. Repeating a preparation ID with changed input, bytes, evidence, policy, destination, or request conflicts.
+
+The standalone CLI requires `--policy-confirmation <file>` from the cooperative controlling host. The assertion has `version: 1`, `action: "release-policy"`, a nonempty `hostId`, `confirmedAt` after the quality inspection, the exact `planDigest` from `release inspect`, and one `decisions` entry per finding. Each decision names the exact `reportDigest`, `findingIndex`, and `findingDigest` from `release inspect`, plus the finding's `criterion`, `state`, and `severity`, `blockRelease`, and a nonempty `reason`. The index and full finding digest distinguish viewport findings with the same criterion, state, and severity. Missing, duplicate, or changed findings fail. This assertion does not approve publication; the later release confirmation binds the full candidate and destination and must use the same `hostId`. The controlling host must show the findings to its operator and write the assertion. As with local decide/commit confirmation, another process with the same OS rights could forge it.
+
+For standalone dependency-bearing releases, `--dependency-confirmation <file>` is a separate versioned controlling-host assertion. It has `version: 1`, `action: "release-dependencies"`, the same `hostId`, an explicit `humanActorId` and `confirmedAt`, a `contextDigest` field equal to `release inspect`'s `dependencyContextDigest`, the `consumer` object copied from `dependencyContext.consumer`, and the intended local `destination`. `packages` contains one permitted decision per exact reachable package ref and digest, with evidence and `kind: "local-publication"` or `"imported-acceptance"`. `licenses` contains one permitted decision per complete exact edge from inspect, including its license and distribution; two same-license edges still require two decisions. `redistribution` contains a permitted ref/digest/evidence grant for every reachable Portable package node and is empty for Reference. Missing or denied decisions fail closed. An imported acceptance is the host and human explicitly accepting those exact bytes for this consumer; it does not assert prior Mimic publication or independent publisher authentication. No field of the authored plan or license text grants authority by itself.
+
+For example, after inspecting a Reference plan with one exact local dependency, a host writes a JSON assertion in this shape after presenting each decision to the human. Replace the shown digest, ref, edge, time, actor, and evidence with the exact inspected values and the actual decision; `edge` is the entire object in `dependencyContext.edges[0]`, not just its license:
+
+```json
+{
+  "version": 1,
+  "action": "release-dependencies",
+  "hostId": "my-local-host",
+  "humanActorId": "human-1",
+  "confirmedAt": "2026-10-07T12:00:00Z",
+  "contextDigest": "<inspect.dependencyContextDigest>",
+  "consumer": {
+    "ref": { "packageId": "product/example", "version": "0.1.0" },
+    "mode": "reference"
+  },
+  "destination": "packages",
+  "packages": [
+    {
+      "ref": { "packageId": "org/source", "version": "1.0.0" },
+      "digest": "<exact dependency digest from inspect>",
+      "kind": "local-publication",
+      "allowed": true,
+      "evidence": "Reviewed completed local publication and exact bytes"
+    }
+  ],
+  "licenses": [
+    {
+      "edge": {
+        "parent": { "packageId": "product/example", "version": "0.1.0" },
+        "ref": { "packageId": "org/source", "version": "1.0.0" },
+        "digest": "<exact dependency digest from inspect>",
+        "source": "packages",
+        "license": "<reviewed license>",
+        "distribution": "external"
+      },
+      "allowed": true,
+      "evidence": "Reviewed this exact edge and license"
+    }
+  ],
+  "redistribution": []
+}
+```
+
+For `local-publication`, the CLI requires the original prepared candidate, durable intent, completed publication, complete exact release confirmation, and actual `FilePackageSource` bytes at the same workspace destination. It checks the manifest, lock, release request, digest, actor, host, and destination before reusing that release as authority. A dependency acquired as an external local source must come from that publication destination. A node reached only through a bundled parent can reuse its own completed local publication when its bundled snapshot has the same exact package digest, lock bytes, and manifest claims as the originally published bytes; no redundant direct edge is required. New intent and completion records store the versioned full confirmation as well as digests. Legacy digest-only records need the original exact release confirmation supplied in that package decision or a fresh explicit `imported-acceptance`; the records alone do not acquire authority. A copied package, prepared-only candidate, or incomplete/tampered completion is not a local publication. The dependency source and authority are closed to the reviewed graph for one invocation. Core's license callback only receives license and distribution, so the CLI first validates every exact edge decision and then permits only the approved pairs within that closed graph. Promotion remains denied.
+
+A trusted embedding host may instead supply `CliHost.release`: package authority, license policy, finding-by-finding release policy, and exact redistribution grants. Local and injected policies cannot be mixed. Reference mode retains external acquisition hints; Portable mode requires grants for every transitive dependency and Core still rejects a partial bundled closure. A release policy must explain each finding without changing its state or severity. A `FAIL`, `CONCERN`, or `UNVERIFIED` stays visible even when policy permits it.
+
+`mimic release publish <release-id> --confirmation <confirmation.json>` is a separate invocation. The cooperative controlling host writes this workspace-contained assertion only after the human explicitly confirms the frozen candidate and destination. It has `version: 1`, `action: "release"`, nonempty `hostId` and `humanActorId`, `confirmedAt` after candidate preparation, `requestId` equal to the manifest approval decision ID, `requestDigest` from the review file, `packageId`, `packageVersion`, `mode`, `digest`, and `destination` equal to the review file. The CLI also requires the human actor to match the manifest approval reference. This assertion is separate from decide/commit confirmations and is not cryptographic human authentication. The trusted package authority still checks the manifest, while Core's publisher checks the full exact release request immediately before publication.
+
+Publication reserves a durable intent before writing a package version. The publisher checks approved and fresh exact artifacts, the package registry, license policy, and candidate bytes before staging and atomic local rename. The CLI records completion after readback. An identical retry after an interrupted response verifies the exact published digest and any dependency context through `FilePackageSource` and `PackageRegistry` before returning `recovered`; a changed confirmation or existing different bytes conflicts. There is no hosted backend, production deployment, remote publish, default signing key, or implicit license grant.
 
 ## Authority and current limits
 
@@ -29,7 +90,7 @@ A receipt file has `{ "payload": <fields>, "signature": "<base64url Ed25519 sign
 
 For durable readback after an authorization receipt expires, a trusted host observes the accepted Core decision event and, for an approval, the commit event, then signs an acceptance certificate. This is a second `{ "payload": ..., "signature": "<base64url Ed25519 signature>" }` envelope under the operator trust root, with `action: "attest-acceptance"`. Its payload binds the decision actor, Run and scope, decision ID and exact record digest, original authorization receipt digest, signer-attested `certifiedAt` within the original receipt window, and the exact decision event sequence and digest. An approved decision also requires a `commit` section binding the exact Commit Request digest, its authorization receipt digest, and the commit event sequence and digest. The CLI checks both signatures, original request bindings, exact recorded events and outputs, then stores the certificate under `.mimic/acceptances/`. The certificate can be imported after the receipt window if the trusted signer attested observation during it. The CLI never signs or generates certificates; the operator host must protect its signer key and issue a certificate only after observing Core acceptance. The standalone verifier rejects expired first use even if workspace history claims acceptance, and rejects expired readback without this signed evidence. A certificate permits durable verification of the exact accepted decision so later Runs can reuse its approved canonical revision. No real signing credentials are installed by this issue.
 
-`mimic preview` and `mimic release` return exit 4 until their backends exist. `submit` requires the static Skill package and work files or a trusted host executor. Local `decide` requires an explicit confirmation file; signed `decide` requires the protected trust root.
+`submit` requires the static Skill package and work files or a trusted host executor. Local `decide` requires an explicit confirmation file; signed `decide` requires the protected trust root. Standalone release preparation requires an explicit local quality policy assertion and, for every dependency, exact local publication evidence or explicit imported acceptance plus edge and redistribution decisions. An embedding host can provide a separate trusted release authority.
 
 ## Preflight and recovery
 
