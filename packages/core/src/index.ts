@@ -23,5 +23,6 @@ export * from "./design-knowledge/index.js";
 export * from "./token-compiler/index.js";
 
 export * from "./prototype-builder/index.js";
+export * from "./prototype-journey/index.js";
 export * from "./prototype-modes/index.js";
 export * from "./quality-gates/public.js";

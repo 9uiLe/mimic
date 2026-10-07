@@ -1,7 +1,7 @@
 {
   "fixtureStatus": "synthetic; fixture authority only",
   "entryMode": "experience-first",
-  "desiredBehavior": "An operator opens case C-204 from the queue, checks evidence in a distinct review domain, returns to the queue with the same case and draft filter, then revisits review without implying approval.",
+  "desiredBehavior": "An operator filters Queue, opens C-204 in Review, edits an uncommitted draft, returns to the filtered Queue, and resumes the same case and draft without approving it.",
   "primaryGoal": "Review the same case without losing context or committing a decision",
   "domains": [
     {
@@ -43,5 +43,39 @@
     "replace": "Replace side-by-side queue and case context with focused case navigation",
     "progressiveDisclose": "Reveal detailed history on request",
     "status": "authored responsive v1 plan exercised with synthetic browser evidence; semantic parity and user outcomes require review"
+  },
+  "journeyExecution": {
+    "status": "synthetic executable specification; fixture authority only",
+    "entities": [
+      {
+        "id": "C-204",
+        "status": "needs-review",
+        "title": "Riverside intake",
+        "initialDraft": "",
+        "approvalStatus": "pending",
+        "committedDecision": "none"
+      },
+      {
+        "id": "C-205",
+        "status": "needs-review",
+        "title": "Market intake",
+        "initialDraft": "",
+        "approvalStatus": "pending",
+        "committedDecision": "none"
+      },
+      {
+        "id": "C-206",
+        "status": "complete",
+        "title": "Closed intake",
+        "initialDraft": "",
+        "approvalStatus": "pending",
+        "committedDecision": "none"
+      }
+    ],
+    "filterField": "status",
+    "draftField": "note",
+    "retention": "same browser session by entity ID until explicit discard",
+    "returnFocus": "Queue filter",
+    "reload": "resets in-memory state; no production persistence or backend"
   }
 }

@@ -238,6 +238,11 @@ export async function runBrowserQualityGates(
   suppliedBrowser?: Browser,
 ): Promise<QualityReport> {
   const bundle = await inspectBundle(input);
+  if (bundle.manifest?.kind === "mimic-prototype-journey")
+    return (await import("./journey-browser.js")).runBrowserJourneyQualityGates(
+      input,
+      suppliedBrowser,
+    );
   const { target, manifest } = bundle;
   const checked = qualityPlan(bundle.plan);
   const plan = checked.plan;

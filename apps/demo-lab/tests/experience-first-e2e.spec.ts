@@ -4,6 +4,8 @@ import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { buildPrototype } from "../../../packages/core/src/prototype-builder/index.js";
+import { buildPrototypeJourney } from "../../../packages/core/src/prototype-journey/index.js";
+import { setupPrototypeJourney } from "../../../fixtures/prototype-journey/setup.js";
 import { runBrowserQualityGates } from "../../../packages/core/src/quality-gates/browser.js";
 import {
   inspectBundle,
@@ -517,4 +519,61 @@ test("Experience-first generated case states retain context on desktop and mobil
   }
   if (cleanupErrors.length)
     throw new AggregateError(cleanupErrors, "C-204 cleanup failed");
+});
+
+test("C-204 acceptance follows Queue filter, Review draft, return and resume", async ({
+  page,
+}) => {
+  const fixture = await setupPrototypeJourney();
+  const output = await buildPrototypeJourney(
+    fixture.store,
+    fixture.journeyPlan,
+    fixture.root,
+  );
+  const server = createServer(async (request, response) => {
+    const name = request.url === "/" ? "index.html" : request.url?.slice(1);
+    if (
+      !name ||
+      !["index.html", "prototype.css", "prototype.js"].includes(name)
+    ) {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, {
+      "content-type": name.endsWith(".css")
+        ? "text/css"
+        : name.endsWith(".js")
+          ? "text/javascript"
+          : "text/html",
+    });
+    response.end(await readFile(path.join(output.directory, name)));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const address = server.address();
+    if (!address || typeof address === "string")
+      throw new Error("No loopback address");
+    await page.goto("http://127.0.0.1:" + address.port + "/");
+    const filter = page.getByRole("searchbox", {
+      name: "Filter cases by status",
+    });
+    await filter.fill("needs-review");
+    await expect(page.getByRole("button", { name: "Open C-206" })).toBeHidden();
+    await page.getByRole("button", { name: "Open C-204" }).click();
+    const draft = page.getByRole("textbox", {
+      name: "Uncommitted review draft",
+    });
+    await draft.fill("C-204 acceptance draft");
+    await page
+      .getByRole("button", { name: "Return to filtered queue" })
+      .click();
+    await expect(filter).toHaveValue("needs-review");
+    await page.getByRole("button", { name: "Open C-204" }).click();
+    await expect(draft).toHaveValue("C-204 acceptance draft");
+    await expect(page.locator("#review__approval-state")).toHaveText("pending");
+    await expect(page.locator("#review__decision-state")).toHaveText("none");
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(fixture.root, { recursive: true, force: true });
+  }
 });

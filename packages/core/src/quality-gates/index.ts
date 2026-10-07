@@ -186,6 +186,11 @@ export async function runStaticQualityGates(
   input: GateInput,
 ): Promise<{ report: QualityReport; bundle: InspectedBundle }> {
   const bundle = await inspectBundle(input);
+  if (bundle.manifest?.kind === "mimic-prototype-journey")
+    return (await import("./journey.js")).runStaticJourneyQualityGates(
+      input,
+      bundle,
+    );
   const { manifest, target } = bundle;
   const planShape = qualityPlan(bundle.plan);
   const plan = planShape.plan;

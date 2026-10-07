@@ -63,6 +63,7 @@ const TAGS = new Set([
   "strong",
   "button",
   "a",
+  "input",
 ]);
 const record = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
@@ -93,6 +94,8 @@ function collect(
   depth = 0,
   budget = { count: 0 },
   interactive = false,
+  journeyControls: ReadonlySet<string> = new Set(),
+  journeyInputs: ReadonlySet<string> = new Set(),
 ): void {
   if (!record(node) || depth > 16 || ++budget.count > 1000) {
     errors.push(`${at}: invalid or unbounded node`);
@@ -108,13 +111,16 @@ function collect(
       "fixtureKey",
       "href",
       "targetState",
+      "inputKind",
+      "ariaLabel",
       "children",
     ],
     at,
     errors,
   );
   if (!TAGS.has(node.tag)) errors.push(`${at}: unsupported tag`);
-  const action = node.tag === "a" || node.tag === "button";
+  const action =
+    node.tag === "a" || node.tag === "button" || node.tag === "input";
   if (action && interactive) errors.push(`${at}: nested action`);
   if (node.id !== undefined) {
     if (typeof node.id !== "string" || !ID.test(node.id) || ids.has(node.id))
@@ -141,8 +147,23 @@ function collect(
       !safeText(plan.fixtures[state]?.[node.fixtureKey]))
   )
     errors.push(`${at}: unresolved fixture`);
-  if (node.tag === "button" && !plan.requiredStates.includes(node.targetState!))
+  if (
+    node.tag === "button" &&
+    !journeyControls.has(node.id ?? "") &&
+    !plan.requiredStates.includes(node.targetState!)
+  )
     errors.push(`${at}: invalid transition`);
+  if (
+    node.tag === "input" &&
+    (!node.id ||
+      !journeyInputs.has(node.id) ||
+      !["text", "search"].includes(node.inputKind ?? "") ||
+      !safeText(node.ariaLabel) ||
+      node.children?.length ||
+      node.text !== undefined ||
+      node.fixtureKey !== undefined)
+  )
+    errors.push(`${at}: invalid journey input`);
   if (node.targetState !== undefined && node.tag !== "button")
     errors.push(`${at}: transition on non-button`);
   if (
@@ -155,6 +176,7 @@ function collect(
     errors.push(`${at}: fragment on non-link`);
   if (
     action &&
+    node.tag !== "input" &&
     !safeText(node.text) &&
     !(node.fixtureKey && safeText(plan.fixtures[state]?.[node.fixtureKey]))
   )
@@ -175,6 +197,8 @@ function collect(
       depth + 1,
       budget,
       interactive || action,
+      journeyControls,
+      journeyInputs,
     ),
   );
 }
@@ -234,7 +258,11 @@ function mapIdentity(
     errors.push(`${at}: action mapping required`);
 }
 /** The same finite structural check is used by the builder and saved-plan gate. */
-export function responsiveErrors(plan: PrototypeBuilderInput): string[] {
+export function responsiveErrors(
+  plan: PrototypeBuilderInput,
+  journeyControls: ReadonlySet<string> = new Set(),
+  journeyInputs: ReadonlySet<string> = new Set(),
+): string[] {
   const errors: string[] = [];
   const value = plan.responsive;
   if (value === undefined) return errors;
@@ -292,7 +320,20 @@ export function responsiveErrors(plan: PrototypeBuilderInput): string[] {
       continue;
     }
     const desktop = new Map<string, Info>();
-    collect(root, desktop, errors, `${state}.root`, plan, state);
+    collect(
+      root,
+      desktop,
+      errors,
+      `${state}.root`,
+      plan,
+      state,
+      undefined,
+      0,
+      { count: 0 },
+      false,
+      journeyControls,
+      journeyInputs,
+    );
     const mobile = new Map(desktop);
     if (!Array.isArray(entry.operations) || !entry.operations.length) {
       errors.push(`${state}: operations required`);
@@ -373,6 +414,12 @@ export function responsiveErrors(plan: PrototypeBuilderInput): string[] {
           `${at}.with`,
           plan,
           state,
+          undefined,
+          0,
+          { count: 0 },
+          false,
+          journeyControls,
+          journeyInputs,
         );
         if (op.with.tag === "main")
           errors.push(`${at}: replacement cannot introduce a main landmark`);

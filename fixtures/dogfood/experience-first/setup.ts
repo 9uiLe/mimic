@@ -48,7 +48,9 @@ export const exact = (artifact: ArtifactSnapshot): ExactArtifactRef => ({
   lockDigest: artifactDigest(artifact),
 });
 
-export async function setupExperienceFirst() {
+export async function setupExperienceFirst(
+  options: { rejectedRequest?: boolean; withModes?: boolean } = {},
+) {
   const base = await setupApprovedPrototypeFixture();
   const schema = await loadSchemaDirectory(
     path.join(repository, "schemas/artifacts"),
@@ -61,7 +63,7 @@ export async function setupExperienceFirst() {
     scopes,
     {
       verifyApproval: async (item) =>
-        item.status === "approved" &&
+        (item.status === "approved" || item.status === "rejected") &&
         item.decisionId === approval.decisionId &&
         item.actorId === approval.actorId,
       verifyDecision: async (id) => id === approval.decisionId,
@@ -112,13 +114,19 @@ export async function setupExperienceFirst() {
         rationale: "Synthetic dogfood input; fixture authority only.",
       },
     ],
+    status: "approved" | "proposed" | "rejected" = "approved",
   ) {
     const bare: ArtifactSnapshot = {
       ...template,
       meta: { ...template.meta, id, type, title: id, revision: 1 },
       scope,
-      lifecycle: { status: "approved", freshness: "valid" },
-      approval,
+      lifecycle: { status, freshness: "valid" },
+      approval:
+        status === "approved"
+          ? approval
+          : status === "rejected"
+            ? { ...approval, status: "rejected" as const }
+            : { status: "pending" as const },
       origin: {
         actorKind: "agent",
         actorId: "agent_dogfood",
@@ -164,6 +172,29 @@ export async function setupExperienceFirst() {
     },
     [productDefinition.ref],
   );
+  const currentCapability = options.withModes
+    ? await add(
+        "art_exp_current_case_context",
+        "system-capability",
+        product,
+        {
+          summary: "Synthetic local journey runtime behavior",
+          capabilityId: "case-context",
+          availability: "current",
+          description:
+            "Locally filter, select and return to synthetic cases while preserving uncommitted entity-keyed drafts and semantic status in this specification prototype",
+          supportingEvidence: ["fixture:9UI-148-generated-browser-checks"],
+        },
+        [],
+        [
+          {
+            path: "/content/description",
+            kind: "fact",
+            evidenceRefs: ["fixture:9UI-148-generated-browser-checks"],
+          },
+        ],
+      )
+    : undefined;
   const contract = await add(
     "art_exp_contract",
     "product-ui-contract",
@@ -175,8 +206,73 @@ export async function setupExperienceFirst() {
       entityContext: [caseData.journey.caseId, caseData.journey.draftState],
       accessibilityBaseline: "WCAG 2.2 AA",
     },
-    [productDefinition.ref, userTask.ref],
+    currentCapability
+      ? [productDefinition.ref, userTask.ref, currentCapability.ref]
+      : [productDefinition.ref, userTask.ref],
+    currentCapability
+      ? [
+          {
+            path: "/content/summary",
+            kind: "derived",
+            inputRefs: [
+              `${currentCapability.ref.artifactId}@${currentCapability.ref.revision}#${currentCapability.ref.lockDigest}`,
+            ],
+            rationale:
+              "Synthetic current case context used by the shared Product UI Contract",
+          },
+        ]
+      : undefined,
   );
+  const request = options.withModes
+    ? await add(
+        "art_exp_proposed_request",
+        "system-request",
+        product,
+        {
+          summary: "Synthetic proposed review assist",
+          changeType: "capability",
+          request: "Preview noncommitting review assistance",
+          rationale: "Keep a proposal separate from Current capability",
+        },
+        [contract.ref],
+        [
+          {
+            path: "/content/request",
+            kind: "derived",
+            inputRefs: [
+              `${contract.ref.artifactId}@${contract.ref.revision}#${contract.ref.lockDigest}`,
+            ],
+            rationale: "Proposal against the exact shared contract",
+          },
+        ],
+        options.rejectedRequest ? "rejected" : "proposed",
+      )
+    : undefined;
+  const proposedCapability = options.withModes
+    ? await add(
+        "art_exp_proposed_assist",
+        "system-capability",
+        product,
+        {
+          summary: "Synthetic proposed review assistance",
+          capabilityId: "review-assist",
+          availability: "proposed",
+          description: "Local noncommitting review assistance preview",
+        },
+        [request!.ref],
+        [
+          {
+            path: "/content/description",
+            kind: "derived",
+            inputRefs: [
+              `${request!.ref.artifactId}@${request!.ref.revision}#${request!.ref.lockDigest}`,
+            ],
+            rationale: "Proposed capability from exact System Request",
+          },
+        ],
+        "proposed",
+      )
+    : undefined;
   const domains = await Promise.all(
     caseData.domains.map((domain) =>
       add(
@@ -299,6 +395,36 @@ export async function setupExperienceFirst() {
       },
     ],
   );
+  const queueScenario = await add(
+    "art_exp_queue_scenario",
+    "scenario",
+    queue,
+    {
+      summary: "Filter the synthetic queue and select a case for review",
+      actor: "Synthetic case operator",
+      context: "Queue of uncommitted synthetic cases",
+      steps: ["Filter cases", "Select one case", "Return to the same filter"],
+      expectedOutcome: "Open an exact case without committing a decision",
+    },
+    [
+      ...sourceRefs,
+      contract.ref,
+      domains[0]!.ref,
+      journey.ref,
+      productAsset.ref,
+    ],
+    [
+      {
+        path: "/content/steps",
+        kind: "derived",
+        inputRefs: sourceRefs
+          .slice(0, 3)
+          .map((ref) => `${ref.artifactId}@${ref.revision}#${ref.lockDigest}`),
+        rationale:
+          "Queue task → selected pattern → layout → component with exact composition links",
+      },
+    ],
+  );
   const input = authoredExperiencePlan(
     base,
     scenario.ref,
@@ -318,5 +444,9 @@ export async function setupExperienceFirst() {
     productAsset,
     domainAsset,
     scenario,
+    queueScenario,
+    currentCapability,
+    request,
+    proposedCapability,
   };
 }

@@ -841,3 +841,14 @@ export async function buildPrototypeModes(
     comparisonDirectory,
   };
 }
+
+export {
+  buildPrototypeJourneyModes,
+  enumerateJourneyContributions,
+  PrototypeJourneyModeError,
+} from "./journey.js";
+export type {
+  PrototypeJourneyModePlan,
+  PrototypeJourneyModeResult,
+  JourneyModeBinding,
+} from "./journey.js";
