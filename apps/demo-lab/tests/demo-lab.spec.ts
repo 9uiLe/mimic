@@ -25,12 +25,14 @@ test("committed catalog matches the genuine mode builder bytes", async () => {
 test("review shell renders genuine generated modes at desktop and mobile sizes", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await ready(page);
   await expect(page.getByLabel("Project")).toHaveValue("product_mimic");
   await expect(page.getByLabel("Experience Domain")).toHaveValue(
     "product-wide",
   );
+  expect((await page.locator("#device-frame").boundingBox())?.width).toBe(880);
   const frame = page.frameLocator("#prototype-frame");
   await frame.getByRole("button", { name: "Show success" }).click();
   await expect(frame.getByText("Synthetic candidate ready")).toBeVisible();
@@ -38,6 +40,7 @@ test("review shell renders genuine generated modes at desktop and mobile sizes",
   await expect(
     frame.getByText("Synthetic candidate selected; action disabled"),
   ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Mobile" }).click();
   await expect(page.locator("#device-frame")).toHaveClass(/mobile/);
   await expect
@@ -170,6 +173,9 @@ test("failed and rapidly superseded selections never leave stale controls active
   await page.goto("/");
   await ready(page);
   await page.getByRole("button", { name: "Proposed", exact: true }).click();
+  await expect(
+    page.getByRole("link", { name: /Open standalone prototype/ }),
+  ).toBeVisible();
   await page
     .frameLocator("#prototype-frame")
     .getByRole("button", { name: "Show success" })
