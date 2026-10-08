@@ -1,0 +1,43 @@
+{
+  "kind": "post-merge-recovery-check",
+  "node": "v24.21.0",
+  "checks": [
+    {
+      "check": "v1-marker-unchanged",
+      "pass": true
+    },
+    {
+      "check": "work-digest",
+      "pass": true
+    },
+    {
+      "check": "sidecar-digest",
+      "pass": true
+    },
+    {
+      "check": "exact-work-result-and-requests",
+      "pass": true
+    },
+    {
+      "check": "accepted-original-run",
+      "pass": true
+    },
+    {
+      "check": "one-request-pending-source",
+      "pass": true
+    },
+    {
+      "check": "source-and-request-exact-locks",
+      "pass": true
+    },
+    {
+      "check": "no-canonical-or-human-decision",
+      "pass": true
+    },
+    {
+      "check": "same-retry-and-negative",
+      "pass": true
+    }
+  ],
+  "allPassed": true
+}

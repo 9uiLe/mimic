@@ -1,0 +1,57 @@
+[
+  {
+    "id": "task_source_review",
+    "skillId": "mimic.s04.system-capability-extractor",
+    "outputType": "system-capability",
+    "scopeOwnerId": "org_local",
+    "intent": "create",
+    "authority": "PROPOSE_ONLY",
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "product-context",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "user-tasks",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "implementation-evidence",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "system-documentation",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "executable-evidence",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "existing-capability",
+              "kind": "artifact",
+              "artifactType": "system-capability",
+              "schemaVersion": "1.0.0"
+            }
+          ]
+        }
+      ]
+    },
+    "evidenceFiles": ["inputs/input-packet.json"],
+    "assumptions": [
+      "Constructed inventory only; detail-field freshness, deployment, authorization, errors and assignment persistence remain unverified.",
+      "Prior pending revisions are historical context, not approved Run inputs."
+    ],
+    "targetArtifactId": "art_rb157_current_inspection"
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "kind": "original-path-v1-recovery",
+  "pre": {
+    "workspaceSha256": "0a4abad4dcf4ef4521f7cc019b20bd751288db60f295ca7bb8a09d95d97ce07f",
+    "markerSha256": "f7470cdb1a70367051ed3b3120f76fa13f43bcf5668fe266e7421d070690b3ed",
+    "workSha256": "be94d55c8afb3cd3e0f6e516612c2192c89dbdd3445b30e15e65c004260a3946",
+    "variantSha256": "3aabf9a18fe528dc91458bb2acbf8d5feac2c24fae81a306755232c52d9f66f8",
+    "eventCount": 11,
+    "snapshotCount": 5
+  },
+  "post": {
+    "workspaceSha256": "0a4abad4dcf4ef4521f7cc019b20bd751288db60f295ca7bb8a09d95d97ce07f",
+    "markerSha256": "f7470cdb1a70367051ed3b3120f76fa13f43bcf5668fe266e7421d070690b3ed",
+    "workSha256": "be94d55c8afb3cd3e0f6e516612c2192c89dbdd3445b30e15e65c004260a3946",
+    "eventCount": 11,
+    "snapshotCount": 5,
+    "recoverySidecar": "/tmp/mimic-9ui-157-reviewed.SxJHia/.mimic/submissions/run_9ui157_live_reviewed-8bc1d89d36b2c3f1a01b64dfc5c4d6d3fa14dfafd70556548d19e0f485a86363.revision.json",
+    "recoverySidecarSha256": "0e045aedf59e78b4aa0d5bc23ec0ff5177731a7bf21548425a20773d19783bc4"
+  },
+  "workspaceUnchanged": true,
+  "markerUnchanged": true,
+  "originalWorkUnchanged": true
+}

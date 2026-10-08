@@ -1,0 +1,106 @@
+{
+  "id": "decision_rb159_source",
+  "packetId": "packet_rb159_source",
+  "proposalId": "proposal_rb159_source",
+  "outcome": "approved",
+  "actor": {
+    "kind": "human",
+    "id": "d62fbb04-9fd1-42af-8e06-48be824f6fc4"
+  },
+  "at": "2026-10-08T12:00:00.000Z",
+  "rationale": "If the owner accepts the exact bounded inventory claim, approve this source while retaining all listed unknowns.",
+  "externalRefs": [
+    "https://linear.app/9uile/issue/9UI-159/実system-feedbackの継続と判断資料を準備する"
+  ],
+  "output": {
+    "ref": {
+      "artifactId": "art_rb157_current_inspection",
+      "revision": 3,
+      "lockDigest": "sha256:f39c8286a87bb8d4e71c8934e99230e93ed81e51f99fffd68945bda4e716dc60"
+    },
+    "artifact": {
+      "approval": {
+        "status": "approved",
+        "decisionId": "decision_rb159_source",
+        "actorId": "d62fbb04-9fd1-42af-8e06-48be824f6fc4",
+        "at": "2026-10-08T12:00:00.000Z"
+      },
+      "content": {
+        "availability": "current",
+        "capabilityId": "riverbend.single_order_inspection_assignment",
+        "description": "The synthetic GET /work-orders list includes ID, zone, severity, age, and assigned crew. The constructed screen inventory permits opening one work-order detail and assigning one crew there. It does not establish whether detail refreshes severity, age, or crew; update time, authorization, errors, persistence, and deployed behavior are unknown. No comparison or bulk-assignment endpoint is inventoried.",
+        "summary": "Current only in the constructed Riverbend inventory: a list exposes work-order ID, zone, severity, age, and crew; a detail can open one order and offer one crew assignment. Detail-field freshness and deployed behavior are unverified.",
+        "supportingEvidence": [
+          "inputs/input-packet.json#/system/observedInventory/0",
+          "inputs/input-packet.json#/system/observedInventory/1",
+          "inputs/input-packet.json#/system/observedInventory/2"
+        ]
+      },
+      "dependencies": [],
+      "lifecycle": {
+        "status": "approved",
+        "freshness": "valid"
+      },
+      "meta": {
+        "createdAt": "2026-10-07T23:25:00.000Z",
+        "id": "art_rb157_current_inspection",
+        "revision": 3,
+        "schemaVersion": "1.0.0",
+        "title": "Riverbend constructed single-order inspection capability",
+        "type": "system-capability",
+        "supersedesRevision": 2,
+        "contentDigest": "sha256:f39c8286a87bb8d4e71c8934e99230e93ed81e51f99fffd68945bda4e716dc60"
+      },
+      "origin": {
+        "actorId": "mimic.s04.system-capability-extractor",
+        "actorKind": "skill",
+        "createdAt": "2026-10-07T23:25:00.000Z",
+        "runId": "run_9ui159_source_review"
+      },
+      "provenance": [
+        {
+          "path": "/content/summary",
+          "kind": "fact",
+          "evidenceRefs": [
+            "inputs/input-packet.json#/classification",
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1"
+          ]
+        },
+        {
+          "path": "/content/capabilityId",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/system"]
+        },
+        {
+          "path": "/content/availability",
+          "kind": "fact",
+          "evidenceRefs": [
+            "inputs/input-packet.json#/classification",
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1"
+          ]
+        },
+        {
+          "path": "/content/description",
+          "kind": "fact",
+          "evidenceRefs": [
+            "inputs/input-packet.json#/system/observedInventory/0",
+            "inputs/input-packet.json#/system/observedInventory/1",
+            "inputs/input-packet.json#/system/observedInventory/2",
+            "inputs/input-packet.json#/limits/0"
+          ]
+        },
+        {
+          "path": "/content/supportingEvidence",
+          "kind": "derived",
+          "inputRefs": ["inputs/input-packet.json#/system/observedInventory"]
+        }
+      ],
+      "scope": {
+        "level": "organization",
+        "ownerId": "org_local"
+      }
+    }
+  }
+}
