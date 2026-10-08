@@ -31,4 +31,6 @@ jobs:
           run_install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps firefox webkit
+      - run: pnpm exec playwright install-deps chromium
+      - run: node scripts/chrome-for-testing.mjs
       - run: pnpm run test:browser --project=firefox-desktop --project=webkit-desktop --project=webkit-mobile

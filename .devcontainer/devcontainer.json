@@ -1,7 +1,7 @@
 {
   "name": "Mimic Node 24",
   "build": { "dockerfile": "Dockerfile" },
-  "postCreateCommand": "corepack enable && corepack prepare pnpm@12.9.1 --activate && pnpm install --frozen-lockfile && pnpm exec playwright install --with-deps chromium",
+  "postCreateCommand": "corepack enable && corepack prepare pnpm@12.9.1 --activate && pnpm install --frozen-lockfile && pnpm exec playwright install-deps chromium && node scripts/chrome-for-testing.mjs",
   "customizations": {
     "vscode": {
       "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]

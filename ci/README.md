@@ -22,7 +22,8 @@ pnpm install --frozen-lockfile
 pnpm run check:quality
 pnpm run test
 pnpm run check
-pnpm exec playwright install chromium firefox webkit
+pnpm exec playwright install firefox webkit
+node scripts/chrome-for-testing.mjs
 pnpm run test:browser
 node apps/cli/dist/main.js
 ```

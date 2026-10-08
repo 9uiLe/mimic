@@ -25,6 +25,10 @@ import type {
 } from "../prototype-builder/index.js";
 import { runStaticJourneyQualityGates } from "./journey.js";
 import type { GateFinding, GateInput, QualityReport } from "./index.js";
+import {
+  assertPatchedChrome,
+  patchedChromeLaunchOptions,
+} from "./patched-chrome.js";
 
 function finding(
   criterion: string,
@@ -516,9 +520,10 @@ export async function runBrowserJourneyQualityGates(
     const base =
       "http://127.0.0.1:" + (server.address() as AddressInfo).port + "/";
     if (!browser) {
-      browser = await chromium.launch({ headless: true });
+      browser = await chromium.launch(patchedChromeLaunchOptions());
       launched = true;
     }
+    assertPatchedChrome(browser);
     for (const width of widths) {
       const name =
         browser.browserType().name() + (width === 390 ? "-mobile" : "-desktop");

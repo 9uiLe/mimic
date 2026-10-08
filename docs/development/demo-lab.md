@@ -17,8 +17,8 @@ The review frame has an opaque sandbox origin with scripts enabled and no parent
 Use Node `24.21.0` and pnpm `12.9.1` after `pnpm install --frozen-lockfile`. The catalog comparator regenerates these outputs into a trusted local temporary root and checks every committed byte. The canonical Vitest suite and the Demo Lab browser spec both invoke it, so unit and browser CI detect stale or hand-edited generated files. To refresh the committed fixture assets after an intentional builder or fixture change:
 
 ```sh
-WRITE_CATALOG=1 pnpm exec vitest run apps/demo-lab/src/catalog.test.ts
-pnpm exec vitest run apps/demo-lab/src/catalog.test.ts
+WRITE_CATALOG=1 pnpm test apps/demo-lab/src/catalog.test.ts
+pnpm test apps/demo-lab/src/catalog.test.ts
 ```
 
-The output root is local and trusted; the builder's path checks do not protect against hostile concurrent directory renames. Do not use a shared or attacker-controlled output root. To review the lab, run `pnpm dev`; `pnpm build` copies the static catalog into the Vite output. Run `pnpm exec playwright test apps/demo-lab/tests/demo-lab.spec.ts` for shell, generated-content, navigation, fallback, sandbox, viewport, and accessibility checks. Automated accessibility results are evidence for those rendered states, not a full WCAG conformance claim.
+The output root is local and trusted; the builder's path checks do not protect against hostile concurrent directory renames. Do not use a shared or attacker-controlled output root. To review the lab, run `pnpm dev`; `pnpm build` copies the static catalog into the Vite output. Run `pnpm test:browser apps/demo-lab/tests/demo-lab.spec.ts` for shell, generated-content, navigation, fallback, sandbox, viewport, and accessibility checks. Automated accessibility results are evidence for those rendered states, not a full WCAG conformance claim.

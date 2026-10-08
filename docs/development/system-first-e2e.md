@@ -33,14 +33,14 @@ The standalone bundle, synthetic case, all exact selected approved artifacts, qu
 Use Node 24.21.0 and pnpm 12.9.1:
 
 ```sh
-pnpm exec vitest run packages/core/src/dogfood-tests/system-first.test.ts
-pnpm exec vitest run apps/cli/tests/riverbend-e2e.test.ts
-pnpm exec playwright test apps/demo-lab/tests/system-first-e2e.spec.ts
+pnpm test packages/core/src/dogfood-tests/system-first.test.ts
+pnpm test apps/cli/tests/riverbend-e2e.test.ts
+pnpm test:browser apps/demo-lab/tests/system-first-e2e.spec.ts
 pnpm check
 pnpm test:browser
 ```
 
-The tests create and remove their output roots under the OS temporary directory. Run `MIMIC_EXPORT_SYSTEM_FIRST=1 pnpm exec vitest run packages/core/src/dogfood-tests/system-first.test.ts -t 'synthetic reference Design Package'` to refresh the tracked generated sample from the same coherent synthetic chain. Then run `MIMIC_EXPORT_SYSTEM_FIRST=1 pnpm exec playwright test apps/demo-lab/tests/system-first-e2e.spec.ts --project=chromium-desktop --project=chromium-mobile` to refresh the four screenshots. Normal tests do not write that sample. The CLI replay publishes only synthetic packages in its temporary local root; no production release, provider key, or external data is involved.
+The tests create and remove their output roots under the OS temporary directory. Run `MIMIC_EXPORT_SYSTEM_FIRST=1 pnpm test packages/core/src/dogfood-tests/system-first.test.ts -t 'synthetic reference Design Package'` to refresh the tracked generated sample from the same coherent synthetic chain. Then run `MIMIC_EXPORT_SYSTEM_FIRST=1 pnpm test:browser apps/demo-lab/tests/system-first-e2e.spec.ts --project=chromium-desktop --project=chromium-mobile` to refresh the four screenshots. Normal tests do not write that sample. The CLI replay publishes only synthetic packages in its temporary local root; no production release, provider key, or external data is involved.
 
 ## Integration gaps and acceptance limits
 

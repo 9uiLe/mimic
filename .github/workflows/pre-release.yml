@@ -50,6 +50,7 @@ jobs:
           version: 12.9.1
           run_install: false
       - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install-deps chromium
       - run: pnpm run test
 
   browser:
@@ -70,7 +71,8 @@ jobs:
           version: 12.9.1
           run_install: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright install-deps chromium
+      - run: node scripts/chrome-for-testing.mjs
       - run: pnpm run test:browser --project=chromium-desktop --project=chromium-mobile
 
   dco:
