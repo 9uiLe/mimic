@@ -358,10 +358,17 @@ function acceptedSubmission(
       event.actor.kind !== "agent" ||
       event.actor.id !== "orchestrator" ||
       event.runAfter.safeActions.includes(binding.taskId) ||
-      !result.outputRefs.every((ref) =>
-        event.runAfter.artifacts.some(
-          (recorded) => canonicalJson(recorded) === canonicalJson(ref),
-        ),
+      !result.outputRefs.every(
+        (ref) =>
+          event.runAfter.artifacts.some(
+            (recorded) => canonicalJson(recorded) === canonicalJson(ref),
+          ) ||
+          (event.runAfter.base.some(
+            (recorded) => canonicalJson(recorded) === canonicalJson(ref),
+          ) &&
+            result.inputRefs.some(
+              (input) => canonicalJson(input) === canonicalJson(ref),
+            )),
       )
     )
       return false;

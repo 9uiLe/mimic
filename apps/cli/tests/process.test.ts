@@ -17,6 +17,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   artifactDigest,
   canonicalJson,
+  createOrchestratorRuntime,
+  FileWorkspaceStorage,
+  loadSchemaDirectory,
   type ArtifactSnapshot,
 } from "@mimic/core";
 import {
@@ -960,4 +963,230 @@ test("built submit retries accepted blockers and recovers a lost response withou
   expect(rejected.stderr).toMatch(/Submission retry changed input/);
   const recovered = invoke(...submitArgs("run_fault"));
   expect(recovered.status, recovered.stderr).toBe(0);
+}, 20_000);
+
+async function approvedReuseFixture(unboundOutput = false) {
+  const dir = root();
+  expect(invoke("init", "--root", dir, "--json").status).toBe(0);
+  const runtime = createOrchestratorRuntime(
+    new FileWorkspaceStorage(path.join(dir, ".mimic/workspace.json")),
+    await loadSchemaDirectory(path.join(repo, "schemas/artifacts")),
+    [{ level: "organization", ownerId: "org_local" }],
+    { verify: async () => false, allowCommit: async () => false },
+    {
+      verifyApproval: async (approval) =>
+        approval.decisionId === "synthetic_seed" &&
+        approval.actorId === "synthetic_human_fixture",
+      verifyDecision: async () => false,
+    },
+  );
+  const fixture = JSON.parse(
+    readFileSync(
+      path.join(repo, "fixtures/artifacts/valid/product-definition.json"),
+      "utf8",
+    ),
+  ) as ArtifactSnapshot;
+  const approved: ArtifactSnapshot = {
+    ...fixture,
+    scope: { level: "organization", ownerId: "org_local" },
+    lifecycle: { status: "approved", freshness: "valid" },
+    approval: {
+      status: "approved",
+      decisionId: "synthetic_seed",
+      actorId: "synthetic_human_fixture",
+      at: "2026-10-08T00:00:00Z",
+    },
+  };
+  const ref = {
+    artifactId: approved.meta.id,
+    revision: approved.meta.revision,
+    lockDigest: artifactDigest(approved),
+  };
+  approved.meta.contentDigest = ref.lockDigest;
+  await runtime.artifacts.create(approved);
+  const other: ArtifactSnapshot = {
+    ...approved,
+    meta: { ...approved.meta, id: "art_other_approved" },
+  };
+  const otherRef = {
+    artifactId: other.meta.id,
+    revision: other.meta.revision,
+    lockDigest: artifactDigest(other),
+  };
+  if (unboundOutput) {
+    other.meta.contentDigest = otherRef.lockDigest;
+    await runtime.artifacts.create(other);
+  }
+  await runtime.registry.seedCanonical(unboundOutput ? [ref, otherRef] : [ref]);
+  cpSync(
+    path.join(repo, "fixtures/skill-runtime/demo"),
+    path.join(dir, "skill"),
+    { recursive: true },
+  );
+  const routed = {
+    id: "reuse",
+    skillId: "mimic.runtime.demo",
+    outputType: "product-definition",
+    scopeOwnerId: "org_local",
+    intent: "revise",
+    targetArtifactId: ref.artifactId,
+    authority: "AUTONOMOUS",
+    humanBrief: "Reassess the approved definition without inventing a change",
+    inputs: {
+      required: [{ name: "brief", kind: "human-brief" }],
+      optional: [{ name: "research", kind: "evidence-file" }],
+      alternatives: [
+        {
+          oneOf: [
+            {
+              name: "existing-definition",
+              kind: "artifact",
+              artifactType: "product-definition",
+              schemaVersion: "1.0.0",
+              refs: [ref],
+            },
+            { name: "context-brief", kind: "human-brief" },
+          ],
+        },
+      ],
+    },
+  };
+  writeFileSync(path.join(dir, "tasks.json"), JSON.stringify([routed]));
+  const started = syntheticSeedHostInvoke(
+    "run",
+    "--root",
+    dir,
+    "--tasks",
+    "tasks.json",
+    "--id",
+    "run_reuse",
+    "--json",
+  );
+  expect(started.status, started.stderr).toBe(0);
+  expect(JSON.parse(started.stdout).actions).toEqual([
+    {
+      taskId: routed.id,
+      action: "UPDATE",
+      ref: `${ref.artifactId}@${ref.revision}`,
+    },
+  ]);
+  const work = {
+    artifacts: [],
+    work: {
+      result: {
+        runId: "run_reuse",
+        taskId: routed.id,
+        skillId: routed.skillId,
+        inputRefs: [ref],
+        outputRefs: [ref],
+      },
+    },
+  };
+  writeFileSync(path.join(dir, "work.json"), JSON.stringify(work));
+  const args = [
+    "submit",
+    "run_reuse",
+    "--task",
+    routed.id,
+    "--package",
+    "skill",
+    "--work",
+    "work.json",
+    "--root",
+    dir,
+    "--json",
+  ];
+  return { dir, ref, otherRef, work, args };
+}
+
+for (const interrupted of [false, true]) {
+  test(`built submit acknowledges unchanged approved base output${interrupted ? " after a lost response" : ""} and preserves exact retries`, async () => {
+    const { dir, ref, args, work } = await approvedReuseFixture();
+    const workspaceFile = path.join(dir, ".mimic/workspace.json");
+    const before = JSON.parse(readFileSync(workspaceFile, "utf8"));
+    if (interrupted) {
+      const entry = pathToFileURL(path.join(repo, "apps/cli/dist/cli.js")).href;
+      const fault = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `import { runCli } from ${JSON.stringify(entry)};
+process.exitCode = await runCli(process.argv.slice(1), undefined, {
+  seedAuthority: {
+    verifyApproval: async (approval) => approval.decisionId === "synthetic_seed" && approval.actorId === "synthetic_human_fixture",
+    verifyDecision: async () => false,
+  },
+  afterSkillAccepted() { throw new Error("simulated lost response"); },
+});`,
+          ...args,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(fault.status, fault.stderr).toBe(6);
+      expect(fault.stderr).toMatch(/simulated lost response/);
+    }
+    const first = syntheticSeedHostInvoke(...args);
+    expect(first.status, first.stderr).toBe(0);
+    expect(JSON.parse(first.stdout)).toMatchObject({
+      submissionState: "accepted",
+      actions: [{ taskId: "reuse", action: "IGNORE" }],
+    });
+    const after = readFileSync(workspaceFile, "utf8");
+    const state = JSON.parse(after);
+    expect(state.snapshots).toEqual(before.snapshots);
+    expect(state.registry.canonical).toEqual(before.registry.canonical);
+    expect(state.registry.decisions).toEqual(before.registry.decisions);
+    expect(state.registry.commits).toEqual(before.registry.commits);
+    expect(state.registry.runs.run_reuse.artifacts).toEqual([]);
+    expect(
+      state.registry.events.slice(before.registry.events.length),
+    ).toMatchObject([
+      {
+        action: "set-work",
+        reason: 'Skill task "reuse" completed with verified exact outputs',
+        runAfter: { base: [ref], artifacts: [], safeActions: [] },
+      },
+      { action: "close-run" },
+    ]);
+    const retry = syntheticSeedHostInvoke(...args);
+    expect(retry.status, retry.stderr).toBe(0);
+    expect(JSON.parse(retry.stdout).submissionState).toBe("accepted");
+    expect(readFileSync(workspaceFile, "utf8")).toBe(after);
+    const changed = {
+      ...work,
+      work: {
+        ...work.work,
+        findings: [
+          { claim: "Changed retry", evidenceRefs: [], status: "UNVERIFIED" },
+        ],
+      },
+    };
+    writeFileSync(path.join(dir, "changed.json"), JSON.stringify(changed));
+    const rejected = syntheticSeedHostInvoke(
+      ...args.map((arg) => (arg === "work.json" ? "changed.json" : arg)),
+    );
+    expect(rejected.status, rejected.stderr).toBe(5);
+    expect(rejected.stderr).toMatch(/Submission retry changed input/);
+    expect(readFileSync(workspaceFile, "utf8")).toBe(after);
+  }, 20_000);
+}
+
+test("built submit rejects an approved base output outside the exact invocation inputs", async () => {
+  const { dir, otherRef, work, args } = await approvedReuseFixture(true);
+  const bad = structuredClone(work);
+  bad.work.result.outputRefs = [otherRef];
+  writeFileSync(path.join(dir, "bad.json"), JSON.stringify(bad));
+  const workspaceFile = path.join(dir, ".mimic/workspace.json");
+  const before = readFileSync(workspaceFile, "utf8");
+  const state = JSON.parse(before);
+  expect(state.registry.runs.run_reuse.base).toContainEqual(otherRef);
+  const rejected = syntheticSeedHostInvoke(
+    ...args.map((arg) => (arg === "work.json" ? "bad.json" : arg)),
+  );
+  expect(rejected.status, rejected.stderr).toBe(6);
+  expect(rejected.stderr).toMatch(
+    /Unchanged output is not verified approved Run context/,
+  );
+  expect(readFileSync(workspaceFile, "utf8")).toBe(before);
 }, 20_000);
