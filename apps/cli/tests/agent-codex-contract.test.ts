@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { artifactDigest, type ArtifactSnapshot } from "@mimic/core";
 import { dispatchCli } from "../src/entry.js";
+import * as processModule from "../src/agent/process.js";
 import {
   CodexExecutor,
   createCodexCreditRiskPermit,
@@ -63,6 +64,23 @@ const request = (workspace: string) => ({
     billingMode: "subscription-only" as const,
     model: "unverified-model",
   },
+});
+test("longer generation deadline retains bounded metadata probes", async () => {
+  const options = await fakeCodex();
+  options.timeoutMs = 45_000;
+  const execute = vi.spyOn(processModule, "executeOfficialProcess");
+  expect((await inspectCodex(options)).authentication).toBe("chatgpt");
+  expect(execute.mock.calls).toHaveLength(2);
+  expect(execute.mock.calls.map(([request]) => request.timeoutMs)).toEqual([
+    10_000, 10_000,
+  ]);
+  await writeFile(path.join(options.workspace, "output-schema.json"), "{}");
+  const profile = await createCodexGenerationProfile(
+    options,
+    request(options.workspace),
+    "output-schema.json",
+  );
+  expect(profile.process.timeoutMs).toBe(45_000);
 });
 async function calls(options: CodexOptions) {
   return (await readFile(path.join(options.workspace, "calls.jsonl"), "utf8"))

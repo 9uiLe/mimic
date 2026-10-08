@@ -47,7 +47,7 @@ export async function inspectCodex(
         args,
         workspace: options.workspace,
         env: options.env,
-        timeoutMs: options.timeoutMs ?? 10_000,
+        timeoutMs: Math.min(options.timeoutMs ?? 10_000, 10_000),
         maxOutputBytes: 64 * 1024,
         signal,
       })

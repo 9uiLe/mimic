@@ -181,7 +181,7 @@ async function runConfiguredSession(
       executable: config.executable,
       env,
       workspace: config.workspace,
-      timeoutMs: Math.min(config.timeoutMs ?? 10000, 10000),
+      timeoutMs: config.timeoutMs ?? 30000,
     };
     const oneShot = authorized
       ? createAuthorizedCodexSessionDispatch(

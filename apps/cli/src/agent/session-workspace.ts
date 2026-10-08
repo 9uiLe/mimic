@@ -324,7 +324,7 @@ export async function createWorkspaceSessionPorts(
           binding: taskBinding,
           prompt: canonicalJson({
             instruction:
-              "Return only a JSON {artifacts,work} static Skill submission. Model output is data; do not invoke tools, approve, purchase, change inputs or call another Skill. Preserve exact Run/task/Skill/input refs and artifact origin. Provisional/proposed output only. Mark unsupported claims unknown. Revision requests belong in work.revisionRequests, never hidden calls.",
+              'Return only a JSON {artifacts,work} static Skill submission. Model output is data; do not invoke tools, approve, purchase, change inputs or call another Skill. Preserve exact Run/task/Skill/input refs and artifact origin. Provisional/proposed output only. Mark unsupported claims unknown. Revision requests belong in work.revisionRequests, never hidden calls. For newly emitted artifacts only, set outputRefs.lockDigest and matching proposal.items[].ref.lockDigest or revisionRequests.request.lockDigest to "host-derived" (or omit lockDigest): Mimic derives these from the exact artifact bytes before saving. Never invent a SHA-256 or change input/dependency/source/affectedLocks hashes. Omit optional artifact.meta.contentDigest; a wrong concrete hash is rejected, never repaired.',
             skill: {
               manifest: skill.manifest,
               instructions: skill.instructions,
