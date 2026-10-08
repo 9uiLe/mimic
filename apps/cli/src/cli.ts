@@ -7,6 +7,7 @@ import {
   lstat,
   readdir,
 } from "node:fs/promises";
+import { inspectRun, pointerExists } from "./inspect.js";
 import { atomicCreateJson } from "./atomic-file.js";
 import {
   LOCAL_MARKER,
@@ -99,6 +100,7 @@ export const EXIT = {
 const commands = new Set([
   "init",
   "status",
+  "inspect",
   "run",
   "next",
   "submit",
@@ -133,7 +135,7 @@ function parse(argv: readonly string[]) {
   if (!command || !commands.has(command))
     throw new CliError(
       EXIT.USAGE,
-      "Usage: mimic <init|status|run|next|submit|revision-requests|decisions|decide|preview|validate|release> [options]",
+      "Usage: mimic <init|status|inspect|run|next|submit|revision-requests|decisions|decide|preview|validate|release> [options]",
     );
   const options: Record<string, string> = {};
   const positionals: string[] = [];
@@ -808,6 +810,40 @@ export async function runCli(
       localAuthority,
       signedAuthority,
     } = await load(root, host);
+    if (command === "inspect") {
+      if (positionals.length > 1)
+        throw new CliError(EXIT.USAGE, "Usage: mimic inspect [run-id]");
+      const state = await runtime.registry.snapshot();
+      const ids = positionals[0]
+        ? [safeId(positionals[0], "run ID")]
+        : Object.keys(state.runs);
+      for (const id of ids)
+        if (!state.runs[id])
+          throw new CliError(EXIT.INVALID, `Unknown Run ${id}`);
+      const runs = [];
+      for (const id of ids)
+        runs.push(
+          await inspectRun(runtime, id, {
+            revisionRecords: await revisionRecords(root, id, runtime),
+            async resolveEvidence(reference) {
+              const [name, pointer] = reference.split("#");
+              if (!name || reference.split("#").length > 2) return false;
+              try {
+                const file = await containedFile(root, name);
+                if (pointer === undefined) return true;
+                return pointerExists(
+                  JSON.parse(await readFile(file, "utf8")),
+                  pointer,
+                );
+              } catch {
+                return false;
+              }
+            },
+          }),
+        );
+      emit(io, { readOnly: true, runs }, json);
+      return EXIT.OK;
+    }
     if (command === "status") {
       if (positionals.length)
         throw new CliError(EXIT.USAGE, "status takes no positional arguments");
