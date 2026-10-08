@@ -18,4 +18,4 @@ Reference mode records exact dependencies as external edges, with acquisition hi
 
 This implementation targets a trusted local output root and cooperating local writers. It does not provide hostile OS actor protection, a retention policy, network publication, production credentials, signing keys, or a hosted registry. The caller supplies human authority, license policy through the registry, and redistribution decisions; the compiler cannot infer those from file names or license strings.
 
-Run the focused suite with `pnpm exec vitest run packages/core/src/package-compiler/package-compiler.test.ts`, then the repository's canonical `pnpm check` and browser checks with Node 24.21.0 and pnpm 12.9.1.
+Run the focused suite with `pnpm test packages/core/src/package-compiler/package-compiler.test.ts`, then the repository's canonical `pnpm check` and browser checks with Node 24.21.0 and pnpm 12.9.1.

@@ -23,6 +23,11 @@ import {
 } from "./index.js";
 import { qualityPlan } from "./plan.js";
 import { matchesOutputLocation } from "./location.js";
+import {
+  assertPatchedChrome,
+  PatchedChromeError,
+  patchedChromeLaunchOptions,
+} from "./patched-chrome.js";
 
 type BrowserFinding = GateFinding;
 const devices = [
@@ -332,9 +337,10 @@ export async function runBrowserQualityGates(
     });
     const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`;
     if (!browser) {
-      browser = await chromium.launch({ headless: true });
+      browser = await chromium.launch(patchedChromeLaunchOptions());
       launched = true;
     }
+    assertPatchedChrome(browser);
     engine = browser.browserType().name();
     for (const device of testedDevices) {
       const graph = transitions(plan!, device.mobile);
@@ -837,6 +843,7 @@ export async function runBrowserQualityGates(
       }
     }
   } catch (error) {
+    if (error instanceof PatchedChromeError) throw error;
     for (const device of testedDevices)
       for (const criterion of criteria)
         findings.push(

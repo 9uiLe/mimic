@@ -48,8 +48,8 @@ The bounded Product Design Package inventory rule is specified in [9UI-144](http
 Use Node 24.21.0 and pnpm 12.9.1. Targeted commands:
 
 ```sh
-pnpm exec vitest run packages/core/src/dogfood-tests/experience-first.test.ts packages/core/src/prototype-journey/prototype-journey.test.ts
-pnpm exec playwright test apps/demo-lab/tests/experience-first-e2e.spec.ts apps/demo-lab/tests/prototype-journey.spec.ts --project=chromium-desktop --project=chromium-mobile --project=webkit-desktop --project=webkit-mobile --workers=1
+pnpm test packages/core/src/dogfood-tests/experience-first.test.ts packages/core/src/prototype-journey/prototype-journey.test.ts
+pnpm test:browser apps/demo-lab/tests/experience-first-e2e.spec.ts apps/demo-lab/tests/prototype-journey.spec.ts --project=chromium-desktop --project=chromium-mobile --project=webkit-desktop --project=webkit-mobile --workers=1
 ```
 
 Run `pnpm check` and the exact-head CI checks. An all-project `pnpm run test:browser` attempt on this macOS host was stopped after 180-second Firefox launch timeouts, so it remains unverified here. Do not mark 9UI-125 Done until its primary PR merges and the open acceptance items have been resolved or explicitly re-scoped by the owner.
