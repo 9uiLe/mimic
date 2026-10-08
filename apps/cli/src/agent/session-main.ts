@@ -3,7 +3,8 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CodexExecutor } from "./codex.js";
+import { CodexExecutor, type CodexCreditRiskDecisionPort } from "./codex.js";
+import { createAuthorizedCodexSessionDispatch } from "./session-authorized.js";
 import { AgentSession, FileSessionStore } from "./session.js";
 import { createWorkspaceSessionPorts } from "./session-workspace.js";
 
@@ -94,6 +95,35 @@ export async function runSessionCli(
     err: console.error,
   },
 ): Promise<number> {
+  return runConfiguredSession(argv, io);
+}
+
+/** Trusted coordinator entry after an actual user decision. It is intentionally
+ * unavailable as a JSON setting or CLI flag. The decision port consumes the
+ * host's receipt; no entitlement/billing-proof object is invented. */
+export async function runAuthorizedSessionOnce(
+  configPath: string,
+  outputSchemaPath: string,
+  decision: CodexCreditRiskDecisionPort,
+  io: { out(value: string): void; err(value: string): void } = {
+    out: console.log,
+    err: console.error,
+  },
+): Promise<number> {
+  return runConfiguredSession(["start", "--config", configPath], io, {
+    decision,
+    outputSchemaPath,
+  });
+}
+
+async function runConfiguredSession(
+  argv: readonly string[],
+  io: { out(value: string): void; err(value: string): void },
+  authorized?: {
+    decision: CodexCreditRiskDecisionPort;
+    outputSchemaPath: string;
+  },
+): Promise<number> {
   const [command, flag, configPath, ...remaining] = argv;
   if (
     !["start", "resume", "inspect", "recover-lock"].includes(command ?? "") ||
@@ -147,12 +177,20 @@ export async function runSessionCli(
         process.env[key] === undefined ? [] : [[key, process.env[key]!]],
       ),
     );
-    const executor = new CodexExecutor({
+    const codexOptions = {
       executable: config.executable,
       env,
       workspace: config.workspace,
       timeoutMs: Math.min(config.timeoutMs ?? 10000, 10000),
-    });
+    };
+    const oneShot = authorized
+      ? createAuthorizedCodexSessionDispatch(
+          codexOptions,
+          authorized.outputSchemaPath,
+          authorized.decision,
+        )
+      : undefined;
+    const executor = oneShot?.executor ?? new CodexExecutor(codexOptions);
     const ports = await createWorkspaceSessionPorts({
       workspace: config.workspace,
       runId: config.runId,
@@ -160,11 +198,18 @@ export async function runSessionCli(
       packages: config.packages,
       settings,
     });
-    const session = new AgentSession(config.sessionId, store, ports, executor, {
-      maxGenerations: config.maxGenerations ?? 4,
-      timeoutMs: config.timeoutMs ?? 60000,
-      maxOutputBytes: config.maxOutputBytes ?? 1_000_000,
-    });
+    const session = new AgentSession(
+      config.sessionId,
+      store,
+      ports,
+      executor,
+      {
+        maxGenerations: authorized ? 1 : (config.maxGenerations ?? 4),
+        timeoutMs: config.timeoutMs ?? 60000,
+        maxOutputBytes: config.maxOutputBytes ?? 1_000_000,
+      },
+      oneShot?.dispatch,
+    );
     const interrupt = () => {
       void session.cancel().catch(() => {});
     };

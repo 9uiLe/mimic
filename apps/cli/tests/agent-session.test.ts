@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, expect, test, vi } from "vitest";
 import {
   mkdtemp,
   mkdir,
@@ -34,7 +34,12 @@ import {
 } from "../src/agent/session.js";
 import { createWorkspaceSessionPorts } from "../src/agent/session-workspace.js";
 import { runCli } from "../src/cli.js";
-import { runSessionCli } from "../src/agent/session-main.js";
+import {
+  runSessionCli,
+  runAuthorizedSessionOnce,
+} from "../src/agent/session-main.js";
+import { CodexExecutor } from "../src/agent/codex.js";
+import { createAuthorizedCodexSessionDispatch } from "../src/agent/session-authorized.js";
 import {
   type AgentExecutor,
   type ExecutorEvent,
@@ -45,9 +50,28 @@ const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
 );
+// This file owns its compiled production-entry prerequisite. Unit CI runs tests
+// without prebuilding; another test worker's build is not a dependency barrier.
+beforeAll(() => {
+  const built = spawnSync(
+    process.execPath,
+    [
+      path.join(repo, "node_modules/typescript/bin/tsc"),
+      "-b",
+      "apps/cli",
+      "--force",
+    ],
+    { cwd: repo, encoding: "utf8", timeout: 120_000 },
+  );
+  expect(
+    built.status,
+    built.stderr || built.stdout || built.error?.message,
+  ).toBe(0);
+}, 180_000);
 const roots: string[] = [];
 afterEach(async () => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
   );
@@ -1324,3 +1348,213 @@ test("a separate production Node process resumes and inspects a durable accepted
       (await h.runtime.artifacts.read(ref.artifactId, ref.revision)).digest,
     ).toBe(ref.lockDigest);
 });
+
+test("trusted one-call dispatch keeps Core acceptance durable and cannot become subscription-only entitlement", async () => {
+  const h = await staticHarness();
+  const decision = {
+    consumeUserDecision: vi.fn(async () => ({
+      decisionId: "test-only-actual-host-decision",
+      expiresAt: Date.now() + 60_000,
+    })),
+  };
+  const options = { executable: process.execPath, workspace: h.root, env: {} };
+  const first = createAuthorizedCodexSessionDispatch(
+    options,
+    "schema.json",
+    decision,
+  );
+  const launch = vi
+    .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
+    .mockImplementation(async (request) => fake(h.output).start(request));
+  const ordinary = vi.spyOn(CodexExecutor.prototype, "start");
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    first.executor,
+    { ...limits, maxGenerations: 1 },
+    first.dispatch,
+  ).advance();
+  expect(state.executionPolicy).toBe("authorized-existing-credit-risk-once");
+  expect(state.tasks.first.phase).toBe("accepted");
+  expect(state.generationCount).toBe(1);
+  expect(launch).toHaveBeenCalledOnce();
+  expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+  expect(ordinary).not.toHaveBeenCalled();
+  const before = await readFile(
+    path.join(h.root, ".mimic/workspace.json"),
+    "utf8",
+  );
+  const fresh = createAuthorizedCodexSessionDispatch(
+    options,
+    "schema.json",
+    decision,
+  );
+  await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    fresh.executor,
+    { ...limits, maxGenerations: 1 },
+    fresh.dispatch,
+  ).advance({ resume: true });
+  expect(
+    await readFile(path.join(h.root, ".mimic/workspace.json"), "utf8"),
+  ).toBe(before);
+  expect(launch).toHaveBeenCalledOnce();
+  expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+  const switched = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    first.executor,
+    limits,
+  ).advance({ resume: true });
+  expect(switched.stop).toBe("reservation-invalid");
+  expect(ordinary).not.toHaveBeenCalled();
+  expect(
+    () =>
+      new AgentSession(
+        "session_other",
+        h.store,
+        h.ports,
+        first.executor,
+        limits,
+        first.dispatch,
+      ),
+  ).toThrow("Invalid session limits");
+  expect(
+    () =>
+      new AgentSession(
+        "session_other",
+        h.store,
+        h.ports,
+        first.executor,
+        { ...limits, maxGenerations: 1 },
+        { policy: "authorized-existing-credit-risk-once", start: launch },
+      ),
+  ).toThrow("Invalid session limits");
+});
+
+test("production trusted one-call entry uses static Core and exposes no JSON or CLI authorization override", async () => {
+  const h = await staticHarness();
+  const configPath = path.join(h.root, "authorized-session.json");
+  const configuration = {
+    workspace: h.root,
+    executable: process.execPath,
+    runId: binding.runId,
+    sessionId: "session_a",
+    packages: { first: "skill" },
+    model: binding.settings.model,
+    maxGenerations: 20,
+  };
+  await writeFile(configPath, JSON.stringify(configuration));
+  const launch = vi
+    .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
+    .mockImplementation(async (request) => fake(h.output).start(request));
+  const decision = {
+    consumeUserDecision: vi.fn(async () => ({
+      decisionId: "test-only-host-entry-decision",
+      expiresAt: Date.now() + 60_000,
+    })),
+  };
+  const out: string[] = [],
+    err: string[] = [];
+  const io = {
+    out: (value: string) => out.push(value),
+    err: (value: string) => err.push(value),
+  };
+  expect(
+    await runAuthorizedSessionOnce(configPath, "schema.json", decision, io),
+  ).toBe(0);
+  expect(JSON.parse(out.at(-1)!).executionPolicy).toBe(
+    "authorized-existing-credit-risk-once",
+  );
+  expect((await h.store.read("session_a"))?.generationCount).toBe(1);
+  expect(launch).toHaveBeenCalledOnce();
+  expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+  expect(err).toEqual([]);
+  expect(
+    await runSessionCli(
+      ["start", "--config", configPath, "--allow-existing-credit-risk"],
+      io,
+    ),
+  ).toBe(2);
+  await writeFile(
+    configPath,
+    JSON.stringify({ ...configuration, creditRiskConfirmed: true }),
+  );
+  expect(await runSessionCli(["start", "--config", configPath], io)).toBe(2);
+  expect(launch).toHaveBeenCalledOnce();
+});
+
+test.each(["cancel", "deadline"] as const)(
+  "one-call %s during host authorization aborts startup before any official launch",
+  async (kind) => {
+    const h = await harness();
+    let entered!: () => void;
+    const entering = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    let release!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let signal: AbortSignal | undefined;
+    const decision = {
+      consumeUserDecision: vi.fn(
+        async (_scope: unknown, abort?: AbortSignal) => {
+          signal = abort;
+          entered();
+          await waiting;
+          return {
+            decisionId: "test-only-cancelled-decision",
+            expiresAt: Date.now() + 60_000,
+          };
+        },
+      ),
+    };
+    const pair = createAuthorizedCodexSessionDispatch(
+      { executable: process.execPath, workspace: h.root, env: {} },
+      "schema.json",
+      decision,
+    );
+    const launch = vi.spyOn(pair.executor, "startAuthorizedOnce");
+    const session = new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      pair.executor,
+      {
+        ...limits,
+        maxGenerations: 1,
+        timeoutMs: kind === "deadline" ? 20 : 1000,
+      },
+      pair.dispatch,
+    );
+    const advancing = session.advance();
+    await entering;
+    if (kind === "cancel") await session.cancel();
+    else expect((await advancing).stop).toBe("timeout");
+    expect(signal?.aborted).toBe(true);
+    release();
+    if (kind === "cancel") expect((await advancing).stop).toBe("cancelled");
+    const request = {
+      requestId: "another",
+      workspace: h.root,
+      prompt: "data",
+      settings: binding.settings,
+    };
+    const repeated = [];
+    for await (const event of (await pair.dispatch.start(request)).events)
+      repeated.push(event);
+    expect(repeated.at(-1)).toMatchObject({
+      type: "stopped",
+      reason: "billing-unconfirmed",
+    });
+    expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+    expect(launch).not.toHaveBeenCalled();
+    expect(h.ports.saveWork).not.toHaveBeenCalled();
+    expect(h.ports.submit).not.toHaveBeenCalled();
+  },
+);

@@ -13,8 +13,10 @@ import {
   executeOfficialProcess,
   validateOfficialEnvironment,
   type OfficialProcessRequest,
+  type OfficialProcessHandle,
 } from "./process.js";
-import { realpath, stat } from "node:fs/promises";
+import { lstat, realpath, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { parseSubscriptionSettings } from "./settings.js";
 
@@ -36,6 +38,7 @@ export interface CodexInspection {
 /** Only read-only official commands; never opens auth files or refreshes/login. */
 export async function inspectCodex(
   options: CodexOptions,
+  signal?: AbortSignal,
 ): Promise<CodexInspection> {
   const run = async (args: string[]) =>
     (
@@ -46,6 +49,7 @@ export async function inspectCodex(
         env: options.env,
         timeoutMs: options.timeoutMs ?? 10_000,
         maxOutputBytes: 64 * 1024,
+        signal,
       })
     ).result;
   const version = await run(["--version"]);
@@ -72,6 +76,126 @@ export async function inspectCodex(
     billingEnforcement: "unconfirmed",
     modelEntitlement: "unconfirmed",
   };
+}
+
+export interface CodexCreditRiskScope {
+  requestId: string;
+  model: string;
+  workspace: string;
+  promptSha256: string;
+}
+/** Trusted application/coordinator port, never model/config/work data. The host
+ * consumes a recorded, actual user decision allowing existing-credit risk once.
+ * This is permission, NOT evidence of subscription-only billing enforcement. */
+export interface CodexCreditRiskDecisionPort {
+  consumeUserDecision(
+    scope: Readonly<CodexCreditRiskScope>,
+    signal?: AbortSignal,
+  ): Promise<{
+    decisionId: string;
+    expiresAt: number;
+  }>;
+}
+declare const creditRiskPermitBrand: unique symbol;
+export interface CodexCreditRiskPermit {
+  readonly [creditRiskPermitBrand]: true;
+}
+const permits = new WeakMap<
+  CodexCreditRiskPermit,
+  {
+    scope: CodexCreditRiskScope;
+    expiresAt: number;
+    consumed: boolean;
+  }
+>();
+const decisions = new WeakMap<CodexCreditRiskDecisionPort, Set<string>>();
+function snapshotCodexRequest(request: ExecutionRequest): ExecutionRequest {
+  let settings;
+  try {
+    settings = parseSubscriptionSettings(request.settings);
+  } catch {
+    throw new ExecutorFailure("unsupported");
+  }
+  return {
+    requestId: request.requestId,
+    workspace: request.workspace,
+    prompt: request.prompt,
+    settings: { ...settings },
+    requiredCapabilities: request.requiredCapabilities
+      ? [...request.requiredCapabilities]
+      : undefined,
+  };
+}
+async function creditRiskScope(
+  request: ExecutionRequest,
+): Promise<CodexCreditRiskScope> {
+  let settings;
+  try {
+    settings = parseSubscriptionSettings(request.settings);
+  } catch {
+    throw new ExecutorFailure("unsupported");
+  }
+  if (
+    settings.provider !== "codex" ||
+    !settings.model ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(settings.model) ||
+    !request.requestId.trim() ||
+    !request.prompt ||
+    Buffer.byteLength(request.prompt) > 64 * 1024 ||
+    !path.isAbsolute(request.workspace)
+  )
+    throw new ExecutorFailure("unsupported");
+  let workspace: string;
+  try {
+    workspace = await realpath(request.workspace);
+    if (!(await stat(workspace)).isDirectory()) throw new Error();
+  } catch {
+    throw new ExecutorFailure("unsupported");
+  }
+  return {
+    requestId: request.requestId,
+    model: settings.model,
+    workspace,
+    promptSha256: createHash("sha256").update(request.prompt).digest("hex"),
+  };
+}
+/** Only a trusted host may call this after the actual user answer. No inference,
+ * login, billing assertion, or automatic reissuance occurs here. */
+export async function createCodexCreditRiskPermit(
+  port: CodexCreditRiskDecisionPort,
+  request: ExecutionRequest,
+  signal?: AbortSignal,
+): Promise<CodexCreditRiskPermit> {
+  request = snapshotCodexRequest(request);
+  checkAbort(signal);
+  const scope = await creditRiskScope(request);
+  checkAbort(signal);
+  const receipt = await port.consumeUserDecision(
+    Object.freeze({ ...scope }),
+    signal,
+  );
+  const now = Date.now();
+  if (
+    !receipt ||
+    typeof receipt.decisionId !== "string" ||
+    !receipt.decisionId.trim() ||
+    !Number.isSafeInteger(receipt.expiresAt) ||
+    receipt.expiresAt <= now ||
+    receipt.expiresAt > now + 300_000
+  )
+    throw new ExecutorFailure("billing-unconfirmed");
+  let used = decisions.get(port);
+  if (!used) {
+    used = new Set();
+    decisions.set(port, used);
+  }
+  if (used.has(receipt.decisionId) || used.size >= 1000)
+    throw new ExecutorFailure("billing-unconfirmed");
+  used.add(receipt.decisionId);
+  checkAbort(signal);
+  const permit = Object.freeze({}) as CodexCreditRiskPermit;
+  permits.set(permit, { scope, expiresAt: receipt.expiresAt, consumed: false });
+  return permit;
 }
 
 /** First official adapter boundary. ChatGPT login alone does not verify the
@@ -137,11 +261,569 @@ export class CodexExecutor implements AgentExecutor {
     // Do not turn an arbitrary confirmed object into a dispatch override.
     throw new ExecutorFailure("billing-unconfirmed");
   }
+  /** Explicit, separate one-generation authorization. Never called by ordinary
+   * startExecution and never upgrades the subscription-only entitlement. */
+  async startAuthorizedOnce(
+    request: ExecutionRequest,
+    outputSchemaPath: string,
+    permit: CodexCreditRiskPermit,
+    signal?: AbortSignal,
+  ): Promise<ExecutionHandle> {
+    const authorization = permits.get(permit);
+    if (
+      !authorization ||
+      authorization.consumed ||
+      authorization.expiresAt <= Date.now()
+    )
+      throw new ExecutorFailure("billing-unconfirmed");
+    // Consume before asynchronous preflight/spawn; failed attempts and cancellation
+    // do not restore permission or permit concurrent/replayed generations.
+    authorization.consumed = true;
+    request = snapshotCodexRequest(request);
+    checkAbort(signal);
+    const scope = await creditRiskScope(request);
+    checkAbort(signal);
+    if (
+      Object.keys(scope).some(
+        (key) =>
+          scope[key as keyof CodexCreditRiskScope] !==
+          authorization.scope[key as keyof CodexCreditRiskScope],
+      )
+    )
+      throw new ExecutorFailure("billing-unconfirmed");
+    const inspection = await inspectCodex(this.options, signal);
+    checkAbort(signal);
+    if (inspection.runtimeVersion !== "0.160.0")
+      throw new ExecutorFailure("unsupported");
+    if (inspection.authentication !== "chatgpt")
+      throw new ExecutorFailure("authentication");
+    const profile = await createCodexGenerationProfile(
+      this.options,
+      request,
+      outputSchemaPath,
+    );
+    if (
+      profile.process.workspace !== authorization.scope.workspace ||
+      createHash("sha256")
+        .update(profile.process.input ?? "")
+        .digest("hex") !== authorization.scope.promptSha256
+    )
+      throw new ExecutorFailure("billing-unconfirmed");
+    if (authorization.expiresAt <= Date.now())
+      throw new ExecutorFailure("billing-unconfirmed");
+    await verifyCodexSafetyProfile(profile, signal);
+    if (authorization.expiresAt <= Date.now())
+      throw new ExecutorFailure("billing-unconfirmed");
+    await verifyNativeInstructions(profile.process.env);
+    checkAbort(signal);
+    if (authorization.expiresAt <= Date.now())
+      throw new ExecutorFailure("billing-unconfirmed");
+    return launchCodex(profile, request.requestId, signal);
+  }
   async resume(request: ResumeRequest): Promise<ExecutionHandle> {
     void request;
     // No implicit new turn/replay of accepted work as a substitute for resume.
     throw new ExecutorFailure("unsupported");
   }
+}
+
+/** Conservative metadata gate: app-server config/read includes user config,
+ * whereas exec ignores it. Reject unsafe retained maps/layers; never treat this
+ * superset read as an exact effective-turn tool inventory or billing proof.
+ * No thread/start, turn/start, account refresh, or inference request is sent. */
+/** Safe control-name diagnostic only; never carries raw config or account data. */
+export class CodexSafetyFailure extends ExecutorFailure {
+  constructor(readonly control: string) {
+    super("unsupported");
+  }
+}
+export async function inspectCodexGenerationSafety(
+  options: CodexOptions,
+  request: ExecutionRequest,
+  outputSchemaPath: string,
+): Promise<void> {
+  await verifyCodexSafetyProfile(
+    await createCodexGenerationProfile(options, request, outputSchemaPath),
+  );
+}
+function checkAbort(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new ExecutorFailure("cancelled");
+}
+async function verifyNativeInstructions(
+  env: Readonly<Record<string, string>>,
+): Promise<void> {
+  const home =
+    env.CODEX_HOME ?? (env.HOME ? path.join(env.HOME, ".codex") : undefined);
+  if (!home) throw new CodexSafetyFailure("native-instructions.home");
+  for (const name of ["AGENTS.override.md", "AGENTS.md"]) {
+    try {
+      const info = await lstat(path.join(home, name));
+      if (!info.isFile() || info.isSymbolicLink() || info.size !== 0)
+        throw new ExecutorFailure("unsupported");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT")
+        throw new CodexSafetyFailure("native-instructions");
+    }
+  }
+}
+async function verifyCodexSafetyProfile(
+  profile: CodexGenerationProfile,
+  signal?: AbortSignal,
+): Promise<void> {
+  checkAbort(signal);
+  await verifyNativeInstructions(profile.process.env);
+  checkAbort(signal);
+  const args = ["app-server", "--strict-config"];
+  for (let index = 0; index < profile.process.args.length; index++) {
+    const arg = profile.process.args[index];
+    if (arg === "--config" || arg === "--disable")
+      args.push(arg, profile.process.args[++index]);
+  }
+  const initialized = JSON.stringify({
+    id: 1,
+    method: "initialize",
+    params: {
+      clientInfo: { name: "mimic_codex_safety", version: "1" },
+      capabilities: { experimentalApi: true },
+    },
+  });
+  let pending = "";
+  const utf8 = new TextDecoder("utf-8", { fatal: true });
+  let phase = 0;
+  let snapshot: Record<string, unknown> | undefined;
+  let requirements: Record<string, unknown> | undefined;
+  const handle: OfficialProcessHandle = await executeOfficialProcess({
+    ...profile.process,
+    args,
+    input: initialized + "\n",
+    keepStdinOpen: true,
+    signal,
+    maxOutputBytes: 2 * 1024 * 1024,
+    timeoutMs: Math.min(profile.process.timeoutMs, 10_000),
+    onStdout: (chunk) => {
+      pending += utf8.decode(chunk, { stream: true });
+      let newline: number;
+      while ((newline = pending.indexOf("\n")) !== -1) {
+        const line = pending.slice(0, newline);
+        pending = pending.slice(newline + 1);
+        if (!line.trim()) continue;
+        const response = object(JSON.parse(line));
+        if (
+          response.id === 1 &&
+          phase === 0 &&
+          response.result &&
+          !response.error
+        ) {
+          phase = 1;
+          handle.writeInput(
+            JSON.stringify({ method: "initialized", params: {} }) +
+              "\n" +
+              JSON.stringify({
+                id: 2,
+                method: "config/read",
+                params: {
+                  includeLayers: true,
+                  cwd: profile.process.workspace,
+                },
+              }) +
+              "\n",
+          );
+        } else if (
+          response.id === 2 &&
+          phase === 1 &&
+          response.result &&
+          !response.error
+        ) {
+          snapshot = object(response.result);
+          phase = 2;
+          handle.writeInput(
+            JSON.stringify({
+              id: 3,
+              method: "configRequirements/read",
+              params: null,
+            }) + "\n",
+          );
+        } else if (
+          response.id === 3 &&
+          phase === 2 &&
+          response.result &&
+          !response.error
+        ) {
+          requirements = object(response.result);
+          phase = 3;
+          handle.closeInput();
+        } else if (response.id !== undefined || response.method === "error") {
+          throw new ExecutorFailure("unsupported");
+        }
+      }
+    },
+  });
+  const result = await handle.result;
+  checkAbort(signal);
+  pending += utf8.decode();
+  if (result.exitCode !== 0 || pending.trim() || !snapshot || phase !== 3)
+    throw new ExecutorFailure("unsupported");
+  // Requirements have higher authority than raw CLI config. Official0.160
+  // generates allowedLoginMethods=["chatgpt"] from forced_login_method. Accept
+  // that exact restriction with all other policy values null, or no policy.
+  if (!requirements || !Object.hasOwn(requirements, "requirements"))
+    throw new CodexSafetyFailure("requirements.response");
+  if (requirements.requirements !== null) {
+    const policy = object(requirements.requirements);
+    const known = new Set([
+      "modelProvider",
+      "modelProviders",
+      "chatgptBaseUrl",
+      "additionalDeveloperInstructions",
+      "defaultPermissions",
+      "featureRequirements",
+      "allowedPermissionProfiles",
+      "allowedSandboxModes",
+      "allowedApprovalPolicies",
+      "modelCatalogJson",
+      "network",
+      "application",
+      "hooks",
+      "autoReview",
+      "models",
+    ]);
+    for (const [key, value] of Object.entries(policy)) {
+      if (value === null) continue;
+      if (
+        key === "allowedLoginMethods" &&
+        Array.isArray(value) &&
+        value.length === 1 &&
+        value[0] === "chatgpt"
+      )
+        continue;
+      throw new CodexSafetyFailure(
+        known.has(key) ? `requirements.${key}` : "requirements.policy",
+      );
+    }
+  }
+  validateCodexSafetySnapshot(snapshot, profile);
+}
+/** Safety projection for stock unmodified0.160.0 exec: API layers are high to
+ * low and omit embedded packaged defaults. That version's stock defaults have
+ * no MCP/provider/permission overrides; pin the guarded defaults here. Public
+ * exec cannot inject an alternate packaged-default file. Preserve remaining
+ * layers in supplied order; never re-sort equal-precedence enterprise layers. */
+function reconstructCodexExecSafetyConfig(
+  snapshot: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!Array.isArray(snapshot.layers) || !snapshot.layers.length)
+    throw new CodexSafetyFailure("layers");
+  const precedence: Record<string, number> = Object.assign(
+    Object.create(null),
+    {
+      mdm: 0,
+      system: 10,
+      enterpriseManaged: 15,
+      user: 20,
+      project: 25,
+      sessionFlags: 30,
+      legacyManagedConfigTomlFromFile: 40,
+      legacyManagedConfigTomlFromMdm: 50,
+    },
+  );
+  const layers = snapshot.layers.map(object);
+  let previous = Infinity;
+  let sessionFlags = 0;
+  for (const layer of layers) {
+    const name = object(layer.name),
+      type = String(name.type);
+    if (
+      !Object.hasOwn(precedence, type) ||
+      typeof layer.version !== "string" ||
+      !layer.version ||
+      (layer.disabledReason !== undefined &&
+        typeof layer.disabledReason !== "string")
+    )
+      throw new CodexSafetyFailure("layers.identity");
+    object(layer.config);
+    const absolute = (key: string) =>
+      typeof name[key] === "string" &&
+      path.isAbsolute(name[key] as string) &&
+      !(name[key] as string).includes("\0");
+    if (
+      (["system", "user", "legacyManagedConfigTomlFromFile"].includes(type) &&
+        !absolute("file")) ||
+      (type === "project" && !absolute("dotCodexFolder")) ||
+      (type === "user" &&
+        name.profile !== null &&
+        typeof name.profile !== "string") ||
+      (type === "mdm" &&
+        ["domain", "key"].some(
+          (key) => typeof name[key] !== "string" || !name[key],
+        )) ||
+      (type === "enterpriseManaged" &&
+        ["id", "name"].some(
+          (key) => typeof name[key] !== "string" || !name[key],
+        ))
+    )
+      throw new CodexSafetyFailure("layers.identity");
+    const rank = precedence[type] + (type === "user" && name.profile ? 1 : 0);
+    if (rank > previous) throw new CodexSafetyFailure("layers.precedence");
+    previous = rank;
+    if (type === "sessionFlags") {
+      if (layer.disabledReason)
+        throw new CodexSafetyFailure("layers.sessionFlags");
+      sessionFlags++;
+    }
+    if (type === "project" && !layer.disabledReason)
+      throw new CodexSafetyFailure("project");
+  }
+  if (sessionFlags !== 1) throw new CodexSafetyFailure("layers.sessionFlags");
+  let config: unknown = Object.assign(Object.create(null), {
+    chatgpt_base_url: "https://chatgpt.com/backend-api/",
+    mcp_servers: Object.create(null),
+    model_providers: Object.create(null),
+  });
+  for (const layer of [...layers].reverse()) {
+    const type = object(layer.name).type;
+    if (type === "user" || layer.disabledReason) continue;
+    config = mergeCodexConfig(config, layer.config);
+  }
+  return object(config);
+}
+function mergeCodexConfig(
+  base: unknown,
+  overlay: unknown,
+  keys: string[] = [],
+): unknown {
+  const table = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === "object" && !Array.isArray(value);
+  const structured =
+    keys.length === 2 &&
+    keys[0] === "features" &&
+    ["code_mode", "multi_agent_v2", "network_proxy", "sleep_tool"].includes(
+      keys[1],
+    );
+  if (structured && table(base) && typeof overlay === "boolean")
+    return Object.assign(Object.create(null), base, { enabled: overlay });
+  if (structured && typeof base === "boolean" && table(overlay))
+    base = { enabled: base };
+  if (!table(overlay))
+    return Array.isArray(overlay)
+      ? overlay.map((value) => mergeCodexConfig(undefined, value))
+      : overlay;
+  const result: Record<string, unknown> = Object.create(null);
+  if (table(base))
+    for (const [key, value] of Object.entries(base)) result[key] = value;
+  for (const [key, value] of Object.entries(overlay)) {
+    // Aliases/filter normalizers are intentionally unsupported in retained
+    // non-user layers: silently guessing public TOML semantics would be unsafe.
+    if (
+      ["__proto__", "constructor", "prototype"].includes(key) ||
+      (keys.join(".") === "tui" && key === "whimsy") ||
+      (keys.join(".") === "memories" &&
+        key === "no_memories_if_mcp_or_web_search") ||
+      (keys.join(".") === "agents" && key === "max_threads") ||
+      (keys.join(".") === "shell_environment_policy" &&
+        ["filters", "exclude", "include_only"].includes(key)) ||
+      (keys.join(".") === "features" &&
+        key === "network_proxy" &&
+        overlay[key] !== false)
+    )
+      throw new CodexSafetyFailure("layers.keys");
+    result[key] = mergeCodexConfig(
+      Object.hasOwn(result, key) ? result[key] : undefined,
+      value,
+      [...keys, key],
+    );
+  }
+  return result;
+}
+
+function validateCodexSafetySnapshot(
+  snapshot: Record<string, unknown>,
+  profile: CodexGenerationProfile,
+): void {
+  const reject = (control = "configuration") => {
+    throw new CodexSafetyFailure(control);
+  };
+  object(snapshot.config); // Require the documented snapshot envelope as well.
+  const config = reconstructCodexExecSafetyConfig(snapshot);
+  const get = (keys: string[]): unknown =>
+    keys.reduce<unknown>(
+      (value, key) =>
+        value && typeof value === "object" && !Array.isArray(value)
+          ? (value as Record<string, unknown>)[key]
+          : undefined,
+      config,
+    );
+  // Fixed scalar controls must survive managed overrides.
+  for (let index = 0; index < profile.process.args.length; index++) {
+    const flag = profile.process.args[index];
+    const value = profile.process.args[index + 1];
+    if (flag === "--disable") {
+      const feature = get(["features", value]);
+      if (
+        feature !== false &&
+        !(
+          feature &&
+          typeof feature === "object" &&
+          ["code_mode", "multi_agent_v2", "sleep_tool"].includes(value) &&
+          object(feature).enabled === false
+        )
+      )
+        reject("features");
+    } else if (
+      flag === "--config" &&
+      /=(true|false|0|"[^"\\]*")$/.test(value)
+    ) {
+      const separator = value.indexOf("=");
+      const expected = JSON.parse(value.slice(separator + 1));
+      const keys = value.slice(0, separator).split(".");
+      const actual = get(keys);
+      if (actual !== expected) reject("fixed-controls");
+    }
+  }
+  if (
+    get(["features", "code_mode_host", "enabled"]) !== false ||
+    get(["features", "code_mode_host", "disable_in_process_fallback"]) !==
+      false ||
+    get(["projects", profile.process.workspace, "trust_level"]) !== "untrusted"
+  )
+    reject();
+  const permission = object(object(config.permissions).mimic);
+  if (
+    permission.extends !== ":read-only" ||
+    object(permission.network).enabled !== false
+  )
+    reject();
+  if (
+    Object.keys(permission).some(
+      (key) =>
+        permission[key] != null &&
+        !["extends", "network", "filesystem"].includes(key),
+    ) ||
+    Object.entries(object(permission.network)).some(
+      ([key, value]) => value != null && key !== "enabled",
+    )
+  )
+    reject();
+  const denyPaths = object(permission.filesystem);
+  if (
+    Object.entries(denyPaths).some(
+      ([key, value]) =>
+        !(key === "glob_scan_max_depth" && value == null) && value !== "deny",
+    )
+  )
+    reject();
+  if (!Array.isArray(config.notify) || config.notify.length) reject();
+  if (
+    !Array.isArray(config.project_root_markers) ||
+    config.project_root_markers.length
+  )
+    reject("project_root_markers");
+  for (const file of [
+    ...(profile.process.env.HOME
+      ? [
+          path.join(profile.process.env.HOME, ".codex"),
+          path.join(profile.process.env.HOME, ".ssh"),
+          path.join(profile.process.env.HOME, ".aws"),
+        ]
+      : []),
+    ...(profile.process.env.CODEX_HOME ? [profile.process.env.CODEX_HOME] : []),
+  ])
+    if (denyPaths[file] !== "deny") reject();
+  // Inline tables recursively merge. An empty CLI table does not clear retained
+  // MCP servers or provider settings; inspect and conservatively reject them.
+  if (
+    config.mcp_servers !== undefined &&
+    Object.keys(object(config.mcp_servers)).length
+  )
+    reject("mcp_servers");
+  if (
+    config.model_providers !== undefined &&
+    Object.keys(object(config.model_providers)).length
+  )
+    reject("model_providers");
+  for (const key of [
+    "openai_base_url",
+    "model_catalog_json",
+    "model_instructions_file",
+    "instructions",
+    "developer_instructions",
+    "compact_prompt",
+  ]) {
+    if (config[key] !== undefined && config[key] !== null) reject(key);
+  }
+  if (!Array.isArray(snapshot.layers)) reject();
+  if (
+    config.chatgpt_base_url !== undefined &&
+    config.chatgpt_base_url !== null &&
+    config.chatgpt_base_url !== "https://chatgpt.com/backend-api/"
+  )
+    reject("chatgpt_base_url");
+  for (const entry of snapshot.layers as unknown[]) {
+    const layer = object(entry);
+    if (object(layer.name).type === "project" && !layer.disabledReason)
+      reject();
+  }
+}
+
+/** Single subprocess, incremental decoding, and group cancellation. No retries.
+ * Raw stderr remains private. JSON candidate data has no approval authority. */
+async function launchCodex(
+  profile: CodexGenerationProfile,
+  requestId: string,
+  signal?: AbortSignal,
+): Promise<ExecutionHandle> {
+  const decoder = new CodexJsonlDecoder(requestId, 4 * 1024 * 1024, "json");
+  const queue: ExecutorEvent[] = [];
+  let done = false;
+  let wake: (() => void) | undefined;
+  let started = false;
+  const publish = (events: ExecutorEvent[]) => {
+    if (!started && events.some((event) => event.type === "stopped")) {
+      queue.push({ type: "started", requestId });
+      started = true;
+    }
+    if (events.some((event) => event.type === "started")) started = true;
+    queue.push(...events);
+    wake?.();
+    wake = undefined;
+  };
+  const process = await executeOfficialProcess({
+    ...profile.process,
+    onStdout: (chunk) => publish(decoder.push(chunk)),
+    signal,
+  });
+  void process.result
+    .then(
+      (result) => publish(decoder.finish(result.exitCode)),
+      (error) =>
+        publish([
+          stopEvent(
+            error instanceof ExecutorFailure ? error.reason : "unknown-outcome",
+          ),
+        ]),
+    )
+    .finally(() => {
+      done = true;
+      wake?.();
+      wake = undefined;
+    });
+  return {
+    cancel: process.cancel,
+    events: (async function* () {
+      let exhausted = false;
+      try {
+        while (!done || queue.length) {
+          if (queue.length) yield queue.shift()!;
+          else
+            await new Promise<void>((resolve) => {
+              wake = resolve;
+            });
+        }
+        exhausted = true;
+      } finally {
+        if (!exhausted) await process.cancel();
+      }
+    })(),
+  };
 }
 
 /** A reviewable fresh-turn plan, not authority to launch a model. */
@@ -239,10 +921,30 @@ export async function createCodexGenerationProfile(
     "cloud.skills.enabled=false",
     "skills.include_instructions=false",
     "project_doc_max_bytes=0",
+    "project_root_markers=[]",
     'shell_environment_policy.inherit="none"',
     "analytics.enabled=false",
     "feedback.enabled=false",
-    `projects.${JSON.stringify(workspace)}.trust_level="untrusted"`,
+    `projects={${JSON.stringify(workspace)}={trust_level="untrusted"}}`,
+    'default_permissions="mimic"',
+    `permissions={mimic={extends=":read-only",network={enabled=false},filesystem={${[
+      ...new Set([
+        ...(env.HOME
+          ? [
+              path.join(env.HOME, ".codex"),
+              path.join(env.HOME, ".ssh"),
+              path.join(env.HOME, ".aws"),
+            ]
+          : []),
+        ...(env.CODEX_HOME ? [env.CODEX_HOME] : []),
+      ]),
+    ]
+      .map((file) => `${JSON.stringify(file)}="deny"`)
+      .join(",")}}}}`,
+    "features.code_mode_host={enabled=false,disable_in_process_fallback=false}",
+    "skills.bundled.enabled=false",
+    "features.skip_host_skill_discovery=true",
+    "notify=[]",
   ];
   const features = [
     "shell_tool",
@@ -261,7 +963,6 @@ export async function createCodexGenerationProfile(
     "image_generation",
     "view_image",
     "code_mode",
-    "code_mode_host",
     "sleep_tool",
     "skill_search",
     "skill_mcp_dependency_install",
@@ -269,6 +970,11 @@ export async function createCodexGenerationProfile(
     "auth_elicitation",
     "unbounded_connection_retries",
     "workspace_dependencies",
+    "request_permissions_tool",
+    "token_budget",
+    "deferred_executor",
+    "current_time_reminder",
+    "send_message_to_user_async",
   ];
   return {
     mode: "fresh",
@@ -282,8 +988,6 @@ export async function createCodexGenerationProfile(
         "--ignore-rules",
         "--ephemeral",
         "--strict-config",
-        "--sandbox",
-        "read-only",
         "--skip-git-repo-check",
         "--json",
         "--color",
@@ -425,6 +1129,7 @@ export class CodexJsonlDecoder {
   constructor(
     private readonly requestId: string,
     private readonly maxBytes = 4 * 1024 * 1024,
+    private readonly outputFormat: "work-envelope" | "json" = "work-envelope",
   ) {
     if (
       !requestId.trim() ||
@@ -531,7 +1236,9 @@ export class CodexJsonlDecoder {
     if (event.type === "turn.completed" && this.finalText !== undefined) {
       if ([...this.items.values()].some((item) => !item.completed))
         throw new ExecutorFailure("unknown-outcome");
-      parseCodexWorkEnvelope(this.finalText);
+      if (this.outputFormat === "work-envelope")
+        parseCodexWorkEnvelope(this.finalText);
+      else object(JSON.parse(this.finalText));
       const usage = object(event.usage);
       for (const key of [
         "input_tokens",

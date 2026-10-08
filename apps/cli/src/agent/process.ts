@@ -9,6 +9,9 @@ export interface OfficialProcessRequest {
   args: readonly string[];
   workspace: string;
   input?: string;
+  /** Internal bounded metadata RPC handshake; ordinary exec closes stdin. */
+  keepStdinOpen?: boolean;
+  signal?: AbortSignal;
   /** Explicit environment only. No process.env inheritance or API credentials. */
   env: Readonly<Record<string, string>>;
   timeoutMs: number;
@@ -25,6 +28,8 @@ export interface OfficialProcessResult {
 }
 export interface OfficialProcessHandle {
   result: Promise<OfficialProcessResult>;
+  writeInput(input: string): void;
+  closeInput(): void;
   cancel(): Promise<void>;
 }
 
@@ -97,6 +102,7 @@ export async function executeOfficialProcess(
   } catch {
     throw new ExecutorFailure("unsupported");
   }
+  if (request.signal?.aborted) throw new ExecutorFailure("cancelled");
   const grouped = process.platform !== "win32";
   let child: ChildProcessWithoutNullStreams;
   try {
@@ -127,6 +133,9 @@ export async function executeOfficialProcess(
     kill("SIGTERM");
     forceTimer ??= setTimeout(() => kill("SIGKILL"), 250);
   };
+  const abort = () => stopProcess("cancelled");
+  request.signal?.addEventListener("abort", abort, { once: true });
+  if (request.signal?.aborted) abort();
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
   let bytes = 0;
@@ -163,6 +172,7 @@ export async function executeOfficialProcess(
       if (stop) kill("SIGKILL");
       closed = true;
       clearTimeout(timeout);
+      request.signal?.removeEventListener("abort", abort);
       if (forceTimer) clearTimeout(forceTimer);
       if (stop || code === null)
         reject(new ExecutorFailure(stop ?? "unknown-outcome"));
@@ -174,9 +184,27 @@ export async function executeOfficialProcess(
         });
     });
   });
-  child.stdin.end(request.input ?? "");
+  let inputBytes = Buffer.byteLength(request.input ?? "");
+  if (request.keepStdinOpen) child.stdin.write(request.input ?? "");
+  else child.stdin.end(request.input ?? "");
   return {
     result,
+    writeInput: (input: string) => {
+      if (
+        !request.keepStdinOpen ||
+        closed ||
+        child.stdin.writableEnded ||
+        typeof input !== "string" ||
+        (inputBytes += Buffer.byteLength(input)) > 16 * 1024 * 1024
+      ) {
+        stopProcess("unknown-outcome");
+        throw new ExecutorFailure("unknown-outcome");
+      }
+      child.stdin.write(input);
+    },
+    closeInput: () => {
+      if (!child.stdin.writableEnded) child.stdin.end();
+    },
     cancel: async () => {
       if (!closed) stopProcess("cancelled");
       try {

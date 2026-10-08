@@ -99,8 +99,7 @@ export async function startExecution(
   executor: AgentExecutor,
   request: ExecutionRequest | ResumeRequest,
 ): Promise<ExecutionHandle> {
-  let handle: ExecutionHandle;
-  try {
+  return containExecution(request, async () => {
     let settings: SubscriptionSettings;
     try {
       settings = parseSubscriptionSettings(request.settings);
@@ -153,8 +152,22 @@ export async function startExecution(
     if ("sessionId" in request) {
       if (!request.sessionId.trim() || !description.capabilities.nativeResume)
         throw new ExecutorFailure("unsupported");
-      handle = await executor.resume({ ...request, settings });
-    } else handle = await executor.start({ ...request, settings });
+      return executor.resume({ ...request, settings });
+    }
+    return executor.start({ ...request, settings });
+  });
+}
+
+/** Shared lifecycle containment after a trusted dispatch boundary. This helper
+ * does not establish entitlement or grant permission; callers must enforce
+ * their explicit dispatch policy before returning an official handle. */
+export async function containExecution(
+  request: ExecutionRequest,
+  dispatch: () => Promise<ExecutionHandle>,
+): Promise<ExecutionHandle> {
+  let handle: ExecutionHandle;
+  try {
+    handle = await dispatch();
   } catch (error) {
     const stopped = stopEvent(
       error instanceof ExecutorFailure ? error.reason : "unknown-outcome",
