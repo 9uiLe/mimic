@@ -4,6 +4,10 @@ import AxeBuilder from "@axe-core/playwright";
 test("vanilla demo responds and has no automated accessibility violations", async ({
   page,
 }) => {
+  let previewRequested;
+  const requestedPreview = new Promise((resolve) => {
+    previewRequested = resolve;
+  });
   let releasePreview;
   const previewResponse = new Promise((resolve) => {
     releasePreview = resolve;
@@ -11,6 +15,7 @@ test("vanilla demo responds and has no automated accessibility violations", asyn
   await page.route(
     "**/catalog/candidate-review/comparison/comparison.json",
     async (route) => {
+      previewRequested();
       await previewResponse;
       await route.continue();
     },
@@ -22,6 +27,7 @@ test("vanilla demo responds and has no automated accessibility violations", asyn
   const standalone = page.getByRole("link", {
     name: /Open standalone prototype/,
   });
+  await requestedPreview;
   await expect(standalone).toBeHidden();
   await page.getByRole("button", { name: "Show preview status" }).click();
   await expect(page.locator("#status")).toHaveText("Preview loading");
