@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, expect, test, vi } from "vitest";
 import {
   mkdtemp,
   mkdir,
@@ -50,6 +50,24 @@ const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
 );
+// This file owns its compiled production-entry prerequisite. Unit CI runs tests
+// without prebuilding; another test worker's build is not a dependency barrier.
+beforeAll(() => {
+  const built = spawnSync(
+    process.execPath,
+    [
+      path.join(repo, "node_modules/typescript/bin/tsc"),
+      "-b",
+      "apps/cli",
+      "--force",
+    ],
+    { cwd: repo, encoding: "utf8", timeout: 120_000 },
+  );
+  expect(
+    built.status,
+    built.stderr || built.stdout || built.error?.message,
+  ).toBe(0);
+}, 180_000);
 const roots: string[] = [];
 afterEach(async () => {
   vi.unstubAllEnvs();
