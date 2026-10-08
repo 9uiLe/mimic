@@ -13,6 +13,9 @@ export interface OfficialProcessRequest {
   env: Readonly<Record<string, string>>;
   timeoutMs: number;
   maxOutputBytes?: number;
+  /** Internal stdout bytes after the shared size bound. May split UTF-8/JSONL.
+   * Callback exceptions stop the whole process group with unknown-outcome. */
+  onStdout?: (chunk: Buffer) => void;
 }
 /** Internal runtime protocol data. Never expose raw stderr as diagnostics. */
 export interface OfficialProcessResult {
@@ -125,7 +128,15 @@ export async function executeOfficialProcess(
     }
     chunks.push(chunk);
   };
-  child.stdout.on("data", (chunk: Buffer) => collect(stdout, chunk));
+  child.stdout.on("data", (chunk: Buffer) => {
+    collect(stdout, chunk);
+    if (stop) return;
+    try {
+      request.onStdout?.(Buffer.from(chunk));
+    } catch {
+      stopProcess("unknown-outcome");
+    }
+  });
   child.stderr.on("data", (chunk: Buffer) => collect(stderr, chunk));
   const timeout = setTimeout(() => stopProcess("timeout"), request.timeoutMs);
   const result = new Promise<OfficialProcessResult>((resolve, reject) => {
