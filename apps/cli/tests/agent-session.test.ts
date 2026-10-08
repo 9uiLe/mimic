@@ -12,7 +12,7 @@ import {
   chmod,
 } from "node:fs/promises";
 import os from "node:os";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -1238,4 +1238,89 @@ test("runnable entry inspects without a checkpoint or launch, and fixed official
   invalid.billingMode = "api";
   await writeFile(configuration, JSON.stringify(invalid));
   expect(await runSessionCli(["start", "--config", configuration], io)).toBe(2);
+});
+
+test("a separate production Node process resumes and inspects a durable accepted checkpoint without launching any official command", async () => {
+  const h = await staticHarness();
+  const executor = fake(h.output);
+  const accepted = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    executor,
+    limits,
+  ).advance();
+  expect(accepted.status).toBe("complete");
+  expect(executor.start).toHaveBeenCalledOnce();
+  const expectedRefs = accepted.tasks.first.outputRefs!;
+  const before = await h.runtime.registry.snapshot();
+  const checkpointBefore = await readFile(
+    path.join(h.store.directory, "session_a.json"),
+    "utf8",
+  );
+  const workspaceBefore = await readFile(
+    path.join(h.root, ".mimic/workspace.json"),
+    "utf8",
+  );
+  const executable = path.join(h.root, "forbidden-runtime-fixture");
+  const runtimeLog = path.join(h.root, "forbidden-runtime-calls");
+  await writeFile(
+    executable,
+    `#!${process.execPath}\nimport { appendFileSync } from 'node:fs';\nappendFileSync(new URL('./forbidden-runtime-calls', import.meta.url), 'unexpected command\\n');\nprocess.exitCode=99;\n`,
+  );
+  await chmod(executable, 0o700);
+  const configuration = path.join(h.root, "separate-process-config.json");
+  await writeFile(
+    configuration,
+    JSON.stringify({
+      workspace: h.root,
+      runId: binding.runId,
+      sessionId: "session_a",
+      packages: { first: "skill" },
+      model: "fixture-model",
+      executable,
+    }),
+  );
+  const entry = path.join(repo, "apps/cli/dist/agent/session-main.js");
+  for (const command of ["resume", "inspect"]) {
+    const child = spawnSync(
+      process.execPath,
+      [entry, command, "--config", configuration],
+      { cwd: repo, encoding: "utf8", timeout: 10000 },
+    );
+    expect(child.status, child.stderr).toBe(0);
+    const readback = JSON.parse(child.stdout);
+    expect(readback).toMatchObject({
+      readOnly: true,
+      sessionId: "session_a",
+      status: "complete",
+      tasks: [
+        {
+          taskId: "first",
+          phase: "accepted",
+          inputRefs: h.frozen.inputRefs,
+          outputRefs: expectedRefs,
+        },
+      ],
+    });
+    expect(readback.core.core.runs[0].runId).toBe(binding.runId);
+    expect(
+      await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+    ).toBe(checkpointBefore);
+    expect(
+      await readFile(path.join(h.root, ".mimic/workspace.json"), "utf8"),
+    ).toBe(workspaceBefore);
+  }
+  await expect(stat(runtimeLog)).rejects.toMatchObject({ code: "ENOENT" });
+  const after = await h.runtime.registry.snapshot();
+  expect(after.events).toEqual(before.events);
+  expect(after.runs.run_session.artifacts).toEqual(
+    before.runs.run_session.artifacts,
+  );
+  expect(after.canonical).toEqual({});
+  expect(after.decisions).toEqual({});
+  for (const ref of expectedRefs)
+    expect(
+      (await h.runtime.artifacts.read(ref.artifactId, ref.revision)).digest,
+    ).toBe(ref.lockDigest);
 });
