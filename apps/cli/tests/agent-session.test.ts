@@ -9,6 +9,7 @@ import {
   stat,
   symlink,
   realpath,
+  chmod,
 } from "node:fs/promises";
 import os from "node:os";
 import { spawn } from "node:child_process";
@@ -33,6 +34,7 @@ import {
 } from "../src/agent/session.js";
 import { createWorkspaceSessionPorts } from "../src/agent/session-workspace.js";
 import { runCli } from "../src/cli.js";
+import { runSessionCli } from "../src/agent/session-main.js";
 import {
   type AgentExecutor,
   type ExecutorEvent,
@@ -45,6 +47,7 @@ const repo = path.resolve(
 );
 const roots: string[] = [];
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await Promise.all(
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
   );
@@ -1152,4 +1155,87 @@ test("actual workspace changes while model runs persist reservation-invalid befo
       ).advance({ resume: true })
     ).stop,
   ).toBe("reservation-invalid");
+});
+
+test("runnable entry inspects without a checkpoint or launch, and fixed official-adapter start/resume stay billing-gated", async () => {
+  const h = await staticHarness();
+  const executable = path.join(h.root, "fake-metadata-only-cli");
+  const log = path.join(h.root, "metadata-calls.jsonl");
+  await writeFile(
+    executable,
+    `#!${process.execPath}\nimport { appendFileSync } from 'node:fs';\nconst args=process.argv.slice(2);\nappendFileSync(new URL('./metadata-calls.jsonl', import.meta.url), JSON.stringify({args,hasApiKey:Object.hasOwn(process.env,'OPENAI_API_KEY'),hasEndpoint:Object.hasOwn(process.env,'OPENAI_BASE_URL'),hasNodeInjection:Object.hasOwn(process.env,'NODE_OPTIONS')})+'\\n');\nif(args.join(' ')==='--version') console.log('codex-cli 0.160.0');\nelse if(args.join(' ')==='login status') console.error('Logged in using ChatGPT');\nelse process.exitCode=99;\n`,
+  );
+  await chmod(executable, 0o700);
+  const configuration = path.join(h.root, "session-config.json");
+  await writeFile(
+    configuration,
+    JSON.stringify({
+      workspace: h.root,
+      runId: binding.runId,
+      sessionId: "session_a",
+      packages: { first: "skill" },
+      model: "fixture-model",
+      executable,
+      timeoutMs: 1000,
+    }),
+  );
+  const output: string[] = [],
+    errors: string[] = [];
+  const io = {
+    out: (value: string) => output.push(value),
+    err: (value: string) => errors.push(value),
+  };
+  expect(await runSessionCli(["inspect", "--config", configuration], io)).toBe(
+    0,
+  );
+  expect(JSON.parse(output.at(-1)!)).toMatchObject({
+    readOnly: true,
+    status: "not-started",
+  });
+  await expect(stat(h.store.directory)).rejects.toMatchObject({
+    code: "ENOENT",
+  });
+  await expect(stat(log)).rejects.toMatchObject({ code: "ENOENT" });
+  vi.stubEnv("OPENAI_API_KEY", "fake-secret-never-copied");
+  vi.stubEnv("OPENAI_BASE_URL", "https://invalid.example/never-used");
+  vi.stubEnv("NODE_OPTIONS", "--invalid-never-inherited");
+  expect(await runSessionCli(["start", "--config", configuration], io)).toBe(0);
+  expect(JSON.parse(output.at(-1)!)).toMatchObject({
+    status: "stopped",
+    stop: "billing-unconfirmed",
+  });
+  const first = (await readFile(log, "utf8"))
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  expect(first).toEqual([
+    {
+      args: ["--version"],
+      hasApiKey: false,
+      hasEndpoint: false,
+      hasNodeInjection: false,
+    },
+    {
+      args: ["login", "status"],
+      hasApiKey: false,
+      hasEndpoint: false,
+      hasNodeInjection: false,
+    },
+  ]);
+  expect(await runSessionCli(["resume", "--config", configuration], io)).toBe(
+    0,
+  );
+  expect(JSON.parse(output.at(-1)!)).toMatchObject({
+    status: "stopped",
+    stop: "billing-unconfirmed",
+  });
+  expect(errors).toEqual([]);
+  expect(output.join("\n")).not.toContain("fake-secret");
+  expect(
+    (await h.runtime.registry.snapshot()).runs.run_session.artifacts,
+  ).toHaveLength(1);
+  const invalid = JSON.parse(await readFile(configuration, "utf8"));
+  invalid.billingMode = "api";
+  await writeFile(configuration, JSON.stringify(invalid));
+  expect(await runSessionCli(["start", "--config", configuration], io)).toBe(2);
 });

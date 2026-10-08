@@ -51,3 +51,11 @@ Record an answer that changes the frozen plan, input or context in an explicit n
 Resume reconstructs Mimic context and starts a **fresh official session**. It has no native conversation continuity, and ephemeral provider execution alone is not durable Mimic state. Native persistent provider resume is unnecessary for this minimum loop and remains a separate capability.
 
 The production Codex model-only execution/billing path is still gated by its adapter's verified capabilities and entitlement. Contract and recovery tests use an explicitly fake executor with real Core/static CLI submission; they do not certify an account or spend credits. Actual official-model vertical acceptance remains pending those concrete runtime prerequisites.
+
+## Runnable entry
+
+After building, use `node apps/cli/dist/agent/session-main.js start --config <file>`. The regular JSON configuration has only absolute `workspace` and official Codex `executable` paths, `runId`, `sessionId`, a task-to-relative-package `packages` map, `model`, and optional `maxGenerations`, `timeoutMs`, and `maxOutputBytes`. The saved Core Run and static packages must already exist. The entry fixes Codex and subscription-only billing; it copies only approved native-login environment keys and has no custom executor, argv, credential or entitlement override.
+
+Use `inspect --config <file>` for read-only state/questions without starting the official CLI. Use `resume --config <file>` only after resolving the displayed stop. `--reconciled-unknown-outcome` on resume is an explicit operator acknowledgment; it cannot bypass a live process lease, changed bindings, billing or tool capability gates. `recover-lock --config <file>` only recovers a proven dead same-host owner, with no inference. SIGINT/SIGTERM requests cancellation of a running session; cancellation uncertainty keeps its lease.
+
+A recognized Codex installation with existing ChatGPT login currently reports `billing-unconfirmed` and launches no inference. Missing auth or incompatible runtime reports its distinct stop. Start/resume emit inspection JSON even when normally stopped; check `status` and `stop` rather than treating exit code zero as completed generation. Configuration/lock errors return code two with sanitized diagnostics. The real model path remains pending the adapter prerequisites above.
