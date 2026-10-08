@@ -3,6 +3,7 @@ import {
   chmod,
   cp,
   mkdtemp,
+  mkdir,
   readFile,
   rm,
   symlink,
@@ -15,6 +16,10 @@ import { artifactDigest, type ArtifactSnapshot } from "@mimic/core";
 import { dispatchCli } from "../src/entry.js";
 import {
   CodexExecutor,
+  createCodexCreditRiskPermit,
+  inspectCodexGenerationSafety,
+  type CodexCreditRiskDecisionPort,
+  type CodexCreditRiskPermit,
   createCodexGenerationProfile,
   prepareCodexSubmission,
   CodexJsonlDecoder,
@@ -583,14 +588,12 @@ test("fixed official fresh-turn profile uses stdin, Standard and native-login en
     },
   });
   const args = profile.process.args;
-  expect(args.slice(0, 14)).toEqual([
+  expect(args.slice(0, 12)).toEqual([
     "exec",
     "--ignore-user-config",
     "--ignore-rules",
     "--ephemeral",
     "--strict-config",
-    "--sandbox",
-    "read-only",
     "--skip-git-repo-check",
     "--json",
     "--color",
@@ -960,4 +963,682 @@ test("decoded candidate uses production static Skill submit with immutable retry
   });
   expect(await dispatchCli(escaped.argv)).toBe(3);
   expect(await readFile(stateFile, "utf8")).toBe(accepted);
+});
+
+/** Explicitly fake subprocess protocol. This fixture is not official safety or
+ * billing evidence; official metadata/source checks are documented separately. */
+async function fakeRuntime(
+  options: CodexOptions,
+  mutation: (
+    config: Record<string, unknown>,
+    snapshot: Record<string, unknown>,
+  ) => void = () => {},
+  behavior: {
+    output?: string;
+    exit?: number;
+    hang?: boolean;
+    login?: string;
+    malformed?: boolean;
+    metadataWait?: boolean;
+    spawnFailure?: boolean;
+  } = {},
+) {
+  if (!options.env.HOME) options.env = { HOME: options.workspace };
+  const config: Record<string, unknown> = {
+    forced_login_method: "chatgpt",
+    model_provider: "openai",
+    service_tier: "default",
+    approval_policy: "never",
+    web_search: "disabled",
+    tools: {
+      update_plan: { enabled: false },
+      experimental_request_user_input: { enabled: false },
+    },
+    memories: { generate_memories: false, use_memories: false },
+    agents: { enabled: false },
+    orchestrator: { mcp: { enabled: false } },
+    cloud: { skills: { enabled: false } },
+    skills: { include_instructions: false, bundled: { enabled: false } },
+    project_doc_max_bytes: 0,
+    project_root_markers: [],
+    shell_environment_policy: { inherit: "none" },
+    analytics: { enabled: false },
+    feedback: { enabled: false },
+    notify: [],
+    default_permissions: "mimic",
+    projects: {
+      [await import("node:fs/promises").then((fs) =>
+        fs.realpath(options.workspace),
+      )]: { trust_level: "untrusted" },
+    },
+    permissions: {
+      mimic: {
+        extends: ":read-only",
+        network: { enabled: false },
+        filesystem: {},
+      },
+    },
+    features: Object.fromEntries(
+      [
+        "shell_tool",
+        "unified_exec",
+        "hooks",
+        "plugins",
+        "apps",
+        "memories",
+        "multi_agent",
+        "multi_agent_v2",
+        "fast_mode",
+        "step_model_switching",
+        "browser_use",
+        "browser_use_external",
+        "computer_use",
+        "image_generation",
+        "view_image",
+        "code_mode",
+        "sleep_tool",
+        "skill_search",
+        "skill_mcp_dependency_install",
+        "tool_suggest",
+        "auth_elicitation",
+        "unbounded_connection_retries",
+        "workspace_dependencies",
+        "request_permissions_tool",
+        "token_budget",
+        "deferred_executor",
+        "current_time_reminder",
+        "send_message_to_user_async",
+      ].map((key) => [key, false]),
+    ),
+  };
+  (config.features as Record<string, unknown>).skip_host_skill_discovery = true;
+  (config.features as Record<string, unknown>).code_mode_host = {
+    enabled: false,
+    disable_in_process_fallback: false,
+  };
+  const deny = (
+    config.permissions as { mimic: { filesystem: Record<string, string> } }
+  ).mimic.filesystem;
+  if (options.env.HOME)
+    for (const name of [".codex", ".ssh", ".aws"])
+      deny[path.join(options.env.HOME, name)] = "deny";
+  if (options.env.CODEX_HOME) deny[options.env.CODEX_HOME] = "deny";
+  const snapshot = {
+    config,
+    origins: {},
+    layers: [{ name: { type: "sessionFlags" }, config, version: "test" }],
+  };
+  mutation(config, snapshot);
+  await writeFile(
+    options.executable,
+    `#!${process.execPath}
+const fs=require('node:fs'), readline=require('node:readline'); const args=process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(path.join(options.workspace, "calls.jsonl"))},JSON.stringify(args)+'\\n');
+if(args[0]==='--version')console.log('codex-cli 0.160.0');
+else if(args.join(' ')==='login status')console.error(${JSON.stringify(behavior.login ?? "Logged in using ChatGPT")});
+else if(args[0]==='app-server'){
+  let phase=0;const input=readline.createInterface({input:process.stdin}); input.on('line',line=>{
+    const msg=JSON.parse(line);
+    if(msg.method==='initialize'&&phase===0){phase=1;console.log(JSON.stringify({id:1,result:{userAgent:'fake'}}));}
+    else if(msg.method==='initialized'&&phase===1){phase=2;}
+    else if(msg.method==='config/read'&&phase===2&&msg.params.includeLayers&&msg.params.cwd){phase=3;${behavior.metadataWait ? `fs.writeFileSync(${JSON.stringify(path.join(options.workspace, "preflight.marker"))},'ready');const interval=setInterval(()=>{if(fs.existsSync(${JSON.stringify(path.join(options.workspace, "preflight.release"))})){clearInterval(interval);console.log(JSON.stringify({id:2,result:JSON.parse(${JSON.stringify(JSON.stringify(snapshot))})}));}},10);` : `console.log(JSON.stringify({id:2,result:JSON.parse(${JSON.stringify(JSON.stringify(snapshot))})}));`}${behavior.spawnFailure ? `fs.unlinkSync(${JSON.stringify(options.executable)});` : ""}}
+    else if(msg.method==='configRequirements/read'&&phase===3){phase=4;console.log(JSON.stringify({id:3,result:{requirements:${JSON.stringify(snapshot.requirements ?? null)}}}));}
+    else{console.error('forbidden RPC');process.exit(97);}
+  });
+}else if(args[0]==='exec'){
+  if(!args.includes('features.code_mode_host={enabled=false,disable_in_process_fallback=false}')||!args.includes('notify=[]')||!args.includes('default_permissions="mimic"')||args.includes('--sandbox')||args.includes('--last'))process.exit(96);
+  let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{fs.writeFileSync(${JSON.stringify(path.join(options.workspace, "execution.json"))},JSON.stringify({model:args[args.indexOf('--model')+1],input})); ${behavior.hang ? "setInterval(()=>{},1000);" : `process.stdout.write(${JSON.stringify(behavior.malformed ? "{malformed}\n" : protocol(behavior.output ?? final))});process.exitCode=${behavior.exit ?? 0};`} });
+}else process.exit(99);
+`,
+  );
+}
+function fakeDecisionPort(
+  expiresAt = Date.now() + 60_000,
+): CodexCreditRiskDecisionPort {
+  return {
+    consumeUserDecision: vi.fn(async () => ({
+      decisionId: "fake-user-decision",
+      expiresAt,
+    })),
+  };
+}
+test("explicit one-shot trusted-host permission uses production metadata gate, launcher and incremental decoder without changing entitlement", async () => {
+  const options = await fakeCodex();
+  options.env = { HOME: options.workspace };
+  const output = '{"smoke":"日本語"}';
+  await fakeRuntime(options, undefined, { output });
+  const input = request(options.workspace),
+    port = fakeDecisionPort();
+  const permit = await createCodexCreditRiskPermit(port, input);
+  expect(port.consumeUserDecision).toHaveBeenCalledWith(
+    expect.objectContaining({
+      requestId: input.requestId,
+      model: input.settings.model,
+      promptSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }),
+    undefined,
+  );
+  const executor = new CodexExecutor(options);
+  expect(
+    await events(
+      await executor.startAuthorizedOnce(input, await schema(options), permit),
+    ),
+  ).toEqual([
+    { type: "started", requestId: input.requestId },
+    { type: "output", text: output },
+    { type: "completed", output },
+  ]);
+  expect((await executor.describe()).entitlement).toEqual({
+    status: "unconfirmed",
+    reason: "billing",
+  });
+  await expect(executor.start(input)).rejects.toMatchObject({
+    reason: "billing-unconfirmed",
+  });
+  await expect(
+    executor.startAuthorizedOnce(input, await schema(options), permit),
+  ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+  expect(
+    (await calls(options)).filter((args: string[]) => args[0] === "exec"),
+  ).toHaveLength(1);
+});
+test("opaque permits reject forged objects and repeated decision receipts without launching", async () => {
+  const options = await fakeCodex();
+  const input = request(options.workspace),
+    port = fakeDecisionPort();
+  await createCodexCreditRiskPermit(port, input);
+  await expect(createCodexCreditRiskPermit(port, input)).rejects.toMatchObject({
+    reason: "billing-unconfirmed",
+  });
+  await expect(
+    new CodexExecutor(options).startAuthorizedOnce(
+      input,
+      await schema(options),
+      {} as CodexCreditRiskPermit,
+    ),
+  ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+  await expect(
+    readFile(path.join(options.workspace, "calls.jsonl")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+});
+test.each(["requestId", "model", "workspace", "prompt", "expired"])(
+  "one-shot permission is bound to %s and burns failed attempts",
+  async (key) => {
+    const options = await fakeCodex(),
+      outside = await fakeCodex(),
+      input = request(options.workspace);
+    const permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+    const changed = { ...input, settings: { ...input.settings } };
+    if (key === "requestId") changed.requestId = "different";
+    if (key === "model") changed.settings.model = "different";
+    if (key === "workspace") changed.workspace = outside.workspace;
+    if (key === "prompt") changed.prompt = "different";
+    if (key === "expired")
+      vi.spyOn(Date, "now").mockReturnValue(Date.now() + 120_000);
+    const executor = new CodexExecutor(options);
+    await expect(
+      executor.startAuthorizedOnce(changed, await schema(options), permit),
+    ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+    await expect(
+      executor.startAuthorizedOnce(input, await schema(options), permit),
+    ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+    await expect(
+      readFile(path.join(options.workspace, "calls.jsonl")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  },
+);
+test.each([
+  "MCP",
+  "host",
+  "project",
+  "write",
+  "notify",
+  "endpoint",
+  "catalog",
+  "instructions",
+  "approval",
+])("metadata gate rejects %s authority before exec", async (kind) => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (config, snapshot) => {
+    if (kind === "MCP")
+      config.mcp_servers = { unsafe: { command: "forbidden" } };
+    if (kind === "host") {
+      (config.features as Record<string, unknown>).code_mode_host = {
+        enabled: true,
+        disable_in_process_fallback: false,
+      };
+    }
+    if (kind === "project")
+      snapshot.layers.push({
+        name: { type: "project" },
+        config: {},
+        version: "bad",
+      });
+    if (kind === "write")
+      (
+        config.permissions as { mimic: { filesystem: Record<string, string> } }
+      ).mimic.filesystem["/tmp"] = "write";
+    if (kind === "notify") config.notify = ["forbidden"];
+    if (kind === "endpoint")
+      config.chatgpt_base_url = "https://forbidden.invalid";
+    if (kind === "catalog") config.model_catalog_json = "/forbidden.json";
+    if (kind === "instructions") config.model_instructions_file = "/private";
+    if (kind === "approval") config.approval_policy = "on-request";
+  });
+  const input = request(options.workspace),
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+  await expect(
+    new CodexExecutor(options).startAuthorizedOnce(
+      input,
+      await schema(options),
+      permit,
+    ),
+  ).rejects.toMatchObject({ reason: "unsupported" });
+  expect(
+    (await calls(options)).some((args: string[]) => args[0] === "exec"),
+  ).toBe(false);
+});
+test.each([{ malformed: true }, { exit: 4 }, { output: "not JSON" }])(
+  "production launch withholds successful output after invalid protocol/process %j",
+  async (behavior) => {
+    const options = await fakeCodex();
+    await fakeRuntime(options, undefined, behavior);
+    const input = request(options.workspace),
+      permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+    const result = await events(
+      await new CodexExecutor(options).startAuthorizedOnce(
+        input,
+        await schema(options),
+        permit,
+      ),
+    );
+    expect(result.at(-1)).toMatchObject({
+      type: "stopped",
+      reason: "unknown-outcome",
+    });
+    expect(result.some((event) => event.type === "completed")).toBe(false);
+  },
+);
+test("concurrent start attempts consume the permit before metadata and dispatch exactly once", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options);
+  const input = request(options.workspace),
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input),
+    executor = new CodexExecutor(options),
+    schemaPath = await schema(options);
+  const result = await Promise.allSettled([
+    executor.startAuthorizedOnce(input, schemaPath, permit),
+    executor.startAuthorizedOnce(input, schemaPath, permit),
+  ]);
+  expect(result.filter((item) => item.status === "fulfilled")).toHaveLength(1);
+  for (const item of result)
+    if (item.status === "fulfilled") await events(item.value);
+  expect(
+    (await calls(options)).filter((args: string[]) => args[0] === "exec"),
+  ).toHaveLength(1);
+});
+test("cancelled production execution cannot reuse its authorization", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, undefined, { hang: true });
+  const input = request(options.workspace),
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input),
+    executor = new CodexExecutor(options),
+    schemaPath = await schema(options);
+  const handle = await executor.startAuthorizedOnce(input, schemaPath, permit);
+  await handle.cancel();
+  expect((await events(handle)).at(-1)).toEqual({
+    type: "stopped",
+    reason: "cancelled",
+    resumeCondition: "reconcile-before-retry",
+  });
+  await expect(
+    executor.startAuthorizedOnce(input, schemaPath, permit),
+  ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+});
+
+test.each(["nonempty", "symlink", "empty"])(
+  "native global instructions %s are stat-only gated",
+  async (kind) => {
+    const options = await fakeCodex();
+    await fakeRuntime(options);
+    const home = path.join(options.workspace, ".codex");
+    await mkdir(home);
+    const file = path.join(home, "AGENTS.md");
+    if (kind === "symlink") {
+      const outside = path.join(options.workspace, "other.md");
+      await writeFile(outside, "");
+      await symlink(outside, file);
+    } else
+      await writeFile(
+        file,
+        kind === "empty" ? "" : "unapproved native instructions",
+      );
+    const inspection = inspectCodexGenerationSafety(
+      options,
+      request(options.workspace),
+      await schema(options),
+    );
+    if (kind === "empty") await expect(inspection).resolves.toBeUndefined();
+    else
+      await expect(inspection).rejects.toMatchObject({ reason: "unsupported" });
+    let actual: string[][] = [];
+    try {
+      actual = await calls(options);
+    } catch {
+      /* A pre-spawn rejection has no call log. */
+    }
+    expect(actual.some((args) => args[0] === "exec")).toBe(false);
+    if (kind !== "empty") expect(actual).toHaveLength(0);
+  },
+);
+
+test("official metadata-shaped null defaults and omitted ToolsV2 fields are verified through raw layers", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (config, snapshot) => {
+    const layers = snapshot.layers as { config: unknown }[];
+    layers[0].config = JSON.parse(JSON.stringify(config));
+    config.tools = { web_search: null };
+    config.chatgpt_base_url = "https://chatgpt.com/backend-api/";
+    const permission = (
+      config.permissions as { mimic: Record<string, unknown> }
+    ).mimic;
+    permission.workspace_roots = null;
+    permission.description = null;
+    (permission.network as Record<string, unknown>).domains = null;
+    (permission.filesystem as Record<string, unknown>).glob_scan_max_depth =
+      null;
+  });
+  await expect(
+    inspectCodexGenerationSafety(
+      options,
+      request(options.workspace),
+      await schema(options),
+    ),
+  ).resolves.toBeUndefined();
+});
+test("higher managed layer cannot re-enable a tool omitted by public ToolsV2", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (_config, snapshot) => {
+    (snapshot.layers as unknown[]).unshift({
+      name: {
+        type: "legacyManagedConfigTomlFromFile",
+        file: path.join(options.workspace, "managed_config.toml"),
+      },
+      version: "managed",
+      config: { tools: { update_plan: { enabled: true } } },
+    });
+  });
+  await expect(
+    inspectCodexGenerationSafety(
+      options,
+      request(options.workspace),
+      await schema(options),
+    ),
+  ).rejects.toMatchObject({ reason: "unsupported" });
+});
+test("abort during official metadata cancels its group before any exec and consumes the permit", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, undefined, { metadataWait: true });
+  const input = request(options.workspace),
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input),
+    executor = new CodexExecutor(options),
+    schemaPath = await schema(options),
+    controller = new AbortController();
+  const startup = executor.startAuthorizedOnce(
+    input,
+    schemaPath,
+    permit,
+    controller.signal,
+  );
+  const rejected = expect(startup).rejects.toMatchObject({
+    reason: "cancelled",
+  });
+  const deadline = Date.now() + 1500;
+  let ready = false;
+  while (Date.now() < deadline) {
+    try {
+      await readFile(path.join(options.workspace, "preflight.marker"));
+      ready = true;
+      break;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+  expect(ready).toBe(true);
+  controller.abort();
+  await rejected;
+  expect(
+    (await calls(options)).some((args: string[]) => args[0] === "exec"),
+  ).toBe(false);
+  await expect(
+    executor.startAuthorizedOnce(input, schemaPath, permit),
+  ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+});
+test("cancelled decision lookup never yields a reusable permit or launches", async () => {
+  const options = await fakeCodex(),
+    controller = new AbortController();
+  let release:
+    ((receipt: { decisionId: string; expiresAt: number }) => void) | undefined;
+  const port: CodexCreditRiskDecisionPort = {
+    consumeUserDecision: vi.fn(async (_scope, signal) => {
+      expect(signal).toBe(controller.signal);
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    }),
+  };
+  const pending = createCodexCreditRiskPermit(
+    port,
+    request(options.workspace),
+    controller.signal,
+  );
+  const rejected = expect(pending).rejects.toMatchObject({
+    reason: "cancelled",
+  });
+  const deadline = Date.now() + 1000;
+  while (!release && Date.now() < deadline)
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  expect(release).toBeDefined();
+  controller.abort();
+  release!({ decisionId: "cancelled-decision", expiresAt: Date.now() + 60000 });
+  await rejected;
+  await expect(
+    readFile(path.join(options.workspace, "calls.jsonl")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+});
+test("spawn failure has a normalized terminal and cannot restore the one-shot permission", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, undefined, { spawnFailure: true });
+  const input = request(options.workspace),
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input),
+    executor = new CodexExecutor(options),
+    schemaPath = await schema(options);
+  const result = await events(
+    await executor.startAuthorizedOnce(input, schemaPath, permit),
+  );
+  expect(result).toEqual([
+    { type: "started", requestId: input.requestId },
+    {
+      type: "stopped",
+      reason: "unknown-outcome",
+      resumeCondition: "reconcile-before-retry",
+    },
+  ]);
+  await expect(
+    executor.startAuthorizedOnce(input, schemaPath, permit),
+  ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+});
+
+test("managed requirements override is rejected independently of a safe raw config snapshot", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (_config, snapshot) => {
+    snapshot.requirements = {
+      modelProvider: "bedrock",
+      additionalDeveloperInstructions: "unapproved context",
+    };
+  });
+  const input = request(options.workspace),
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+  await expect(
+    new CodexExecutor(options).startAuthorizedOnce(
+      input,
+      await schema(options),
+      permit,
+    ),
+  ).rejects.toMatchObject({ reason: "unsupported" });
+  expect(
+    (await calls(options)).some((args: string[]) => args[0] === "exec"),
+  ).toBe(false);
+});
+
+test("official generated ChatGPT-only requirement is allowed without claiming billing proof", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (_config, snapshot) => {
+    snapshot.requirements = {
+      modelProvider: null,
+      chatgptBaseUrl: null,
+      featureRequirements: null,
+      allowedLoginMethods: ["chatgpt"],
+    };
+  });
+  await expect(
+    inspectCodexGenerationSafety(
+      options,
+      request(options.workspace),
+      await schema(options),
+    ),
+  ).resolves.toBeUndefined();
+});
+
+test("ignored user MCP cannot mask retained system MCP", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (_config, snapshot) => {
+    (snapshot.layers as unknown[]).push({
+      name: {
+        type: "user",
+        file: path.join(options.workspace, "config.toml"),
+        profile: null,
+      },
+      version: "user",
+      config: { mcp_servers: { danger: { enabled: false } } },
+    });
+    (snapshot.layers as unknown[]).push({
+      name: { type: "system", file: "/etc/codex/config.toml" },
+      version: "system",
+      config: {
+        mcp_servers: { danger: { command: "forbidden", enabled: true } },
+      },
+    });
+  });
+  await expect(
+    inspectCodexGenerationSafety(
+      options,
+      request(options.workspace),
+      await schema(options),
+    ),
+  ).rejects.toMatchObject({ control: "mcp_servers" });
+});
+test("stock exec excludes only user layers and disabled project while preserving managed maps", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, (_config, snapshot) => {
+    (snapshot.layers as unknown[]).push({
+      name: {
+        type: "project",
+        dotCodexFolder: path.join(options.workspace, ".codex"),
+      },
+      version: "project",
+      disabledReason: "untrusted",
+      config: {
+        notify: ["forbidden"],
+        mcp_servers: { danger: { command: "forbidden" } },
+      },
+    });
+    (snapshot.layers as unknown[]).push({
+      name: {
+        type: "user",
+        file: path.join(options.workspace, "config.toml"),
+        profile: null,
+      },
+      version: "user",
+      config: { mcp_servers: { danger: { command: "forbidden" } } },
+    });
+    (snapshot.layers as unknown[]).push({
+      name: { type: "system", file: "/etc/codex/config.toml" },
+      version: "system",
+      config: {},
+    });
+  });
+  await expect(
+    inspectCodexGenerationSafety(
+      options,
+      request(options.workspace),
+      await schema(options),
+    ),
+  ).resolves.toBeUndefined();
+});
+test.each(["unknown", "order", "missing-session", "incomplete", "prototype"])(
+  "raw layer reconstruction fails closed for %s",
+  async (kind) => {
+    const options = await fakeCodex();
+    await fakeRuntime(options, (_config, snapshot) => {
+      const layers = snapshot.layers as unknown[];
+      if (kind === "unknown")
+        layers.push({ name: { type: "unknown" }, version: "bad", config: {} });
+      if (kind === "order")
+        layers.push({
+          name: { type: "legacyManagedConfigTomlFromMdm" },
+          version: "bad",
+          config: {},
+        });
+      if (kind === "missing-session") snapshot.layers = [];
+      if (kind === "incomplete")
+        layers.push({ name: { type: "system" }, version: "bad", config: {} });
+      if (kind === "prototype")
+        layers.push({
+          name: { type: "system", file: "/etc/codex/config.toml" },
+          version: "bad",
+          config: JSON.parse('{"__proto__":{"model_provider":"forbidden"}}'),
+        });
+    });
+    await expect(
+      inspectCodexGenerationSafety(
+        options,
+        request(options.workspace),
+        await schema(options),
+      ),
+    ).rejects.toMatchObject({ reason: "unsupported" });
+  },
+);
+test("authorized dispatch snapshots original model/prompt before delayed metadata", async () => {
+  const options = await fakeCodex();
+  await fakeRuntime(options, undefined, { metadataWait: true });
+  const input = request(options.workspace),
+    expected = { model: input.settings.model, input: input.prompt },
+    permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+  const startup = new CodexExecutor(options).startAuthorizedOnce(
+    input,
+    await schema(options),
+    permit,
+  );
+  const deadline = Date.now() + 1500;
+  let ready = false;
+  while (Date.now() < deadline) {
+    try {
+      await readFile(path.join(options.workspace, "preflight.marker"));
+      ready = true;
+      break;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+  }
+  expect(ready).toBe(true);
+  input.prompt = "different";
+  input.settings.model = "different";
+  await writeFile(path.join(options.workspace, "preflight.release"), "ready");
+  await events(await startup);
+  expect(
+    JSON.parse(
+      await readFile(path.join(options.workspace, "execution.json"), "utf8"),
+    ),
+  ).toEqual(expected);
 });

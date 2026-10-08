@@ -8,8 +8,13 @@ import { canonicalJson, type ExactArtifactRef } from "@mimic/core";
 import {
   startExecution,
   type AgentExecutor,
+  type ExecutionRequest,
   type StopReason,
 } from "./executor.js";
+import {
+  isAuthorizedSessionDispatch,
+  type AuthorizedSessionDispatch,
+} from "./session-authorized.js";
 import {
   parseSubscriptionSettings,
   type SubscriptionSettings,
@@ -86,6 +91,8 @@ export interface SessionCheckpoint {
   status: "ready" | "stopped" | "complete";
   stop?: SessionStop;
   questionIds: readonly string[];
+  /** Records an explicit one-call exception, never a billing-proof assertion. */
+  executionPolicy?: "authorized-existing-credit-risk-once";
 }
 export function sessionDigest(value: unknown): string {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
@@ -256,7 +263,9 @@ export class FileSessionStore {
           !Number.isSafeInteger(value.generationCount) ||
           value.generationCount < 0 ||
           !["ready", "stopped", "complete"].includes(value.status) ||
-          !Array.isArray(value.questionIds)
+          !Array.isArray(value.questionIds) ||
+          (value.executionPolicy !== undefined &&
+            value.executionPolicy !== "authorized-existing-credit-risk-once")
         )
           throw new Error("Invalid checkpoint");
         validateBinding(value.binding);
@@ -334,12 +343,14 @@ export interface SessionLimits {
 export class AgentSession {
   private cancelled = false;
   private cancelExecution?: () => Promise<void>;
+  private startupAbort?: AbortController;
   constructor(
     readonly id: string,
     private readonly store: FileSessionStore,
     private readonly ports: SessionPorts,
     private readonly executor: AgentExecutor,
     private readonly limits: SessionLimits,
+    private readonly authorizedDispatch?: AuthorizedSessionDispatch,
   ) {
     if (
       !identifier.test(id) ||
@@ -348,12 +359,16 @@ export class AgentSession {
       !Number.isSafeInteger(limits.timeoutMs) ||
       limits.timeoutMs < 1 ||
       !Number.isSafeInteger(limits.maxOutputBytes) ||
-      limits.maxOutputBytes < 1
+      limits.maxOutputBytes < 1 ||
+      (authorizedDispatch &&
+        (!isAuthorizedSessionDispatch(authorizedDispatch, executor) ||
+          limits.maxGenerations !== 1))
     )
       throw new Error("Invalid session limits");
   }
   async cancel(): Promise<void> {
     this.cancelled = true;
+    this.startupAbort?.abort();
     if (this.cancelExecution) {
       let timer: ReturnType<typeof setTimeout> | undefined;
       await Promise.race([
@@ -372,6 +387,7 @@ export class AgentSession {
       status: state?.status ?? "not-started",
       stop: state?.stop,
       questionIds: state?.questionIds ?? [],
+      executionPolicy: state?.executionPolicy,
       tasks: Object.values(state?.tasks ?? {}).map((task) => ({
         taskId: task.binding.taskId,
         phase: task.phase,
@@ -416,6 +432,9 @@ export class AgentSession {
           tasks: {},
           status: "ready",
           questionIds: [],
+          ...(this.authorizedDispatch
+            ? { executionPolicy: this.authorizedDispatch.policy }
+            : {}),
         };
         await this.store.write(state);
       }
@@ -436,6 +455,8 @@ export class AgentSession {
         }
       };
       if (sessionDigest(binding) !== sessionDigest(state.binding))
+        return stop("reservation-invalid");
+      if (state.executionPolicy !== this.authorizedDispatch?.policy)
         return stop("reservation-invalid");
 
       if (state.status === "stopped" && !options.resume) return state;
@@ -523,14 +544,20 @@ export class AgentSession {
         };
         state.generationCount++;
         await this.store.write(state);
+        if (this.cancelled) return stop("cancelled");
         const deadline = Date.now() + this.limits.timeoutMs;
-        const starting = startExecution(this.executor, {
+        const startupAbort = new AbortController();
+        this.startupAbort = startupAbort;
+        const request: ExecutionRequest = {
           requestId: `${this.id}-${state.generationCount}`,
           workspace: this.ports.workspace,
           prompt: task.prompt,
           settings: state.binding.settings,
           requiredCapabilities: ["toolRestriction"],
-        });
+        };
+        const starting = this.authorizedDispatch
+          ? this.authorizedDispatch.start(request, startupAbort.signal)
+          : startExecution(this.executor, request);
         let startTimer: ReturnType<typeof setTimeout> | undefined;
         const handle = await Promise.race([
           starting,
@@ -542,11 +569,14 @@ export class AgentSession {
           }),
         ]).finally(() => clearTimeout(startTimer));
         if (!handle) {
+          startupAbort.abort();
+          this.startupAbort = undefined;
           void starting.then((late) => late.cancel()).catch(() => {});
           this.store.retainLock(this.id);
           return stop("timeout");
         }
         this.cancelExecution = handle.cancel;
+        this.startupAbort = undefined;
         const iterator = handle.events[Symbol.asyncIterator]();
         let output: string | undefined;
         let backendStop: StopReason | undefined;
@@ -579,6 +609,10 @@ export class AgentSession {
           ]).finally(() => clearTimeout(timer));
           if (!proven) this.store.retainLock(this.id);
         };
+        if (this.cancelled) {
+          await settleCancellation();
+          return stop("cancelled");
+        }
         try {
           while (true) {
             let timer: ReturnType<typeof setTimeout> | undefined;
