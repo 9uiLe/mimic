@@ -28,18 +28,11 @@ export interface OfficialProcessHandle {
   cancel(): Promise<void>;
 }
 
-export async function executeOfficialProcess(
-  request: OfficialProcessRequest,
-): Promise<OfficialProcessHandle> {
-  if (
-    !path.isAbsolute(request.executable) ||
-    request.executable.includes("\0") ||
-    !path.isAbsolute(request.workspace) ||
-    !Number.isSafeInteger(request.timeoutMs) ||
-    request.timeoutMs < 1 ||
-    request.timeoutMs > 3_600_000 ||
-    !request.args.every((arg) => typeof arg === "string" && !arg.includes("\0"))
-  )
+/** Copy only native-login variables; never inherit API credentials or endpoints. */
+export function validateOfficialEnvironment(
+  env: Readonly<Record<string, string>>,
+): Record<string, string> {
+  if (!env || typeof env !== "object" || Array.isArray(env))
     throw new ExecutorFailure("unsupported");
   const environmentKeys = new Set([
     "PATH",
@@ -61,13 +54,7 @@ export async function executeOfficialProcess(
     "TERM",
     "NO_COLOR",
   ]);
-  if (
-    request.input !== undefined &&
-    (typeof request.input !== "string" ||
-      Buffer.byteLength(request.input) > 16 * 1024 * 1024)
-  )
-    throw new ExecutorFailure("unsupported");
-  for (const [key, value] of Object.entries(request.env)) {
+  for (const [key, value] of Object.entries(env)) {
     if (
       !environmentKeys.has(key) ||
       !/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) ||
@@ -77,6 +64,29 @@ export async function executeOfficialProcess(
     )
       throw new ExecutorFailure("unsupported");
   }
+  return { ...env };
+}
+
+export async function executeOfficialProcess(
+  request: OfficialProcessRequest,
+): Promise<OfficialProcessHandle> {
+  if (
+    !path.isAbsolute(request.executable) ||
+    request.executable.includes("\0") ||
+    !path.isAbsolute(request.workspace) ||
+    !Number.isSafeInteger(request.timeoutMs) ||
+    request.timeoutMs < 1 ||
+    request.timeoutMs > 3_600_000 ||
+    !request.args.every((arg) => typeof arg === "string" && !arg.includes("\0"))
+  )
+    throw new ExecutorFailure("unsupported");
+  if (
+    request.input !== undefined &&
+    (typeof request.input !== "string" ||
+      Buffer.byteLength(request.input) > 16 * 1024 * 1024)
+  )
+    throw new ExecutorFailure("unsupported");
+  const env = validateOfficialEnvironment(request.env);
   const limit = request.maxOutputBytes ?? 4 * 1024 * 1024;
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16 * 1024 * 1024)
     throw new ExecutorFailure("unsupported");
@@ -92,7 +102,7 @@ export async function executeOfficialProcess(
   try {
     child = spawn(request.executable, [...request.args], {
       cwd,
-      env: { ...request.env },
+      env,
       shell: false,
       detached: grouped,
       stdio: ["pipe", "pipe", "pipe"],

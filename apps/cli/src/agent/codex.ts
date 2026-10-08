@@ -9,7 +9,13 @@ import {
   type ResumeRequest,
   type StopReason,
 } from "./executor.js";
-import { executeOfficialProcess } from "./process.js";
+import {
+  executeOfficialProcess,
+  validateOfficialEnvironment,
+  type OfficialProcessRequest,
+} from "./process.js";
+import { realpath, stat } from "node:fs/promises";
+import path from "node:path";
 import { parseSubscriptionSettings } from "./settings.js";
 
 export interface CodexOptions {
@@ -136,6 +142,224 @@ export class CodexExecutor implements AgentExecutor {
     // No implicit new turn/replay of accepted work as a substitute for resume.
     throw new ExecutorFailure("unsupported");
   }
+}
+
+/** A reviewable fresh-turn plan, not authority to launch a model. */
+export interface CodexGenerationProfile {
+  mode: "fresh";
+  nativeResume: false;
+  toolRestriction: false;
+  process: OfficialProcessRequest;
+}
+
+function within(root: string, target: string): boolean {
+  const relative = path.relative(root, target);
+  return (
+    relative !== ".." &&
+    !relative.startsWith(`..${path.sep}`) &&
+    !path.isAbsolute(relative)
+  );
+}
+
+/** Fixed official controls only: callers cannot append args, override providers,
+ * change the tier, or smuggle ambient API credentials through this profile.
+ * No model is dispatched here; production start still applies the billing hold.
+ */
+export async function createCodexGenerationProfile(
+  options: CodexOptions,
+  request: ExecutionRequest,
+  outputSchemaPath: string,
+): Promise<CodexGenerationProfile> {
+  let settings;
+  try {
+    settings = parseSubscriptionSettings(request.settings);
+  } catch {
+    throw new ExecutorFailure("unsupported");
+  }
+  if (
+    settings.provider !== "codex" ||
+    !settings.model ||
+    !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(settings.model) ||
+    !request.requestId.trim() ||
+    !request.prompt ||
+    Buffer.byteLength(request.prompt) > 64 * 1024 ||
+    !path.isAbsolute(options.executable) ||
+    options.executable.includes("\0") ||
+    !path.isAbsolute(request.workspace) ||
+    !path.isAbsolute(options.workspace) ||
+    Object.keys(options).some(
+      (key) => !["executable", "env", "workspace", "timeoutMs"].includes(key),
+    )
+  )
+    throw new ExecutorFailure("unsupported");
+  const env = validateOfficialEnvironment(options.env);
+  if (
+    (env.HOME && !path.isAbsolute(env.HOME)) ||
+    (env.CODEX_HOME && !path.isAbsolute(env.CODEX_HOME))
+  )
+    throw new ExecutorFailure("unsupported");
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  if (
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs < 1 ||
+    timeoutMs > 60_000 ||
+    outputSchemaPath.includes("\0")
+  )
+    throw new ExecutorFailure("unsupported");
+  let workspace: string, schema: string;
+  try {
+    workspace = await realpath(request.workspace);
+    if (
+      workspace !== (await realpath(options.workspace)) ||
+      !(await stat(workspace)).isDirectory()
+    )
+      throw new Error();
+    const lexicalRoot = path.resolve(request.workspace);
+    const lexicalSchema = path.resolve(lexicalRoot, outputSchemaPath);
+    if (!within(lexicalRoot, lexicalSchema)) throw new Error();
+    schema = await realpath(lexicalSchema);
+    if (!within(workspace, schema) || !(await stat(schema)).isFile())
+      throw new Error();
+  } catch {
+    throw new ExecutorFailure("unsupported");
+  }
+  const controls = [
+    'forced_login_method="chatgpt"',
+    'model_provider="openai"',
+    // Version0.160.0 maps Standard to the default service tier, not priority.
+    'service_tier="default"',
+    'approval_policy="never"',
+    'web_search="disabled"',
+    "tools.update_plan.enabled=false",
+    "tools.experimental_request_user_input.enabled=false",
+    "memories.generate_memories=false",
+    "memories.use_memories=false",
+    "agents.enabled=false",
+    "orchestrator.mcp.enabled=false",
+    "cloud.skills.enabled=false",
+    "skills.include_instructions=false",
+    "project_doc_max_bytes=0",
+    'shell_environment_policy.inherit="none"',
+    "analytics.enabled=false",
+    "feedback.enabled=false",
+    `projects.${JSON.stringify(workspace)}.trust_level="untrusted"`,
+  ];
+  const features = [
+    "shell_tool",
+    "unified_exec",
+    "hooks",
+    "plugins",
+    "apps",
+    "memories",
+    "multi_agent",
+    "multi_agent_v2",
+    "fast_mode",
+    "step_model_switching",
+    "browser_use",
+    "browser_use_external",
+    "computer_use",
+    "image_generation",
+    "view_image",
+    "code_mode",
+    "code_mode_host",
+    "sleep_tool",
+    "skill_search",
+    "skill_mcp_dependency_install",
+    "tool_suggest",
+    "auth_elicitation",
+    "unbounded_connection_retries",
+    "workspace_dependencies",
+  ];
+  return {
+    mode: "fresh",
+    nativeResume: false,
+    toolRestriction: false,
+    process: {
+      executable: options.executable,
+      args: [
+        "exec",
+        "--ignore-user-config",
+        "--ignore-rules",
+        "--ephemeral",
+        "--strict-config",
+        "--sandbox",
+        "read-only",
+        "--skip-git-repo-check",
+        "--json",
+        "--color",
+        "never",
+        "--model",
+        settings.model,
+        "--output-schema",
+        schema,
+        ...controls.flatMap((control) => ["--config", control]),
+        ...features.flatMap((feature) => ["--disable", feature]),
+        "-",
+      ],
+      workspace,
+      env,
+      input: request.prompt,
+      timeoutMs,
+      maxOutputBytes: 4 * 1024 * 1024,
+    },
+  };
+}
+
+export interface CodexSubmissionInput {
+  output: string;
+  runId: string;
+  taskId: string;
+  packagePath: string;
+  workPath: string;
+  workspace: string;
+}
+/** No filesystem writes, execution host, approval, or commit. The session layer
+ * saves serializedWork immutably; the existing static CLI submit is authority.
+ */
+export function prepareCodexSubmission(input: CodexSubmissionInput): {
+  envelope: Record<string, unknown>;
+  serializedWork: string;
+  argv: string[];
+} {
+  if (
+    !path.isAbsolute(input.workspace) ||
+    input.workspace.includes("\0") ||
+    ![input.runId, input.taskId].every((id) =>
+      /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id),
+    )
+  )
+    throw new ExecutorFailure("unsupported");
+  const workspace = path.resolve(input.workspace);
+  for (const file of [input.packagePath, input.workPath]) {
+    if (
+      !file ||
+      file.includes("\0") ||
+      file.startsWith("-") ||
+      !within(workspace, path.resolve(workspace, file))
+    )
+      throw new ExecutorFailure("unsupported");
+  }
+  const envelope = parseCodexWorkEnvelope(input.output);
+  const result = object(object(envelope.work).result);
+  if (result.runId !== input.runId || result.taskId !== input.taskId)
+    throw new ExecutorFailure("unknown-outcome");
+  return {
+    envelope,
+    serializedWork: `${JSON.stringify(envelope)}\n`,
+    argv: [
+      "submit",
+      input.runId,
+      "--task",
+      input.taskId,
+      "--package",
+      input.packagePath,
+      "--work",
+      input.workPath,
+      "--root",
+      workspace,
+      "--json",
+    ],
+  };
 }
 
 /** Classify official error text internally; raw messages never reach diagnostics. */
