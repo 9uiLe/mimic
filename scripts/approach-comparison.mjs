@@ -40,7 +40,7 @@ async function frozenFile(file) {
   const bytes = await readFile(file);
   return { sha256: sha(bytes), bytes: bytes.length };
 }
-async function skillFiles(root) {
+async function treeFiles(root, directory) {
   const files = [];
   async function walk(folder) {
     for (const entry of await readdir(folder, { withFileTypes: true })) {
@@ -52,7 +52,7 @@ async function skillFiles(root) {
       }
     }
   }
-  await walk(path.join(root, "skills"));
+  await walk(path.join(root, directory));
   files.sort();
   return Object.fromEntries(
     await Promise.all(
@@ -63,8 +63,12 @@ async function skillFiles(root) {
     ),
   );
 }
-async function createFrozen(file, content) {
+async function createFrozen(root, file, content) {
   await mkdir(path.dirname(file), { recursive: true });
+  assert(
+    inside(root, await realpath(path.dirname(file))),
+    "Output parent escapes workspace",
+  );
   const handle = await open(file, "wx", 0o600);
   try {
     await handle.writeFile(content);
@@ -312,7 +316,11 @@ async function prepare(cfg) {
     assert(inside(root, file), "Evidence escapes workspace");
     pageEvidence[name] = await frozenFile(file);
   }
-  const packages = await skillFiles(root);
+  const packages = await treeFiles(root, "skills");
+  const schemas = {
+    repository: await treeFiles(repo, "schemas"),
+    workspace: await treeFiles(root, "schemas"),
+  };
   const graph = await readJson(path.join(repo, corpusFiles[0]));
   const sources = await readJson(path.join(repo, corpusFiles[2]));
   const retrieval = retrieveDesignReferences(graph, {
@@ -341,6 +349,7 @@ async function prepare(cfg) {
   const written = [];
   written.push(
     await createFrozen(
+      root,
       path.join(root, targets[0]),
       JSON.stringify(inventory, null, 2) + "\n",
     ),
@@ -357,10 +366,13 @@ async function prepare(cfg) {
       cfg.assessments,
     );
     const evidencePath = `inputs/${cohort}-${arm.toLowerCase()}-s09.md`;
-    written.push(await createFrozen(path.join(root, evidencePath), evidence));
+    written.push(
+      await createFrozen(root, path.join(root, evidencePath), evidence),
+    );
     if (arm === "C2")
       written.push(
         await createFrozen(
+          root,
           path.join(root, `inputs/${cohort}-c2-s11.md`),
           `# S11 purpose and counterexample check\n\nCompare every direction against the same decision facts: what is visible, what consequential fact is hidden, what is needless noise, and the next action. Revisit the cases' explicit non-fit conditions. This evidence was present in the common corpus at S09; it is foregrounded now.\n\n${JSON.stringify(graph.nodes.filter((node) => node.kind === "failure" && cfg.assessments.some((item) => item.caseId.slice(5) === node.id.slice(8))).map((node) => ({ id: node.id, label: node.label, evidenceRefs: node.evidenceRefs })))}`,
         ),
@@ -376,6 +388,7 @@ async function prepare(cfg) {
   const planPath = `plans/${cohort}-comparison.json`;
   written.push(
     await createFrozen(
+      root,
       path.join(root, planPath),
       JSON.stringify(plan, null, 2) + "\n",
     ),
@@ -391,6 +404,7 @@ async function prepare(cfg) {
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
     packages,
+    schemas,
     commonTaskIds: stages,
     pageEvidence,
     corpus: inventory,
@@ -408,6 +422,7 @@ async function prepare(cfg) {
     })),
   };
   await createFrozen(
+    root,
     path.join(root, `plans/${cohort}-manifest.json`),
     JSON.stringify(manifest, null, 2) + "\n",
   );
@@ -469,6 +484,23 @@ async function report(cfg) {
       actual.sha256 === expected.sha256 && actual.bytes === expected.bytes,
       `Changed Skill package: ${name}`,
     );
+  }
+  let schemaVerification = "not-frozen";
+  if (manifest.schemas) {
+    for (const [location, base] of [
+      ["repository", repo],
+      ["workspace", root],
+    ])
+      for (const [name, expected] of Object.entries(
+        manifest.schemas[location],
+      )) {
+        const actual = await frozenFile(path.join(base, name));
+        assert(
+          actual.sha256 === expected.sha256 && actual.bytes === expected.bytes,
+          `Changed schema: ${location}/${name}`,
+        );
+      }
+    schemaVerification = "verified";
   }
   const scopeConfig = await readJson(path.join(root, ".mimic/config.json"));
   const planned = await readJson(path.join(root, manifest.planPath));
@@ -619,6 +651,7 @@ async function report(cfg) {
     runId: manifest.runId,
     repositoryCommit: manifest.repositoryCommit,
     repositoryInputs,
+    schemaVerification,
     runState: workspace.registry.runs[manifest.runId]
       ? deriveRunState(workspace.registry.runs[manifest.runId])
       : "not-started",

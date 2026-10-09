@@ -43,7 +43,7 @@ not repeated in each S09/S11 prompt.
 manifest with `wx` writes. It rejects a workspace with an existing Run or
 canonical artifact so optional inputs cannot inherit prior work. It freezes the repository commit, source file
 hashes, Skill package files, page evidence, model name/effort, retrieval input,
-and generated plan/evidence hashes. The repository contains the nine-stage
+artifact and submission schema files, and generated plan/evidence hashes. The repository contains the nine-stage
 [plan template](plan-template.json). Keep each model attempt's session config
 and authorized decision receipt separate; use a new session ID for every new
 invocation. The trusted host calls `runAuthorizedSessionOnce`, checks the

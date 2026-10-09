@@ -1,5 +1,14 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile, cp, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  cp,
+  rm,
+  rename,
+  symlink,
+} from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { test } from "node:test";
@@ -33,6 +42,9 @@ test("matched comparison freezes one common upstream and three isolated branches
     "<main>Fixed snapshot</main>\n",
   );
   await cp(path.join(repo, "skills"), path.join(root, "skills"), {
+    recursive: true,
+  });
+  await cp(path.join(repo, "schemas"), path.join(root, "schemas"), {
     recursive: true,
   });
   const cfg = {
@@ -259,6 +271,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.binding.verifiedSessionCount, 1);
   assert.equal(result.binding.reasoningEffortLogCount, 1);
   assert.equal(result.binding.reasoningEffortVerified, true);
+  assert.equal(result.schemaVerification, "verified");
   assert.equal(result.repositoryInputs.templateMatches, true);
   const partial = JSON.parse(
     await readFile(
@@ -281,6 +294,33 @@ test("matched comparison freezes one common upstream and three isolated branches
   await assert.rejects(report(cfg), /Session binding differs/);
   mismatched.checkpoint.binding.settings.model = cfg.model;
   await writeFile(sessionFile, JSON.stringify(mismatched));
+  const schemaFile = path.join(
+    root,
+    "schemas/agent/codex-submission-output.schema.json",
+  );
+  const originalSchema = await readFile(schemaFile);
+  await writeFile(schemaFile, "{}\n");
+  await assert.rejects(report(cfg), /Changed schema/);
+  await writeFile(schemaFile, originalSchema);
   await writeFile(path.join(root, manifest.arms.B0.evidencePath), "changed\n");
   await assert.rejects(report(cfg), /Changed frozen file/);
+  await writeFile(
+    path.join(root, ".mimic/workspace.json"),
+    JSON.stringify({ registry: { events: [], runs: {} }, snapshots: {} }),
+  );
+  const outside = await mkdtemp(path.join(os.tmpdir(), "mimic-escape-test-"));
+  await rename(path.join(root, "inputs"), path.join(root, "inputs-original"));
+  await cp(
+    path.join(root, "inputs-original/page.html"),
+    path.join(outside, "page.html"),
+  );
+  await symlink(outside, path.join(root, "inputs"));
+  await assert.rejects(
+    prepare({
+      ...cfg,
+      cohortId: "test_symlink_escape",
+      pageEvidenceFiles: ["inputs-original/page.html"],
+    }),
+    /Output parent escapes workspace/,
+  );
 });
