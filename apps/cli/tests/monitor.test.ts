@@ -394,6 +394,17 @@ test("loopback fixed routes reject Host/origin/method/traversal and never expose
   const reviewHtml = await (await fetch(monitor.url + "/design-review")).text();
   expect(reviewHtml).toContain("固定ケーススタディ");
   expect(reviewHtml).toMatch(/id="review-preview-link"[^>]*hidden/);
+  const monitorHtml = await (await fetch(monitor.url)).text();
+  for (const html of [monitorHtml, reviewHtml]) {
+    expect(html).toContain("方式は未採用");
+    expect(html).toContain("B0/C1/C2の同条件比較は未完了");
+    expect(html).toContain(
+      'href="https://github.com/9uiLe/mimic/blob/main/docs/dogfood/9ui184/decision-packet.md"',
+    );
+    expect(html).toContain(
+      'href="https://github.com/9uiLe/mimic/blob/main/docs/dogfood/9ui183/README.md"',
+    );
+  }
   expect(
     (
       await fetch(monitor.url + "/api/state", {
