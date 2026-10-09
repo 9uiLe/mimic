@@ -23,7 +23,8 @@
     "reasoningEffort": "low",
     "verifiedSessionCount": 5,
     "reasoningEffortLogCount": 5,
-    "reasoningEffortVerified": true
+    "reasoningEffortVerified": true,
+    "dispatchSettingsVerified": false
   },
   "commonAcceptedRefs": [
     {
@@ -67,6 +68,7 @@
       "attemptCount": 0,
       "mixedSessionIds": [],
       "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
@@ -79,6 +81,7 @@
       "attemptCount": 0,
       "mixedSessionIds": [],
       "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
@@ -91,10 +94,11 @@
       "attemptCount": 0,
       "mixedSessionIds": [],
       "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
     }
   },
-  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+  "warning": "Elapsed generation and reasoning effort require one-to-one attempt logs. Cross-arm comparison also requires frozen, hashed dispatch configurations and submission schema; absent evidence leaves dispatch settings unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
 }

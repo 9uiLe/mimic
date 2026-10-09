@@ -26,9 +26,9 @@ specific differences; it cannot establish a causal winner. The historical
 
 | Arm | S09 evidence                                                                                         | S11 emphasis                                                                   |
 | --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| B0  | Compact flat catalogue of the same sourced cases, without graph roles or paths                       | Same task and exact directions                                                 |
+| B0  | Flat sourced catalogue plus unranked raw graph and source ledger; no task-conditioned roles          | Same task and exact directions                                                 |
 | C1  | Host `retrieveDesignReferences` projection with source IDs, mechanisms, risks, and missing-role gaps | Same task and exact directions                                                 |
-| C2  | Compact catalogue with positive mechanisms foregrounded                                              | Purpose, hidden decisive facts, excess noise, and counterexamples foregrounded |
+| C2  | Raw graph and source ledger with positive mechanisms foregrounded                                    | Purpose, hidden decisive facts, excess noise, and counterexamples foregrounded |
 
 The graph projection is based on declared traits in the **fixed task brief**
 before S08. It does not claim to have read a later model-generated S08 profile.
@@ -46,12 +46,18 @@ repository's `skills/` and `schemas/` directories into that workspace, and
 place the fixed page/observation files under `inputs/` before preparation.
 It freezes the repository commit, source file hashes, Skill package files,
 page evidence, model name/effort, retrieval input, artifact and submission
-schema files, compiled Core/CLI modules used by preparation, and generated plan/evidence hashes. The repository contains the nine-stage
+schema files, dispatch settings (`executable`, `maxGenerations`, `timeoutMs`,
+`maxOutputBytes`), compiled Core/CLI modules used by preparation, and generated
+plan/evidence hashes. The repository contains the nine-stage
 [plan template](plan-template.json). Keep each model attempt's session config
 and authorized decision receipt separate; use a new session ID for every new
 invocation. The trusted host calls `runAuthorizedSessionOnce`, checks the
 workspace/model/request scope once, and records prompt _digests_, never prompt
-or credentials, in non-sensitive attempt logs.
+or credentials, in non-sensitive attempt logs. Each new attempt log row records
+the SHA-256 of its saved session config as `sessionConfigSha256` and the exact
+submission schema as `schemaSha256`. The report verifies these against the
+frozen settings, saved config, checkpoint, and workspace schema. Older trial
+logs lack these receipts and correctly report dispatch settings unverified.
 
 Then run `mimic run --id <manifest.runId> --tasks <manifest.planPath>` in that
 workspace. Dispatch common stages once, followed by the three S09–S11

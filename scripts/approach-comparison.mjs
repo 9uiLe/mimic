@@ -18,6 +18,12 @@ const corpusFiles = [
   "knowledge/seed/purpose-information-playbook.md",
 ];
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const dispatchSettings = (config) => ({
+  executable: config.executable,
+  maxGenerations: config.maxGenerations,
+  timeoutMs: config.timeoutMs,
+  maxOutputBytes: config.maxOutputBytes,
+});
 const readJson = async (file) => JSON.parse(await readFile(file, "utf8"));
 const repositoryCommit = () =>
   execFileSync("git", ["-c", `safe.directory=${repo}`, "rev-parse", "HEAD"], {
@@ -187,12 +193,21 @@ function referenceEvidence(
 ) {
   const header = `# ${arm} reference evidence\n\nAll source claims below are local paraphrases or hypotheses; follow the source URLs. Complete corpus SHA-256 inventory: ${inventory.digest}. Do not treat a case as a UI to copy.\n\n`;
   const flat = flatCaseRows(sources, graph, assessments);
+  const rawCorpus =
+    "\n## Shared traversable corpus (unranked)\n\nThis is the same raw node, edge, and source set for both flat arms. It supplies the S09 path contract without C1's task-conditioned selection or roles.\n\n" +
+    JSON.stringify({
+      nodes: graph.nodes,
+      edges: graph.edges,
+      sourceEvidence: sources.evidence,
+    }) +
+    "\n";
   if (arm === "B0")
     return (
       header +
       "## Flat case catalogue\n\nNo task-specific graph role or path is supplied in this arm. The common upstream carries the product purpose and observed page.\n\n" +
       JSON.stringify(flat) +
-      "\n"
+      "\n" +
+      rawCorpus
     );
   if (arm === "C2")
     return (
@@ -211,7 +226,8 @@ function referenceEvidence(
             .map((node) => node.label),
         })),
       ) +
-      "\n"
+      "\n" +
+      rawCorpus
     );
   const nodeIds = new Set([
     ...traitIds,
@@ -275,7 +291,14 @@ async function prepare(cfg) {
       cfg.reasoningEffort &&
       cfg.brief &&
       Array.isArray(cfg.pageEvidenceFiles) &&
-      cfg.pageEvidenceFiles.length > 0,
+      cfg.pageEvidenceFiles.length > 0 &&
+      cfg.dispatchSettings &&
+      typeof cfg.dispatchSettings.executable === "string" &&
+      ["maxGenerations", "timeoutMs", "maxOutputBytes"].every(
+        (key) =>
+          Number.isSafeInteger(cfg.dispatchSettings[key]) &&
+          cfg.dispatchSettings[key] > 0,
+      ),
     "Missing comparison settings",
   );
   const commit = repositoryCommit();
@@ -460,6 +483,7 @@ async function prepare(cfg) {
     planTemplate: await frozenFile(path.resolve(cfg.planTemplate)),
     model: cfg.model,
     reasoningEffort: cfg.reasoningEffort,
+    dispatchSettings: dispatchSettings(cfg.dispatchSettings),
     packages,
     schemas,
     compiledModules,
@@ -703,6 +727,21 @@ async function report(cfg) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
+  const sessionConfigs = new Map();
+  for (const name of await readdir(root)) {
+    if (!/^session-.*\.json$/.test(name)) continue;
+    const file = path.join(root, name);
+    const bytes = await readFile(file);
+    const config = JSON.parse(bytes);
+    if (config.runId !== manifest.runId) continue;
+    const rows = sessionConfigs.get(config.sessionId) ?? [];
+    rows.push({
+      config,
+      sha256: sha(bytes),
+      canonicalWorkspace: await realpath(config.workspace).catch(() => null),
+    });
+    sessionConfigs.set(config.sessionId, rows);
+  }
   const attemptRows = new Map();
   for (const item of attempts) {
     const rows = attemptRows.get(item.sessionId) ?? [];
@@ -726,6 +765,40 @@ async function report(cfg) {
         `Attempt settings differ from frozen comparison: ${session.sessionId}`,
       );
   }
+  const expectedSchema =
+    manifest.schemas?.workspace?.[
+      "schemas/agent/codex-submission-output.schema.json"
+    ]?.sha256;
+  const dispatchForSession = (session) => {
+    const attempt = attemptedSessions.get(session.sessionId);
+    const configs = sessionConfigs.get(session.sessionId) ?? [];
+    if (
+      !manifest.dispatchSettings ||
+      !expectedSchema ||
+      !attempt ||
+      configs.length !== 1
+    )
+      return null;
+    const { config, sha256, canonicalWorkspace } = configs[0];
+    if (
+      attempt.sessionConfigSha256 !== sha256 ||
+      attempt.schemaSha256 !== expectedSchema ||
+      canonicalWorkspace !== root ||
+      config.runId !== manifest.runId ||
+      config.model !== manifest.model ||
+      config.reasoningEffort !== manifest.reasoningEffort ||
+      JSON.stringify(dispatchSettings(config)) !==
+        JSON.stringify(manifest.dispatchSettings) ||
+      !config.packages ||
+      typeof config.packages !== "object"
+    )
+      return null;
+    return sha(JSON.stringify(config.packages));
+  };
+  const dispatchDigests = sessions.map(dispatchForSession);
+  const dispatchSettingsVerified =
+    sessions.length > 0 &&
+    dispatchDigests.every((digest) => digest && digest === dispatchDigests[0]);
   const hasProposedDecision = (event) =>
     event.outputs?.some((ref) => {
       const snapshot =
@@ -779,6 +852,8 @@ async function report(cfg) {
       attemptCount: exclusiveCosts ? armSessions.length : null,
       mixedSessionIds,
       reasoningEffortVerified: timingVerified,
+      dispatchSettingsVerified:
+        armSessions.length > 0 && dispatchSettingsVerified,
       generationCount: exclusiveCosts
         ? armSessions.reduce((total, item) => total + item.generationCount, 0)
         : null,
@@ -819,6 +894,7 @@ async function report(cfg) {
         sessions.length > 0 &&
         attempts.length === sessions.length &&
         sessions.every((item) => attemptedSessions.has(item.sessionId)),
+      dispatchSettingsVerified,
     },
     commonAcceptedRefs: stages.flatMap((id) =>
       completed(id).flatMap((event) => event.outputs),
@@ -834,7 +910,7 @@ async function report(cfg) {
         ).length,
     outcomes,
     warning:
-      "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied.",
+      "Elapsed generation and reasoning effort require one-to-one attempt logs. Cross-arm comparison also requires frozen, hashed dispatch configurations and submission schema; absent evidence leaves dispatch settings unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied.",
   };
 }
 const [command, configFile] = process.argv.slice(2);

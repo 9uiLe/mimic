@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import {
   mkdtemp,
@@ -59,6 +60,12 @@ test("matched comparison freezes one common upstream and three isolated branches
     planTemplate: template,
     model: "gpt-6-luna",
     reasoningEffort: "low",
+    dispatchSettings: {
+      executable: "/usr/local/bin/codex",
+      maxGenerations: 1,
+      timeoutMs: 120000,
+      maxOutputBytes: 4000000,
+    },
     brief: "Compare three structures.",
     pageEvidenceFiles: ["inputs/page.html"],
     traitIds: ["trait:smarthr-table", "trait:google-expressive"],
@@ -210,11 +217,20 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.match(c2Review, /Emphasis can become visual noise/);
   assert.match(c2Review, /Google brand palette/);
   assert.match(c2Review, /hyp:google-expressive/);
+  const c2 = await readFile(
+    path.join(root, manifest.arms.C2.evidencePath),
+    "utf8",
+  );
+  assert.match(c2, /Shared traversable corpus/);
+  assert.match(c2, /principle:smarthr-table/);
   const b0 = await readFile(
     path.join(root, manifest.arms.B0.evidencePath),
     "utf8",
   );
   assert.match(b0, /Flat case catalogue/);
+  assert.match(b0, /Shared traversable corpus/);
+  assert.match(b0, /"edges"/);
+  assert.ok(Buffer.byteLength(b0) <= 1024 * 1024);
   assert.doesNotMatch(b0, /Host graph retrieval/);
   const orphan = {
     action: "produce-provisional",
@@ -333,6 +349,23 @@ test("matched comparison freezes one common upstream and three isolated branches
   const noAttemptLog = await report(cfg);
   assert.equal(noAttemptLog.binding.reasoningEffortVerified, false);
   assert.equal(noAttemptLog.outcomes.B0.elapsedGenerationMs, null);
+  const sessionConfig = {
+    workspace: root,
+    runId: manifest.runId,
+    sessionId: "attempt",
+    model: cfg.model,
+    reasoningEffort: cfg.reasoningEffort,
+    ...cfg.dispatchSettings,
+    packages: { s09_b0: "skills/s09-design-space-explorer" },
+  };
+  const configPath = path.join(root, "session-attempt.json");
+  const configText = JSON.stringify(sessionConfig);
+  await writeFile(configPath, configText);
+  const configHash = createHash("sha256").update(configText).digest("hex");
+  const schemaHash =
+    manifest.schemas.workspace[
+      "schemas/agent/codex-submission-output.schema.json"
+    ].sha256;
   await writeFile(
     path.join(root, "attempts.jsonl"),
     JSON.stringify({
@@ -341,6 +374,8 @@ test("matched comparison freezes one common upstream and three isolated branches
       model: cfg.model,
       reasoningEffort: cfg.reasoningEffort,
       elapsedMs: 20,
+      sessionConfigSha256: configHash,
+      schemaSha256: schemaHash,
       tasks: [{ taskId: "s09_b0" }],
     }) + "\n",
   );
@@ -356,12 +391,19 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.binding.verifiedSessionCount, 1);
   assert.equal(result.binding.reasoningEffortLogCount, 1);
   assert.equal(result.binding.reasoningEffortVerified, true);
+  assert.equal(result.binding.dispatchSettingsVerified, true);
   assert.equal(result.schemaVerification, "verified");
   assert.equal(result.compiledVerification, "verified");
   assert.equal(result.outcomes.C2.reasoningEffortVerified, false);
   assert.equal(result.repositoryInputs.templateMatches, true);
   const attemptPath = path.join(root, "attempts.jsonl");
   const originalAttempt = JSON.parse(await readFile(attemptPath, "utf8"));
+  await writeFile(
+    configPath,
+    JSON.stringify({ ...sessionConfig, timeoutMs: 1000 }),
+  );
+  assert.equal((await report(cfg)).binding.dispatchSettingsVerified, false);
+  await writeFile(configPath, configText);
   await writeFile(
     attemptPath,
     [originalAttempt, originalAttempt].map(JSON.stringify).join("\n") + "\n",
