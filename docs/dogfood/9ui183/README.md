@@ -41,9 +41,12 @@ not repeated in each S09/S11 prompt.
 `scripts/approach-comparison.mjs prepare <config.json>` requires a new
 `mimic init` workspace and creates all evidence, the combined plan, and a
 manifest with `wx` writes. It rejects a workspace with an existing Run or
-canonical artifact so optional inputs cannot inherit prior work. It freezes the repository commit, source file
-hashes, Skill package files, page evidence, model name/effort, retrieval input,
-artifact and submission schema files, and generated plan/evidence hashes. The repository contains the nine-stage
+canonical artifact so optional inputs cannot inherit prior work. Copy the
+repository's `skills/` and `schemas/` directories into that workspace, and
+place the fixed page/observation files under `inputs/` before preparation.
+It freezes the repository commit, source file hashes, Skill package files,
+page evidence, model name/effort, retrieval input, artifact and submission
+schema files, and generated plan/evidence hashes. The repository contains the nine-stage
 [plan template](plan-template.json). Keep each model attempt's session config
 and authorized decision receipt separate; use a new session ID for every new
 invocation. The trusted host calls `runAuthorizedSessionOnce`, checks the

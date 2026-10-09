@@ -1,0 +1,182 @@
+{
+  "cohort": "9ui183_matched_v10_20261009",
+  "runId": "run_9ui183_matched_v10_20261009",
+  "repositoryCommit": "fc373ac2500cffbdae30f91fb9480a1b23a63910",
+  "repositoryInputs": {
+    "commitMatches": true,
+    "templateMatches": true,
+    "implementationMatches": true,
+    "corpusMatches": {
+      "knowledge/seed/graph.json": true,
+      "knowledge/seed/spaces.json": true,
+      "knowledge/seed/sources.json": true,
+      "knowledge/seed/product-ui-playbook.md": true,
+      "knowledge/seed/purpose-information-playbook.md": true
+    }
+  },
+  "schemaVerification": "verified",
+  "runState": "active",
+  "binding": {
+    "planDigest": "398418fc483e8d8e86af939d7d98c04c0b69b05f6de93274adde83b84dd13ec4",
+    "model": "gpt-6-sol",
+    "reasoningEffort": "low",
+    "verifiedSessionCount": 10,
+    "reasoningEffortLogCount": 10,
+    "reasoningEffortVerified": true
+  },
+  "commonAcceptedRefs": [
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s04_monitor_run_browser",
+      "lockDigest": "sha256:109af49f4b328794dfd9f77d4161aaeeab56e21b6fcfa69465057d5f09a984a6",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s04_monitor_state_polling",
+      "lockDigest": "sha256:df5424d15dbf9e12f1166298710e0a24d89f886615a474993b74bbd01705b1ae",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s01_product_definition",
+      "lockDigest": "sha256:2888ed22034b95faca681f7ccb2c825ceee07fc29c46dbab1cc0dd4b7596deb9",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s02_user_task_model",
+      "lockDigest": "sha256:4ea3f2d0b7b8c41a54530cab186b66cce2d1dc7a41d5702e3d4b6a1974882864",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s05_product_ui_contract",
+      "lockDigest": "sha256:312d670b8111e866b24eb552dd45a2c1faf1d4a03ddc90299612cc9665766ebe",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s07_direction_review",
+      "lockDigest": "sha256:62ab9e2c5585a7602cf269e583824a87f067397b525e0579a08ba26fed97dc62",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s07_run_review",
+      "lockDigest": "sha256:e6c3b6ff924bb04e8fe2fe5161ff8f745b9e328d536e5cd6fa8bb9fba560a833",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s07_preview_assessment",
+      "lockDigest": "sha256:f9a8991c68218c82bd18a625005a0747f6bcbf2947af5d49e0894d569f0b8bf2",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s07_review_journey",
+      "lockDigest": "sha256:a950cd80edfaa77ac6b1d433e6e5ec556ce4ff5eac366911305d06b65f2d1281",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s07_boundary_decision",
+      "lockDigest": "sha256:a6a3120e97438acdf0e1c65714e6ba27eece9d0306f26a90820bc95a932f395f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s08_direction_problem_profile",
+      "lockDigest": "sha256:f65f5c3e99a0907e96ead8e643c7fc21cb5990f9bcf43e56ed462f84c7514f9f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s08_run_problem_profile",
+      "lockDigest": "sha256:6d4a0b200ac9db0765539268361b4207818aced6eb73902cade0397486c80528",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v10_20261009_s08_preview_problem_profile",
+      "lockDigest": "sha256:1895bd7b9c4d4bedc8e73910c1f1e48d736243b03d91513519a8de96fa71b426",
+      "revision": 1
+    }
+  ],
+  "commonAttemptCount": 6,
+  "outcomes": {
+    "B0": {
+      "taskIds": ["s09_b0", "s10_b0", "s11_b0"],
+      "acceptedRefs": [
+        {
+          "artifactId": "art_run_9ui183_matched_v10_20261009_s09_b0_reference_selection",
+          "lockDigest": "sha256:d1edd961ad03c4a2f419f20282fe42ef83460ecb98b594fc1378e90ee89e962e",
+          "revision": 1
+        }
+      ],
+      "lastAcceptedEvent": "2026-10-09T20:18:22.478Z",
+      "firstReviewableAt": null,
+      "attemptCount": 4,
+      "reasoningEffortVerified": true,
+      "generationCount": 4,
+      "elapsedGenerationMs": 228824,
+      "stops": [
+        {
+          "sessionId": "session_9ui183_matched_v10_s09_b0_a_20261009",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s09_b0",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v10_s10_b0_a_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v10_s10_b0_b_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v10_s10_b0_c_20261009",
+          "stop": "unknown-outcome",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "prepared",
+              "rejectionReason": null
+            }
+          ]
+        }
+      ]
+    },
+    "C1": {
+      "taskIds": ["s09_c1", "s10_c1", "s11_c1"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "reasoningEffortVerified": true,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    },
+    "C2": {
+      "taskIds": ["s09_c2", "s10_c2", "s11_c2"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "reasoningEffortVerified": true,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    }
+  },
+  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+}

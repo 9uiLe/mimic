@@ -1,0 +1,198 @@
+{
+  "cohort": "9ui183_matched_v9_20261009",
+  "runId": "run_9ui183_matched_v9_20261009",
+  "repositoryCommit": "2bb6c9d6f3cf9415dbdd751dff8ff39a7e34ce14",
+  "repositoryInputs": {
+    "commitMatches": false,
+    "templateMatches": true,
+    "implementationMatches": false,
+    "corpusMatches": {
+      "knowledge/seed/graph.json": true,
+      "knowledge/seed/spaces.json": true,
+      "knowledge/seed/sources.json": true,
+      "knowledge/seed/product-ui-playbook.md": true,
+      "knowledge/seed/purpose-information-playbook.md": true
+    }
+  },
+  "schemaVerification": "not-frozen",
+  "runState": "active",
+  "binding": {
+    "planDigest": "072531203644c79086c1bd10ec6b03577a1ab53d69d30f67a4b52ae8fbdd48bc",
+    "model": "gpt-6-sol",
+    "reasoningEffort": "low",
+    "verifiedSessionCount": 11,
+    "reasoningEffortLogCount": 11,
+    "reasoningEffortVerified": true
+  },
+  "commonAcceptedRefs": [
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s04_run_browser",
+      "lockDigest": "sha256:ed5793defa74467f82c2426b8d079795bd87f06df663ec7aadfadb81e279ae08",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s04_state_polling",
+      "lockDigest": "sha256:40b2daaf914d7d566df9ffeb7393867724a69d8bf6fedb128d5d378deac03e7f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s04_preview_link",
+      "lockDigest": "sha256:488a6ed6a419bbc8801953f0bf42a68f1b8b990cecc75f67a3e17a62e9d7ba32",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s01_product_definition",
+      "lockDigest": "sha256:bcd78f876b4da819123ada8f06158916dea8eb15819f8fbea427bbb0c9635a44",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s02_user_task_model",
+      "lockDigest": "sha256:675ae1db40e18ec4e7822b772186b103886489d4d38eb947477b0fd298f5bbca",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s05_ui_contract",
+      "lockDigest": "sha256:e3fd4bf44068846cbfa08d2c68091d80125e54197676d93bbed5167c4f05842d",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s07_run_monitor_domain",
+      "lockDigest": "sha256:1818080864e4c9b1d43647e75f09e984e9581a0f648aeb004dd532ce4a3ae91b",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s07_direction_review_domain",
+      "lockDigest": "sha256:c0509e740d5269c83e09f9376f961b145690706492ac9b1f749f9fb312642ca3",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s07_preview_domain",
+      "lockDigest": "sha256:7172680781d756d34f43c2ec5f6f5093b46aa071b9391aef969882e9cb486223",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s07_cross_domain_journey",
+      "lockDigest": "sha256:e90de9887f4da3b19689178445d0e264fc54fad62364acc63014e5556383f10d",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s07_boundary_decision",
+      "lockDigest": "sha256:7c891bfcbe285ea457eebf45a34547a77a4c253199c7d8f46fc67a4c328a2008",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s08_run_monitor_profile",
+      "lockDigest": "sha256:f9ee6c18582a65a5b51b77a7c31e9a29a02b4fa0327e959d8a94cf92d4fa5c9f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s08_direction_review_profile",
+      "lockDigest": "sha256:51c91b25af9a1beb8650e48cf59500ab2a4ca5bd7830b83372fa2d693e225999",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v9_20261009_s08_preview_profile",
+      "lockDigest": "sha256:6295c1d989ea6e4e44e4a344631fc9e13f771958af06d8638d9195a510e9110f",
+      "revision": 1
+    }
+  ],
+  "commonAttemptCount": 6,
+  "outcomes": {
+    "B0": {
+      "taskIds": ["s09_b0", "s10_b0", "s11_b0"],
+      "acceptedRefs": [
+        {
+          "artifactId": "art_run_9ui183_matched_v9_20261009_s09_b0_reference_selection",
+          "lockDigest": "sha256:68a78fe1553bf97d6b1e2d9022d2ad99bba0917850c5ae2ff196ed9911593060",
+          "revision": 1
+        }
+      ],
+      "lastAcceptedEvent": "2026-10-09T20:06:30.548Z",
+      "firstReviewableAt": null,
+      "attemptCount": 5,
+      "reasoningEffortVerified": true,
+      "generationCount": 5,
+      "elapsedGenerationMs": 265854,
+      "stops": [
+        {
+          "sessionId": "session_9ui183_matched_v9_s09_b0_a_20261009",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s09_b0",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v9_s10_b0_a_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v9_s10_b0_b_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v9_s10_b0_c_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v9_s10_b0_d_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        }
+      ]
+    },
+    "C1": {
+      "taskIds": ["s09_c1", "s10_c1", "s11_c1"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "reasoningEffortVerified": true,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    },
+    "C2": {
+      "taskIds": ["s09_c2", "s10_c2", "s11_c2"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "reasoningEffortVerified": true,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    }
+  },
+  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+}
