@@ -434,6 +434,12 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(await page.locator('[data-run-id="run_monitor"]').isHidden()).toBe(
       true,
     );
+    expect(await page.locator("#run-detail").textContent()).toContain(
+      "run_monitor",
+    );
+    expect(await page.locator("#selection-note").textContent()).toContain(
+      "検索結果の外",
+    );
     await page.locator("#run-search").fill("run_monitor");
     expect(await page.locator('[data-run-id="run_monitor"]').isVisible()).toBe(
       true,
@@ -457,10 +463,15 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(
       await page.locator('[data-run-id="run_monitor"]').textContent(),
     ).toContain("進行可能");
-    await page.locator('[data-run-id="run_monitor"] summary').click();
+    await page.locator('[data-run-id="run_monitor"]').click();
     expect(
-      await page.locator('[data-run-id="run_monitor"]').getAttribute("open"),
-    ).toBeNull();
+      await page
+        .locator('[data-run-id="run_monitor"]')
+        .getAttribute("aria-current"),
+    ).toBe("true");
+    expect(await page.locator("#run-detail").textContent()).toContain(
+      "Core の保存状態",
+    );
     await runtime.registry.setWork({
       runId: "run_monitor",
       safeActions: [],
@@ -470,36 +481,86 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
       reason: "private-core-transition",
     });
     await expect
+      .poll(async () => page.locator("#run-detail").textContent(), {
+        timeout: 6000,
+      })
+      .toContain("Run 終了");
+    expect(
+      await page
+        .locator('[data-run-id="run_monitor"]')
+        .getAttribute("aria-current"),
+    ).toBe("true");
+    await new FileSessionStore(root).write(checkpoint());
+    await expect
+      .poll(async () => page.locator("#run-detail").textContent(), {
+        timeout: 6000,
+      })
+      .toContain("結果不明・要照合");
+    await new FileSessionStore(root).write(checkpoint("approval", true));
+    await expect
+      .poll(async () => page.locator("#run-detail").textContent(), {
+        timeout: 6000,
+      })
+      .toContain("提出済み");
+    expect(await page.locator("#run-detail").textContent()).toContain(
+      "人の承認待ち",
+    );
+    await page.locator("#run-search").clear();
+    await runtime.registry.start({
+      id: "run_second",
+      scope: "org_local",
+      entryMode: "system-first",
+      base: [],
+      reused: [],
+      safeActions: ["task_second"],
+      actor,
+      at,
+      reason: "second-run-selection",
+    });
+    await page.locator('[data-run-id="run_second"]').waitFor({ timeout: 6000 });
+    expect(await page.locator("#run-count").textContent()).toContain("2 / 2");
+    await page.locator('[data-run-id="run_second"]').focus();
+    await page.keyboard.press("Enter");
+    expect(await page.locator("#run-detail h2").textContent()).toBe(
+      "run_second",
+    );
+    await runtime.registry.setWork({
+      runId: "run_second",
+      safeActions: [],
+      blockers: {},
+      actor,
+      at,
+      reason: "focused-run-transition",
+    });
+    await expect
       .poll(
-        async () => page.locator('[data-run-id="run_monitor"]').textContent(),
+        async () => page.locator('[data-run-id="run_second"]').textContent(),
         { timeout: 6000 },
       )
       .toContain("Run 終了");
     expect(
-      await page.locator('[data-run-id="run_monitor"]').getAttribute("open"),
-    ).toBeNull();
-    await new FileSessionStore(root).write(checkpoint());
-    await expect
-      .poll(
-        async () => page.locator('[data-run-id="run_monitor"]').textContent(),
-        { timeout: 6000 },
-      )
-      .toContain("結果不明・要照合");
-    await new FileSessionStore(root).write(checkpoint("approval", true));
-    await expect
-      .poll(
-        async () => page.locator('[data-run-id="run_monitor"]').textContent(),
-        { timeout: 6000 },
-      )
-      .toContain("提出済み");
+      await page.evaluate(() =>
+        document.activeElement?.getAttribute("data-run-id"),
+      ),
+    ).toBe("run_second");
+    await page.setViewportSize({ width: 390, height: 844 });
     expect(
-      await page.locator('[data-run-id="run_monitor"]').textContent(),
-    ).toContain("人の承認待ち");
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+    await page.locator('[data-run-id="run_monitor"]').click();
+    expect(await page.locator("#run-detail h2").textContent()).toBe(
+      "run_monitor",
+    );
     const opened = context.waitForEvent("page");
     await page.locator("#product-preview-link").click();
     const tab = await opened;
     await tab.waitForLoadState();
     expect(await tab.evaluate(() => window.opener === null)).toBe(true);
+    expect(
+      await tab
+        .getByRole("link", { name: "Run 一覧に戻る" })
+        .getAttribute("href"),
+    ).toBe("/");
     const frame = tab.frameLocator('iframe[title="Product preview"]');
     await frame
       .getByRole("button", { name: "Show success", exact: true })
@@ -606,7 +667,9 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
         { timeout: 6000 },
       )
       .toBe("disconnected");
-    expect(await page.locator("#runs").getAttribute("data-stale")).toBe("true");
+    expect(await page.locator("#run-browser").getAttribute("data-stale")).toBe(
+      "true",
+    );
   } finally {
     await browser.close();
   }
