@@ -1,0 +1,35 @@
+{
+  "source": "GET http://127.0.0.1:43173/api/state captured before the new design Runs",
+  "observedAt": 1791565308365,
+  "runCount": 18,
+  "counts": {
+    "artifacts": 123,
+    "sessions": 50,
+    "decisions": 0,
+    "commits": 0
+  },
+  "preview": {
+    "state": "available"
+  },
+  "stateCounts": {
+    "closed": 6,
+    "active": 9,
+    "blocked": 1,
+    "review-ready": 2
+  },
+  "taskCount": 116,
+  "taskPhaseCounts": {
+    "recorded": 62,
+    "multiple-sessions": 7,
+    "runnable": 24,
+    "iteration-limit": 16,
+    "unknown-outcome": 5,
+    "question": 1,
+    "approval": 1
+  },
+  "visiblePageFacts": [
+    "The primary page shows a search field, Run list, selected Run detail, Task table, session list and exact artifact refs.",
+    "The status and Run list refresh by polling /api/state every two seconds.",
+    "The separately selected synthetic product preview opens at /preview in a new tab; the page does not claim that it came from the selected Run."
+  ]
+}
