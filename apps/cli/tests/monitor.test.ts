@@ -551,6 +551,9 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(await page.locator("#run-detail h2").textContent()).toBe(
       "run_monitor",
     );
+    expect(await page.locator(".table-scroll").getAttribute("tabindex")).toBe(
+      "0",
+    );
     const opened = context.waitForEvent("page");
     await page.locator("#product-preview-link").click();
     const tab = await opened;
