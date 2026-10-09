@@ -460,6 +460,13 @@ export class AgentSession {
       reconcilePreparedWorkDigest?: string;
     } = {},
   ): Promise<SessionCheckpoint> {
+    if (
+      this.authorizedDispatch?.reconciliationOnly &&
+      (!options.resume ||
+        options.reconciledUnknownOutcome ||
+        !/^[a-f0-9]{64}$/.test(options.reconcilePreparedWorkDigest ?? ""))
+    )
+      throw new Error("Reconciliation requires an exact saved work digest");
     return this.store.exclusive(this.id, async () => {
       let state = await this.store.read(this.id);
       if (options.reconcilePreparedWorkDigest !== undefined && !state)

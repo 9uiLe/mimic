@@ -43,7 +43,10 @@ import {
   runAuthorizedSessionResume,
 } from "../src/agent/session-main.js";
 import { CodexExecutor, CodexJsonlDecoder } from "../src/agent/codex.js";
-import { createAuthorizedCodexSessionDispatch } from "../src/agent/session-authorized.js";
+import {
+  createAuthorizedCodexReconciliationDispatch,
+  createAuthorizedCodexSessionDispatch,
+} from "../src/agent/session-authorized.js";
 import {
   type AgentExecutor,
   type ExecutorEvent,
@@ -2399,6 +2402,35 @@ test("trusted resume refuses changed binding and saved candidate without launchi
   );
   expect(launch).toHaveBeenCalledOnce();
   expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+});
+
+test("reconciliation-only dispatch refuses omitted digest or start before creating a checkpoint", async () => {
+  const h = await staticHarness();
+  const oneShot = createAuthorizedCodexReconciliationDispatch({
+    executable: process.execPath,
+    workspace: h.root,
+    env: {},
+  });
+  const session = new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    oneShot.executor,
+    { ...limits, maxGenerations: 1 },
+    oneShot.dispatch,
+  );
+  await expect(session.advance()).rejects.toThrow("digest");
+  await expect(session.advance({ resume: true })).rejects.toThrow("digest");
+  await expect(
+    session.advance({ resume: true, reconcilePreparedWorkDigest: "wrong" }),
+  ).rejects.toThrow("digest");
+  await expect(
+    session.advance({ resume: true, reconcilePreparedWorkDigest: digest }),
+  ).rejects.toThrow("No saved authorized session");
+  expect(await h.store.read("session_a")).toBeUndefined();
+  expect(
+    (await h.runtime.registry.snapshot()).runs[binding.runId].artifacts,
+  ).toHaveLength(1);
 });
 
 test.each(["cancel", "deadline"] as const)(
