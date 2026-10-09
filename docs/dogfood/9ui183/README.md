@@ -26,15 +26,17 @@ specific differences; it cannot establish a causal winner. The historical
 
 | Arm | S09 evidence                                                                                         | S11 emphasis                                                                   |
 | --- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| B0  | Both local 179/180 playbooks in a flat bundle                                                        | Same task and exact directions                                                 |
+| B0  | Compact flat catalogue of the same sourced cases, without graph roles or paths                       | Same task and exact directions                                                 |
 | C1  | Host `retrieveDesignReferences` projection with source IDs, mechanisms, risks, and missing-role gaps | Same task and exact directions                                                 |
-| C2  | Both playbooks, with positive structural mechanisms first                                            | Purpose, hidden decisive facts, excess noise, and counterexamples foregrounded |
+| C2  | Compact catalogue with positive mechanisms foregrounded                                              | Purpose, hidden decisive facts, excess noise, and counterexamples foregrounded |
 
 The graph projection is based on declared traits in the **fixed task brief**
 before S08. It does not claim to have read a later model-generated S08 profile.
 Compare those traits against S08 before interpreting C1. C1 can omit an
 unexpected distant mechanism. The full corpus inventory, hash, and source
-ledger remain saved even where S09 sees a projection.
+ledger remain saved even where S09 sees a compact projection. The page and
+observation files enter all arms through the common S04/S08 upstream; they are
+not repeated in each S09/S11 prompt.
 
 `scripts/approach-comparison.mjs prepare <config.json>` requires a new
 `mimic init` workspace and creates all evidence, the combined plan, and a

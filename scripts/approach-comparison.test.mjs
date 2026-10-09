@@ -144,7 +144,6 @@ test("matched comparison freezes one common upstream and three isolated branches
     );
   }
   assert.deepEqual(task("s11_c2").evidenceFiles, [
-    "inputs/page.html",
     "inputs/test_compare-c2-s11.md",
   ]);
   assert.equal(manifest.retrieval.status, "ready");
@@ -155,14 +154,14 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.match(c1, /case:smarthr-table/);
   assert.match(c1, /https:\/\/smarthr\.design/);
   assert.match(c1, /One object per row with name, discriminating fields/);
-  assert.match(c1, /"from": "trait:smarthr-table"/);
+  assert.match(c1, /"from":"trait:smarthr-table"/);
   assert.match(c1, /obs:google-expressive/);
   assert.match(c1, /portfolio-limit/);
   const b0 = await readFile(
     path.join(root, manifest.arms.B0.evidencePath),
     "utf8",
   );
-  assert.match(b0, /Purpose and information amount/);
+  assert.match(b0, /Flat case catalogue/);
   assert.doesNotMatch(b0, /Host graph retrieval/);
   const orphan = {
     action: "produce-provisional",

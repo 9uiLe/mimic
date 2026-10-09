@@ -124,14 +124,12 @@ function makePlan(template, cohort, cfg) {
         original.id === "s09"
           ? [
               `inputs/${cohort}-${suffix}-s09.md`,
-              ...cfg.pageEvidenceFiles,
               `inputs/${cohort}-corpus-inventory.json`,
             ]
           : original.id === "s11"
-            ? [
-                ...cfg.pageEvidenceFiles,
-                ...(arm === "C2" ? [`inputs/${cohort}-c2-s11.md`] : []),
-              ]
+            ? arm === "C2"
+              ? [`inputs/${cohort}-c2-s11.md`]
+              : []
             : [];
       return task;
     }),
@@ -157,23 +155,57 @@ function sourceRows(sources, result) {
       claim: row.claim,
     }));
 }
+function flatCaseRows(sources, graph, assessments) {
+  return assessments.map((assessment) => ({
+    caseId: assessment.caseId,
+    caseLabel: graph.nodes.find((node) => node.id === assessment.caseId)?.label,
+    evidence: sources.evidence
+      .filter((row) => assessment.evidenceRefs.includes(row.id))
+      .map((row) => ({
+        kind: row.kind,
+        sourceUrl: row.sourceUrl,
+        author: row.author,
+        accessDate: row.accessDate,
+        claim: row.claim,
+      })),
+  }));
+}
 function referenceEvidence(
   arm,
-  corpus,
   inventory,
   result,
   sources,
   graph,
   traitIds,
+  assessments,
 ) {
   const header = `# ${arm} reference evidence\n\nAll source claims below are local paraphrases or hypotheses; follow the source URLs. Complete corpus SHA-256 inventory: ${inventory.digest}. Do not treat a case as a UI to copy.\n\n`;
-  const full = `## Product UI mechanisms\n\n${corpus.product}\n\n## Purpose and information amount\n\n${corpus.purpose}\n`;
-  if (arm === "B0") return header + full;
+  const flat = flatCaseRows(sources, graph, assessments);
+  if (arm === "B0")
+    return (
+      header +
+      "## Flat case catalogue\n\nNo task-specific graph role or path is supplied in this arm. The common upstream carries the product purpose and observed page.\n\n" +
+      JSON.stringify(flat) +
+      "\n"
+    );
   if (arm === "C2")
     return (
       header +
-      "## Foregrounded before divergence\n\nExplore distinct information architectures, operation models, and progress representations. Preserve the choice and status facts; postpone the explicit counterexample check to S11. The complete common corpus follows for audit and remains usable here.\n\n" +
-      full
+      "## Mechanisms foregrounded before divergence\n\nExplore distinct information architectures, operation models, and progress representations. Preserve choice and status facts. The non-fit check follows at S11.\n\n" +
+      JSON.stringify(
+        flat.map((item) => ({
+          ...item,
+          mechanisms: graph.nodes
+            .filter(
+              (node) =>
+                node.kind === "mechanism" &&
+                node.id.slice("mechanism:".length) ===
+                  item.caseId.slice("case:".length),
+            )
+            .map((node) => node.label),
+        })),
+      ) +
+      "\n"
     );
   const nodeIds = new Set([
     ...traitIds,
@@ -207,26 +239,22 @@ function referenceEvidence(
     "## Host graph retrieval (provisional, reviewable)\n\n" +
     "This was computed before S09 from declared traits and assessments. S09 may question its roles. Omitted cases remain in the hashed inventory and are not deemed useless.\n\n" +
     "```json\n" +
-    JSON.stringify(
-      {
-        selected: result.selected.map((item) => ({
-          caseId: item.caseId,
-          role: item.role,
-          mechanismIds: item.mechanismIds,
-          rationale: item.rationale,
-          doNotBorrow: item.doNotBorrow,
-          risks: item.risks,
-          evidenceRefs: item.evidenceRefs,
-        })),
-        exclusions: result.exclusions,
-        gaps: result.gaps,
-        graphNodes,
-        graphEdges,
-        sourceEvidence: sourceRows(sources, result),
-      },
-      null,
-      2,
-    ) +
+    JSON.stringify({
+      selected: result.selected.map((item) => ({
+        caseId: item.caseId,
+        role: item.role,
+        mechanismIds: item.mechanismIds,
+        rationale: item.rationale,
+        doNotBorrow: item.doNotBorrow,
+        risks: item.risks,
+        evidenceRefs: item.evidenceRefs,
+      })),
+      exclusions: result.exclusions,
+      gaps: result.gaps,
+      graphNodes,
+      graphEdges,
+      sourceEvidence: sourceRows(sources, result),
+    }) +
     "\n```\n"
   );
 }
@@ -265,10 +293,6 @@ async function prepare(cfg) {
   assert(Array.isArray(template), "Invalid plan template");
   const plan = makePlan(template, cohort, cfg);
   preflightPlan(plan, scopeConfig.scopes, scopeConfig.defaultScope);
-  const corpus = {
-    product: await readFile(path.join(repo, corpusFiles[3]), "utf8"),
-    purpose: await readFile(path.join(repo, corpusFiles[4]), "utf8"),
-  };
   const fileHashes = Object.fromEntries(
     await Promise.all(
       corpusFiles.map(async (name) => [
@@ -325,12 +349,12 @@ async function prepare(cfg) {
   for (const arm of arms) {
     const evidence = referenceEvidence(
       arm,
-      corpus,
       inventory,
       retrieval,
       sources,
       graph,
       cfg.traitIds,
+      cfg.assessments,
     );
     const evidencePath = `inputs/${cohort}-${arm.toLowerCase()}-s09.md`;
     written.push(await createFrozen(path.join(root, evidencePath), evidence));
@@ -338,7 +362,7 @@ async function prepare(cfg) {
       written.push(
         await createFrozen(
           path.join(root, `inputs/${cohort}-c2-s11.md`),
-          `# S11 purpose and counterexample check\n\nCompare every direction against the same decision facts: what is visible, what consequential fact is hidden, what is needless noise, and the next action. Revisit the cases' explicit non-fit conditions. This evidence was present in the common corpus at S09; it is foregrounded now.\n\n${corpus.purpose}`,
+          `# S11 purpose and counterexample check\n\nCompare every direction against the same decision facts: what is visible, what consequential fact is hidden, what is needless noise, and the next action. Revisit the cases' explicit non-fit conditions. This evidence was present in the common corpus at S09; it is foregrounded now.\n\n${JSON.stringify(graph.nodes.filter((node) => node.kind === "failure" && cfg.assessments.some((item) => item.caseId.slice(5) === node.id.slice(8))).map((node) => ({ id: node.id, label: node.label, evidenceRefs: node.evidenceRefs })))}`,
         ),
       );
     armRecords[arm] = {
