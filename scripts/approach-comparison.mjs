@@ -397,14 +397,43 @@ async function prepare(cfg) {
     written.push(
       await createFrozen(root, path.join(root, evidencePath), evidence),
     );
-    if (arm === "C2")
+    if (arm === "C2") {
+      const counterexamples = graph.nodes
+        .filter(
+          (node) =>
+            node.kind === "failure" &&
+            cfg.assessments.some(
+              (item) => item.caseId.slice(5) === node.id.slice(8),
+            ),
+        )
+        .map((node) => {
+          const caseNode = graph.nodes.find(
+            (item) => item.id === `case:${node.id.slice(8)}`,
+          );
+          return {
+            id: node.id,
+            label: node.label,
+            risks: node.risks ?? [],
+            doNotBorrow: caseNode?.doNotBorrow ?? [],
+            evidenceRefs: node.evidenceRefs,
+            sourceEvidence: sources.evidence
+              .filter((item) => node.evidenceRefs.includes(item.id))
+              .map((item) => ({
+                id: item.id,
+                sourceUrl: item.sourceUrl,
+                author: item.author,
+                claim: item.claim,
+              })),
+          };
+        });
       written.push(
         await createFrozen(
           root,
           path.join(root, `inputs/${cohort}-c2-s11.md`),
-          `# S11 purpose and counterexample check\n\nCompare every direction against the same decision facts: what is visible, what consequential fact is hidden, what is needless noise, and the next action. Revisit the cases' explicit non-fit conditions. This evidence was present in the common corpus at S09; it is foregrounded now.\n\n${JSON.stringify(graph.nodes.filter((node) => node.kind === "failure" && cfg.assessments.some((item) => item.caseId.slice(5) === node.id.slice(8))).map((node) => ({ id: node.id, label: node.label, evidenceRefs: node.evidenceRefs })))}`,
+          `# S11 purpose and counterexample check\n\nCompare every direction against the same decision facts: what is visible, what consequential fact is hidden, what is needless noise, and the next action. Revisit the cases' explicit non-fit conditions. This evidence was present in the common corpus at S09; it is foregrounded now.\n\n${JSON.stringify(counterexamples)}`,
         ),
       );
+    }
     armRecords[arm] = {
       taskIds: ["s09", "s10", "s11"].map(
         (stage) => `${stage}_${arm.toLowerCase()}`,

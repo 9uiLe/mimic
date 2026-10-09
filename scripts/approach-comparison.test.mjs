@@ -203,6 +203,13 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.match(c1, /"from":"trait:smarthr-table"/);
   assert.match(c1, /obs:google-expressive/);
   assert.match(c1, /portfolio-limit/);
+  const c2Review = await readFile(
+    path.join(root, "inputs/test_compare-c2-s11.md"),
+    "utf8",
+  );
+  assert.match(c2Review, /Emphasis can become visual noise/);
+  assert.match(c2Review, /Google brand palette/);
+  assert.match(c2Review, /hyp:google-expressive/);
   const b0 = await readFile(
     path.join(root, manifest.arms.B0.evidencePath),
     "utf8",
