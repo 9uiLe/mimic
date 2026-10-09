@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -14,10 +15,15 @@ import os from "node:os";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { preflightPlan } from "../apps/cli/dist/plan.js";
+import { canonicalJson } from "../packages/core/dist/index.js";
 import { makePlan, prepare, report } from "./approach-comparison.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const template = path.join(repo, "docs/dogfood/9ui183/plan-template.json");
+const seal = (checkpoint) => ({
+  digest: createHash("sha256").update(canonicalJson(checkpoint)).digest("hex"),
+  checkpoint,
+});
 
 test("matched comparison freezes one common upstream and three isolated branches", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-approach-test-"));
@@ -190,6 +196,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   };
   const completed = {
     action: "set-work",
+    actor: { kind: "agent", id: "orchestrator" },
     runId: manifest.runId,
     reason: 'Skill task "s09_c1" completed with verified exact outputs',
     outputs: [
@@ -198,6 +205,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   };
   const firstReviewable = {
     action: "set-work",
+    actor: { kind: "agent", id: "orchestrator" },
     runId: manifest.runId,
     reason: 'Skill task "s11_c1" completed with verified exact outputs',
     at: "2026-10-09T10:00:00.000Z",
@@ -207,11 +215,31 @@ test("matched comparison freezes one common upstream and three isolated branches
     ...firstReviewable,
     at: "2026-10-09T11:00:00.000Z",
   };
+  const unrelatedWork = {
+    action: "set-work",
+    actor: { kind: "agent", id: "operator" },
+    runId: manifest.runId,
+    reason: 'Skill task "s11_c1" completed with verified exact outputs',
+    at: "2026-10-09T09:00:00.000Z",
+    outputs: [{ artifactId: "false_review" }],
+  };
+  const unrelatedReason = {
+    ...unrelatedWork,
+    actor: { kind: "agent", id: "orchestrator" },
+    reason: 'Recorded work for Skill task "s11_c1" without completion',
+  };
   await writeFile(
     path.join(root, ".mimic/workspace.json"),
     JSON.stringify({
       registry: {
-        events: [orphan, completed, firstReviewable, laterReview],
+        events: [
+          orphan,
+          unrelatedWork,
+          unrelatedReason,
+          completed,
+          firstReviewable,
+          laterReview,
+        ],
         runs: {
           [manifest.runId]: {
             closed: false,
@@ -229,8 +257,9 @@ test("matched comparison freezes one common upstream and three isolated branches
   await mkdir(path.join(root, ".mimic/agent-sessions"));
   await writeFile(
     path.join(root, ".mimic/agent-sessions/attempt.json"),
-    JSON.stringify({
-      checkpoint: {
+    JSON.stringify(
+      seal({
+        version: 1,
         sessionId: "attempt",
         binding: {
           runId: manifest.runId,
@@ -247,8 +276,8 @@ test("matched comparison freezes one common upstream and three isolated branches
         tasks: {
           s09_b0: { phase: "rejected", rejectionReason: "preparation" },
         },
-      },
-    }),
+      }),
+    ),
   );
   const noAttemptLog = await report(cfg);
   assert.equal(noAttemptLog.binding.reasoningEffortVerified, false);
@@ -289,7 +318,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   shared.checkpoint.tasks.s09_c1 = { phase: "rejected" };
   await writeFile(
     path.join(root, ".mimic/agent-sessions/attempt.json"),
-    JSON.stringify(shared),
+    JSON.stringify(seal(shared.checkpoint)),
   );
   const mixed = await report(cfg);
   assert.deepEqual(mixed.outcomes.B0.mixedSessionIds, ["attempt"]);
@@ -299,13 +328,12 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(mixed.outcomes.C1.elapsedGenerationMs, null);
   await writeFile(
     path.join(root, ".mimic/agent-sessions/attempt.json"),
-    JSON.stringify({
-      ...shared,
-      checkpoint: {
+    JSON.stringify(
+      seal({
         ...shared.checkpoint,
         tasks: { s09_b0: shared.checkpoint.tasks.s09_b0 },
-      },
-    }),
+      }),
+    ),
   );
   const partial = JSON.parse(
     await readFile(
@@ -316,7 +344,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   partial.checkpoint.sessionId = "unlogged-attempt";
   await writeFile(
     path.join(root, ".mimic/agent-sessions/unlogged-attempt.json"),
-    JSON.stringify(partial),
+    JSON.stringify(seal(partial.checkpoint)),
   );
   const incompleteTiming = await report(cfg);
   assert.equal(incompleteTiming.outcomes.B0.elapsedGenerationMs, null);
@@ -325,9 +353,11 @@ test("matched comparison freezes one common upstream and three isolated branches
   const mismatched = JSON.parse(await readFile(sessionFile, "utf8"));
   mismatched.checkpoint.binding.settings.model = "different-model";
   await writeFile(sessionFile, JSON.stringify(mismatched));
+  await assert.rejects(report(cfg), /Invalid checkpoint envelope/);
+  await writeFile(sessionFile, JSON.stringify(seal(mismatched.checkpoint)));
   await assert.rejects(report(cfg), /Session binding differs/);
   mismatched.checkpoint.binding.settings.model = cfg.model;
-  await writeFile(sessionFile, JSON.stringify(mismatched));
+  await writeFile(sessionFile, JSON.stringify(seal(mismatched.checkpoint)));
   const schemaFile = path.join(
     root,
     "schemas/agent/codex-submission-output.schema.json",

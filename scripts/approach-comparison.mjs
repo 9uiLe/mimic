@@ -584,7 +584,10 @@ async function report(cfg) {
     events.filter(
       (event) =>
         event.action === "set-work" &&
-        event.reason?.includes(`Skill task "${taskId}"`),
+        event.actor?.kind === "agent" &&
+        event.actor?.id === "orchestrator" &&
+        event.reason ===
+          `Skill task ${JSON.stringify(taskId)} completed with verified exact outputs`,
     );
   const sessions = [];
   try {
@@ -596,6 +599,19 @@ async function report(cfg) {
         path.join(root, ".mimic/agent-sessions", name),
       );
       const checkpoint = saved.checkpoint;
+      assert(
+        checkpoint &&
+          saved.digest === sha(canonicalJson(checkpoint)) &&
+          checkpoint.version === 1 &&
+          checkpoint.sessionId === name.slice(0, -5) &&
+          Number.isSafeInteger(checkpoint.generationCount) &&
+          checkpoint.generationCount >= 0 &&
+          ["ready", "stopped", "complete"].includes(checkpoint.status) &&
+          checkpoint.tasks &&
+          typeof checkpoint.tasks === "object" &&
+          !Array.isArray(checkpoint.tasks),
+        `Invalid checkpoint envelope: ${name}`,
+      );
       if (checkpoint?.binding?.runId !== manifest.runId) continue;
       assert(
         checkpoint.binding.planDigest === expectedPlanDigest &&
