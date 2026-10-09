@@ -20,7 +20,7 @@ S09 は SmartHR table を近接、teamLab object・GitHub Actions Run・MediaWik
 
 ## 実測結果
 
-[9UI-183 の試行履歴](../9ui183/attempt-history.md) と機械集計 [v9](../9ui183/v9-report.json)、[v10](../9ui183/v10-report.json)、[v11](../9ui183/v11-report.json)、[v12](../9ui183/v12-report.json) を参照。各 Run の正確な artifact ID、lock digest、入力・Skill・schema hash、モデル設定、受理・棄却状態は report にある。v9 は schema hash を固定する前の試行。v10～v12 は固定済み。四 cohort のモデル・brief が異なるため、横に並べた経過時間を方式間の速度差と解釈できない。
+[9UI-183 の試行履歴](../9ui183/attempt-history.md) と機械集計 [v9](../9ui183/v9-report.json)、[v10](../9ui183/v10-report.json)、[v11](../9ui183/v11-report.json)、[v12](../9ui183/v12-report.json) を参照。各 Run の正確な artifact ID、lock digest、入力・Skill・schema hash、モデル設定、受理・棄却状態は report にある。v9 は schema hash を固定する前の試行。v10～v12 は固定済み。四 cohort のモデル・brief が異なり、当時の manifest は ignored `dist/` の compiled Core/CLI modules も固定していなかったため、横に並べた経過時間を方式間の速度差と解釈できない。9UI-183 の更新版ハーネスは新規 cohort で compiled modules を固定する。
 
 | cohort                   | 共通 Task の試行・受理                        | B0 の試行・受理                         | C1 / C2 | 観測した停止                                                                                                |
 | ------------------------ | --------------------------------------------- | --------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------- |
