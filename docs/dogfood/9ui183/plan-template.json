@@ -1,0 +1,526 @@
+[
+  {
+    "id": "s04",
+    "skillId": "mimic.s04.system-capability-extractor",
+    "outputType": "system-capability",
+    "scopeOwnerId": "org_local",
+    "dependsOn": [],
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "product-context",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "user-tasks",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "implementation-evidence",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "system-documentation",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "executable-evidence",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "existing-capability",
+              "kind": "artifact",
+              "artifactType": "system-capability",
+              "schemaVersion": "1.0.0"
+            }
+          ]
+        }
+      ]
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS",
+    "additionalOutputTypes": ["system-request"]
+  },
+  {
+    "id": "s01",
+    "skillId": "mimic.s01.product-definition",
+    "outputType": "product-definition",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s04"],
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "user-tasks",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "system-context",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        },
+        {
+          "name": "research",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "human-intent",
+              "kind": "human-brief"
+            },
+            {
+              "name": "existing-definition",
+              "kind": "artifact",
+              "artifactType": "product-definition",
+              "schemaVersion": "1.0.0"
+            }
+          ]
+        }
+      ]
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS",
+    "additionalOutputTypes": ["decision"]
+  },
+  {
+    "id": "s02",
+    "skillId": "mimic.s02.user-task-modeling",
+    "outputType": "user-task-model",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s04", "s01"],
+    "inputs": {
+      "required": [],
+      "optional": [
+        {
+          "name": "system-context",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        },
+        {
+          "name": "existing-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "research",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": [
+        {
+          "oneOf": [
+            {
+              "name": "product-definition",
+              "kind": "artifact",
+              "artifactType": "product-definition",
+              "schemaVersion": "1.0.0",
+              "refsFromTask": "s01"
+            },
+            {
+              "name": "bounded-product-brief",
+              "kind": "human-brief"
+            }
+          ]
+        },
+        {
+          "oneOf": [
+            {
+              "name": "task-evidence",
+              "kind": "evidence-file"
+            },
+            {
+              "name": "explicit-task-assumptions",
+              "kind": "human-brief"
+            }
+          ]
+        }
+      ]
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS"
+  },
+  {
+    "id": "s05",
+    "skillId": "mimic.s05.ui-contract-manager",
+    "outputType": "product-ui-contract",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s04", "s01", "s02"],
+    "inputs": {
+      "required": [
+        {
+          "name": "product-definition",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s01"
+        },
+        {
+          "name": "user-task-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s02"
+        },
+        {
+          "name": "system-capability",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        }
+      ],
+      "optional": [
+        {
+          "name": "brand",
+          "kind": "artifact",
+          "artifactType": "brand",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "existing-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "approved-rules",
+          "kind": "artifact",
+          "artifactType": "design-system-asset",
+          "schemaVersion": "1.0.0"
+        }
+      ],
+      "alternatives": []
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS",
+    "additionalOutputTypes": ["system-request"]
+  },
+  {
+    "id": "s07",
+    "skillId": "mimic.s07.experience-architecture",
+    "outputType": "experience-domain",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s04", "s01", "s02", "s05"],
+    "inputs": {
+      "required": [
+        {
+          "name": "product-ui-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s05"
+        },
+        {
+          "name": "user-task-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s02"
+        },
+        {
+          "name": "product-definition",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s01"
+        }
+      ],
+      "optional": [
+        {
+          "name": "system-capability",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        },
+        {
+          "name": "existing-domain",
+          "kind": "artifact",
+          "artifactType": "experience-domain",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "existing-journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0"
+        }
+      ],
+      "alternatives": []
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS",
+    "additionalOutputTypes": ["journey", "decision"]
+  },
+  {
+    "id": "s08",
+    "skillId": "mimic.s08.design-problem-profiler",
+    "outputType": "problem-profile",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s02", "s04", "s05", "s07"],
+    "inputs": {
+      "required": [
+        {
+          "name": "user-task-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s02"
+        },
+        {
+          "name": "product-ui-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s05"
+        },
+        {
+          "name": "experience-domain",
+          "kind": "artifact",
+          "artifactType": "experience-domain",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s07"
+        }
+      ],
+      "optional": [
+        {
+          "name": "journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s07"
+        },
+        {
+          "name": "system-capability",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        },
+        {
+          "name": "task-evidence",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": []
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS"
+  },
+  {
+    "id": "s09",
+    "skillId": "mimic.s09.design-space-explorer",
+    "outputType": "reference-selection",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s05", "s07", "s08"],
+    "inputs": {
+      "required": [
+        {
+          "name": "problem-profile",
+          "kind": "artifact",
+          "artifactType": "problem-profile",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s08"
+        },
+        {
+          "name": "product-ui-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s05"
+        },
+        {
+          "name": "reference-source",
+          "kind": "evidence-file"
+        }
+      ],
+      "optional": [
+        {
+          "name": "experience-domain",
+          "kind": "artifact",
+          "artifactType": "experience-domain",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s07"
+        },
+        {
+          "name": "journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0"
+        }
+      ],
+      "alternatives": []
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS"
+  },
+  {
+    "id": "s10",
+    "skillId": "mimic.s10.design-direction-generator",
+    "outputType": "design-direction",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s04", "s05", "s08", "s09"],
+    "inputs": {
+      "required": [
+        {
+          "name": "problem-profile",
+          "kind": "artifact",
+          "artifactType": "problem-profile",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s08"
+        },
+        {
+          "name": "product-ui-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s05"
+        },
+        {
+          "name": "reference-selection",
+          "kind": "artifact",
+          "artifactType": "reference-selection",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s09"
+        }
+      ],
+      "optional": [
+        {
+          "name": "brand",
+          "kind": "artifact",
+          "artifactType": "brand",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "system-capability",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        },
+        {
+          "name": "prior-direction",
+          "kind": "artifact",
+          "artifactType": "design-direction",
+          "schemaVersion": "1.0.0"
+        }
+      ],
+      "alternatives": []
+    },
+    "intent": "create",
+    "authority": "AUTONOMOUS"
+  },
+  {
+    "id": "s11",
+    "skillId": "mimic.s11.direction-evaluator",
+    "outputType": "evaluation",
+    "scopeOwnerId": "org_local",
+    "dependsOn": ["s01", "s02", "s04", "s05", "s08", "s09", "s10"],
+    "inputs": {
+      "required": [
+        {
+          "name": "design-direction",
+          "kind": "artifact",
+          "artifactType": "design-direction",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s10"
+        },
+        {
+          "name": "problem-profile",
+          "kind": "artifact",
+          "artifactType": "problem-profile",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s08"
+        },
+        {
+          "name": "product-ui-contract",
+          "kind": "artifact",
+          "artifactType": "product-ui-contract",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s05"
+        }
+      ],
+      "optional": [
+        {
+          "name": "product-definition",
+          "kind": "artifact",
+          "artifactType": "product-definition",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s01"
+        },
+        {
+          "name": "user-task-model",
+          "kind": "artifact",
+          "artifactType": "user-task-model",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s02"
+        },
+        {
+          "name": "brand",
+          "kind": "artifact",
+          "artifactType": "brand",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "journey",
+          "kind": "artifact",
+          "artifactType": "journey",
+          "schemaVersion": "1.0.0"
+        },
+        {
+          "name": "system-capability",
+          "kind": "artifact",
+          "artifactType": "system-capability",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s04"
+        },
+        {
+          "name": "reference-selection",
+          "kind": "artifact",
+          "artifactType": "reference-selection",
+          "schemaVersion": "1.0.0",
+          "refsFromTask": "s09"
+        },
+        {
+          "name": "evaluation-evidence",
+          "kind": "evidence-file"
+        }
+      ],
+      "alternatives": []
+    },
+    "intent": "create",
+    "authority": "PROPOSE_ONLY",
+    "additionalOutputTypes": ["decision"]
+  }
+]
