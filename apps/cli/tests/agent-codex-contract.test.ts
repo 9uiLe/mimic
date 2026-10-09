@@ -999,6 +999,8 @@ async function fakeRuntime(
     malformed?: boolean;
     metadataWait?: boolean;
     spawnFailure?: boolean;
+    wire?: string;
+    stderr?: string;
   } = {},
 ) {
   if (!options.env.HOME) options.env = { HOME: options.workspace };
@@ -1105,7 +1107,7 @@ else if(args[0]==='app-server'){
   });
 }else if(args[0]==='exec'){
   if(!args.includes('features.code_mode_host={enabled=false,disable_in_process_fallback=false}')||!args.includes('notify=[]')||!args.includes('default_permissions="mimic"')||args.includes('--sandbox')||args.includes('--last'))process.exit(96);
-  let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{fs.writeFileSync(${JSON.stringify(path.join(options.workspace, "execution.json"))},JSON.stringify({model:args[args.indexOf('--model')+1],input})); ${behavior.hang ? "setInterval(()=>{},1000);" : `process.stdout.write(${JSON.stringify(behavior.malformed ? "{malformed}\n" : protocol(behavior.output ?? final))});process.exitCode=${behavior.exit ?? 0};`} });
+  let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{fs.writeFileSync(${JSON.stringify(path.join(options.workspace, "execution.json"))},JSON.stringify({model:args[args.indexOf('--model')+1],input})); ${behavior.hang ? "setInterval(()=>{},1000);" : `process.stderr.write(${JSON.stringify(behavior.stderr ?? "")});process.stdout.write(${JSON.stringify(behavior.wire ?? (behavior.malformed ? "{malformed}\n" : protocol(behavior.output ?? final)))});process.exitCode=${behavior.exit ?? 0};`} });
 }else process.exit(99);
 `,
   );
@@ -1263,18 +1265,30 @@ test.each([{ malformed: true }, { exit: 4 }, { output: "not JSON" }])(
     await fakeRuntime(options, undefined, behavior);
     const input = request(options.workspace),
       permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
-    const result = await events(
-      await new CodexExecutor(options).startAuthorizedOnce(
-        input,
-        await schema(options),
-        permit,
-      ),
+    const handle = await new CodexExecutor(options).startAuthorizedOnce(
+      input,
+      await schema(options),
+      permit,
     );
+    const result = await events(handle);
     expect(result.at(-1)).toMatchObject({
       type: "stopped",
       reason: "unknown-outcome",
     });
     expect(result.some((event) => event.type === "completed")).toBe(false);
+    expect(handle.diagnostics?.()).toMatchObject({
+      backendReach: "unknown",
+      stage: "generation",
+      processKind: "generation",
+      process: { spawned: true, settled: true },
+      decoder: {
+        failure: behavior.malformed
+          ? "json"
+          : behavior.output
+            ? "invalid-output"
+            : "nonzero-exit",
+      },
+    });
   },
 );
 test("concurrent start attempts consume the permit before metadata and dispatch exactly once", async () => {
@@ -1471,9 +1485,8 @@ test("spawn failure has a normalized terminal and cannot restore the one-shot pe
     permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input),
     executor = new CodexExecutor(options),
     schemaPath = await schema(options);
-  const result = await events(
-    await executor.startAuthorizedOnce(input, schemaPath, permit),
-  );
+  const handle = await executor.startAuthorizedOnce(input, schemaPath, permit);
+  const result = await events(handle);
   expect(result).toEqual([
     { type: "started", requestId: input.requestId },
     {
@@ -1482,9 +1495,164 @@ test("spawn failure has a normalized terminal and cannot restore the one-shot pe
       resumeCondition: "reconcile-before-retry",
     },
   ]);
+  expect(handle.diagnostics?.()).toMatchObject({
+    stage: "generation",
+    processKind: "generation",
+    backendReach: "unknown",
+    process: {
+      spawned: false,
+      settled: true,
+      exitCode: null,
+      errorCode: "ENOENT",
+      failure: "spawn-error",
+    },
+  });
   await expect(
     executor.startAuthorizedOnce(input, schemaPath, permit),
   ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+});
+
+test.each([
+  {
+    wire: "",
+    stderr: "private stderr account-token",
+    exit: 7,
+    failure: "nonzero-exit",
+    thread: false,
+  },
+  {
+    wire:
+      JSON.stringify({ type: "thread.started", thread_id: "private-thread" }) +
+      "\n",
+    failure: "missing-terminal",
+    thread: true,
+  },
+])(
+  "production diagnostics distinguish local exit/EOF without asserting backend contact: %j",
+  async (behavior) => {
+    const options = await fakeCodex();
+    await fakeRuntime(options, undefined, behavior);
+    const input = request(options.workspace);
+    const permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+    const executor = new CodexExecutor(options);
+    const handle = await executor.startAuthorizedOnce(
+      input,
+      await schema(options),
+      permit,
+    );
+    expect((await events(handle)).at(-1)).toMatchObject({
+      type: "stopped",
+      reason: "unknown-outcome",
+    });
+    const diagnostic = handle.diagnostics?.();
+    expect(diagnostic).toMatchObject({
+      backendReach: "unknown",
+      process: { spawned: true, settled: true, exitCode: behavior.exit ?? 0 },
+      decoder: {
+        threadStarted: behavior.thread,
+        outputObserved: false,
+        terminalObserved: false,
+        finished: true,
+        failure: behavior.failure,
+      },
+    });
+    expect(JSON.stringify(diagnostic)).not.toMatch(
+      /private stderr|account-token|private-thread|output_tokens|requestId|workspace/,
+    );
+    await expect(
+      executor.startAuthorizedOnce(input, await schema(options), permit),
+    ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+  },
+);
+
+test.each([
+  { bytes: Buffer.from([0xff]), failure: "utf8" },
+  {
+    bytes: Buffer.from('{"type":"private-unknown-event"}\n'),
+    failure: "protocol",
+  },
+  { bytes: Buffer.from("{private-malformed}\n"), failure: "json" },
+  { bytes: Buffer.from("x".repeat(65)), failure: "output-limit" },
+])(
+  "decoder keeps the first safe failure category: $failure",
+  ({ bytes, failure }) => {
+    const decoder = new CodexJsonlDecoder("private-request", 64);
+    expect(() => decoder.push(bytes)).toThrow("unknown-outcome");
+    decoder.finish(9);
+    expect(decoder.diagnostics()).toMatchObject({ failed: true, failure });
+    expect(JSON.stringify(decoder.diagnostics())).not.toContain("private");
+  },
+);
+
+test("profile rejection clears old login-process diagnostics; safety rejection observes its own metadata process", async () => {
+  for (const stage of ["generation-profile", "safety-metadata"] as const) {
+    const options = await fakeCodex();
+    await fakeRuntime(
+      options,
+      stage === "safety-metadata"
+        ? (config) => {
+            config.notify = ["private-notify"];
+          }
+        : undefined,
+    );
+    const input = request(options.workspace);
+    const permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+    const executor = new CodexExecutor(options);
+    try {
+      await executor.startAuthorizedOnce(
+        input,
+        stage === "generation-profile"
+          ? "missing-schema.json"
+          : await schema(options),
+        permit,
+      );
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toMatchObject({
+        reason: "unsupported",
+        diagnostics: { stage, backendReach: "unknown" },
+      });
+      const diagnostic = (error as { diagnostics: Record<string, unknown> })
+        .diagnostics;
+      if (stage === "generation-profile") {
+        expect(diagnostic.process).toBeUndefined();
+        expect(diagnostic.processKind).toBeUndefined();
+      } else
+        expect(diagnostic).toMatchObject({
+          processKind: "metadata",
+          process: { spawned: true, settled: true, exitCode: 0 },
+        });
+      expect(JSON.stringify(diagnostic)).not.toContain("private-notify");
+    }
+    expect(
+      (await calls(options)).some((args: string[]) => args[0] === "exec"),
+    ).toBe(false);
+  }
+});
+
+test("observed candidate text without terminal remains withheld and backend contact unknown", () => {
+  const decoder = new CodexJsonlDecoder("private-request");
+  const incomplete =
+    protocol().trimEnd().split("\n").slice(0, -1).join("\n") + "\n";
+  expect(
+    decoder
+      .push(Buffer.from(incomplete))
+      .some((event) => event.type === "completed"),
+  ).toBe(false);
+  expect(decoder.finish(0)).toMatchObject([
+    { type: "stopped", reason: "unknown-outcome" },
+  ]);
+  expect(decoder.diagnostics()).toMatchObject({
+    threadStarted: true,
+    turnStarted: true,
+    outputObserved: true,
+    terminalObserved: false,
+    finished: true,
+    failure: "missing-terminal",
+  });
+  expect(JSON.stringify(decoder.diagnostics())).not.toMatch(
+    /private-request|private reasoning|output_tokens/,
+  );
 });
 
 test("managed requirements override is rejected independently of a safe raw config snapshot", async () => {

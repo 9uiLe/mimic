@@ -10,6 +10,8 @@ import {
   type AgentExecutor,
   type ExecutionRequest,
   type StopReason,
+  sanitizeExecutionDiagnostics,
+  type ExecutionDiagnostics,
 } from "./executor.js";
 import {
   isAuthorizedSessionDispatch,
@@ -81,6 +83,7 @@ interface TaskCheckpoint {
   phase: "executing" | "prepared" | "accepted" | "blocked";
   work?: SavedWork;
   outputRefs?: readonly ExactArtifactRef[];
+  diagnostics?: ExecutionDiagnostics;
 }
 export interface SessionCheckpoint {
   version: 1;
@@ -277,7 +280,9 @@ export class FileSessionStore {
               task.phase,
             ) ||
             (task.phase !== "executing" && !task.work) ||
-            (task.phase === "accepted" && !Array.isArray(task.outputRefs))
+            (task.phase === "accepted" && !Array.isArray(task.outputRefs)) ||
+            (task.diagnostics !== undefined &&
+              !sanitizeExecutionDiagnostics(task.diagnostics))
           )
             throw new Error("Invalid task checkpoint");
         }
@@ -291,6 +296,18 @@ export class FileSessionStore {
     }
   }
   async write(checkpoint: SessionCheckpoint): Promise<void> {
+    checkpoint = {
+      ...checkpoint,
+      tasks: Object.fromEntries(
+        Object.entries(checkpoint.tasks).map(([id, task]) => {
+          const raw = task.diagnostics;
+          const diagnostics = sanitizeExecutionDiagnostics(raw);
+          if (raw !== undefined && !diagnostics)
+            throw new Error("Invalid task diagnostics");
+          return [id, { ...task, diagnostics }];
+        }),
+      ),
+    };
     if (!identifier.test(checkpoint.sessionId))
       throw new Error("Invalid session ID");
     const directory = await this.directoryPath();
@@ -394,6 +411,7 @@ export class AgentSession {
         inputRefs: task.binding.inputRefs,
         outputRefs: task.outputRefs,
         work: task.work,
+        diagnostics: sanitizeExecutionDiagnostics(task.diagnostics),
       })),
       next:
         state?.stop === "question"
@@ -438,7 +456,19 @@ export class AgentSession {
         };
         await this.store.write(state);
       }
+      let diagnosticTask: TaskCheckpoint | undefined;
+      let readDiagnostics: (() => unknown) | undefined;
+      const captureDiagnostics = () => {
+        try {
+          const diagnostic = sanitizeExecutionDiagnostics(readDiagnostics?.());
+          if (diagnosticTask && diagnostic)
+            diagnosticTask.diagnostics = diagnostic;
+        } catch {
+          /* Untrusted adapter telemetry never changes stop semantics. */
+        }
+      };
       const stop = async (reason: SessionStop) => {
+        captureDiagnostics();
         state!.status = "stopped";
         state!.stop = reason;
         await this.store.write(state!);
@@ -541,7 +571,14 @@ export class AgentSession {
         state.tasks[task.binding.taskId] = {
           binding: structuredClone(task.binding),
           phase: "executing",
+          diagnostics: {
+            version: 1,
+            stage: "dispatch",
+            backendReach: "unknown",
+          },
         };
+        diagnosticTask = state.tasks[task.binding.taskId];
+        readDiagnostics = undefined;
         state.generationCount++;
         await this.store.write(state);
         if (this.cancelled) return stop("cancelled");
@@ -558,6 +595,7 @@ export class AgentSession {
         const starting = this.authorizedDispatch
           ? this.authorizedDispatch.start(request, startupAbort.signal)
           : startExecution(this.executor, request);
+        readDiagnostics = () => this.authorizedDispatch?.diagnostics?.();
         let startTimer: ReturnType<typeof setTimeout> | undefined;
         const handle = await Promise.race([
           starting,
@@ -576,6 +614,7 @@ export class AgentSession {
           return stop("timeout");
         }
         this.cancelExecution = handle.cancel;
+        readDiagnostics = () => handle.diagnostics?.();
         this.startupAbort = undefined;
         const iterator = handle.events[Symbol.asyncIterator]();
         let output: string | undefined;
@@ -650,6 +689,7 @@ export class AgentSession {
           backendStop = "unknown-outcome";
         } finally {
           this.cancelExecution = undefined;
+          captureDiagnostics();
         }
         if (backendStop || output === undefined || this.cancelled)
           return stop(

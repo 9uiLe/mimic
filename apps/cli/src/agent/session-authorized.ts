@@ -16,6 +16,7 @@ import {
  * confirmed subscription-only entitlement. It is never decoded from JSON. */
 export interface AuthorizedSessionDispatch {
   readonly policy: "authorized-existing-credit-risk-once";
+  diagnostics?(): unknown;
   start(
     request: ExecutionRequest,
     signal?: AbortSignal,
@@ -42,16 +43,29 @@ export function createAuthorizedCodexSessionDispatch(
   let attempted = false;
   const dispatch: AuthorizedSessionDispatch = Object.freeze({
     policy: "authorized-existing-credit-risk-once" as const,
+    diagnostics: () =>
+      executor.diagnostics() ??
+      (attempted
+        ? { version: 1, stage: "authorization", backendReach: "unknown" }
+        : undefined),
     start: (request: ExecutionRequest, signal?: AbortSignal) =>
       containExecution(request, async () => {
         if (attempted) throw new ExecutorFailure("billing-unconfirmed");
         attempted = true;
         if (signal?.aborted) throw new ExecutorFailure("cancelled");
-        const permit = await createCodexCreditRiskPermit(
-          decision,
-          request,
-          signal,
-        );
+        let permit;
+        try {
+          permit = await createCodexCreditRiskPermit(decision, request, signal);
+        } catch (error) {
+          throw new ExecutorFailure(
+            error instanceof ExecutorFailure ? error.reason : "unknown-outcome",
+            {
+              version: 1,
+              stage: "authorization",
+              backendReach: "unknown",
+            },
+          );
+        }
         return executor.startAuthorizedOnce(
           request,
           outputSchemaPath,

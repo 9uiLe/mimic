@@ -45,6 +45,9 @@ import {
   type AgentExecutor,
   type ExecutorEvent,
   type ExecutionRequest,
+  sanitizeExecutionDiagnostics,
+  ExecutorFailure,
+  type ExecutionDiagnostics,
 } from "../src/agent/executor.js";
 
 const repo = path.resolve(
@@ -93,6 +96,31 @@ const ref: ExactArtifactRef = {
   lockDigest: `sha256:${digest}`,
 };
 const limits = { maxGenerations: 8, timeoutMs: 1000, maxOutputBytes: 10000 };
+const safeDiagnostic: ExecutionDiagnostics = {
+  version: 1,
+  stage: "generation",
+  backendReach: "unknown",
+  processKind: "generation",
+  process: {
+    spawned: true,
+    settled: true,
+    exitCode: 7,
+    signal: null,
+    stdoutBytes: 0,
+    stderrBytes: 24,
+    errorCode: "none",
+    failure: "nonzero-exit",
+  },
+  decoder: {
+    threadStarted: false,
+    turnStarted: false,
+    outputObserved: false,
+    terminalObserved: false,
+    finished: true,
+    failed: false,
+    failure: "nonzero-exit",
+  },
+};
 function fake(
   output: string | ((request: ExecutionRequest) => ExecutorEvent[]),
 ) {
@@ -288,6 +316,280 @@ test("unknown outcome requires reconciliation, and changed inputs/model require 
   expect((await session.advance({ resume: true })).stop).toBe(
     "reservation-invalid",
   );
+});
+
+test("safe failed-process diagnostics survive separate production resume/inspect without launch or raw data", async () => {
+  const h = await staticHarness();
+  const executor = fake((request) => [
+    { type: "started", requestId: request.requestId },
+    {
+      type: "stopped",
+      reason: "unknown-outcome",
+      resumeCondition: "reconcile-before-retry",
+    },
+  ]);
+  const start = executor.start;
+  executor.start = vi.fn(async (request) => ({
+    ...(await start(request)),
+    diagnostics: () => safeDiagnostic,
+  }));
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    executor,
+    limits,
+  ).advance();
+  expect(state.stop).toBe("unknown-outcome");
+  expect(state.generationCount).toBe(1);
+  expect(state.tasks.first.diagnostics).toEqual(safeDiagnostic);
+  const before = await readFile(
+    path.join(h.store.directory, "session_a.json"),
+    "utf8",
+  );
+  const workspaceBefore = await readFile(
+    path.join(h.root, ".mimic/workspace.json"),
+    "utf8",
+  );
+  const configuration = path.join(h.root, "diagnostic-config.json");
+  await writeFile(
+    configuration,
+    JSON.stringify({
+      workspace: h.root,
+      executable: path.join(h.root, "missing-private-runtime"),
+      runId: binding.runId,
+      sessionId: "session_a",
+      packages: { first: "skill" },
+      model: binding.settings.model,
+    }),
+  );
+  for (const command of ["resume", "inspect"]) {
+    const child = spawnSync(
+      process.execPath,
+      [
+        path.join(repo, "apps/cli/dist/agent/session-main.js"),
+        command,
+        "--config",
+        configuration,
+      ],
+      { encoding: "utf8" },
+    );
+    expect(child.status, child.stderr).toBe(0);
+    const inspected = JSON.parse(child.stdout);
+    expect(inspected).toMatchObject({
+      stop: "unknown-outcome",
+      tasks: [{ phase: "executing", diagnostics: safeDiagnostic }],
+    });
+    expect(child.stdout).not.toMatch(
+      /private-runtime|Private prompt|stderr"|stdout"|output_tokens/,
+    );
+  }
+  expect(executor.start).toHaveBeenCalledOnce();
+  expect(
+    await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+  ).toBe(before);
+  expect(
+    await readFile(path.join(h.root, ".mimic/workspace.json"), "utf8"),
+  ).toBe(workspaceBefore);
+});
+
+test.each([
+  "extra-key",
+  "unknown-stage",
+  "unknown-signal",
+  "negative",
+  "oversized",
+  "nan",
+  "infinity",
+  "raw-decoder",
+  "getter",
+])(
+  "untrusted diagnostic metadata is discarded before checkpoint: %s",
+  async (kind) => {
+    const diagnostic = structuredClone(safeDiagnostic) as unknown as Record<
+      string,
+      unknown
+    >;
+    const process = diagnostic.process as Record<string, unknown>;
+    const decoder = diagnostic.decoder as Record<string, unknown>;
+    if (kind === "extra-key") diagnostic.stderr = "private-secret";
+    if (kind === "unknown-stage") diagnostic.stage = "private-secret";
+    if (kind === "unknown-signal") process.signal = "private-secret";
+    if (kind === "negative") process.stderrBytes = -1;
+    if (kind === "oversized") process.stderrBytes = 16 * 1024 * 1024 + 1;
+    if (kind === "nan") process.stderrBytes = NaN;
+    if (kind === "infinity") process.stderrBytes = Infinity;
+    if (kind === "raw-decoder") decoder.eventType = "private-secret";
+    if (kind === "getter")
+      Object.defineProperty(diagnostic, "stage", {
+        get: () => "private-secret",
+        enumerable: true,
+      });
+    expect(sanitizeExecutionDiagnostics(diagnostic)).toBeUndefined();
+    const h = await harness();
+    const executor = fake((request) => [
+      { type: "started", requestId: request.requestId },
+    ]);
+    const start = executor.start;
+    executor.start = vi.fn(async (request) => ({
+      ...(await start(request)),
+      diagnostics: () => diagnostic,
+    }));
+    const state = await new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      executor,
+      limits,
+    ).advance();
+    expect(state.stop).toBe("unknown-outcome");
+    expect(state.tasks.first.diagnostics).toEqual({
+      version: 1,
+      stage: "dispatch",
+      backendReach: "unknown",
+    });
+    expect(
+      await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+    ).not.toContain("private-secret");
+  },
+);
+
+test("descriptor snapshots ignore Proxy get traps and checkpoint writes persist only projected values", async () => {
+  const payload = structuredClone(safeDiagnostic);
+  const trap = vi.fn(() => "private-secret");
+  payload.process = new Proxy(payload.process!, { get: trap });
+  const projected = sanitizeExecutionDiagnostics(payload)!;
+  expect(projected).toEqual(safeDiagnostic);
+  expect(trap).not.toHaveBeenCalled();
+  const h = await harness();
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    fake("answer"),
+    limits,
+  ).advance();
+  state.tasks.first.diagnostics = payload;
+  await h.store.write(state);
+  expect((await h.store.read("session_a"))!.tasks.first.diagnostics).toEqual(
+    safeDiagnostic,
+  );
+  expect(
+    await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+  ).not.toContain("private-secret");
+  expect(trap).not.toHaveBeenCalled();
+});
+
+test("checkpoint read/write reject forged diagnostics and custom-store inspect still projects safely", async () => {
+  const h = await harness();
+  const session = new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    fake("answer"),
+    limits,
+  );
+  const state = await session.advance();
+  const before = await readFile(
+    path.join(h.store.directory, "session_a.json"),
+    "utf8",
+  );
+  state.tasks.first.diagnostics = {
+    ...safeDiagnostic,
+    stderr: "private-secret",
+  } as ExecutionDiagnostics;
+  await expect(h.store.write(state)).rejects.toThrow(
+    "Invalid task diagnostics",
+  );
+  expect(
+    await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+  ).toBe(before);
+  await writeFile(
+    path.join(h.store.directory, "session_a.json"),
+    JSON.stringify({ checkpoint: state, digest: sessionDigest(state) }),
+  );
+  await expect(h.store.read("session_a")).rejects.toThrow(
+    "Invalid task checkpoint",
+  );
+  vi.spyOn(h.store, "read").mockResolvedValue(state);
+  expect(JSON.stringify(await session.inspect())).not.toContain(
+    "private-secret",
+  );
+});
+
+test("pre-handle authorization failure has its own stage and cannot borrow a claimed process diagnostic", async () => {
+  const h = await harness();
+  const decision = {
+    consumeUserDecision: vi.fn(async () => {
+      throw new ExecutorFailure("unknown-outcome", safeDiagnostic);
+    }),
+  };
+  const dispatch = createAuthorizedCodexSessionDispatch(
+    { executable: process.execPath, workspace: h.root, env: {} },
+    "schema.json",
+    decision,
+  );
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    dispatch.executor,
+    { ...limits, maxGenerations: 1 },
+    dispatch.dispatch,
+  ).advance();
+  expect(state.stop).toBe("unknown-outcome");
+  expect(state.tasks.first.diagnostics).toEqual({
+    version: 1,
+    stage: "authorization",
+    backendReach: "unknown",
+  });
+  await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    dispatch.executor,
+    { ...limits, maxGenerations: 1 },
+    dispatch.dispatch,
+  ).advance({ resume: true });
+  expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+});
+
+test("startup error diagnostic accessor exceptions remain contained and private", async () => {
+  const h = await harness();
+  const executor = fake("unused");
+  executor.start = vi.fn(async () => {
+    const error = new ExecutorFailure("unknown-outcome");
+    Object.defineProperty(error, "diagnostics", {
+      get: () => {
+        throw new Error("private-secret");
+      },
+    });
+    throw error;
+  });
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    executor,
+    limits,
+  ).advance();
+  expect(state.stop).toBe("unknown-outcome");
+  expect(state.tasks.first.diagnostics).toEqual({
+    version: 1,
+    stage: "dispatch",
+    backendReach: "unknown",
+  });
+  expect(
+    JSON.stringify(
+      await new AgentSession(
+        "session_a",
+        h.store,
+        h.ports,
+        executor,
+        limits,
+      ).inspect(),
+    ),
+  ).not.toContain("private-secret");
 });
 test("human question stays pending; answering through trusted ports allows only unfinished work", async () => {
   const h = await harness(),
@@ -1726,6 +2028,11 @@ test.each(["cancel", "deadline"] as const)(
     expect(signal?.aborted).toBe(true);
     release();
     if (kind === "cancel") expect((await advancing).stop).toBe("cancelled");
+    expect((await h.store.read("session_a"))!.tasks.first.diagnostics).toEqual({
+      version: 1,
+      stage: "authorization",
+      backendReach: "unknown",
+    });
     const request = {
       requestId: "another",
       workspace: h.root,

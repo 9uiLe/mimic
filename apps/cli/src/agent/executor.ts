@@ -63,6 +63,237 @@ export type ExecutorEvent =
 export interface ExecutionHandle {
   events: AsyncIterable<ExecutorEvent>;
   cancel(): Promise<void>;
+  /** Untrusted adapter telemetry; consumers must sanitize it before persistence. */
+  diagnostics?(): unknown;
+}
+export interface ProcessDiagnostics {
+  spawned: boolean;
+  settled: boolean;
+  exitCode: number | null;
+  signal:
+    | "SIGTERM"
+    | "SIGKILL"
+    | "SIGINT"
+    | "SIGABRT"
+    | "SIGSEGV"
+    | "SIGPIPE"
+    | "other"
+    | null;
+  stdoutBytes: number;
+  stderrBytes: number;
+  errorCode: "none" | "ENOENT" | "EACCES" | "EPIPE" | "other";
+  failure:
+    | "none"
+    | "spawn-error"
+    | "stdin-error"
+    | "output-limit"
+    | "stdout-callback"
+    | "timeout"
+    | "cancelled"
+    | "nonzero-exit"
+    | "signal";
+}
+export interface ExecutionDiagnostics {
+  version: 1;
+  stage:
+    | "dispatch"
+    | "authorization"
+    | "permit-validation"
+    | "runtime-metadata"
+    | "generation-profile"
+    | "safety-metadata"
+    | "native-instructions"
+    | "generation-launch"
+    | "generation";
+  /** Local protocol observations never establish backend contact or call count. */
+  backendReach: "unknown";
+  processKind?: "metadata" | "generation";
+  process?: ProcessDiagnostics;
+  decoder?: {
+    threadStarted: boolean;
+    turnStarted: boolean;
+    outputObserved: boolean;
+    terminalObserved: boolean;
+    finished: boolean;
+    failed: boolean;
+    failure:
+      | "none"
+      | "utf8"
+      | "json"
+      | "protocol"
+      | "output-limit"
+      | "missing-terminal"
+      | "invalid-output"
+      | "nonzero-exit";
+  };
+}
+function closed(
+  value: unknown,
+  keys: readonly string[],
+): Record<string, unknown> {
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    ![Object.prototype, null].includes(Object.getPrototypeOf(value))
+  )
+    throw new Error("Invalid diagnostic");
+  const descriptors = Object.getOwnPropertyDescriptors(value);
+  if (
+    Reflect.ownKeys(descriptors).some(
+      (key) => typeof key !== "string" || !keys.includes(key),
+    ) ||
+    Object.values(descriptors).some((item) => item.get || item.set)
+  )
+    throw new Error("Invalid diagnostic");
+  return Object.fromEntries(
+    Object.entries(descriptors).map(([key, descriptor]) => [
+      key,
+      descriptor.value,
+    ]),
+  );
+}
+/** Reject unknown keys/getters/strings rather than spreading adapter metadata.
+ * These observations cannot change execution, billing or authority policy. */
+export function sanitizeExecutionDiagnostics(
+  value: unknown,
+): ExecutionDiagnostics | undefined {
+  try {
+    const d = closed(value, [
+      "version",
+      "stage",
+      "backendReach",
+      "processKind",
+      "process",
+      "decoder",
+    ]);
+    if (
+      d.version !== 1 ||
+      d.backendReach !== "unknown" ||
+      typeof d.stage !== "string" ||
+      ![
+        "dispatch",
+        "authorization",
+        "permit-validation",
+        "runtime-metadata",
+        "generation-profile",
+        "safety-metadata",
+        "native-instructions",
+        "generation-launch",
+        "generation",
+      ].includes(d.stage) ||
+      (d.processKind !== undefined &&
+        d.processKind !== "metadata" &&
+        d.processKind !== "generation")
+    )
+      return undefined;
+    const result: ExecutionDiagnostics = {
+      version: 1,
+      stage: d.stage as ExecutionDiagnostics["stage"],
+      backendReach: "unknown",
+    };
+    if (d.processKind !== undefined) result.processKind = d.processKind;
+    if (d.process !== undefined) {
+      const p = closed(d.process, [
+        "spawned",
+        "settled",
+        "exitCode",
+        "signal",
+        "stdoutBytes",
+        "stderrBytes",
+        "errorCode",
+        "failure",
+      ]);
+      if (
+        typeof p.spawned !== "boolean" ||
+        typeof p.settled !== "boolean" ||
+        !(
+          p.exitCode === null ||
+          (Number.isSafeInteger(p.exitCode) &&
+            Number(p.exitCode) >= 0 &&
+            Number(p.exitCode) <= 2147483647)
+        ) ||
+        !(
+          p.signal === null ||
+          (typeof p.signal === "string" &&
+            [
+              "SIGTERM",
+              "SIGKILL",
+              "SIGINT",
+              "SIGABRT",
+              "SIGSEGV",
+              "SIGPIPE",
+              "other",
+            ].includes(p.signal))
+        ) ||
+        [p.stdoutBytes, p.stderrBytes].some(
+          (n) =>
+            !Number.isSafeInteger(n) ||
+            Number(n) < 0 ||
+            Number(n) > 16 * 1024 * 1024,
+        ) ||
+        typeof p.errorCode !== "string" ||
+        !["none", "ENOENT", "EACCES", "EPIPE", "other"].includes(p.errorCode) ||
+        typeof p.failure !== "string" ||
+        ![
+          "none",
+          "spawn-error",
+          "stdin-error",
+          "output-limit",
+          "stdout-callback",
+          "timeout",
+          "cancelled",
+          "nonzero-exit",
+          "signal",
+        ].includes(p.failure)
+      )
+        return undefined;
+      result.process = {
+        spawned: p.spawned,
+        settled: p.settled,
+        exitCode: p.exitCode as number | null,
+        signal: p.signal as ProcessDiagnostics["signal"],
+        stdoutBytes: p.stdoutBytes as number,
+        stderrBytes: p.stderrBytes as number,
+        errorCode: p.errorCode as ProcessDiagnostics["errorCode"],
+        failure: p.failure as ProcessDiagnostics["failure"],
+      };
+    }
+    if (d.decoder !== undefined) {
+      const keys = [
+        "threadStarted",
+        "turnStarted",
+        "outputObserved",
+        "terminalObserved",
+        "finished",
+        "failed",
+      ] as const;
+      const decoder = closed(d.decoder, [...keys, "failure"]);
+      if (keys.some((key) => typeof decoder[key] !== "boolean"))
+        return undefined;
+      if (
+        typeof decoder.failure !== "string" ||
+        ![
+          "none",
+          "utf8",
+          "json",
+          "protocol",
+          "output-limit",
+          "missing-terminal",
+          "invalid-output",
+          "nonzero-exit",
+        ].includes(decoder.failure)
+      )
+        return undefined;
+      result.decoder = {
+        ...Object.fromEntries(keys.map((key) => [key, decoder[key]])),
+        failure: decoder.failure,
+      } as ExecutionDiagnostics["decoder"];
+    }
+    return result;
+  } catch {
+    return undefined;
+  }
 }
 /** Adapters use only their official runtime; no token extraction or paid fallback. */
 export interface AgentExecutor {
@@ -71,8 +302,13 @@ export interface AgentExecutor {
   resume(request: ResumeRequest): Promise<ExecutionHandle>;
 }
 export class ExecutorFailure extends Error {
-  constructor(readonly reason: StopReason) {
+  readonly diagnostics?: ExecutionDiagnostics;
+  constructor(
+    readonly reason: StopReason,
+    diagnostics?: unknown,
+  ) {
     super(reason);
+    this.diagnostics = sanitizeExecutionDiagnostics(diagnostics);
   }
 }
 export function stopEvent(
@@ -173,6 +409,15 @@ export async function containExecution(
       error instanceof ExecutorFailure ? error.reason : "unknown-outcome",
     );
     return {
+      diagnostics: () => {
+        try {
+          return error instanceof ExecutorFailure
+            ? sanitizeExecutionDiagnostics(error.diagnostics)
+            : undefined;
+        } catch {
+          return undefined;
+        }
+      },
       events: (async function* () {
         yield stopped;
       })(),
@@ -196,6 +441,13 @@ export async function containExecution(
   };
   return {
     cancel,
+    diagnostics: () => {
+      try {
+        return sanitizeExecutionDiagnostics(handle.diagnostics?.());
+      } catch {
+        return undefined;
+      }
+    },
     events: (async function* () {
       let started = false;
       let terminal: ExecutorEvent | undefined;

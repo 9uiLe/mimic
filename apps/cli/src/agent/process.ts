@@ -1,7 +1,11 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { realpath, stat } from "node:fs/promises";
 import path from "node:path";
-import { ExecutorFailure, type StopReason } from "./executor.js";
+import {
+  ExecutorFailure,
+  type StopReason,
+  type ProcessDiagnostics,
+} from "./executor.js";
 
 export interface OfficialProcessRequest {
   /** Absolute path to an unmodified official runtime executable. */
@@ -31,6 +35,7 @@ export interface OfficialProcessHandle {
   writeInput(input: string): void;
   closeInput(): void;
   cancel(): Promise<void>;
+  diagnostics(): ProcessDiagnostics;
 }
 
 /** Copy only native-login variables; never inherit API credentials or endpoints. */
@@ -104,6 +109,29 @@ export async function executeOfficialProcess(
   }
   if (request.signal?.aborted) throw new ExecutorFailure("cancelled");
   const grouped = process.platform !== "win32";
+  const diagnostic: ProcessDiagnostics = {
+    spawned: false,
+    settled: false,
+    exitCode: null,
+    signal: null,
+    stdoutBytes: 0,
+    stderrBytes: 0,
+    errorCode: "none",
+    failure: "none",
+  };
+  const errorCode = (error: unknown): ProcessDiagnostics["errorCode"] => {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    return code === "ENOENT" || code === "EACCES" || code === "EPIPE"
+      ? code
+      : "other";
+  };
+  const failure = (reason: StopReason) =>
+    new ExecutorFailure(reason, {
+      version: 1,
+      stage: "generation-launch",
+      backendReach: "unknown",
+      process: { ...diagnostic },
+    });
   let child: ChildProcessWithoutNullStreams;
   try {
     child = spawn(request.executable, [...request.args], {
@@ -113,9 +141,14 @@ export async function executeOfficialProcess(
       detached: grouped,
       stdio: ["pipe", "pipe", "pipe"],
     });
-  } catch {
-    throw new ExecutorFailure("unknown-outcome");
+  } catch (error) {
+    diagnostic.failure = "spawn-error";
+    diagnostic.errorCode = errorCode(error);
+    throw failure("unknown-outcome");
   }
+  child.once("spawn", () => {
+    diagnostic.spawned = true;
+  });
   let stop: StopReason | undefined;
   let closed = false;
   let forceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -130,6 +163,11 @@ export async function executeOfficialProcess(
   };
   const stopProcess = (reason: StopReason) => {
     stop ??= reason;
+    if (
+      diagnostic.failure === "none" &&
+      (reason === "timeout" || reason === "cancelled")
+    )
+      diagnostic.failure = reason;
     kill("SIGTERM");
     forceTimer ??= setTimeout(() => kill("SIGKILL"), 250);
   };
@@ -139,33 +177,72 @@ export async function executeOfficialProcess(
   const stdout: Buffer[] = [];
   const stderr: Buffer[] = [];
   let bytes = 0;
-  const collect = (chunks: Buffer[], chunk: Buffer) => {
+  const collect = (
+    chunks: Buffer[],
+    chunk: Buffer,
+    stream: "stdoutBytes" | "stderrBytes",
+  ) => {
+    diagnostic[stream] = Math.min(
+      16 * 1024 * 1024,
+      diagnostic[stream] + chunk.length,
+    );
     bytes += chunk.length;
     if (bytes > limit) {
+      if (diagnostic.failure === "none") diagnostic.failure = "output-limit";
       stopProcess("unknown-outcome");
       return;
     }
     chunks.push(chunk);
   };
   child.stdout.on("data", (chunk: Buffer) => {
-    collect(stdout, chunk);
+    collect(stdout, chunk, "stdoutBytes");
     if (stop) return;
     try {
       request.onStdout?.(Buffer.from(chunk));
     } catch {
+      if (diagnostic.failure === "none") diagnostic.failure = "stdout-callback";
       stopProcess("unknown-outcome");
     }
   });
-  child.stderr.on("data", (chunk: Buffer) => collect(stderr, chunk));
+  child.stderr.on("data", (chunk: Buffer) =>
+    collect(stderr, chunk, "stderrBytes"),
+  );
   const timeout = setTimeout(() => stopProcess("timeout"), request.timeoutMs);
   const result = new Promise<OfficialProcessResult>((resolve, reject) => {
-    child.on("error", () => {
+    child.on("error", (error) => {
+      if (diagnostic.failure === "none") diagnostic.failure = "spawn-error";
+      diagnostic.errorCode = errorCode(error);
       stop ??= "unknown-outcome";
     });
-    child.stdin.on("error", () => {
+    child.stdin.on("error", (error) => {
+      if (diagnostic.failure === "none") diagnostic.failure = "stdin-error";
+      if (diagnostic.errorCode === "none")
+        diagnostic.errorCode = errorCode(error);
       stop ??= "unknown-outcome";
     });
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
+      diagnostic.settled = true;
+      // Negative libuv spawn statuses are not real process exit codes.
+      diagnostic.exitCode = code !== null && code >= 0 ? code : null;
+      diagnostic.signal =
+        signal === null
+          ? null
+          : [
+                "SIGTERM",
+                "SIGKILL",
+                "SIGINT",
+                "SIGABRT",
+                "SIGSEGV",
+                "SIGPIPE",
+              ].includes(signal)
+            ? (signal as ProcessDiagnostics["signal"])
+            : "other";
+      if (diagnostic.failure === "none")
+        diagnostic.failure = signal
+          ? "signal"
+          : code !== 0
+            ? "nonzero-exit"
+            : "none";
       // The leader may exit on SIGTERM while descendants ignore it. Kill the
       // existing group immediately at close, before dropping its timer/identity;
       // never schedule a late group signal against a possibly reused PID.
@@ -174,8 +251,7 @@ export async function executeOfficialProcess(
       clearTimeout(timeout);
       request.signal?.removeEventListener("abort", abort);
       if (forceTimer) clearTimeout(forceTimer);
-      if (stop || code === null)
-        reject(new ExecutorFailure(stop ?? "unknown-outcome"));
+      if (stop || code === null) reject(failure(stop ?? "unknown-outcome"));
       else
         resolve({
           exitCode: code,
@@ -189,6 +265,7 @@ export async function executeOfficialProcess(
   else child.stdin.end(request.input ?? "");
   return {
     result,
+    diagnostics: () => ({ ...diagnostic }),
     writeInput: (input: string) => {
       if (
         !request.keepStdinOpen ||
