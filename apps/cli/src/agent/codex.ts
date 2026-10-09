@@ -8,6 +8,8 @@ import {
   type ExecutorEvent,
   type ResumeRequest,
   type StopReason,
+  type ExecutionDiagnostics,
+  sanitizeExecutionDiagnostics,
 } from "./executor.js";
 import {
   executeOfficialProcess,
@@ -39,19 +41,30 @@ export interface CodexInspection {
 export async function inspectCodex(
   options: CodexOptions,
   signal?: AbortSignal,
+  observe?: (diagnostic: ExecutionDiagnostics) => void,
 ): Promise<CodexInspection> {
-  const run = async (args: string[]) =>
-    (
-      await executeOfficialProcess({
-        executable: options.executable,
-        args,
-        workspace: options.workspace,
-        env: options.env,
-        timeoutMs: Math.min(options.timeoutMs ?? 10_000, 10_000),
-        maxOutputBytes: 64 * 1024,
-        signal,
-      })
-    ).result;
+  const run = async (args: string[]) => {
+    const process = await executeOfficialProcess({
+      executable: options.executable,
+      args,
+      workspace: options.workspace,
+      env: options.env,
+      timeoutMs: Math.min(options.timeoutMs ?? 10_000, 10_000),
+      maxOutputBytes: 64 * 1024,
+      signal,
+    });
+    try {
+      return await process.result;
+    } finally {
+      observe?.({
+        version: 1,
+        stage: "runtime-metadata",
+        backendReach: "unknown",
+        processKind: "metadata",
+        process: process.diagnostics(),
+      });
+    }
+  };
   const version = await run(["--version"]);
   const match =
     version.exitCode === 0 &&
@@ -206,6 +219,10 @@ export async function createCodexCreditRiskPermit(
  */
 export class CodexExecutor implements AgentExecutor {
   private readonly options: CodexOptions;
+  private startupDiagnostics?: ExecutionDiagnostics;
+  diagnostics(): ExecutionDiagnostics | undefined {
+    return sanitizeExecutionDiagnostics(this.startupDiagnostics);
+  }
   constructor(options: CodexOptions) {
     this.options = { ...options, env: { ...options.env } };
   }
@@ -269,56 +286,93 @@ export class CodexExecutor implements AgentExecutor {
     permit: CodexCreditRiskPermit,
     signal?: AbortSignal,
   ): Promise<ExecutionHandle> {
-    const authorization = permits.get(permit);
-    if (
-      !authorization ||
-      authorization.consumed ||
-      authorization.expiresAt <= Date.now()
-    )
-      throw new ExecutorFailure("billing-unconfirmed");
-    // Consume before asynchronous preflight/spawn; failed attempts and cancellation
-    // do not restore permission or permit concurrent/replayed generations.
-    authorization.consumed = true;
-    request = snapshotCodexRequest(request);
-    checkAbort(signal);
-    const scope = await creditRiskScope(request);
-    checkAbort(signal);
-    if (
-      Object.keys(scope).some(
-        (key) =>
-          scope[key as keyof CodexCreditRiskScope] !==
-          authorization.scope[key as keyof CodexCreditRiskScope],
+    let diagnostic: ExecutionDiagnostics = {
+      version: 1,
+      stage: "permit-validation",
+      backendReach: "unknown",
+    };
+    this.startupDiagnostics = diagnostic;
+    const enter = (stage: ExecutionDiagnostics["stage"]) => {
+      diagnostic = { version: 1, stage, backendReach: "unknown" };
+      this.startupDiagnostics = diagnostic;
+    };
+    const observe = (observed: ExecutionDiagnostics) => {
+      diagnostic = observed;
+      this.startupDiagnostics = diagnostic;
+    };
+    try {
+      const authorization = permits.get(permit);
+      if (
+        !authorization ||
+        authorization.consumed ||
+        authorization.expiresAt <= Date.now()
       )
-    )
-      throw new ExecutorFailure("billing-unconfirmed");
-    const inspection = await inspectCodex(this.options, signal);
-    checkAbort(signal);
-    if (inspection.runtimeVersion !== "0.160.0")
-      throw new ExecutorFailure("unsupported");
-    if (inspection.authentication !== "chatgpt")
-      throw new ExecutorFailure("authentication");
-    const profile = await createCodexGenerationProfile(
-      this.options,
-      request,
-      outputSchemaPath,
-    );
-    if (
-      profile.process.workspace !== authorization.scope.workspace ||
-      createHash("sha256")
-        .update(profile.process.input ?? "")
-        .digest("hex") !== authorization.scope.promptSha256
-    )
-      throw new ExecutorFailure("billing-unconfirmed");
-    if (authorization.expiresAt <= Date.now())
-      throw new ExecutorFailure("billing-unconfirmed");
-    await verifyCodexSafetyProfile(profile, signal);
-    if (authorization.expiresAt <= Date.now())
-      throw new ExecutorFailure("billing-unconfirmed");
-    await verifyNativeInstructions(profile.process.env);
-    checkAbort(signal);
-    if (authorization.expiresAt <= Date.now())
-      throw new ExecutorFailure("billing-unconfirmed");
-    return launchCodex(profile, request.requestId, signal);
+        throw new ExecutorFailure("billing-unconfirmed");
+      // Consume before asynchronous preflight/spawn; failed attempts and cancellation
+      // do not restore permission or permit concurrent/replayed generations.
+      authorization.consumed = true;
+      request = snapshotCodexRequest(request);
+      checkAbort(signal);
+      const scope = await creditRiskScope(request);
+      checkAbort(signal);
+      if (
+        Object.keys(scope).some(
+          (key) =>
+            scope[key as keyof CodexCreditRiskScope] !==
+            authorization.scope[key as keyof CodexCreditRiskScope],
+        )
+      )
+        throw new ExecutorFailure("billing-unconfirmed");
+      enter("runtime-metadata");
+      const inspection = await inspectCodex(this.options, signal, observe);
+      checkAbort(signal);
+      if (inspection.runtimeVersion !== "0.160.0")
+        throw new ExecutorFailure("unsupported");
+      if (inspection.authentication !== "chatgpt")
+        throw new ExecutorFailure("authentication");
+      enter("generation-profile");
+      const profile = await createCodexGenerationProfile(
+        this.options,
+        request,
+        outputSchemaPath,
+      );
+      if (
+        profile.process.workspace !== authorization.scope.workspace ||
+        createHash("sha256")
+          .update(profile.process.input ?? "")
+          .digest("hex") !== authorization.scope.promptSha256
+      )
+        throw new ExecutorFailure("billing-unconfirmed");
+      if (authorization.expiresAt <= Date.now())
+        throw new ExecutorFailure("billing-unconfirmed");
+      enter("safety-metadata");
+      await verifyCodexSafetyProfile(profile, signal, observe);
+      if (authorization.expiresAt <= Date.now())
+        throw new ExecutorFailure("billing-unconfirmed");
+      enter("native-instructions");
+      await verifyNativeInstructions(profile.process.env);
+      checkAbort(signal);
+      if (authorization.expiresAt <= Date.now())
+        throw new ExecutorFailure("billing-unconfirmed");
+      enter("generation-launch");
+      return await launchCodex(profile, request.requestId, signal);
+    } catch (error) {
+      // Use only the validated process observation; do not copy raw errors or
+      // mistake a metadata subprocess for a dispatched generation.
+      const observed =
+        error instanceof ExecutorFailure
+          ? sanitizeExecutionDiagnostics(error.diagnostics)
+          : undefined;
+      if (observed?.process) {
+        diagnostic.process = observed.process;
+        diagnostic.processKind =
+          diagnostic.stage === "generation-launch" ? "generation" : "metadata";
+      }
+      throw new ExecutorFailure(
+        error instanceof ExecutorFailure ? error.reason : "unknown-outcome",
+        diagnostic,
+      );
+    }
   }
   async resume(request: ResumeRequest): Promise<ExecutionHandle> {
     void request;
@@ -369,6 +423,7 @@ async function verifyNativeInstructions(
 async function verifyCodexSafetyProfile(
   profile: CodexGenerationProfile,
   signal?: AbortSignal,
+  observe?: (diagnostic: ExecutionDiagnostics) => void,
 ): Promise<void> {
   checkAbort(signal);
   await verifyNativeInstructions(profile.process.env);
@@ -458,7 +513,18 @@ async function verifyCodexSafetyProfile(
       }
     },
   });
-  const result = await handle.result;
+  let result;
+  try {
+    result = await handle.result;
+  } finally {
+    observe?.({
+      version: 1,
+      stage: "safety-metadata",
+      backendReach: "unknown",
+      processKind: "metadata",
+      process: handle.diagnostics(),
+    });
+  }
   checkAbort(signal);
   pending += utf8.decode();
   if (result.exitCode !== 0 || pending.trim() || !snapshot || phase !== 3)
@@ -808,6 +874,14 @@ async function launchCodex(
     });
   return {
     cancel: process.cancel,
+    diagnostics: () => ({
+      version: 1,
+      stage: "generation",
+      backendReach: "unknown",
+      processKind: "generation",
+      process: process.diagnostics(),
+      decoder: decoder.diagnostics(),
+    }),
     events: (async function* () {
       let exhausted = false;
       try {
@@ -1126,6 +1200,13 @@ export class CodexJsonlDecoder {
   >();
   private failed = false;
   private finished = false;
+  private failure: NonNullable<ExecutionDiagnostics["decoder"]>["failure"] =
+    "none";
+  private noteFailure(
+    value: NonNullable<ExecutionDiagnostics["decoder"]>["failure"],
+  ): void {
+    if (this.failure === "none") this.failure = value;
+  }
   constructor(
     private readonly requestId: string,
     private readonly maxBytes = 4 * 1024 * 1024,
@@ -1139,18 +1220,38 @@ export class CodexJsonlDecoder {
     )
       throw new ExecutorFailure("unsupported");
   }
+  diagnostics(): NonNullable<ExecutionDiagnostics["decoder"]> {
+    return {
+      threadStarted: this.threadId !== undefined,
+      turnStarted: this.turn,
+      outputObserved: this.finalText !== undefined,
+      terminalObserved: this.terminal !== undefined,
+      finished: this.finished,
+      failed: this.failed,
+      failure: this.failure,
+    };
+  }
   push(chunk: Buffer): ExecutorEvent[] {
     if (this.failed || this.finished)
       throw new ExecutorFailure("unknown-outcome");
     this.bytes += chunk.length;
     if (this.bytes > this.maxBytes) {
       this.failed = true;
+      this.noteFailure("output-limit");
       throw new ExecutorFailure("unknown-outcome");
     }
     try {
-      return this.consume(this.utf8.decode(chunk, { stream: true }));
+      let text: string;
+      try {
+        text = this.utf8.decode(chunk, { stream: true });
+      } catch {
+        this.noteFailure("utf8");
+        throw new ExecutorFailure("unknown-outcome");
+      }
+      return this.consume(text);
     } catch {
       this.failed = true;
+      this.noteFailure("protocol");
       throw new ExecutorFailure("unknown-outcome");
     }
   }
@@ -1171,7 +1272,14 @@ export class CodexJsonlDecoder {
     return events;
   }
   private line(line: string): ExecutorEvent[] {
-    const event = object(JSON.parse(line));
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(line);
+    } catch {
+      this.noteFailure("json");
+      throw new ExecutorFailure("unknown-outcome");
+    }
+    const event = object(decoded);
     if (this.terminal) throw new ExecutorFailure("unknown-outcome");
     if (event.type === "thread.started") {
       if (
@@ -1236,9 +1344,14 @@ export class CodexJsonlDecoder {
     if (event.type === "turn.completed" && this.finalText !== undefined) {
       if ([...this.items.values()].some((item) => !item.completed))
         throw new ExecutorFailure("unknown-outcome");
-      if (this.outputFormat === "work-envelope")
-        parseCodexWorkEnvelope(this.finalText);
-      else object(JSON.parse(this.finalText));
+      try {
+        if (this.outputFormat === "work-envelope")
+          parseCodexWorkEnvelope(this.finalText);
+        else object(JSON.parse(this.finalText));
+      } catch {
+        this.noteFailure("invalid-output");
+        throw new ExecutorFailure("unknown-outcome");
+      }
       const usage = object(event.usage);
       for (const key of [
         "input_tokens",
@@ -1264,17 +1377,30 @@ export class CodexJsonlDecoder {
     if (this.failed || this.finished) return [stopEvent("unknown-outcome")];
     this.finished = true;
     try {
-      const events = this.consume(this.utf8.decode());
+      let text: string;
+      try {
+        text = this.utf8.decode();
+      } catch {
+        this.noteFailure("utf8");
+        throw new ExecutorFailure("unknown-outcome");
+      }
+      const events = this.consume(text);
       if (this.pending.trim()) {
         events.push(...this.line(this.pending));
         this.pending = "";
       }
-      if (!this.terminal) return [...events, stopEvent("unknown-outcome")];
-      if (exitCode !== 0 && this.terminal.type === "completed")
+      if (!this.terminal) {
+        this.noteFailure(exitCode !== 0 ? "nonzero-exit" : "missing-terminal");
         return [...events, stopEvent("unknown-outcome")];
+      }
+      if (exitCode !== 0 && this.terminal.type === "completed") {
+        this.noteFailure("nonzero-exit");
+        return [...events, stopEvent("unknown-outcome")];
+      }
       return [...events, this.terminal];
     } catch {
       this.failed = true;
+      this.noteFailure("protocol");
       return [stopEvent("unknown-outcome")];
     }
   }

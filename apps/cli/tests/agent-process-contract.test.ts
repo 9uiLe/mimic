@@ -79,9 +79,18 @@ test("timeout stops official process and hides raw diagnostics", async () => {
     "console.error('secret-token');setInterval(()=>{},1000)",
   );
   config.timeoutMs = 60;
-  await expect(
-    (await executeOfficialProcess(config)).result,
-  ).rejects.toMatchObject({ reason: "timeout", message: "timeout" });
+  const handle = await executeOfficialProcess(config);
+  await expect(handle.result).rejects.toMatchObject({
+    reason: "timeout",
+    message: "timeout",
+  });
+  expect(handle.diagnostics()).toMatchObject({
+    spawned: true,
+    settled: true,
+    failure: "timeout",
+    exitCode: null,
+  });
+  expect(JSON.stringify(handle.diagnostics())).not.toContain("secret-token");
 });
 test("cancel is idempotent and waits for process closure", async () => {
   const config = await request("setInterval(()=>{},1000)");
@@ -91,6 +100,10 @@ test("cancel is idempotent and waits for process closure", async () => {
   });
   await Promise.all([handle.cancel(), handle.cancel()]);
   await failure;
+  expect(handle.diagnostics()).toMatchObject({
+    settled: true,
+    failure: "cancelled",
+  });
 });
 test("oversized runtime output fails closed instead of reporting truncated success", async () => {
   const config = await request("console.log('x'.repeat(4096))");
@@ -102,20 +115,63 @@ test("oversized runtime output fails closed instead of reporting truncated succe
 test("spawn errors never expose executable errors or credentials", async () => {
   const config = await request("process.exit(0)");
   config.executable = path.join(config.workspace, "missing-secret-runtime");
-  await expect(
-    (await executeOfficialProcess(config)).result,
-  ).rejects.toMatchObject({
+  const handle = await executeOfficialProcess(config);
+  await expect(handle.result).rejects.toMatchObject({
     reason: "unknown-outcome",
     message: "unknown-outcome",
   });
+  expect(handle.diagnostics()).toMatchObject({
+    spawned: false,
+    settled: true,
+    exitCode: null,
+    errorCode: "ENOENT",
+    failure: "spawn-error",
+  });
+  expect(JSON.stringify(handle.diagnostics())).not.toContain(
+    "missing-secret-runtime",
+  );
 });
 test("nonzero exits remain protocol data for backend classification, not success", async () => {
   const config = await request(
     "console.error('quota-protocol');process.exit(7)",
   );
-  const result = await (await executeOfficialProcess(config)).result;
+  const handle = await executeOfficialProcess(config);
+  const result = await handle.result;
   expect(result.exitCode).toBe(7);
   expect(result.stderr).toContain("quota-protocol");
+  expect(handle.diagnostics()).toMatchObject({
+    spawned: true,
+    settled: true,
+    exitCode: 7,
+    stdoutBytes: 0,
+    stderrBytes: Buffer.byteLength("quota-protocol\n"),
+    failure: "nonzero-exit",
+  });
+  expect(JSON.stringify(handle.diagnostics())).not.toContain("quota-protocol");
+});
+
+test("broken stdin records only allowlisted EPIPE and retains normalized stop", async () => {
+  const config = await request(
+    "require('node:fs').closeSync(0);console.log('ready');setTimeout(()=>process.exit(0),100)",
+  );
+  const handle: Awaited<ReturnType<typeof executeOfficialProcess>> =
+    await executeOfficialProcess({
+      ...config,
+      keepStdinOpen: true,
+      onStdout: () => {
+        handle.writeInput("x".repeat(256 * 1024));
+        handle.closeInput();
+      },
+    });
+  await expect(handle.result).rejects.toMatchObject({
+    reason: "unknown-outcome",
+  });
+  expect(handle.diagnostics()).toMatchObject({
+    spawned: true,
+    settled: true,
+    failure: "stdin-error",
+    errorCode: "EPIPE",
+  });
 });
 
 test("rejects endpoint overrides and oversized stdin before launch", async () => {
