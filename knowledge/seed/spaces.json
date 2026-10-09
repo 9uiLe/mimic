@@ -292,6 +292,90 @@
       ],
       "observedClaimRefs": ["obs:gov-task-list"],
       "transferHypothesisRefs": ["hyp:gov-task-list"]
+    },
+    {
+      "id": "space:kintone-color",
+      "category": "brand-core-color",
+      "label": "Warm brand core with restrained support roles",
+      "problemTraits": ["trait:kintone-color"],
+      "principles": ["principle:kintone-color"],
+      "transferableMechanisms": ["mechanism:kintone-color"],
+      "referenceCases": ["case:kintone-color"],
+      "goodFit": [
+        "An approved character calls for warmth and recognizability across frequent work contexts."
+      ],
+      "poorFit": [
+        "Brand intent is reserved or technical, or the warm cue collides with task states."
+      ],
+      "failureModes": ["failure:kintone-color"],
+      "superficialDoNotBorrow": [
+        "kintone yellow, exact ratios, layouts, and artwork"
+      ],
+      "observedClaimRefs": ["obs:kintone-color"],
+      "transferHypothesisRefs": ["hyp:kintone-color"]
+    },
+    {
+      "id": "space:youtube-hue",
+      "category": "signature-brand-color",
+      "label": "Signature brand moments on a restrained canvas",
+      "problemTraits": ["trait:youtube-hue"],
+      "principles": ["principle:youtube-hue"],
+      "transferableMechanisms": ["mechanism:youtube-hue"],
+      "referenceCases": ["case:youtube-hue"],
+      "goodFit": [
+        "A brand has recognizable equity or a clear rationale for selective signature emphasis."
+      ],
+      "poorFit": [
+        "No brand character is agreed or persistent color is needed to orient between contexts."
+      ],
+      "failureModes": ["failure:youtube-hue"],
+      "superficialDoNotBorrow": [
+        "YouTube red, magenta gradient, video imagery, and exact component styling"
+      ],
+      "observedClaimRefs": ["obs:youtube-hue"],
+      "transferHypothesisRefs": ["hyp:youtube-hue"]
+    },
+    {
+      "id": "space:smarthr-color-roles",
+      "category": "semantic-color-roles",
+      "label": "Purpose-based UI color roles",
+      "problemTraits": ["trait:smarthr-color-roles"],
+      "principles": ["principle:smarthr-color-roles"],
+      "transferableMechanisms": ["mechanism:smarthr-color-roles"],
+      "referenceCases": ["case:smarthr-color-roles"],
+      "goodFit": [
+        "Multiple screens and states reuse color meanings across components."
+      ],
+      "poorFit": [
+        "A single decorative asset has no reusable product state system to govern."
+      ],
+      "failureModes": ["failure:smarthr-color-roles"],
+      "superficialDoNotBorrow": [
+        "SmartHR palette values, labels, CSS tokens and HR-specific status semantics"
+      ],
+      "observedClaimRefs": ["obs:smarthr-color-roles"],
+      "transferHypothesisRefs": ["hyp:smarthr-color-roles"]
+    },
+    {
+      "id": "space:carbon-layers",
+      "category": "layered-color-context",
+      "label": "Layered neutral utility surfaces",
+      "problemTraits": ["trait:carbon-layers"],
+      "principles": ["principle:carbon-layers"],
+      "transferableMechanisms": ["mechanism:carbon-layers"],
+      "referenceCases": ["case:carbon-layers"],
+      "goodFit": [
+        "A screen has genuinely nested panels, forms or diagnostics that need containment cues."
+      ],
+      "poorFit": [
+        "A shallow interface gains no clarity from multiple surface layers."
+      ],
+      "failureModes": ["failure:carbon-layers"],
+      "superficialDoNotBorrow": [
+        "Carbon exact grays, four-layer quota, component code and artwork"
+      ],
+      "observedClaimRefs": ["obs:carbon-layers"],
+      "transferHypothesisRefs": ["hyp:carbon-layers"]
     }
   ]
 }
