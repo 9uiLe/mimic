@@ -46,6 +46,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   artifactDigest,
+  assessProvenance,
   canonicalJson,
   createOrchestratorRuntime,
   loadSkillPackage,
@@ -1033,6 +1034,56 @@ export async function runCli(
             EXIT.INVALID,
             "Invalid Skill result identity or references",
           );
+        const routable = (
+          await runtime.orchestrator.next(id, tasks)
+        ).actions.find((action) => action.taskId === taskId)?.invocation;
+        if (
+          routable &&
+          canonicalJson(work.result.inputRefs) !==
+            canonicalJson(routable.inputRefs)
+        )
+          throw new CliError(
+            EXIT.INVALID,
+            "Skill input locks differ from route",
+          );
+        // Reject malformed optional work before reserving this task's sole
+        // immutable submission marker. Core still owns semantic validation.
+        if (
+          Object.keys(work).some(
+            (key) =>
+              !["result", "findings", "unknowns", "revisionRequests"].includes(
+                key,
+              ),
+          ) ||
+          (work.findings !== undefined &&
+            (!Array.isArray(work.findings) ||
+              !work.findings.every(
+                (finding) =>
+                  finding &&
+                  typeof finding.claim === "string" &&
+                  finding.claim.trim() &&
+                  Array.isArray(finding.evidenceRefs) &&
+                  finding.evidenceRefs.every(
+                    (ref: unknown) => typeof ref === "string" && ref.trim(),
+                  ) &&
+                  ["PASS", "CONCERN", "FAIL", "UNVERIFIED", "N/A"].includes(
+                    finding.status,
+                  ) &&
+                  (["UNVERIFIED", "N/A"].includes(finding.status) ||
+                    finding.evidenceRefs.length > 0),
+              ))) ||
+          (work.unknowns !== undefined &&
+            (!Array.isArray(work.unknowns) ||
+              !work.unknowns.every(
+                (unknown) =>
+                  unknown &&
+                  typeof unknown.question === "string" &&
+                  unknown.question.trim() &&
+                  Array.isArray(unknown.affectedTaskIds) &&
+                  unknown.affectedTaskIds.includes(taskId),
+              )))
+        )
+          throw new CliError(EXIT.INVALID, "Invalid Skill work structure");
         if (work.revisionRequests !== undefined) {
           const exact = (a: unknown, b: unknown) =>
             canonicalJson(a) === canonicalJson(b);
@@ -1080,6 +1131,9 @@ export async function runCli(
               EXIT.INVALID,
               "Candidate origin does not match Skill and Run",
             );
+          // Provenance pointer errors are deterministic candidate errors.
+          // Check them before creating the immutable submission reservation.
+          await assessProvenance(artifact);
           const exact = artifactDigest(artifact);
           if (
             !work.result.outputRefs.some(
@@ -1092,6 +1146,21 @@ export async function runCli(
             throw new CliError(
               EXIT.INVALID,
               "Candidate does not match an exact output reference",
+            );
+          if (
+            artifact.dependencies.some(
+              (dependency) =>
+                !work.result.inputRefs.some(
+                  (ref) =>
+                    ref.artifactId === dependency.artifactId &&
+                    ref.revision === dependency.revision &&
+                    ref.lockDigest === dependency.lockDigest,
+                ),
+            )
+          )
+            throw new CliError(
+              EXIT.INVALID,
+              "Candidate dependency differs from exact input",
             );
         }
         const markerFolder = path.join(await metadata(root), "submissions");

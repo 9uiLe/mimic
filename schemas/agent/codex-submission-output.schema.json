@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "submissionJson": {
+      "type": "string",
+      "description": "A JSON-serialized {artifacts,work} static Skill submission."
+    }
+  },
+  "required": ["submissionJson"],
+  "additionalProperties": false
+}

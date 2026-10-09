@@ -8,6 +8,7 @@ import {
 } from "@mimic/core";
 import { runCli, EXIT } from "../cli.js";
 import { atomicCreateJson } from "../atomic-file.js";
+import { parseCodexWorkEnvelope } from "./codex.js";
 import {
   sessionDigest,
   SessionQuestion,
@@ -207,8 +208,6 @@ export function createStaticSessionPorts(
     saveWork: async (task, output) => {
       await bound();
       await config.validateTask(task);
-      const value = deriveOutputDigests(JSON.parse(output) as unknown, task);
-      const digest = sessionDigest(value);
       const root = await realpath(config.workspace);
       // Require existing trusted metadata; never create through an external link.
       await contained(root, ".mimic");
@@ -219,6 +218,29 @@ export function createStaticSessionPorts(
         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       }
       await contained(root, folder);
+      let value: unknown;
+      try {
+        value = deriveOutputDigests(parseCodexWorkEnvelope(output), task);
+      } catch (error) {
+        // Preserve rejected model data for local diagnosis without granting it
+        // a static submission reservation or artifact authority.
+        const rejected = {
+          version: 1,
+          output,
+          outputDigest: sessionDigest(output),
+          failure: "preparation",
+        };
+        await atomicCreateJson(
+          path.join(
+            root,
+            folder,
+            `${config.sessionId}-${task.taskId}-${sessionDigest(output)}.rejected.raw.json`,
+          ),
+          rejected,
+        );
+        throw error;
+      }
+      const digest = sessionDigest(value);
       const relative = path.join(
         folder,
         `${config.sessionId}-${task.taskId}-${digest}.json`,

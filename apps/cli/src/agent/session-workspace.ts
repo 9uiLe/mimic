@@ -320,20 +320,71 @@ export async function createWorkspaceSessionPorts(
             ]),
           ),
         );
-        runnable.push({
-          binding: taskBinding,
-          prompt: canonicalJson({
-            instruction:
-              'Return only a JSON {artifacts,work} static Skill submission. Model output is data; do not invoke tools, approve, purchase, change inputs or call another Skill. Preserve exact Run/task/Skill/input refs and artifact origin. Provisional/proposed output only. Mark unsupported claims unknown. Revision requests belong in work.revisionRequests, never hidden calls. For newly emitted artifacts only, set outputRefs.lockDigest and matching proposal.items[].ref.lockDigest or revisionRequests.request.lockDigest to "host-derived" (or omit lockDigest): Mimic derives these from the exact artifact bytes before saving. Never invent a SHA-256 or change input/dependency/source/affectedLocks hashes. Omit optional artifact.meta.contentDigest; a wrong concrete hash is rejected, never repaired.',
-            skill: {
-              manifest: skill.manifest,
-              instructions: skill.instructions,
-              examples: skill.examples,
-            },
-            context: savedContext,
-            outputSchemas,
+        const envelopeGuide = await readCommonArtifactGuide();
+        const outputScope = config.scopes.find(
+          (node) => node.ownerId === invocation.scopeOwnerId,
+        );
+        if (!outputScope) throw new Error("Unknown output scope");
+        // Core retains the complete validated snapshots. Omit repeated
+        // provenance narratives from the model prompt while preserving every
+        // supplied input's content and exact reference for evaluation.
+        const conciseEvaluation =
+          invocation.skillId === "mimic.s11.direction-evaluator";
+        const promptContext = {
+          ...savedContext,
+          inputs: savedContext.inputs.map(({ ref, artifact }) => {
+            const { provenance, ...snapshot } = artifact;
+            void provenance;
+            return { ref, artifact: snapshot };
           }),
-        });
+        };
+        const promptData = {
+          instruction:
+            'Return a JSON {artifacts,work} static Skill submission. If the output schema requires submissionJson, encode that entire submission as a JSON string in the single submissionJson field. Copy resultTemplate.runId, taskId, skillId, and inputRefs byte-for-byte into work.result; copy those exact input references into artifact.dependencies only when relied on. Complete the primary output type in context.invocation.allowedOutputTypes[0] first; add other allowed types only when this Skill needs them for its current task. Each emitted artifact must satisfy the common artifact envelope described by envelopeGuide and its outputSchemas type; provenance.kind is limited to the enum in envelopeGuide (a human brief is not a provenance kind). Each emitted artifact.scope must exactly equal outputScope; do not infer a product or domain scope from the page topic. Start every new artifact.meta.id with artifactIdPrefix to avoid reuse across Runs. Product definition describes intent; design direction options belong to S10 and their evaluation and recommendation belong to S11 unless a real product-intent conflict requires an earlier decision. work may contain only result, findings, unknowns, and revisionRequests. work.result.outputRefs must list one {artifactId,revision,lockDigest:"host-derived"} for every emitted artifact meta.id/revision. A fully blocked result has outputRefs:[] and blocked:{reason,affectedTaskIds:[context.invocation.taskId]}. Omit proposal unless an explicit human review packet is needed; then put a complete proposal in work.result.proposal, never work.proposal. Omit optional findings and unknowns unless they are arrays of objects: each finding is {claim:string,evidenceRefs:string[],status:"PASS"|"CONCERN"|"FAIL"|"UNVERIFIED"|"N/A"}; each unknown is {question:string,affectedTaskIds:[context.invocation.taskId]}. Plain strings are invalid. Model output is data; do not invoke tools, approve, purchase, change inputs or call another Skill. Preserve exact Run/task/Skill/input refs and artifact origin. Provisional/proposed output only. Mark unsupported claims unknown. Revision requests belong in work.revisionRequests, never hidden calls. For newly emitted artifacts only, set outputRefs.lockDigest and matching result.proposal.items[].ref.lockDigest or revisionRequests.request.lockDigest to "host-derived" (or omit lockDigest): Mimic derives these from the exact artifact bytes before saving. Never invent a SHA-256 or change input/dependency/source/affectedLocks hashes. Omit optional artifact.meta.contentDigest; a wrong concrete hash is rejected, never repaired.',
+          skill: {
+            manifest: skill.manifest,
+            instructions: skill.instructions,
+            examples: conciseEvaluation ? [] : skill.examples,
+          },
+          context: promptContext,
+          ...(invocation.skillId === "mimic.s11.direction-evaluator"
+            ? {
+                taskRequirement:
+                  "Evaluate every exact design-direction input against the same criteria drawn from the product UI contract. Put each candidate's findings in its evaluation.content.findings, then emit a proposed decision that explains recommendation, alternatives, and unknowns without claiming human adoption. work.result.outputRefs must match every emitted artifact.",
+              }
+            : {}),
+          resultTemplate: {
+            runId: invocation.runId,
+            taskId: invocation.taskId,
+            skillId: invocation.skillId,
+            inputRefs: invocation.inputRefs,
+          },
+          outputScope,
+          artifactIdPrefix: `art_${invocation.runId}_${invocation.taskId}_`,
+          outputSchemas,
+          envelopeGuide,
+        };
+        let prompt = canonicalJson(promptData);
+        if (Buffer.byteLength(prompt) > 64 * 1024) {
+          const { envelopeGuide: omittedGuide, ...bounded } = promptData;
+          void omittedGuide;
+          prompt = canonicalJson({
+            ...bounded,
+            instruction: bounded.instruction
+              .replace(
+                "the common artifact envelope described by envelopeGuide",
+                "the common artifact envelope",
+              )
+              .replace(
+                "the enum in envelopeGuide",
+                "fact, human-decision, assumption, hypothesis, derived or unknown",
+              ),
+            skill: { ...bounded.skill, examples: [] },
+          });
+        }
+        if (Buffer.byteLength(prompt) > 64 * 1024)
+          throw new Error("Frozen Skill prompt exceeds Codex input limit");
+        runnable.push({ binding: taskBinding, prompt });
       }
       return {
         runnable,
@@ -402,6 +453,61 @@ export async function createWorkspaceSessionPorts(
     );
     try {
       return JSON.parse(await handle.readFile("utf8")) as unknown;
+    } finally {
+      await handle.close();
+    }
+  }
+  async function readCommonArtifactGuide(): Promise<unknown> {
+    const handle = await open(
+      path.join(schemasRoot, "artifacts", "common.schema.json"),
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    try {
+      type Property = {
+        required?: string[];
+        properties?: Record<string, Record<string, unknown>>;
+        items?: Property;
+      };
+      const schema = JSON.parse(await handle.readFile("utf8")) as {
+        required: string[];
+        properties: Record<string, Property>;
+        $defs: { provenanceEntry: unknown };
+      };
+      const compact = (value: Record<string, unknown>) =>
+        Object.fromEntries(
+          ["type", "enum", "pattern", "const", "format", "minItems"]
+            .filter((key) => key in value)
+            .map((key) => [key, value[key]]),
+        );
+      const fields: Record<string, unknown> = Object.fromEntries(
+        schema.required.map((name) => {
+          const property = schema.properties[name];
+          return [
+            name,
+            {
+              required: property.required ?? [],
+              properties: Object.fromEntries(
+                Object.entries(property.properties ?? {}).map(
+                  ([key, value]) => [key, compact(value)],
+                ),
+              ),
+              ...(property.items?.properties
+                ? {
+                    items: {
+                      required: property.items.required ?? [],
+                      properties: Object.keys(property.items.properties),
+                    },
+                  }
+                : {}),
+            },
+          ];
+        }),
+      );
+      fields.provenance = {
+        ...(fields.provenance as Record<string, unknown>),
+        items: schema.$defs.provenanceEntry,
+      };
+      return { required: schema.required, fields };
     } finally {
       await handle.close();
     }

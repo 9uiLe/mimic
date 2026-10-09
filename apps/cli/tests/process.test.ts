@@ -714,7 +714,15 @@ test("built submit routes file work through the merged Skill harness and leaves 
   expect(repeated.status, repeated.stderr).toBe(0);
   writeFileSync(
     path.join(dir, "changed-work.json"),
-    JSON.stringify({ ...work, work: { ...work.work, findings: ["changed"] } }),
+    JSON.stringify({
+      ...work,
+      work: {
+        ...work.work,
+        findings: [
+          { claim: "changed", evidenceRefs: [], status: "UNVERIFIED" },
+        ],
+      },
+    }),
   );
   const changed = invoke(
     "submit",

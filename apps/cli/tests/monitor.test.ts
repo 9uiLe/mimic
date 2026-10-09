@@ -179,7 +179,10 @@ test("live Core records, exact artifacts and validated stops are projected witho
   const artifact = {
     ...template,
     scope: { level: "organization" as const, ownerId: "org_local" },
-    meta: { ...template.meta, id: "art_monitor" },
+    meta: {
+      ...template.meta,
+      id: "art_run_mimic_monitor_design_v5_20261009_s09_workspace_monitor_reference_selection",
+    },
     origin: {
       actorKind: "agent" as const,
       actorId: actor.id,
@@ -427,6 +430,14 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     const page = await context.newPage();
     await page.goto(monitor.url);
     await page.locator('[data-run-id="run_monitor"]').waitFor();
+    await page.locator("#run-search").fill("missing-run");
+    expect(await page.locator('[data-run-id="run_monitor"]').isHidden()).toBe(
+      true,
+    );
+    await page.locator("#run-search").fill("run_monitor");
+    expect(await page.locator('[data-run-id="run_monitor"]').isVisible()).toBe(
+      true,
+    );
     expect(
       await page
         .locator("#product-preview-link")
@@ -446,6 +457,10 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(
       await page.locator('[data-run-id="run_monitor"]').textContent(),
     ).toContain("進行可能");
+    await page.locator('[data-run-id="run_monitor"] summary').click();
+    expect(
+      await page.locator('[data-run-id="run_monitor"]').getAttribute("open"),
+    ).toBeNull();
     await runtime.registry.setWork({
       runId: "run_monitor",
       safeActions: [],
@@ -460,6 +475,9 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
         { timeout: 6000 },
       )
       .toContain("Run 終了");
+    expect(
+      await page.locator('[data-run-id="run_monitor"]').getAttribute("open"),
+    ).toBeNull();
     await new FileSessionStore(root).write(checkpoint());
     await expect
       .poll(
@@ -592,7 +610,7 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
   } finally {
     await browser.close();
   }
-}, 30_000);
+}, 60_000);
 
 test("production CLI monitor starts/stops and rejects invalid options without disclosing paths", async () => {
   const { root } = await setup();

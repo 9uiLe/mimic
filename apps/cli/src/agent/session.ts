@@ -101,6 +101,7 @@ export function sessionDigest(value: unknown): string {
   return createHash("sha256").update(canonicalJson(value)).digest("hex");
 }
 const identifier = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
+const artifactIdentifier = /^art_[A-Za-z0-9_-]{1,255}$/;
 function validateBinding(value: SessionBinding): SessionBinding {
   const settings = parseSubscriptionSettings(value.settings);
   if (
@@ -125,7 +126,7 @@ function validateTask(task: TaskBinding): void {
     !Array.isArray(task.inputRefs) ||
     task.inputRefs.some(
       (ref) =>
-        !identifier.test(ref.artifactId) ||
+        !artifactIdentifier.test(ref.artifactId) ||
         !Number.isSafeInteger(ref.revision) ||
         ref.revision < 1 ||
         !/^sha256:[a-f0-9]{64}$/.test(ref.lockDigest),

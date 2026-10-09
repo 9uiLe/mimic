@@ -41,9 +41,18 @@ function need(value: unknown): boolean {
   if (!record(value) || !nonempty(value.name)) return false;
   if (value.kind === "artifact")
     return (
-      only(value, ["kind", "name", "artifactType", "schemaVersion", "refs"]) &&
+      only(value, [
+        "kind",
+        "name",
+        "artifactType",
+        "schemaVersion",
+        "refs",
+        "refsFromTask",
+      ]) &&
       nonempty(value.artifactType) &&
       (value.schemaVersion === undefined || nonempty(value.schemaVersion)) &&
+      (value.refsFromTask === undefined || nonempty(value.refsFromTask)) &&
+      !(value.refs !== undefined && value.refsFromTask !== undefined) &&
       (value.refs === undefined ||
         (Array.isArray(value.refs) &&
           value.refs.length > 0 &&
@@ -229,6 +238,27 @@ export function preflightPlan(
   }
   for (const id of ids) visit(id);
   for (const entry of value) {
+    for (const need of [
+      ...entry.inputs.required,
+      ...entry.inputs.optional,
+      ...entry.inputs.alternatives.flatMap(
+        (group: { oneOf: Record<string, unknown>[] }) => group.oneOf,
+      ),
+    ]) {
+      if (need.kind !== "artifact" || !need.refsFromTask) continue;
+      const producer = byId.get(need.refsFromTask) as
+        { outputType: string; additionalOutputTypes?: string[] } | undefined;
+      check(
+        producer &&
+          producer !== entry &&
+          entry.dependsOn?.includes(need.refsFromTask) &&
+          [
+            producer.outputType,
+            ...(producer.additionalOutputTypes ?? []),
+          ].includes(need.artifactType),
+        "Invalid producer output binding",
+      );
+    }
     for (const item of entry.uncertainties ?? [])
       for (const affected of item.affectedTaskIds)
         check(ids.has(affected), `Unknown affected task ${affected}`);

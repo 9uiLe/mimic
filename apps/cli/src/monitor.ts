@@ -14,6 +14,7 @@ import { monitorPage, monitorScript, previewPage } from "./monitor-ui.js";
 import type { CliIO } from "./cli.js";
 
 const idPattern = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
+const artifactIdPattern = /^art_[A-Za-z0-9_-]{1,255}$/;
 const types = [
   "system-capability",
   "system-request",
@@ -56,6 +57,11 @@ function id(value: unknown): string {
     throw new Error("Invalid ID");
   return value;
 }
+function artifactId(value: unknown): string {
+  if (typeof value !== "string" || !artifactIdPattern.test(value))
+    throw new Error("Invalid artifact ID");
+  return value;
+}
 function count(value: number): number {
   if (!Number.isSafeInteger(value) || value < 0 || value > 1_000_000)
     throw new Error("Invalid count");
@@ -71,7 +77,7 @@ function ref(value: unknown) {
   )
     throw new Error("Invalid ref");
   return {
-    artifactId: id(r.artifactId),
+    artifactId: artifactId(r.artifactId),
     revision: Number(r.revision),
     lockDigest: r.lockDigest,
   };
