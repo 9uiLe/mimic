@@ -90,6 +90,16 @@ test("matched comparison freezes one common upstream and three isolated branches
     prepare({ ...cfg, pageEvidenceFiles: [] }),
     /Missing comparison settings/,
   );
+  await assert.rejects(
+    prepare({ ...cfg, pageEvidenceFiles: ["./inputs/page.html"] }),
+    /Invalid evidence path/,
+  );
+  await symlink("page.html", path.join(root, "inputs/page-link.html"));
+  await assert.rejects(
+    prepare({ ...cfg, pageEvidenceFiles: ["inputs/page-link.html"] }),
+    /Linked or escaped evidence/,
+  );
+  await rm(path.join(root, "inputs/page-link.html"));
   await writeFile(
     path.join(root, "inputs/oversize.html"),
     "x".repeat(1024 * 1024 + 1),

@@ -315,8 +315,27 @@ async function prepare(cfg) {
   };
   const pageEvidence = {};
   for (const name of cfg.pageEvidenceFiles) {
-    const file = await realpath(path.join(root, name));
-    assert(inside(root, file), "Evidence escapes workspace");
+    assert(
+      typeof name === "string" &&
+        !path.isAbsolute(name) &&
+        !name.includes("\\") &&
+        name
+          .split("/")
+          .every(
+            (part) =>
+              part &&
+              part !== "." &&
+              part !== ".." &&
+              ![".codex", ".aws", ".mimic", ".env"].includes(part) &&
+              !part.startsWith(".env."),
+          ),
+      `Invalid evidence path: ${name}`,
+    );
+    const file = path.join(root, name);
+    assert(
+      inside(root, file) && (await realpath(file)) === file,
+      `Linked or escaped evidence: ${name}`,
+    );
     const frozen = await frozenFile(file);
     assert(frozen.bytes <= 1024 * 1024, `Evidence file too large: ${name}`);
     pageEvidence[name] = frozen;
