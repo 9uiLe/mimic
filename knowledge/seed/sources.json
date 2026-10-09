@@ -232,6 +232,138 @@
         "failure:skos-relations"
       ],
       "rightsStrategy": "Original analysis only; cited source supports the observed mechanism, not effectiveness of this transfer."
+    },
+    {
+      "id": "obs:teamlab-object",
+      "kind": "observation",
+      "sourceUrl": "https://speakerdeck.com/teamlab/object-oriented-ui-design",
+      "sourceTitle": "複雑なUI設計への銀の弾丸 「オブジェクト指向UIデザイン」",
+      "author": "朴木優斗 / teamLab",
+      "relevantSection": "Slides 8–18, 23–31, 45–50, 60–61; slide images 9, 12, 25, 31, 48",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party slide text reviewed; slide 48 image visually inspected. Other selected slide images were acquired but not analyzed visually; product-specific outcome unverified.",
+      "claim": "The authored bookshelf example contrasts an action-first home with a book collection. The deck shows book collection/detail navigation and contextual editing after selecting a book; slide 48 visually shows the collection and detail screens.",
+      "claimLinkage": ["case:teamlab-object"],
+      "rightsStrategy": "Link and original paraphrase only; no third-party screenshot, slide, CSS, brand asset, or long passage copied."
+    },
+    {
+      "id": "hyp:teamlab-object",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://speakerdeck.com/teamlab/object-oriented-ui-design",
+      "sourceTitle": "複雑なUI設計への銀の弾丸 「オブジェクト指向UIデザイン」",
+      "author": "朴木優斗 / teamLab",
+      "relevantSection": "Slides 8–18, 23–31, 45–50, 60–61; slide images 9, 12, 25, 31, 48",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original application hypothesis; not tested by the source.",
+      "claim": "For Mimic, a direction may center persistent design proposals as objects with comparison and actions after selection; first verify that the user needs to revisit and compare proposals. This does not establish that object-first is universally better.",
+      "claimLinkage": [
+        "trait:teamlab-object",
+        "principle:teamlab-object",
+        "space:teamlab-object",
+        "mechanism:teamlab-object",
+        "pattern:teamlab-object",
+        "failure:teamlab-object"
+      ],
+      "rightsStrategy": "Original analysis; source supports the observed mechanism, not the effectiveness of transfer."
+    },
+    {
+      "id": "obs:smarthr-table",
+      "kind": "observation",
+      "sourceUrl": "https://smarthr.design/products/design-patterns/smarthr-table/",
+      "sourceTitle": "よくあるテーブル | SmartHR Design System",
+      "author": "SmartHR Design System",
+      "relevantSection": "構成; オブジェクトの情報; 情報量; ステータス; オブジェクトの操作; overview screenshot",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party pattern text and illustrated table overview visually inspected; product-specific outcome unverified.",
+      "claim": "The first-party pattern shows a row table with status, object name, information, and actions. It says to select information that lets users identify and compare objects rather than show every field, while task status should identify the stage and too many columns reduce overview.",
+      "claimLinkage": ["case:smarthr-table"],
+      "rightsStrategy": "Link and original paraphrase only; no third-party screenshot, slide, CSS, brand asset, or long passage copied."
+    },
+    {
+      "id": "hyp:smarthr-table",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://smarthr.design/products/design-patterns/smarthr-table/",
+      "sourceTitle": "よくあるテーブル | SmartHR Design System",
+      "author": "SmartHR Design System",
+      "relevantSection": "構成; オブジェクトの情報; 情報量; ステータス; オブジェクトの操作; overview screenshot",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original application hypothesis; not tested by the source.",
+      "claim": "For Mimic, list view may show proposal name, two or three decision-making differences, status and next action; detailed implementation metadata can be available on demand. Test whether users can still explain a choice and detect a blocked or unfinished option.",
+      "claimLinkage": [
+        "trait:smarthr-table",
+        "principle:smarthr-table",
+        "space:smarthr-table",
+        "mechanism:smarthr-table",
+        "pattern:smarthr-table",
+        "failure:smarthr-table"
+      ],
+      "rightsStrategy": "Original analysis; source supports the observed mechanism, not the effectiveness of transfer."
+    },
+    {
+      "id": "obs:google-expressive",
+      "kind": "observation",
+      "sourceUrl": "https://design.google/library/expressive-material-design-google-research",
+      "sourceTitle": "Better, Easier, Emotional UX — Google Design",
+      "author": "Frank Bentley, Julia Feldman, Lennard Schmidt, Martin Pielot, Michael Gilbert / Google Design",
+      "relevantSection": "Expressive designs are easier to use; Context still matters; email and playlist comparison images",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party article and paired email screens visually inspected; playlist pair was not fully inspected visually. Product-specific outcome unverified.",
+      "claim": "The first-party article pairs email composer screens: a small top-bar Send control and a larger Send control near the keyboard. It reports faster visual location in its study. The same article shows a familiar playlist next to an unstructured image layout and reports poorer usability for the latter; removing email action labels also hurt usability.",
+      "claimLinkage": ["case:google-expressive"],
+      "rightsStrategy": "Link and original paraphrase only; no third-party screenshot, slide, CSS, brand asset, or long passage copied."
+    },
+    {
+      "id": "hyp:google-expressive",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://design.google/library/expressive-material-design-google-research",
+      "sourceTitle": "Better, Easier, Emotional UX — Google Design",
+      "author": "Frank Bentley, Julia Feldman, Lennard Schmidt, Martin Pielot, Michael Gilbert / Google Design",
+      "relevantSection": "Expressive designs are easier to use; Context still matters; email and playlist comparison images",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original application hypothesis; not tested by the source.",
+      "claim": "For Mimic, visual hierarchy may emphasize the next meaningful decision and current result while keeping proposal labels and navigation stable. Compare with a quiet alternative; do not transfer Google study effect sizes to Mimic.",
+      "claimLinkage": [
+        "trait:google-expressive",
+        "principle:google-expressive",
+        "space:google-expressive",
+        "mechanism:google-expressive",
+        "pattern:google-expressive",
+        "failure:google-expressive"
+      ],
+      "rightsStrategy": "Original analysis; source supports the observed mechanism, not the effectiveness of transfer."
+    },
+    {
+      "id": "obs:github-run",
+      "kind": "observation",
+      "sourceUrl": "https://github.blog/news-insights/product-news/improving-navigation-for-github-actions/",
+      "sourceTitle": "Improving navigation for GitHub Actions",
+      "author": "Amarilis Dias / GitHub",
+      "relevantSection": "Improvements to reusable workflows hierarchy; Local navigation; run-jobs screenshot",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party article and linked Run jobs screenshot visually inspected; current GitHub UI and product-specific outcome unverified.",
+      "claim": "GitHub’s first-party article shows a Run jobs panel with completed and in-progress rows; a Deploy parent contains indented regional jobs. It describes grouping reusable jobs under callers, expandable hierarchy, and a local route back to workflow list.",
+      "claimLinkage": ["case:github-run"],
+      "rightsStrategy": "Link and original paraphrase only; no third-party screenshot, slide, CSS, brand asset, or long passage copied."
+    },
+    {
+      "id": "hyp:github-run",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://github.blog/news-insights/product-news/improving-navigation-for-github-actions/",
+      "sourceTitle": "Improving navigation for GitHub Actions",
+      "author": "Amarilis Dias / GitHub",
+      "relevantSection": "Improvements to reusable workflows hierarchy; Local navigation; run-jobs screenshot",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original application hypothesis; not tested by the source.",
+      "claim": "For Mimic, the run overview may prioritize current stage, completed/blocked state and next user action, while nested task and log detail opens when diagnosing. The UI must not invent linear progress for parallel or uncertain work.",
+      "claimLinkage": [
+        "trait:github-run",
+        "principle:github-run",
+        "space:github-run",
+        "mechanism:github-run",
+        "pattern:github-run",
+        "failure:github-run"
+      ],
+      "rightsStrategy": "Original analysis; source supports the observed mechanism, not the effectiveness of transfer."
     }
   ]
 }

@@ -166,6 +166,90 @@
       ],
       "observedClaimRefs": ["obs:skos-relations"],
       "transferHypothesisRefs": ["hyp:skos-relations"]
+    },
+    {
+      "id": "space:teamlab-object",
+      "category": "product-object-navigation",
+      "label": "Object-first exploration",
+      "problemTraits": ["trait:teamlab-object"],
+      "principles": ["principle:teamlab-object"],
+      "transferableMechanisms": ["mechanism:teamlab-object"],
+      "referenceCases": ["case:teamlab-object"],
+      "goodFit": [
+        "People need to browse, compare, return to, and act on identifiable objects."
+      ],
+      "poorFit": [
+        "There is only one implicit object or a fixed one-off procedure with no useful collection."
+      ],
+      "failureModes": ["failure:teamlab-object"],
+      "superficialDoNotBorrow": [
+        "Book covers, exact bookshelf layout, labels, and teamLab visual styling"
+      ],
+      "observedClaimRefs": ["obs:teamlab-object"],
+      "transferHypothesisRefs": ["hyp:teamlab-object"]
+    },
+    {
+      "id": "space:smarthr-table",
+      "category": "product-comparison",
+      "label": "Decision-focused object comparison",
+      "problemTraits": ["trait:smarthr-table"],
+      "principles": ["principle:smarthr-table"],
+      "transferableMechanisms": ["mechanism:smarthr-table"],
+      "referenceCases": ["case:smarthr-table"],
+      "goodFit": [
+        "Candidates share comparable attributes and the user must scan or compare several at once."
+      ],
+      "poorFit": [
+        "Objects lack stable comparable fields, or rich spatial/visual context determines the choice."
+      ],
+      "failureModes": ["failure:smarthr-table"],
+      "superficialDoNotBorrow": [
+        "SmartHR labels, icons, colors, sample data, and exact table layout"
+      ],
+      "observedClaimRefs": ["obs:smarthr-table"],
+      "transferHypothesisRefs": ["hyp:smarthr-table"]
+    },
+    {
+      "id": "space:google-expressive",
+      "category": "visual-priority",
+      "label": "Function-led visual emphasis",
+      "problemTraits": ["trait:google-expressive"],
+      "principles": ["principle:google-expressive"],
+      "transferableMechanisms": ["mechanism:google-expressive"],
+      "referenceCases": ["case:google-expressive"],
+      "goodFit": [
+        "One action is clearly primary at a particular task moment and users must find it quickly."
+      ],
+      "poorFit": [
+        "Several actions are equally important, or the domain calls for calm, familiar scanning."
+      ],
+      "failureModes": ["failure:google-expressive"],
+      "superficialDoNotBorrow": [
+        "Google brand palette, expressive shapes, email content, and experimental screen compositions"
+      ],
+      "observedClaimRefs": ["obs:google-expressive"],
+      "transferHypothesisRefs": ["hyp:google-expressive"]
+    },
+    {
+      "id": "space:github-run",
+      "category": "run-progress",
+      "label": "Hierarchical run progress with detail on demand",
+      "problemTraits": ["trait:github-run"],
+      "principles": ["principle:github-run"],
+      "transferableMechanisms": ["mechanism:github-run"],
+      "referenceCases": ["case:github-run"],
+      "goodFit": [
+        "Work has real nested stages and users need to see where execution is waiting or failing."
+      ],
+      "poorFit": [
+        "The work is instantaneous or stages do not correspond to meaningful user-visible progress."
+      ],
+      "failureModes": ["failure:github-run"],
+      "superficialDoNotBorrow": [
+        "GitHub iconography, job names, exact Actions sidebar, and green/yellow status styling"
+      ],
+      "observedClaimRefs": ["obs:github-run"],
+      "transferHypothesisRefs": ["hyp:github-run"]
     }
   ]
 }
