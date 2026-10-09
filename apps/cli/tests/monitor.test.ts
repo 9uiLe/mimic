@@ -554,6 +554,35 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(await page.locator(".table-scroll").getAttribute("tabindex")).toBe(
       "0",
     );
+    const scrollLeft = await page.locator(".table-scroll").evaluate((table) => {
+      table.focus();
+      table.scrollLeft = 60;
+      return table.scrollLeft;
+    });
+    expect(scrollLeft).toBeGreaterThan(0);
+    await runtime.registry.start({
+      id: "run_third",
+      scope: "org_local",
+      entryMode: "system-first",
+      base: [],
+      reused: [],
+      safeActions: ["task_third"],
+      actor,
+      at,
+      reason: "unrelated-run-update",
+    });
+    await page.locator('[data-run-id="run_third"]').waitFor({ timeout: 6000 });
+    expect(
+      await page.locator(".table-scroll").evaluate((table) => table.scrollLeft),
+    ).toBe(scrollLeft);
+    expect(await page.evaluate(() => document.activeElement?.className)).toBe(
+      "table-scroll",
+    );
+    await page.locator('[data-run-id="run_second"]').click();
+    await page.locator('[data-run-id="run_monitor"]').click();
+    expect(
+      await page.locator(".table-scroll").evaluate((table) => table.scrollLeft),
+    ).toBe(0);
     const opened = context.waitForEvent("page");
     await page.locator("#product-preview-link").click();
     const tab = await opened;

@@ -13,7 +13,7 @@ const labels = {
 const text = (value) => labels[value] || value;
 const add = (parent, tag, value) => { const el=document.createElement(tag); el.textContent=value; parent.append(el); return el; };
 const refText = (ref) => ref.artifactId+'@'+ref.revision+' #'+ref.lockDigest;
-let busy=false, lastSnapshot='', selectedRunId='', latestRuns=[];
+let busy=false, lastSnapshot='', selectedRunId='', latestRuns=[], renderedRunId='', renderedRunSnapshot='';
 const search=document.getElementById('run-search');
 function applyFilter() {
   const query=search.value.trim().toLocaleLowerCase();
@@ -27,8 +27,15 @@ function applyFilter() {
 }
 search.addEventListener('input',applyFilter);
 function renderDetail() {
-  const detail=document.getElementById('run-detail'); detail.replaceChildren();
+  const detail=document.getElementById('run-detail');
   const run=latestRuns.find(item=>item.runId===selectedRunId);
+  const snapshot=JSON.stringify(run);
+  if(selectedRunId===renderedRunId && snapshot===renderedRunSnapshot) return;
+  const sameRun=selectedRunId===renderedRunId;
+  const previousTable=detail.querySelector('.table-scroll');
+  const tableFocused=sameRun && previousTable===document.activeElement;
+  const tableScrollLeft=sameRun ? previousTable?.scrollLeft || 0 : 0;
+  detail.replaceChildren(); renderedRunId=selectedRunId; renderedRunSnapshot=snapshot;
   if(!run) { add(detail,'p','Run を選ぶと、保存された Task・セッション・成果物を確認できます。'); return; }
   const eyebrow=add(detail,'p','選択中の Run · Core の保存状態'); eyebrow.className='eyebrow';
   add(detail,'h2',run.runId);
@@ -54,6 +61,8 @@ function renderDetail() {
   add(detail,'h3','成果物の exact refs');
   if(!run.artifacts.length) add(detail,'p','この Run の成果物 ref はまだありません。');
   for(const artifact of run.artifacts) add(detail,'p',artifact.type+' · '+refText(artifact.ref)).className='ref';
+  const newTable=detail.querySelector('.table-scroll');
+  if(newTable) { newTable.scrollLeft=tableScrollLeft; if(tableFocused) newTable.focus({preventScroll:true}); }
 }
 function selectRun(runId) {
   selectedRunId=runId;
