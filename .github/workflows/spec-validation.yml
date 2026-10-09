@@ -3,6 +3,10 @@ name: Initial specification validation
 on:
   pull_request:
 
+concurrency:
+  group: spec-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -26,14 +30,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run check:ci
 
-  bootstrap:
-    name: Bootstrap quality, unit, browser and CLI
+  bootstrap-matrix:
+    name: Bootstrap ${{ matrix.check }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [quality, browser]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -43,15 +52,39 @@ jobs:
         with:
           version: 12.9.1
           run_install: false
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install-deps chromium
-      - run: node scripts/chrome-for-testing.mjs
+      - id: select
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/select-ci.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
+      - if: steps.select.outputs.scope != 'docs'
+        run: pnpm install --frozen-lockfile
+      - if: steps.select.outputs.scope != 'docs'
+        run: pnpm exec playwright install-deps chromium
+      - if: steps.select.outputs.scope != 'docs' && matrix.check == 'browser'
+        run: node scripts/chrome-for-testing.mjs
       - name: Quality, build and unit tests
+        if: steps.select.outputs.scope != 'docs' && matrix.check == 'quality'
         run: pnpm run check
       - name: Chromium and axe smoke
+        if: steps.select.outputs.scope != 'docs' && matrix.check == 'browser'
         run: pnpm run test:browser --project=chromium-desktop --project=chromium-mobile
       - name: Built CLI startup
+        if: steps.select.outputs.scope != 'docs' && matrix.check == 'quality'
         run: |
           output="$(node apps/cli/dist/main.js)"
           test "$output" = '{"name":"mimic","state":"ready"}'
           printf '%s\n' "$output"
+      - if: steps.select.outputs.scope == 'docs'
+        run: echo 'Bootstrap runtime checks are not applicable to Markdown-only changes'
+
+  bootstrap:
+    name: Bootstrap quality, unit, browser and CLI
+    if: always()
+    needs: bootstrap-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both bootstrap checks to pass
+        env:
+          MATRIX_RESULT: ${{ needs.bootstrap-matrix.result }}
+        run: test "$MATRIX_RESULT" = success
