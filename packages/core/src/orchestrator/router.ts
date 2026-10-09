@@ -542,7 +542,7 @@ export class Orchestrator {
         if (need.kind === "evidence-file") return !!task.evidenceFiles?.length;
         if (need.refsFromTask) {
           const source = byId.get(need.refsFromTask)!;
-          const completion = state.events.find(
+          const completions = state.events.filter(
             (event) =>
               event.runId === runId &&
               event.action === "set-work" &&
@@ -551,13 +551,41 @@ export class Orchestrator {
               event.reason === completionReason(source.id) &&
               !event.runAfter.safeActions.includes(source.id),
           );
+          const completion = completions.at(-1);
           if (!completion) return false;
-          const selected = completion.outputs.filter(
+          // Legacy file-backed completions omitted outputs. Their producer
+          // events carry the same invocation timestamp as set-work. Exclude
+          // partial outputs from earlier attempts as well as earlier tasks.
+          const previousSequence = completions.at(-2)?.sequence ?? 0;
+          const produced = completion.outputs.length
+            ? completion.outputs
+            : state.events
+                .filter(
+                  (event) =>
+                    event.sequence > previousSequence &&
+                    event.sequence < completion.sequence &&
+                    event.at === completion.at &&
+                    event.runId === runId &&
+                    event.action === "produce-provisional" &&
+                    event.actor.kind === "skill" &&
+                    event.actor.id === source.skillId &&
+                    event.reason ===
+                      productionReason(source.id, source.skillId),
+                )
+                .flatMap((event) => event.outputs)
+                .filter((ref) =>
+                  completion.runAfter.artifacts.some((item) =>
+                    equal(item, ref),
+                  ),
+                );
+          const selected = produced.filter(
             (ref) =>
               artifacts.get(`${ref.artifactId}@${ref.revision}`)?.meta.type ===
               need.artifactType,
           );
           return selected.length > 0 &&
+            new Set(selected.map((ref) => canonicalJson(ref))).size ===
+              selected.length &&
             selected.every(
               (ref) =>
                 available.some((item) => equal(item, ref)) &&

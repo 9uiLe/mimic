@@ -30,6 +30,8 @@ export interface CodexOptions {
   env: Readonly<Record<string, string>>;
   workspace: string;
   timeoutMs?: number;
+  /** Bounded generation effort; does not change tool or account permissions. */
+  reasoningEffort?: "low" | "medium";
 }
 export interface CodexInspection {
   runtimeVersion: string;
@@ -948,7 +950,14 @@ export async function createCodexGenerationProfile(
     !path.isAbsolute(request.workspace) ||
     !path.isAbsolute(options.workspace) ||
     Object.keys(options).some(
-      (key) => !["executable", "env", "workspace", "timeoutMs"].includes(key),
+      (key) =>
+        ![
+          "executable",
+          "env",
+          "workspace",
+          "timeoutMs",
+          "reasoningEffort",
+        ].includes(key),
     )
   )
     throw new ExecutorFailure("unsupported");
@@ -963,6 +972,8 @@ export async function createCodexGenerationProfile(
     !Number.isSafeInteger(timeoutMs) ||
     timeoutMs < 1 ||
     timeoutMs > 60_000 ||
+    (options.reasoningEffort !== undefined &&
+      !["low", "medium"].includes(options.reasoningEffort)) ||
     outputSchemaPath.includes("\0")
   )
     throw new ExecutorFailure("unsupported");
@@ -988,6 +999,9 @@ export async function createCodexGenerationProfile(
     'model_provider="openai"',
     // Version0.160.0 maps Standard to the default service tier, not priority.
     'service_tier="default"',
+    ...(options.reasoningEffort
+      ? [`model_reasoning_effort="${options.reasoningEffort}"`]
+      : []),
     'approval_policy="never"',
     'web_search="disabled"',
     "tools.update_plan.enabled=false",
@@ -1174,6 +1188,24 @@ export function parseCodexWorkEnvelope(text: string): Record<string, unknown> {
   let envelope: Record<string, unknown>;
   try {
     envelope = object(JSON.parse(text));
+    // Strict Structured Outputs cannot describe arbitrary artifact content.
+    // The official CLI may instead return one JSON-encoded submission string;
+    // the same static submit path validates its decoded contents below.
+    if (
+      Object.keys(envelope).length === 1 &&
+      typeof envelope.submissionJson === "string"
+    ) {
+      const serialized = envelope.submissionJson;
+      try {
+        envelope = object(JSON.parse(serialized));
+      } catch {
+        // A single redundant closing brace is an unambiguous syntax error.
+        // Keep the original output separately and let static submit validate
+        // every resulting field, origin and exact lock.
+        if (!serialized.endsWith("}")) throw new Error();
+        envelope = object(JSON.parse(serialized.slice(0, -1)));
+      }
+    }
   } catch {
     throw new ExecutorFailure("unknown-outcome");
   }

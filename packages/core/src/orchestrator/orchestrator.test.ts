@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -825,6 +825,20 @@ describe("orchestrator over shared workspace", () => {
       outputs.push(candidate);
     }
     const refs = outputs.map(reference);
+    const partial: ArtifactSnapshot = {
+      ...structuredClone(outputs[0]!),
+      meta: { ...outputs[0]!.meta, id: "art_direction_partial_attempt" },
+    };
+    const partialRef = reference(partial);
+    await x.artifacts.create(partial);
+    await x.registry.produce({
+      runId: "run_producer_refs",
+      ref: partialRef,
+      inputs: [],
+      actor: { kind: "skill", id: source.skillId },
+      at: new Date(Date.parse(now) - 1000).toISOString(),
+      reason: `Skill task ${JSON.stringify(source.id)} by ${JSON.stringify(source.skillId)} returned exact provisional output`,
+    });
     await x.orchestrator.accept(
       sourceInvocation,
       {
@@ -848,6 +862,27 @@ describe("orchestrator over shared workspace", () => {
         `Skill task ${JSON.stringify(source.id)} completed with verified exact outputs`,
     );
     expect(completion?.outputs).toEqual(refs);
+    const snapshot = await x.registry.snapshot();
+    const legacy = structuredClone(snapshot);
+    const legacyCompletion = legacy.events.find(
+      (event) => event.sequence === completion?.sequence,
+    );
+    if (!legacyCompletion) throw new Error("Missing producer completion");
+    (
+      legacyCompletion as { outputs: readonly (typeof refs)[number][] }
+    ).outputs = [];
+    const read = vi.spyOn(x.registry, "snapshot").mockResolvedValue(legacy);
+    expect(
+      (await x.orchestrator.next("run_producer_refs", tasks)).actions.find(
+        (action) => action.taskId === compare.id,
+      )?.invocation?.inputBindings,
+    ).toEqual([{ name: "directions", refs }]);
+    expect(
+      (await x.orchestrator.next("run_producer_refs", tasks)).actions.find(
+        (action) => action.taskId === compare.id,
+      )?.invocation?.inputRefs,
+    ).not.toContainEqual(partialRef);
+    read.mockRestore();
   });
 
   test("one-of inputs choose only the supplied brief and optional gaps remain explicit", async () => {

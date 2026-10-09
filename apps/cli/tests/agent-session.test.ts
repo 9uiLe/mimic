@@ -245,6 +245,32 @@ test("runs independent work despite review-ready, then restores accepted work in
     (await stat(path.join(h.store.directory, "session_a.json"))).mode & 0o777,
   ).toBe(0o600);
 });
+
+test("session accepts an exact artifact ID longer than the task ID limit", async () => {
+  const h = await harness();
+  const candidate = task("first");
+  candidate.binding.inputRefs = [
+    {
+      ...ref,
+      artifactId:
+        "art_run_mimic_monitor_design_v5_20261009_s09_workspace_monitor_reference_selection",
+    },
+  ];
+  h.setPlan({
+    runnable: [candidate],
+    reviewReady: false,
+    questionIds: [],
+    complete: true,
+  });
+  const state = await new AgentSession(
+    "session_long_artifact_id",
+    h.store,
+    h.ports,
+    fake("model answer"),
+    limits,
+  ).advance();
+  expect(state.tasks.first?.phase).toBe("accepted");
+});
 test.each(["quota", "authentication", "billing-unconfirmed"] as const)(
   "%s pauses without retries, explicit resume only generates unfinished work",
   async (reason) => {
@@ -1168,9 +1194,9 @@ test.each(["output", "proposal", "request", "content"])(
     await expect(
       h.ports.saveWork(h.frozen, JSON.stringify(generated)),
     ).rejects.toThrow(/digest differs/);
-    await expect(
-      stat(path.join(h.root, ".mimic/agent-work")),
-    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readdir(path.join(h.root, ".mimic/agent-work"))).toEqual([
+      expect.stringMatching(/\.rejected\.raw\.json$/),
+    ]);
     expect(await h.runtime.registry.snapshot()).toEqual(before);
   },
 );
@@ -1214,9 +1240,9 @@ test.each([
     await expect(
       h.ports.saveWork(h.frozen, JSON.stringify(generated)),
     ).rejects.toThrow();
-    await expect(
-      stat(path.join(h.root, ".mimic/agent-work")),
-    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readdir(path.join(h.root, ".mimic/agent-work"))).toEqual([
+      expect.stringMatching(/\.rejected\.raw\.json$/),
+    ]);
   },
 );
 

@@ -4,6 +4,7 @@ import {
   cp,
   mkdtemp,
   mkdir,
+  readdir,
   readFile,
   rm,
   symlink,
@@ -706,10 +707,19 @@ test("invalid UTF-8 and oversized protocol fail without truncated success", () =
 
 test("envelope validation does not fabricate Core validation or mutate candidate data", () => {
   expect(parseCodexWorkEnvelope(final)).toEqual(envelope);
+  expect(
+    parseCodexWorkEnvelope(JSON.stringify({ submissionJson: final })),
+  ).toEqual(envelope);
+  expect(
+    parseCodexWorkEnvelope(JSON.stringify({ submissionJson: `${final}}` })),
+  ).toEqual(envelope);
   for (const value of [
     "{}",
     '{"artifacts":[],"work":{}}',
     '{"artifacts":[null],"work":{"result":{}}}',
+    '{"submissionJson":"{}"}',
+    '{"submissionJson":"{}","work":{}}',
+    JSON.stringify({ submissionJson: `${final}}}` }),
   ])
     expect(() => parseCodexWorkEnvelope(value)).toThrow("unknown-outcome");
 });
@@ -929,6 +939,12 @@ test("fixed official fresh-turn profile uses stdin, Standard and native-login en
     },
   });
   const args = profile.process.args;
+  const lowEffort = await createCodexGenerationProfile(
+    { ...options, reasoningEffort: "low" },
+    input,
+    await schema(options),
+  );
+  expect(lowEffort.process.args).toContain('model_reasoning_effort="low"');
   expect(args.slice(0, 12)).toEqual([
     "exec",
     "--ignore-user-config",
@@ -1019,6 +1035,7 @@ test("profile rejects arbitrary argv, model flags, long budgets, external schema
   for (const mutation of [
     { ...options, args: ["--oss"] },
     { ...options, timeoutMs: 60_001 },
+    { ...options, reasoningEffort: "none" },
     { ...options, env: { HOME: "relative" } },
     { ...options, workspace: outside.workspace },
   ])
@@ -1265,6 +1282,21 @@ test("decoded candidate uses production static Skill submit with immutable retry
     workspace,
   });
   // Only the test's host saves bytes here;168 helper neither saves nor approves.
+  const duplicate = structuredClone(work);
+  duplicate.artifacts[0]!.provenance.push({
+    ...duplicate.artifacts[0]!.provenance[0]!,
+  });
+  const duplicateRef = {
+    ...ref,
+    lockDigest: artifactDigest(duplicate.artifacts[0]!),
+  };
+  duplicate.work.result.outputRefs = [duplicateRef];
+  duplicate.work.result.proposal.items[0]!.ref = duplicateRef;
+  await writeFile(path.join(workspace, "work.json"), JSON.stringify(duplicate));
+  expect(await dispatchCli(handoff.argv)).toBe(6);
+  expect(
+    await readdir(path.join(workspace, ".mimic/submissions")).catch(() => []),
+  ).toEqual([]);
   await writeFile(path.join(workspace, "work.json"), handoff.serializedWork);
   expect(await dispatchCli(handoff.argv)).toBe(0);
   expect(JSON.parse(String(log.mock.calls.at(-1)?.[0]))).toMatchObject({

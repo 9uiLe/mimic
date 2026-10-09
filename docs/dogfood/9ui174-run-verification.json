@@ -1,0 +1,113 @@
+{
+  "runId": "run_mimic_monitor_design_v8_20261009",
+  "pass": true,
+  "failures": [],
+  "directions": [
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s10_direction_index",
+        "lockDigest": "sha256:951aa3c62d8cea1a4f7dd79b079624ad93d0354212603bac82bd8f969be020ee",
+        "revision": 1
+      },
+      "title": "Run index with persistent record context",
+      "summary": "A searchable index of five saved Runs opens a persistent record detail view that keeps Run identity, task, session, artifact reference, and reported connection status together. A distinct preview route returns to the index and makes no claim of Run provenance."
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s10_direction_timeline",
+        "lockDigest": "sha256:56bb66f71947b18cd169a217c4174069a7cf9225e1c79493bdb0a16ff8cdee1a",
+        "revision": 1
+      },
+      "title": "Chronological Run stream with explicit preview return",
+      "summary": "A dated stream presents saved Run records in sequence, with each entry carrying its own task, session, artifact reference, and reported connection status. The stream provides a direct selected-preview route and a labeled return path; sequence does not imply causal relationship or preview provenance."
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s10_direction_guided",
+        "lockDigest": "sha256:75d3ddbf15848269ce30d8b743f7884d2c5d5b8748e25d5989045efd64c4a51f",
+        "revision": 1
+      },
+      "title": "Guided record inspection with explicit checkpoints",
+      "summary": "A focused inspection flow guides a reader through locating one of five saved Runs, checking its associated fields and reported connection status, and optionally opening a separately selected preview before returning to reidentify the record. The flow organizes inspection steps without implying that the saved focus is restored."
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s10_direction_comparison",
+        "lockDigest": "sha256:ea296062dd6ca0d9d4cae60771ea31f261fd91eb33ab2753de1374f7144b3c23",
+        "revision": 1
+      },
+      "title": "Shared comparison board for saved Run records",
+      "summary": "A comparison board puts the five saved Run records in aligned columns under common field labels so readers can inspect their task, session, artifact reference, and monitor-reported connection status side by side. A separately selected preview remains a distinct destination; a separate design review route compares candidate monitor structures for a human decision."
+    }
+  ],
+  "evaluations": [
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s11_eval_index",
+        "lockDigest": "sha256:1ba5ab264d30c455aa31509530271510ab31dfdd6520b93066234b1e4fcec724",
+        "revision": 1
+      },
+      "target": "art_run_mimic_monitor_design_v8_20261009_s10_direction_index@1 — Run index with persistent record context",
+      "criteria": [
+        "Run identity and finding",
+        "Preview separation",
+        "Feasible interaction",
+        "Unverified user/accessibility outcomes"
+      ]
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s11_eval_timeline",
+        "lockDigest": "sha256:4ccdf92ef1e623355cf6919aa3004af0e779dd72a17055665279c49777ee3bd6",
+        "revision": 1
+      },
+      "target": "art_run_mimic_monitor_design_v8_20261009_s10_direction_timeline@1 — Chronological Run stream with explicit preview return",
+      "criteria": [
+        "Run identity and finding",
+        "Preview separation",
+        "Feasible interaction",
+        "Unverified user/accessibility outcomes"
+      ]
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s11_eval_guided",
+        "lockDigest": "sha256:fb18791d70a5d9d2c489fa8287ce4ed85eef044e9534ab2b216209cf4929b9b3",
+        "revision": 1
+      },
+      "target": "art_run_mimic_monitor_design_v8_20261009_s10_direction_guided@1 — Guided record inspection with explicit checkpoints",
+      "criteria": [
+        "Run identity and finding",
+        "Preview separation",
+        "Feasible interaction",
+        "Unverified user/accessibility outcomes"
+      ]
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s11_eval_comparison",
+        "lockDigest": "sha256:ef21d8be204fe1590f2c4ec2d3ab35d909170fcd61e79b4b4db6aa40f9bdef74",
+        "revision": 1
+      },
+      "target": "art_run_mimic_monitor_design_v8_20261009_s10_direction_comparison@1 — Shared comparison board for saved Run records",
+      "criteria": [
+        "Run identity and finding",
+        "Preview separation",
+        "Feasible interaction",
+        "Unverified user/accessibility outcomes"
+      ]
+    }
+  ],
+  "decision": [
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_design_v8_20261009_s11_pending_decision",
+        "lockDigest": "sha256:2dd666a32002a45f26bda422167bf9e658e17c33574d2f4d99b552b359d7d562",
+        "revision": 1
+      },
+      "outcome": "proposed",
+      "rationale": "Recommend the persistent searchable Run index as the leading review candidate because it combines direct location with record context and a separately labeled preview path."
+    }
+  ],
+  "structuralDifferencesRequireHumanReview": true
+}

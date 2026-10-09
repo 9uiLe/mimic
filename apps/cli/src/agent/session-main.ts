@@ -34,6 +34,7 @@ interface SessionConfiguration {
   sessionId: string;
   packages: Record<string, string>;
   model: string;
+  reasoningEffort?: "low" | "medium";
   executable: string;
   maxGenerations?: number;
   timeoutMs?: number;
@@ -52,6 +53,7 @@ function parseConfiguration(value: unknown): SessionConfiguration {
           "sessionId",
           "packages",
           "model",
+          "reasoningEffort",
           "executable",
           "maxGenerations",
           "timeoutMs",
@@ -71,6 +73,12 @@ function parseConfiguration(value: unknown): SessionConfiguration {
     )
   )
     throw new Error("Invalid configuration");
+  if (
+    config.reasoningEffort !== undefined &&
+    (typeof config.reasoningEffort !== "string" ||
+      !["low", "medium"].includes(config.reasoningEffort))
+  )
+    throw new Error("Invalid reasoning effort");
   for (const [key, maximum] of [
     ["maxGenerations", 20],
     ["timeoutMs", 60000],
@@ -182,6 +190,9 @@ async function runConfiguredSession(
       env,
       workspace: config.workspace,
       timeoutMs: config.timeoutMs ?? 30000,
+      ...(config.reasoningEffort
+        ? { reasoningEffort: config.reasoningEffort }
+        : {}),
     };
     const oneShot = authorized
       ? createAuthorizedCodexSessionDispatch(
