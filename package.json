@@ -9,7 +9,7 @@
   "scripts": {
     "check:docs": "prettier --check \"**/*.md\" \"**/*.json\" && markdownlint-cli2 \"**/*.md\"",
     "check:schemas": "node scripts/check-schemas.mjs",
-    "test:ci": "node --test scripts/check-schemas.test.mjs",
+    "test:ci": "node --test scripts/check-schemas.test.mjs scripts/select-ci.test.mjs",
     "test:dco": "node --test scripts/check-dco.test.mjs",
     "check:ci": "pnpm run test:ci && pnpm run check:docs && pnpm run check:schemas",
     "dev": "pnpm --filter @mimic/demo-lab dev",

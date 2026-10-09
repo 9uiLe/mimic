@@ -3,22 +3,54 @@ name: Dev Container verification
 on:
   pull_request:
 
+concurrency:
+  group: devcontainer-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
-  devcontainer:
-    name: Dev Container Linux verification
+  devcontainer-matrix:
+    name: Dev Container ${{ matrix.check }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [quality, chromium-desktop, chromium-mobile]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - id: select
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/select-ci.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
       - name: Build, start and verify repository Dev Container
+        if: steps.select.outputs.scope != 'docs'
         uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca # v0.3.1900000450
         with:
           imageName: mimic-devcontainer-ci
           push: never
-          runCmd: bash ci/devcontainer-smoke.sh
+          runCmd: bash ci/devcontainer-smoke.sh ${{ matrix.check }}
+      - if: steps.select.outputs.scope == 'docs'
+        run: echo 'Dev Container runtime is not affected by Markdown-only changes'
+
+  devcontainer:
+    name: Dev Container Linux verification
+    if: always()
+    needs: devcontainer-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all Dev Container checks to pass
+        env:
+          MATRIX_RESULT: ${{ needs.devcontainer-matrix.result }}
+        run: test "$MATRIX_RESULT" = success

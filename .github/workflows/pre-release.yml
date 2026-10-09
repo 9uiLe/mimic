@@ -3,6 +3,10 @@ name: Pre-release checks
 on:
   pull_request:
 
+concurrency:
+  group: pre-release-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -15,6 +19,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -24,9 +29,18 @@ jobs:
         with:
           version: 12.9.1
           run_install: false
+      - id: select
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/select-ci.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run check:quality
+      - if: steps.select.outputs.scope == 'docs'
+        run: pnpm run check:ci
+      - if: steps.select.outputs.scope != 'docs'
+        run: pnpm run check:quality
       - name: Built CLI startup
+        if: steps.select.outputs.scope != 'docs'
         run: |
           output="$(node apps/cli/dist/main.js)"
           test "$output" = '{"name":"mimic","state":"ready"}'
@@ -40,6 +54,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -49,18 +64,34 @@ jobs:
         with:
           version: 12.9.1
           run_install: false
+      - id: select
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/select-ci.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install-deps chromium
-      - run: pnpm run test
+      - if: steps.select.outputs.scope != 'docs'
+        run: pnpm exec playwright install-deps chromium
+      - if: steps.select.outputs.scope == 'docs'
+        run: pnpm run test:ci
+      - if: steps.select.outputs.scope == 'ui'
+        run: pnpm exec vitest run apps/demo-lab/src/catalog.test.ts
+      - if: steps.select.outputs.scope != 'docs' && steps.select.outputs.scope != 'ui'
+        run: pnpm run test
 
-  browser:
-    name: browser
+  browser-project:
+    name: Chrome ${{ matrix.project }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium-desktop, chromium-mobile]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -70,10 +101,32 @@ jobs:
         with:
           version: 12.9.1
           run_install: false
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install-deps chromium
-      - run: node scripts/chrome-for-testing.mjs
-      - run: pnpm run test:browser --project=chromium-desktop --project=chromium-mobile
+      - id: select
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/select-ci.mjs "$PR_BASE_SHA" "$PR_HEAD_SHA"
+      - if: steps.select.outputs.scope != 'docs' && steps.select.outputs.scope != 'cli'
+        run: pnpm install --frozen-lockfile
+      - if: steps.select.outputs.scope != 'docs' && steps.select.outputs.scope != 'cli'
+        run: pnpm exec playwright install-deps chromium
+      - if: steps.select.outputs.scope != 'docs' && steps.select.outputs.scope != 'cli'
+        run: node scripts/chrome-for-testing.mjs
+      - if: steps.select.outputs.scope != 'docs' && steps.select.outputs.scope != 'cli'
+        run: pnpm run test:browser --project=${{ matrix.project }}
+      - if: steps.select.outputs.scope == 'docs' || steps.select.outputs.scope == 'cli'
+        run: echo "Chrome tests not applicable to ${{ steps.select.outputs.scope }} changes"
+
+  browser:
+    name: browser
+    if: always()
+    needs: browser-project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both Chrome projects to pass
+        env:
+          MATRIX_RESULT: ${{ needs.browser-project.result }}
+        run: test "$MATRIX_RESULT" = success
 
   dco:
     name: dco
