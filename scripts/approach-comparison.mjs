@@ -19,6 +19,11 @@ const corpusFiles = [
 ];
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const readJson = async (file) => JSON.parse(await readFile(file, "utf8"));
+const repositoryCommit = () =>
+  execFileSync("git", ["-c", `safe.directory=${repo}`, "rev-parse", "HEAD"], {
+    cwd: repo,
+    encoding: "utf8",
+  }).trim();
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
@@ -229,15 +234,18 @@ async function prepare(cfg) {
       Array.isArray(cfg.pageEvidenceFiles),
     "Missing comparison settings",
   );
-  const commit = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: repo,
-    encoding: "utf8",
-  }).trim();
+  const commit = repositoryCommit();
   assert(
     !cfg.repositoryCommit || cfg.repositoryCommit === commit,
     "Repository commit changed",
   );
   const scopeConfig = await readJson(path.join(root, ".mimic/config.json"));
+  const existing = await readJson(path.join(root, ".mimic/workspace.json"));
+  assert(
+    Object.keys(existing.registry?.runs ?? {}).length === 0 &&
+      Object.keys(existing.registry?.canonical ?? {}).length === 0,
+    "Comparison preparation requires a fresh Mimic workspace",
+  );
   const template = await readJson(path.resolve(cfg.planTemplate));
   assert(Array.isArray(template), "Invalid plan template");
   const plan = makePlan(template, cohort, cfg);
@@ -375,10 +383,7 @@ async function report(cfg) {
     path.join(root, `plans/${cohort}-manifest.json`),
   );
   assert(manifest.cohort === cohort, "Cohort mismatch");
-  const currentCommit = execFileSync("git", ["rev-parse", "HEAD"], {
-    cwd: repo,
-    encoding: "utf8",
-  }).trim();
+  const currentCommit = repositoryCommit();
   const currentTemplate = await frozenFile(path.resolve(cfg.planTemplate));
   const currentImplementation = await frozenFile(
     fileURLToPath(import.meta.url),
@@ -557,9 +562,11 @@ async function report(cfg) {
         (total, item) => total + item.generationCount,
         0,
       ),
-      elapsedGenerationMs: armAttempts.length
-        ? armAttempts.reduce((total, item) => total + item.elapsedMs, 0)
-        : null,
+      elapsedGenerationMs:
+        armSessions.length > 0 &&
+        armSessions.every((item) => attemptedSessions.has(item.sessionId))
+          ? armAttempts.reduce((total, item) => total + item.elapsedMs, 0)
+          : null,
       stops: armSessions.map((item) => ({
         sessionId: item.sessionId,
         stop: item.stop,

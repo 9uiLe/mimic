@@ -66,6 +66,21 @@ test("matched comparison freezes one common upstream and three isolated branches
   };
   const manifest = await prepare(cfg);
   await writeFile(
+    path.join(root, ".mimic/workspace.json"),
+    JSON.stringify({
+      registry: { events: [], runs: { previous: {} }, canonical: {} },
+      snapshots: {},
+    }),
+  );
+  await assert.rejects(
+    prepare({ ...cfg, cohortId: "test_used_workspace" }),
+    /fresh Mimic workspace/,
+  );
+  await writeFile(
+    path.join(root, ".mimic/workspace.json"),
+    JSON.stringify({ registry: { events: [], runs: {} }, snapshots: {} }),
+  );
+  await writeFile(
     path.join(root, ".mimic/config.json"),
     JSON.stringify({
       defaultScope: "other_scope",
@@ -238,6 +253,20 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.binding.reasoningEffortLogCount, 1);
   assert.equal(result.binding.reasoningEffortVerified, true);
   assert.equal(result.repositoryInputs.templateMatches, true);
+  const partial = JSON.parse(
+    await readFile(
+      path.join(root, ".mimic/agent-sessions/attempt.json"),
+      "utf8",
+    ),
+  );
+  partial.checkpoint.sessionId = "unlogged-attempt";
+  await writeFile(
+    path.join(root, ".mimic/agent-sessions/unlogged-attempt.json"),
+    JSON.stringify(partial),
+  );
+  const incompleteTiming = await report(cfg);
+  assert.equal(incompleteTiming.outcomes.B0.elapsedGenerationMs, null);
+  assert.equal(incompleteTiming.outcomes.B0.reasoningEffortVerified, false);
   const sessionFile = path.join(root, ".mimic/agent-sessions/attempt.json");
   const mismatched = JSON.parse(await readFile(sessionFile, "utf8"));
   mismatched.checkpoint.binding.settings.model = "different-model";
