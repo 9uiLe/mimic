@@ -1,4 +1,10 @@
 /** Local, immutable graph types and retrieval helpers. The seed corpus is separate data in knowledge/seed, not a canonical artifact. */
+export {
+  checkColorRoleProposal,
+  type ColorRoleContract,
+  type ColorRoleProposal,
+} from "./color-roles.js";
+
 export type NodeKind =
   | "trait"
   | "principle"
