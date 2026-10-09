@@ -86,6 +86,19 @@ test("matched comparison freezes one common upstream and three isolated branches
     prepare({ ...cfg, cohortId: "x".repeat(77) }),
     /Invalid cohort ID/,
   );
+  await assert.rejects(
+    prepare({ ...cfg, pageEvidenceFiles: [] }),
+    /Missing comparison settings/,
+  );
+  await writeFile(
+    path.join(root, "inputs/oversize.html"),
+    "x".repeat(1024 * 1024 + 1),
+  );
+  await assert.rejects(
+    prepare({ ...cfg, pageEvidenceFiles: ["inputs/oversize.html"] }),
+    /Evidence file too large/,
+  );
+  await rm(path.join(root, "inputs/oversize.html"));
   const manifest = await prepare(cfg);
   assert.ok(Object.keys(manifest.compiledModules).length > 0);
   await rm(path.join(root, ".mimic/workspace.json"));

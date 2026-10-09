@@ -274,7 +274,8 @@ async function prepare(cfg) {
     cfg.model &&
       cfg.reasoningEffort &&
       cfg.brief &&
-      Array.isArray(cfg.pageEvidenceFiles),
+      Array.isArray(cfg.pageEvidenceFiles) &&
+      cfg.pageEvidenceFiles.length > 0,
     "Missing comparison settings",
   );
   const commit = repositoryCommit();
@@ -316,7 +317,9 @@ async function prepare(cfg) {
   for (const name of cfg.pageEvidenceFiles) {
     const file = await realpath(path.join(root, name));
     assert(inside(root, file), "Evidence escapes workspace");
-    pageEvidence[name] = await frozenFile(file);
+    const frozen = await frozenFile(file);
+    assert(frozen.bytes <= 1024 * 1024, `Evidence file too large: ${name}`);
+    pageEvidence[name] = frozen;
   }
   const packages = await treeFiles(root, "skills");
   const schemas = {
