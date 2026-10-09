@@ -1,0 +1,358 @@
+{
+  "attempts": [
+    {
+      "sessionId": "session_9ui183_final_s04_a_20261009",
+      "runId": "run_9ui183_matched_final_20261009",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "medium",
+      "sessionConfigSha256": "caec491aba2662ced52d9760406b07997f81021221af9a510d86ef32a04bacee",
+      "schemaSha256": "8ee8876934b17944a022fe0b89ad87b63aeed38e9d21b5221be9a1bc5e1812e6",
+      "startedAt": "2026-10-09T22:04:33.605Z",
+      "finishedAt": "2026-10-09T22:05:06.204Z",
+      "elapsedMs": 32599,
+      "exitCode": 0,
+      "status": "stopped",
+      "stop": "iteration-limit",
+      "error": null,
+      "tasks": [
+        {
+          "taskId": "s04",
+          "phase": "accepted",
+          "rejectionReason": null,
+          "outputRefs": [
+            {
+              "artifactId": "art_run_9ui183_matched_final_20261009_s04_run_inspection",
+              "revision": 1,
+              "lockDigest": "sha256:f288c5dd155680001cb7db697d7f6b6b2b44be318ad7f7df52d20735f3bfc703"
+            },
+            {
+              "artifactId": "art_run_9ui183_matched_final_20261009_s04_state_refresh",
+              "revision": 1,
+              "lockDigest": "sha256:a679d28f45594f6fde116ae676146296bacc9a585d84b4648199b2f70950edf3"
+            },
+            {
+              "artifactId": "art_run_9ui183_matched_final_20261009_s04_separate_preview",
+              "revision": 1,
+              "lockDigest": "sha256:5e6f7bc7503cad423dffa2b442eb45dc1981801d2f7bc87877093b678c1f8c5a"
+            }
+          ],
+          "workDigest": "96801e20a195911bb0136d58130f14ceffd3ce3be96b051e977f1d8897ea9082",
+          "diagnostic": {
+            "version": 1,
+            "stage": "generation",
+            "backendReach": "unknown",
+            "processKind": "generation",
+            "process": {
+              "spawned": true,
+              "settled": true,
+              "exitCode": 0,
+              "signal": null,
+              "stdoutBytes": 8632,
+              "stderrBytes": 0,
+              "errorCode": "none",
+              "failure": "none"
+            },
+            "decoder": {
+              "threadStarted": true,
+              "turnStarted": true,
+              "outputObserved": true,
+              "terminalObserved": true,
+              "finished": true,
+              "failed": false,
+              "failure": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "sessionId": "session_9ui183_final_s01_a_20261009",
+      "runId": "run_9ui183_matched_final_20261009",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "medium",
+      "sessionConfigSha256": "5e2a5bae12e0ac54cf3a35d9846b338e2d9203654d901d114ef51bd2fa2d7549",
+      "schemaSha256": "8ee8876934b17944a022fe0b89ad87b63aeed38e9d21b5221be9a1bc5e1812e6",
+      "startedAt": "2026-10-09T22:05:19.998Z",
+      "finishedAt": "2026-10-09T22:05:59.849Z",
+      "elapsedMs": 39851,
+      "exitCode": 0,
+      "status": "stopped",
+      "stop": "iteration-limit",
+      "error": null,
+      "tasks": [
+        {
+          "taskId": "s01",
+          "phase": "accepted",
+          "rejectionReason": null,
+          "outputRefs": [
+            {
+              "artifactId": "art_run_9ui183_matched_final_20261009_s01_product_definition",
+              "revision": 1,
+              "lockDigest": "sha256:f8c1204ec3667ce280688ee65228b381e8a93433ba25ce55829268ea9863b709"
+            }
+          ],
+          "workDigest": "b09353b6e026e576d112bbc50365a4918c16ef2d33ca8194b86ebe064c09f258",
+          "diagnostic": {
+            "version": 1,
+            "stage": "generation",
+            "backendReach": "unknown",
+            "processKind": "generation",
+            "process": {
+              "spawned": true,
+              "settled": true,
+              "exitCode": 0,
+              "signal": null,
+              "stdoutBytes": 9322,
+              "stderrBytes": 0,
+              "errorCode": "none",
+              "failure": "none"
+            },
+            "decoder": {
+              "threadStarted": true,
+              "turnStarted": true,
+              "outputObserved": true,
+              "terminalObserved": true,
+              "finished": true,
+              "failed": false,
+              "failure": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "sessionId": "session_9ui183_final_s02_a_20261009",
+      "runId": "run_9ui183_matched_final_20261009",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "medium",
+      "sessionConfigSha256": "e94dd47d59f266a1e18f105687cd001efb7d0b8afd570704b42ab7b3b4bd7d7a",
+      "schemaSha256": "8ee8876934b17944a022fe0b89ad87b63aeed38e9d21b5221be9a1bc5e1812e6",
+      "startedAt": "2026-10-09T22:06:06.526Z",
+      "finishedAt": "2026-10-09T22:06:48.673Z",
+      "elapsedMs": 42147,
+      "exitCode": 0,
+      "status": "stopped",
+      "stop": "iteration-limit",
+      "error": null,
+      "tasks": [
+        {
+          "taskId": "s02",
+          "phase": "accepted",
+          "rejectionReason": null,
+          "outputRefs": [
+            {
+              "artifactId": "art_run_9ui183_matched_final_20261009_s02_user_task_model",
+              "revision": 1,
+              "lockDigest": "sha256:a7852f5666a222729a702c439ad356cd0e0376506e8b93e94c0a0e6c70b1c0fe"
+            }
+          ],
+          "workDigest": "afa20b3973c2e33fcaf041500d5fe2b52aa3eebc6e934173e91d3b0ac66ce043",
+          "diagnostic": {
+            "version": 1,
+            "stage": "generation",
+            "backendReach": "unknown",
+            "processKind": "generation",
+            "process": {
+              "spawned": true,
+              "settled": true,
+              "exitCode": 0,
+              "signal": null,
+              "stdoutBytes": 9522,
+              "stderrBytes": 0,
+              "errorCode": "none",
+              "failure": "none"
+            },
+            "decoder": {
+              "threadStarted": true,
+              "turnStarted": true,
+              "outputObserved": true,
+              "terminalObserved": true,
+              "finished": true,
+              "failed": false,
+              "failure": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "sessionId": "session_9ui183_final_s05_a_20261009",
+      "runId": "run_9ui183_matched_final_20261009",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "medium",
+      "sessionConfigSha256": "b8d0c6c40008443b52830db4781b8ed92fb2b169a66e8e8a40b8bfda8054af2f",
+      "schemaSha256": "8ee8876934b17944a022fe0b89ad87b63aeed38e9d21b5221be9a1bc5e1812e6",
+      "startedAt": "2026-10-09T22:06:54.779Z",
+      "finishedAt": "2026-10-09T22:07:54.958Z",
+      "elapsedMs": 60178,
+      "exitCode": 0,
+      "status": "stopped",
+      "stop": "iteration-limit",
+      "error": null,
+      "tasks": [
+        {
+          "taskId": "s05",
+          "phase": "accepted",
+          "rejectionReason": null,
+          "outputRefs": [
+            {
+              "artifactId": "art_run_9ui183_matched_final_20261009_s05_product_ui_contract",
+              "revision": 1,
+              "lockDigest": "sha256:dc0326eab4d84143c84e63b81c9dda9619e212c8f21ad59d8938cc7f4148c97b"
+            }
+          ],
+          "workDigest": "46fac642d13073aaf67fd409ae622efb190dd572b3ba03fe6b2300e7542471a6",
+          "diagnostic": {
+            "version": 1,
+            "stage": "generation",
+            "backendReach": "unknown",
+            "processKind": "generation",
+            "process": {
+              "spawned": true,
+              "settled": true,
+              "exitCode": 0,
+              "signal": null,
+              "stdoutBytes": 14501,
+              "stderrBytes": 0,
+              "errorCode": "none",
+              "failure": "none"
+            },
+            "decoder": {
+              "threadStarted": true,
+              "turnStarted": true,
+              "outputObserved": true,
+              "terminalObserved": true,
+              "finished": true,
+              "failed": false,
+              "failure": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "sessionId": "session_9ui183_final_s07_a_20261009",
+      "runId": "run_9ui183_matched_final_20261009",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "medium",
+      "sessionConfigSha256": "b1ce57e7e9a5dd424f3ae05bf8e7f79a525e39d228226ba64fb60e55457b6f3d",
+      "schemaSha256": "8ee8876934b17944a022fe0b89ad87b63aeed38e9d21b5221be9a1bc5e1812e6",
+      "startedAt": "2026-10-09T22:08:04.244Z",
+      "finishedAt": "2026-10-09T22:10:04.540Z",
+      "elapsedMs": 120295,
+      "exitCode": 0,
+      "status": "stopped",
+      "stop": "timeout",
+      "error": null,
+      "tasks": [
+        {
+          "taskId": "s07",
+          "phase": "executing",
+          "rejectionReason": null,
+          "outputRefs": [],
+          "workDigest": null,
+          "diagnostic": {
+            "version": 1,
+            "stage": "generation",
+            "backendReach": "unknown",
+            "processKind": "generation",
+            "process": {
+              "spawned": true,
+              "settled": true,
+              "exitCode": null,
+              "signal": "SIGTERM",
+              "stdoutBytes": 1035,
+              "stderrBytes": 0,
+              "errorCode": "none",
+              "failure": "cancelled"
+            },
+            "decoder": {
+              "threadStarted": true,
+              "turnStarted": true,
+              "outputObserved": true,
+              "terminalObserved": false,
+              "finished": false,
+              "failed": false,
+              "failure": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "sessionId": "session_9ui183_final_s07_b_20261009",
+      "runId": "run_9ui183_matched_final_20261009",
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "medium",
+      "sessionConfigSha256": "1a536f51f83de83c59f53d84a6388b0a16f2ad3d88b98eeac8f61e822a89f1c1",
+      "schemaSha256": "8ee8876934b17944a022fe0b89ad87b63aeed38e9d21b5221be9a1bc5e1812e6",
+      "startedAt": "2026-10-09T22:10:37.704Z",
+      "finishedAt": "2026-10-09T22:12:36.416Z",
+      "elapsedMs": 118712,
+      "exitCode": 0,
+      "status": "stopped",
+      "stop": "unknown-outcome",
+      "error": null,
+      "tasks": [
+        {
+          "taskId": "s07",
+          "phase": "prepared",
+          "rejectionReason": null,
+          "outputRefs": [],
+          "workDigest": "9b16ef025a62790784eb2a2dadc7a29e878789e643a796992760d31580f3c627",
+          "diagnostic": {
+            "version": 1,
+            "stage": "generation",
+            "backendReach": "unknown",
+            "processKind": "generation",
+            "process": {
+              "spawned": true,
+              "settled": true,
+              "exitCode": 0,
+              "signal": null,
+              "stdoutBytes": 33048,
+              "stderrBytes": 0,
+              "errorCode": "none",
+              "failure": "none"
+            },
+            "decoder": {
+              "threadStarted": true,
+              "turnStarted": true,
+              "outputObserved": true,
+              "terminalObserved": true,
+              "finished": true,
+              "failed": false,
+              "failure": "none"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "reconciliations": [
+    {
+      "sessionId": "session_9ui183_final_s07_b_20261009",
+      "action": "same-saved-work-resume-once",
+      "at": "2026-10-09T22:13:07.682679+00:00",
+      "status": "stopped",
+      "stop": "reservation-invalid",
+      "tasks": [
+        {
+          "taskId": "s07",
+          "phase": "prepared"
+        }
+      ]
+    }
+  ],
+  "s07PreparedWork": {
+    "path": ".mimic/agent-work/session_9ui183_final_s07_b_20261009-s07-9b16ef025a62790784eb2a2dadc7a29e878789e643a796992760d31580f3c627.json",
+    "digest": "9b16ef025a62790784eb2a2dadc7a29e878789e643a796992760d31580f3c627"
+  },
+  "s07SubmissionMarkers": [
+    {
+      "path": ".mimic/submissions/run_9ui183_matched_final_20261009-96e4947c496ebfc1f5bb2eeb203f7d9235ef4a3ee5badca94908772a8b534c94.json",
+      "sha256": "aa08ddb234f32f4549f7e42986d58e776de22e3bce9484d62bfa4755d1ddccf5",
+      "bytes": 3020
+    }
+  ]
+}

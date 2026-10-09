@@ -1,0 +1,95 @@
+{
+  "cohort": "9ui183_matched_final_20261009",
+  "runId": "run_9ui183_matched_final_20261009",
+  "repositoryCommit": "a9abf7427cfb9044ccf01da3a756a181be82e091",
+  "manifestSha256": "e7951d1d24a459a2b411ae74c509a20b85a8f70275542bd9a3a2eb411537048d",
+  "planDigest": "0d9c3a9afb853e8451642b5edef66da8692fdbd893f20a8ba6bf5e765c15e7ca",
+  "model": "gpt-6.1-sol",
+  "reasoningEffort": "medium",
+  "dispatchSettings": {
+    "executable": "/Users/t.kobayashi/.local/bin/codex",
+    "maxGenerations": 1,
+    "timeoutMs": 120000,
+    "maxOutputBytes": 4000000
+  },
+  "pageEvidence": {
+    "inputs/9ui183-monitor-page.html": {
+      "sha256": "96073caf3a39863e948754e24fdd3d397e492c47a3e38cd54fde6a666aea744b",
+      "bytes": 5095
+    },
+    "inputs/9ui183-monitor-observations.json": {
+      "sha256": "6a2f27ade1a5c83e184c82d0cdce39130b84c95531160b17a14161541700bf40",
+      "bytes": 971
+    }
+  },
+  "corpus": {
+    "commit": "a9abf7427cfb9044ccf01da3a756a181be82e091",
+    "files": {
+      "knowledge/seed/graph.json": {
+        "sha256": "487fd670b4cfbe91c27f88fafb9ada94a61ec6293ca359d8df3645f9c623460b",
+        "bytes": 68559
+      },
+      "knowledge/seed/spaces.json": {
+        "sha256": "185ce1ad71c558ef81d20eab66345412e7024195ba5c1a2a741525331ae6741a",
+        "bytes": 15370
+      },
+      "knowledge/seed/sources.json": {
+        "sha256": "e19212d0ae5d309c2d4633b63cdd485120df82f88ddbb11c36274579dcb54634",
+        "bytes": 33403
+      },
+      "knowledge/seed/product-ui-playbook.md": {
+        "sha256": "4030914b578757bac300e77fdb8a0239957191f0e95805aece44bed2d603972e",
+        "bytes": 6806
+      },
+      "knowledge/seed/purpose-information-playbook.md": {
+        "sha256": "9b6d5aebe25a17e1f5fe7cd183536fa234492e3050807e86baa5b6edbf5ec4bf",
+        "bytes": 7039
+      }
+    },
+    "digest": "22a3e0932850961a168b6360f52320404ca3a619f926e1bfc86aab3fff6ede88"
+  },
+  "retrieval": {
+    "status": "ready",
+    "selected": [
+      {
+        "caseId": "case:smarthr-table",
+        "role": "near"
+      },
+      {
+        "caseId": "case:github-run",
+        "role": "adjacent"
+      },
+      {
+        "caseId": "case:gov-details",
+        "role": "adjacent"
+      },
+      {
+        "caseId": "case:teamlab-object",
+        "role": "adjacent"
+      }
+    ]
+  },
+  "armEvidence": [
+    {
+      "path": "inputs/9ui183_matched_final_20261009-b0-s09.md",
+      "sha256": "cfc0fcf392e67fd64dc8836ebc569f4a3a374944f5e4b4a19d16bb97acc67820",
+      "bytes": 89849
+    },
+    {
+      "path": "inputs/9ui183_matched_final_20261009-c1-s09.md",
+      "sha256": "e5cf7d739de1489cb45c30e8e9d7236c2cc6f69d20862660f1de956b646fedbf",
+      "bytes": 23438
+    },
+    {
+      "path": "inputs/9ui183_matched_final_20261009-c2-s09.md",
+      "sha256": "f2352cf104d93bfd903280c39d8f66299c4880297451a13faae2d9606400c1d6",
+      "bytes": 90665
+    },
+    {
+      "path": "inputs/9ui183_matched_final_20261009-c2-s11.md",
+      "sha256": "568bffdfe5c7cd8aeabaf3b64bc8bd4dd240add63b2f6c11f03782c3ad1d6b55",
+      "bytes": 5035
+    }
+  ],
+  "boundedAttemptsPerTask": 2
+}
