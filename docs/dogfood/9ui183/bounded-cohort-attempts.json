@@ -332,10 +332,12 @@
   "reconciliations": [
     {
       "sessionId": "session_9ui183_final_s07_b_20261009",
-      "action": "same-saved-work-resume-once",
+      "action": "unauthorized-cli-resume-attempt",
       "at": "2026-10-09T22:13:07.682679+00:00",
       "status": "stopped",
       "stop": "reservation-invalid",
+      "staticSubmitReached": false,
+      "explanation": "The public CLI lacked the checkpoint's authorized-existing-credit-risk-once dispatch. The execution-policy check stopped before replaying saved work; the checkpoint persisted reservation-invalid.",
       "tasks": [
         {
           "taskId": "s07",

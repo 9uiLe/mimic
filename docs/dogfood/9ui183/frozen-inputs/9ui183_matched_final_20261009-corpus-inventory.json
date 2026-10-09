@@ -1,0 +1,26 @@
+{
+  "commit": "a9abf7427cfb9044ccf01da3a756a181be82e091",
+  "files": {
+    "knowledge/seed/graph.json": {
+      "sha256": "487fd670b4cfbe91c27f88fafb9ada94a61ec6293ca359d8df3645f9c623460b",
+      "bytes": 68559
+    },
+    "knowledge/seed/spaces.json": {
+      "sha256": "185ce1ad71c558ef81d20eab66345412e7024195ba5c1a2a741525331ae6741a",
+      "bytes": 15370
+    },
+    "knowledge/seed/sources.json": {
+      "sha256": "e19212d0ae5d309c2d4633b63cdd485120df82f88ddbb11c36274579dcb54634",
+      "bytes": 33403
+    },
+    "knowledge/seed/product-ui-playbook.md": {
+      "sha256": "4030914b578757bac300e77fdb8a0239957191f0e95805aece44bed2d603972e",
+      "bytes": 6806
+    },
+    "knowledge/seed/purpose-information-playbook.md": {
+      "sha256": "9b6d5aebe25a17e1f5fe7cd183536fa234492e3050807e86baa5b6edbf5ec4bf",
+      "bytes": 7039
+    }
+  },
+  "digest": "22a3e0932850961a168b6360f52320404ca3a619f926e1bfc86aab3fff6ede88"
+}
