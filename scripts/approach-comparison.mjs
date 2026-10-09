@@ -189,6 +189,7 @@ function referenceEvidence(arm, corpus, inventory, result, sources) {
 async function prepare(cfg) {
   const { retrieveDesignReferences } =
     await import("../packages/core/dist/index.js");
+  const { preflightPlan } = await import("../apps/cli/dist/plan.js");
   const root = await realpath(cfg.workspace);
   const cohort = safeName(cfg.cohortId);
   assert(
@@ -206,10 +207,11 @@ async function prepare(cfg) {
     !cfg.repositoryCommit || cfg.repositoryCommit === commit,
     "Repository commit changed",
   );
-  await readJson(path.join(root, ".mimic/config.json"));
+  const scopeConfig = await readJson(path.join(root, ".mimic/config.json"));
   const template = await readJson(path.resolve(cfg.planTemplate));
   assert(Array.isArray(template), "Invalid plan template");
   const plan = makePlan(template, cohort, cfg);
+  preflightPlan(plan, scopeConfig.scopes, scopeConfig.defaultScope);
   const corpus = {
     product: await readFile(path.join(repo, corpusFiles[3]), "utf8"),
     purpose: await readFile(path.join(repo, corpusFiles[4]), "utf8"),
@@ -342,6 +344,35 @@ async function report(cfg) {
     path.join(root, `plans/${cohort}-manifest.json`),
   );
   assert(manifest.cohort === cohort, "Cohort mismatch");
+  const currentCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: repo,
+    encoding: "utf8",
+  }).trim();
+  const currentTemplate = await frozenFile(path.resolve(cfg.planTemplate));
+  const currentImplementation = await frozenFile(
+    fileURLToPath(import.meta.url),
+  );
+  const corpusMatches = Object.fromEntries(
+    await Promise.all(
+      Object.entries(manifest.corpus.files).map(async ([name, expected]) => {
+        const actual = await frozenFile(path.join(repo, name));
+        return [
+          name,
+          actual.sha256 === expected.sha256 && actual.bytes === expected.bytes,
+        ];
+      }),
+    ),
+  );
+  const repositoryInputs = {
+    commitMatches: currentCommit === manifest.repositoryCommit,
+    templateMatches:
+      currentTemplate.sha256 === manifest.planTemplate.sha256 &&
+      currentTemplate.bytes === manifest.planTemplate.bytes,
+    implementationMatches:
+      currentImplementation.sha256 === manifest.implementation.sha256 &&
+      currentImplementation.bytes === manifest.implementation.bytes,
+    corpusMatches,
+  };
   for (const file of manifest.frozenFiles) {
     const actual = await frozenFile(path.join(root, file.path));
     assert(
@@ -463,9 +494,8 @@ async function report(cfg) {
   for (const session of sessions) {
     const attempt = attemptedSessions.get(session.sessionId);
     assert(
-      !attempt ||
-        (attempt.model === manifest.model &&
-          attempt.reasoningEffort === manifest.reasoningEffort),
+      attempt?.model === manifest.model &&
+        attempt.reasoningEffort === manifest.reasoningEffort,
       `Attempt settings differ from frozen comparison: ${session.sessionId}`,
     );
   }
@@ -483,7 +513,10 @@ async function report(cfg) {
       acceptedRefs: accepted.flatMap((event) => event.outputs),
       lastAcceptedEvent: accepted.at(-1)?.at ?? null,
       firstReviewableAt:
-        completed(`s11_${arm.toLowerCase()}`).at(-1)?.at ?? null,
+        completed(`s11_${arm.toLowerCase()}`)
+          .map((event) => event.at)
+          .filter(Boolean)
+          .sort()[0] ?? null,
       attemptCount: armSessions.length,
       generationCount: armSessions.reduce(
         (total, item) => total + item.generationCount,
@@ -503,6 +536,7 @@ async function report(cfg) {
     cohort,
     runId: manifest.runId,
     repositoryCommit: manifest.repositoryCommit,
+    repositoryInputs,
     runState: workspace.registry.runs[manifest.runId]
       ? deriveRunState(workspace.registry.runs[manifest.runId])
       : "not-started",

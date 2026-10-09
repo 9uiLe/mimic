@@ -56,6 +56,24 @@ test("matched comparison freezes one common upstream and three isolated branches
     ],
   };
   const manifest = await prepare(cfg);
+  await writeFile(
+    path.join(root, ".mimic/config.json"),
+    JSON.stringify({
+      defaultScope: "other_scope",
+      scopes: [{ level: "organization", ownerId: "other_scope" }],
+    }),
+  );
+  await assert.rejects(
+    prepare({ ...cfg, cohortId: "test_wrong_scope" }),
+    /scope|Scope/,
+  );
+  await writeFile(
+    path.join(root, ".mimic/config.json"),
+    JSON.stringify({
+      defaultScope: "org_local",
+      scopes: [{ level: "organization", ownerId: "org_local" }],
+    }),
+  );
   const plan = JSON.parse(
     await readFile(path.join(root, manifest.planPath), "utf8"),
   );
@@ -127,11 +145,22 @@ test("matched comparison freezes one common upstream and three isolated branches
       { artifactId: "art_completed", revision: 1, lockDigest: "sha256:1" },
     ],
   };
+  const firstReviewable = {
+    action: "set-work",
+    runId: manifest.runId,
+    reason: 'Skill task "s11_c1" completed with verified exact outputs',
+    at: "2026-10-09T10:00:00.000Z",
+    outputs: [],
+  };
+  const laterReview = {
+    ...firstReviewable,
+    at: "2026-10-09T11:00:00.000Z",
+  };
   await writeFile(
     path.join(root, ".mimic/workspace.json"),
     JSON.stringify({
       registry: {
-        events: [orphan, completed],
+        events: [orphan, completed, firstReviewable, laterReview],
         runs: {
           [manifest.runId]: {
             closed: false,
@@ -170,13 +199,30 @@ test("matched comparison freezes one common upstream and three isolated branches
       },
     }),
   );
+  await assert.rejects(report(cfg), /Attempt settings differ/);
+  await writeFile(
+    path.join(root, "attempts.jsonl"),
+    JSON.stringify({
+      runId: manifest.runId,
+      sessionId: "attempt",
+      model: cfg.model,
+      reasoningEffort: cfg.reasoningEffort,
+      elapsedMs: 20,
+      tasks: [{ taskId: "s09_b0" }],
+    }) + "\n",
+  );
   const result = await report(cfg);
   assert.deepEqual(result.outcomes.B0.acceptedRefs, []);
   assert.equal(result.outcomes.B0.attemptCount, 1);
-  assert.equal(result.outcomes.B0.elapsedGenerationMs, null);
+  assert.equal(result.outcomes.B0.elapsedGenerationMs, 20);
   assert.equal(result.outcomes.C1.acceptedRefs[0].artifactId, "art_completed");
+  assert.equal(
+    result.outcomes.C1.firstReviewableAt,
+    "2026-10-09T10:00:00.000Z",
+  );
   assert.equal(result.binding.verifiedSessionCount, 1);
-  assert.equal(result.binding.reasoningEffortLogCount, 0);
+  assert.equal(result.binding.reasoningEffortLogCount, 1);
+  assert.equal(result.repositoryInputs.templateMatches, true);
   const sessionFile = path.join(root, ".mimic/agent-sessions/attempt.json");
   const mismatched = JSON.parse(await readFile(sessionFile, "utf8"));
   mismatched.checkpoint.binding.settings.model = "different-model";
