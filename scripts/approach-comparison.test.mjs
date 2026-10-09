@@ -14,7 +14,13 @@ test("matched comparison freezes one common upstream and three isolated branches
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-approach-test-"));
   await mkdir(path.join(root, ".mimic"));
   await mkdir(path.join(root, "inputs"));
-  await writeFile(path.join(root, ".mimic/config.json"), "{}\n");
+  await writeFile(
+    path.join(root, ".mimic/config.json"),
+    JSON.stringify({
+      defaultScope: "org_local",
+      scopes: [{ level: "organization", ownerId: "org_local" }],
+    }),
+  );
   await writeFile(
     path.join(root, ".mimic/workspace.json"),
     JSON.stringify({
@@ -124,17 +130,37 @@ test("matched comparison freezes one common upstream and three isolated branches
   await writeFile(
     path.join(root, ".mimic/workspace.json"),
     JSON.stringify({
-      registry: { events: [orphan, completed], runs: {} },
+      registry: {
+        events: [orphan, completed],
+        runs: {
+          [manifest.runId]: {
+            closed: false,
+            proposals: {},
+            safeActions: [{}],
+            blockers: {},
+          },
+        },
+      },
       snapshots: {},
     }),
   );
+  const frozenReport = await report(cfg);
+  assert.equal(frozenReport.runState, "active");
   await mkdir(path.join(root, ".mimic/agent-sessions"));
   await writeFile(
     path.join(root, ".mimic/agent-sessions/attempt.json"),
     JSON.stringify({
       checkpoint: {
         sessionId: "attempt",
-        binding: { runId: manifest.runId },
+        binding: {
+          runId: manifest.runId,
+          planDigest: frozenReport.binding.planDigest,
+          settings: {
+            provider: "codex",
+            billingMode: "subscription-only",
+            model: cfg.model,
+          },
+        },
         generationCount: 1,
         status: "stopped",
         stop: "candidate-rejected",
@@ -149,6 +175,15 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.outcomes.B0.attemptCount, 1);
   assert.equal(result.outcomes.B0.elapsedGenerationMs, null);
   assert.equal(result.outcomes.C1.acceptedRefs[0].artifactId, "art_completed");
+  assert.equal(result.binding.verifiedSessionCount, 1);
+  assert.equal(result.binding.reasoningEffortLogCount, 0);
+  const sessionFile = path.join(root, ".mimic/agent-sessions/attempt.json");
+  const mismatched = JSON.parse(await readFile(sessionFile, "utf8"));
+  mismatched.checkpoint.binding.settings.model = "different-model";
+  await writeFile(sessionFile, JSON.stringify(mismatched));
+  await assert.rejects(report(cfg), /Session binding differs/);
+  mismatched.checkpoint.binding.settings.model = cfg.model;
+  await writeFile(sessionFile, JSON.stringify(mismatched));
   await writeFile(path.join(root, manifest.arms.B0.evidencePath), "changed\n");
   await assert.rejects(report(cfg), /Changed frozen file/);
 });

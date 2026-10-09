@@ -333,6 +333,9 @@ async function prepare(cfg) {
   return manifest;
 }
 async function report(cfg) {
+  const { canonicalJson, deriveRunState } =
+    await import("../packages/core/dist/index.js");
+  const { preflightPlan } = await import("../apps/cli/dist/plan.js");
   const root = await realpath(cfg.workspace);
   const cohort = safeName(cfg.cohortId);
   const manifest = await readJson(
@@ -360,6 +363,46 @@ async function report(cfg) {
       `Changed Skill package: ${name}`,
     );
   }
+  const scopeConfig = await readJson(path.join(root, ".mimic/config.json"));
+  const planned = await readJson(path.join(root, manifest.planPath));
+  const normalized = preflightPlan(
+    planned,
+    scopeConfig.scopes,
+    scopeConfig.defaultScope,
+  );
+  const packageBySkill = new Map();
+  for (const entry of await readdir(path.join(root, "skills"), {
+    withFileTypes: true,
+  })) {
+    if (!entry.isDirectory()) continue;
+    const content = await readFile(
+      path.join(root, "skills", entry.name, "manifest.yaml"),
+      "utf8",
+    );
+    const skillId = content.match(/^\s*"skillId":\s*"([^"]+)"/m)?.[1];
+    assert(skillId && !packageBySkill.has(skillId), "Invalid Skill mapping");
+    packageBySkill.set(skillId, `skills/${entry.name}`);
+  }
+  const sessionPackages = Object.fromEntries(
+    normalized.map((task) => {
+      const location = packageBySkill.get(task.skillId);
+      assert(location, `Missing Skill for ${task.id}`);
+      return [task.id, location];
+    }),
+  );
+  const savedTasks = await readJson(
+    path.join(root, ".mimic/runs", `${manifest.runId}.json`),
+  ).catch((error) => {
+    if (error.code === "ENOENT") return normalized;
+    throw error;
+  });
+  assert(
+    canonicalJson(savedTasks) === canonicalJson(normalized),
+    "Saved Run plan differs from frozen plan",
+  );
+  const expectedPlanDigest = sha(
+    canonicalJson({ tasks: normalized, packages: sessionPackages }),
+  );
   const workspace = await readJson(path.join(root, ".mimic/workspace.json"));
   const events = workspace.registry.events.filter(
     (event) => event.runId === manifest.runId,
@@ -381,6 +424,13 @@ async function report(cfg) {
       );
       const checkpoint = saved.checkpoint;
       if (checkpoint?.binding?.runId !== manifest.runId) continue;
+      assert(
+        checkpoint.binding.planDigest === expectedPlanDigest &&
+          checkpoint.binding.settings?.provider === "codex" &&
+          checkpoint.binding.settings?.billingMode === "subscription-only" &&
+          checkpoint.binding.settings?.model === manifest.model,
+        `Session binding differs from frozen comparison: ${name}`,
+      );
       sessions.push({
         sessionId: checkpoint.sessionId,
         generationCount: checkpoint.generationCount,
@@ -406,6 +456,18 @@ async function report(cfg) {
       .filter((item) => item.runId === manifest.runId);
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
+  }
+  const attemptedSessions = new Map(
+    attempts.map((item) => [item.sessionId, item]),
+  );
+  for (const session of sessions) {
+    const attempt = attemptedSessions.get(session.sessionId);
+    assert(
+      !attempt ||
+        (attempt.model === manifest.model &&
+          attempt.reasoningEffort === manifest.reasoningEffort),
+      `Attempt settings differ from frozen comparison: ${session.sessionId}`,
+    );
   }
   const outcomes = {};
   for (const [arm, armRecord] of Object.entries(manifest.arms)) {
@@ -441,7 +503,18 @@ async function report(cfg) {
     cohort,
     runId: manifest.runId,
     repositoryCommit: manifest.repositoryCommit,
-    runState: workspace.registry.runs[manifest.runId]?.state ?? "not-started",
+    runState: workspace.registry.runs[manifest.runId]
+      ? deriveRunState(workspace.registry.runs[manifest.runId])
+      : "not-started",
+    binding: {
+      planDigest: expectedPlanDigest,
+      model: manifest.model,
+      reasoningEffort: manifest.reasoningEffort,
+      verifiedSessionCount: sessions.length,
+      reasoningEffortLogCount: sessions.filter((item) =>
+        attemptedSessions.has(item.sessionId),
+      ).length,
+    },
     commonAcceptedRefs: stages.flatMap((id) =>
       completed(id).flatMap((event) => event.outputs),
     ),
