@@ -173,6 +173,46 @@ test("every graph claim resolves to a specific observation or transfer hypothesi
     for (const ref of edge.evidenceRefs) expect(ledger.has(ref)).toBe(true);
 });
 
+test("information hierarchy cases retrieve with distinct fit boundaries", () => {
+  const details = spaces.find(
+    (space) => space.category === "bounded-explanation",
+  )!;
+  const tasks = spaces.find(
+    (space) => space.category === "multi-session-task-progress",
+  )!;
+  const result = retrieveDesignReferences(graph, {
+    traitIds: [...details.problemTraits, ...tasks.problemTraits],
+    assessments: [details, tasks].map((space) => ({
+      caseId: space.referenceCases[0]!,
+      role: "near" as const,
+      structuralFit: "high" as const,
+      contextDistance: "low" as const,
+      rationale: `Apply only if ${space.goodFit[0]}`,
+      evidenceRefs: space.transferHypothesisRefs,
+    })),
+  });
+  expect(result.status).toBe("ready");
+  if (result.status !== "ready") return;
+  expect(result.selected.map((item) => item.caseId).sort()).toEqual(
+    [details.referenceCases[0], tasks.referenceCases[0]].sort(),
+  );
+  expect(
+    new Set(result.selected.flatMap((item) => item.mechanismIds)).size,
+  ).toBe(2);
+  for (const space of [details, tasks]) {
+    expect(space.goodFit[0]).not.toEqual(space.poorFit[0]);
+    expect(
+      result.selected.find((item) => item.caseId === space.referenceCases[0])
+        ?.evidenceRefs,
+    ).toEqual(
+      expect.arrayContaining([
+        ...space.observedClaimRefs,
+        ...space.transferHypothesisRefs,
+      ]),
+    );
+  }
+});
+
 test("all reference spaces carry fit boundaries and complete retrievable paths", () => {
   expect(new Set(spaces.map((space) => space.category))).toEqual(
     new Set([
@@ -188,9 +228,11 @@ test("all reference spaces carry fit boundaries and complete retrievable paths",
       "product-comparison",
       "visual-priority",
       "run-progress",
+      "bounded-explanation",
+      "multi-session-task-progress",
     ]),
   );
-  expect(spaces.length).toBe(12);
+  expect(spaces.length).toBe(14);
   for (const space of spaces) {
     expect(nodes.get(space.id)?.kind).toBe("space");
     const trait = nodes.get(space.problemTraits[0]!);

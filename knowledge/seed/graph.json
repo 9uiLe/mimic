@@ -803,6 +803,140 @@
       "risks": [
         "Exposing every internal step can flood the overview; collapsing all children can conceal a failure or the next action."
       ]
+    },
+    {
+      "id": "trait:gov-details",
+      "kind": "trait",
+      "label": "A clear main action has one bounded supplementary explanation",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-details"]
+    },
+    {
+      "id": "principle:gov-details",
+      "kind": "principle",
+      "label": "Keep decision-critical facts visible and put only optional explanation behind a descriptive trigger",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-details"]
+    },
+    {
+      "id": "space:gov-details",
+      "kind": "space",
+      "label": "Optional explanation after the primary decision",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-details"],
+      "doNotBorrow": [
+        "GOV.UK styling, wording, icon, exact markup, and sample text"
+      ],
+      "risks": [
+        "Hiding a decisive caveat can produce a confident but uninformed choice."
+      ]
+    },
+    {
+      "id": "case:gov-details",
+      "kind": "case",
+      "label": "GOV.UK Details disclosure",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:gov-details"],
+      "doNotBorrow": [
+        "GOV.UK styling, wording, icon, exact markup, and sample text"
+      ],
+      "risks": [
+        "Hiding a decisive caveat can produce a confident but uninformed choice."
+      ]
+    },
+    {
+      "id": "mechanism:gov-details",
+      "kind": "mechanism",
+      "label": "A short descriptive summary expands one nearby block of supplementary text without navigating away",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-details"],
+      "doNotBorrow": [
+        "GOV.UK styling, wording, icon, exact markup, and sample text"
+      ]
+    },
+    {
+      "id": "pattern:gov-details",
+      "kind": "pattern",
+      "label": "One optional, bounded explanation attached to a visible decision",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-details"]
+    },
+    {
+      "id": "failure:gov-details",
+      "kind": "failure",
+      "label": "A hidden decisive caveat or several collapsed sections make the next action unclear",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-details"],
+      "risks": [
+        "Hiding a decisive caveat can produce a confident but uninformed choice."
+      ]
+    },
+    {
+      "id": "trait:gov-task-list",
+      "kind": "trait",
+      "label": "A person returns to a long transaction and must identify completed work and the next task",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-task-list"]
+    },
+    {
+      "id": "principle:gov-task-list",
+      "kind": "principle",
+      "label": "Represent actionable progress by task and dependency rather than a decorative completion count",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-task-list"]
+    },
+    {
+      "id": "space:gov-task-list",
+      "kind": "space",
+      "label": "Resume-oriented multi-task progress",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "doNotBorrow": [
+        "GOV.UK styling, status labels, exact task order, and sample content"
+      ],
+      "risks": [
+        "Treating every internal process step as a user task inflates perceived work and obscures the actual next action."
+      ]
+    },
+    {
+      "id": "case:gov-task-list",
+      "kind": "case",
+      "label": "GOV.UK multi-task list",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:gov-task-list"],
+      "doNotBorrow": [
+        "GOV.UK styling, status labels, exact task order, and sample content"
+      ],
+      "risks": [
+        "Treating every internal process step as a user task inflates perceived work and obscures the actual next action."
+      ]
+    },
+    {
+      "id": "mechanism:gov-task-list",
+      "kind": "mechanism",
+      "label": "Grouped linked tasks show individual completion state and make the next unfinished action discoverable",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "doNotBorrow": [
+        "GOV.UK styling, status labels, exact task order, and sample content"
+      ]
+    },
+    {
+      "id": "pattern:gov-task-list",
+      "kind": "pattern",
+      "label": "Task list for a genuine multi-session process",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-task-list"]
+    },
+    {
+      "id": "failure:gov-task-list",
+      "kind": "failure",
+      "label": "A task list adds noise to a short journey or masks a blocker behind an aggregate count",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "risks": [
+        "Treating every internal process step as a user task inflates perceived work and obscures the actual next action."
+      ]
     }
   ],
   "edges": [
@@ -1309,6 +1443,90 @@
       "rationale": "This failure mode limits the proposed transfer.",
       "evidenceRefs": ["hyp:github-run"],
       "from": "principle:github-run"
+    },
+    {
+      "to": "principle:gov-details",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-details"],
+      "from": "trait:gov-details"
+    },
+    {
+      "to": "space:gov-details",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-details"],
+      "from": "principle:gov-details"
+    },
+    {
+      "to": "case:gov-details",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:gov-details"],
+      "from": "space:gov-details"
+    },
+    {
+      "to": "mechanism:gov-details",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:gov-details"],
+      "from": "case:gov-details"
+    },
+    {
+      "to": "principle:gov-details",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-details"],
+      "from": "mechanism:gov-details"
+    },
+    {
+      "to": "pattern:gov-details",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-details"],
+      "from": "principle:gov-details"
+    },
+    {
+      "to": "failure:gov-details",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-details"],
+      "from": "principle:gov-details"
+    },
+    {
+      "to": "principle:gov-task-list",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "from": "trait:gov-task-list"
+    },
+    {
+      "to": "space:gov-task-list",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "from": "principle:gov-task-list"
+    },
+    {
+      "to": "case:gov-task-list",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:gov-task-list"],
+      "from": "space:gov-task-list"
+    },
+    {
+      "to": "mechanism:gov-task-list",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:gov-task-list"],
+      "from": "case:gov-task-list"
+    },
+    {
+      "to": "principle:gov-task-list",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "from": "mechanism:gov-task-list"
+    },
+    {
+      "to": "pattern:gov-task-list",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "from": "principle:gov-task-list"
+    },
+    {
+      "to": "failure:gov-task-list",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:gov-task-list"],
+      "from": "principle:gov-task-list"
     }
   ]
 }
