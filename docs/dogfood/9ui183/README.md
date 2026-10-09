@@ -51,8 +51,10 @@ Then run `mimic run --id <manifest.runId> --tasks <manifest.planPath>` in that
 workspace. Dispatch common stages once, followed by the three S09–S11
 branches. The manifest's task IDs and frozen plan specify exact bindings.
 `scripts/approach-comparison.mjs report <config.json>` checks the frozen
-files again and reports accepted exact refs, attempts, stops, and the first
-S11 acceptance time for each arm. A static rejection or unknown outcome stays
+files again and reads the official session checkpoints and completed `set-work`
+events for exact refs, attempts, stops, and the first S11 completion time.
+Elapsed time is reported only when a non-sensitive `attempts.jsonl` exists;
+otherwise it remains unknown. A static rejection or unknown outcome stays
 with its original work and submission marker; the normal session recovery
 protocol determines whether the same work may be retried. Never rewrite a
 model output or marker to create a pass.

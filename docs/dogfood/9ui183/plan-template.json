@@ -428,12 +428,6 @@
           "artifactType": "system-capability",
           "schemaVersion": "1.0.0",
           "refsFromTask": "s04"
-        },
-        {
-          "name": "prior-direction",
-          "kind": "artifact",
-          "artifactType": "design-direction",
-          "schemaVersion": "1.0.0"
         }
       ],
       "alternatives": []

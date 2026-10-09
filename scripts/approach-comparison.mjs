@@ -81,6 +81,12 @@ function makePlan(template, cohort, cfg) {
     ["s09", "s10", "s11"].includes(task.id),
   );
   assert(armTemplate.length === 3, "Missing S09–S11 template");
+  assert(
+    !armTemplate.some((task) =>
+      task.inputs.optional.some((need) => need.name === "prior-direction"),
+    ),
+    "Unbound prior direction can leak between comparison arms",
+  );
   const commonBrief = `${cfg.brief.trim()}\n\nThis is a matched comparison. The supplied brief is evidence, not a recorded human decision. Do not invent a decisionId or human-decision provenance. No owner has adopted a direction.\n`;
   const common = upstream.map((original) => {
     const task = JSON.parse(JSON.stringify(original));
@@ -358,6 +364,38 @@ async function report(cfg) {
   const events = workspace.registry.events.filter(
     (event) => event.runId === manifest.runId,
   );
+  const completed = (taskId) =>
+    events.filter(
+      (event) =>
+        event.action === "set-work" &&
+        event.reason?.includes(`Skill task "${taskId}"`),
+    );
+  const sessions = [];
+  try {
+    for (const name of await readdir(
+      path.join(root, ".mimic/agent-sessions"),
+    )) {
+      if (!name.endsWith(".json")) continue;
+      const saved = await readJson(
+        path.join(root, ".mimic/agent-sessions", name),
+      );
+      const checkpoint = saved.checkpoint;
+      if (checkpoint?.binding?.runId !== manifest.runId) continue;
+      sessions.push({
+        sessionId: checkpoint.sessionId,
+        generationCount: checkpoint.generationCount,
+        status: checkpoint.status,
+        stop: checkpoint.stop ?? null,
+        tasks: Object.entries(checkpoint.tasks ?? {}).map(([taskId, task]) => ({
+          taskId,
+          phase: task.phase,
+          rejectionReason: task.rejectionReason ?? null,
+        })),
+      });
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
   let attempts = [];
   try {
     attempts = (await readFile(path.join(root, "attempts.jsonl"), "utf8"))
@@ -371,14 +409,11 @@ async function report(cfg) {
   }
   const outcomes = {};
   for (const [arm, armRecord] of Object.entries(manifest.arms)) {
-    const accepted = events.filter(
-      (event) =>
-        event.action === "produce-provisional" &&
-        armRecord.taskIds.some((id) =>
-          event.reason?.includes(`Skill task "${id}"`),
-        ),
-    );
+    const accepted = armRecord.taskIds.flatMap((id) => completed(id));
     const armAttempts = attempts.filter((item) =>
+      item.tasks.some((task) => armRecord.taskIds.includes(task.taskId)),
+    );
+    const armSessions = sessions.filter((item) =>
       item.tasks.some((task) => armRecord.taskIds.includes(task.taskId)),
     );
     outcomes[arm] = {
@@ -386,22 +421,19 @@ async function report(cfg) {
       acceptedRefs: accepted.flatMap((event) => event.outputs),
       lastAcceptedEvent: accepted.at(-1)?.at ?? null,
       firstReviewableAt:
-        accepted.find((event) =>
-          event.reason?.includes(`Skill task "s11_${arm.toLowerCase()}"`),
-        )?.at ?? null,
-      attemptCount: armAttempts.length,
-      elapsedGenerationMs: armAttempts.reduce(
-        (total, item) => total + item.elapsedMs,
+        completed(`s11_${arm.toLowerCase()}`).at(-1)?.at ?? null,
+      attemptCount: armSessions.length,
+      generationCount: armSessions.reduce(
+        (total, item) => total + item.generationCount,
         0,
       ),
-      stops: armAttempts.map((item) => ({
+      elapsedGenerationMs: armAttempts.length
+        ? armAttempts.reduce((total, item) => total + item.elapsedMs, 0)
+        : null,
+      stops: armSessions.map((item) => ({
         sessionId: item.sessionId,
         stop: item.stop,
-        tasks: item.tasks.map((task) => ({
-          taskId: task.taskId,
-          phase: task.phase,
-          rejectionReason: task.rejectionReason,
-        })),
+        tasks: item.tasks,
       })),
     };
   }
@@ -410,14 +442,10 @@ async function report(cfg) {
     runId: manifest.runId,
     repositoryCommit: manifest.repositoryCommit,
     runState: workspace.registry.runs[manifest.runId]?.state ?? "not-started",
-    commonAcceptedRefs: events
-      .filter(
-        (event) =>
-          event.action === "produce-provisional" &&
-          stages.some((id) => event.reason?.includes(`Skill task "${id}"`)),
-      )
-      .flatMap((event) => event.outputs),
-    commonAttemptCount: attempts.filter((item) =>
+    commonAcceptedRefs: stages.flatMap((id) =>
+      completed(id).flatMap((event) => event.outputs),
+    ),
+    commonAttemptCount: sessions.filter((item) =>
       item.tasks.some((task) => stages.includes(task.taskId)),
     ).length,
     outcomes,

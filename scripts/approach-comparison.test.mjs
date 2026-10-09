@@ -5,7 +5,7 @@ import os from "node:os";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { preflightPlan } from "../apps/cli/dist/plan.js";
-import { prepare, report } from "./approach-comparison.mjs";
+import { makePlan, prepare, report } from "./approach-comparison.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const template = path.join(repo, "docs/dogfood/9ui183/plan-template.json");
@@ -53,6 +53,18 @@ test("matched comparison freezes one common upstream and three isolated branches
   const plan = JSON.parse(
     await readFile(path.join(root, manifest.planPath), "utf8"),
   );
+  const contaminated = JSON.parse(await readFile(template, "utf8"));
+  contaminated
+    .find((task) => task.id === "s10")
+    .inputs.optional.push({
+      name: "prior-direction",
+      kind: "artifact",
+      artifactType: "design-direction",
+    });
+  assert.throws(
+    () => makePlan(contaminated, "test_compare", cfg),
+    /leak between/,
+  );
   assert.equal(plan.length, 15);
   assert.equal(
     preflightPlan(
@@ -93,7 +105,50 @@ test("matched comparison freezes one common upstream and three isolated branches
   );
   assert.match(b0, /Purpose and information amount/);
   assert.doesNotMatch(b0, /Host graph retrieval/);
-  await report(cfg);
+  const orphan = {
+    action: "produce-provisional",
+    runId: manifest.runId,
+    reason: 'Skill task "s09_b0" produced partial output',
+    outputs: [
+      { artifactId: "art_orphan", revision: 1, lockDigest: "sha256:0" },
+    ],
+  };
+  const completed = {
+    action: "set-work",
+    runId: manifest.runId,
+    reason: 'Skill task "s09_c1" completed with verified exact outputs',
+    outputs: [
+      { artifactId: "art_completed", revision: 1, lockDigest: "sha256:1" },
+    ],
+  };
+  await writeFile(
+    path.join(root, ".mimic/workspace.json"),
+    JSON.stringify({
+      registry: { events: [orphan, completed], runs: {} },
+      snapshots: {},
+    }),
+  );
+  await mkdir(path.join(root, ".mimic/agent-sessions"));
+  await writeFile(
+    path.join(root, ".mimic/agent-sessions/attempt.json"),
+    JSON.stringify({
+      checkpoint: {
+        sessionId: "attempt",
+        binding: { runId: manifest.runId },
+        generationCount: 1,
+        status: "stopped",
+        stop: "candidate-rejected",
+        tasks: {
+          s09_b0: { phase: "rejected", rejectionReason: "preparation" },
+        },
+      },
+    }),
+  );
+  const result = await report(cfg);
+  assert.deepEqual(result.outcomes.B0.acceptedRefs, []);
+  assert.equal(result.outcomes.B0.attemptCount, 1);
+  assert.equal(result.outcomes.B0.elapsedGenerationMs, null);
+  assert.equal(result.outcomes.C1.acceptedRefs[0].artifactId, "art_completed");
   await writeFile(path.join(root, manifest.arms.B0.evidencePath), "changed\n");
   await assert.rejects(report(cfg), /Changed frozen file/);
 });
