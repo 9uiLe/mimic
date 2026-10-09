@@ -617,6 +617,12 @@ async function report(cfg) {
     const armSessions = sessions.filter((item) =>
       item.tasks.some((task) => armRecord.taskIds.includes(task.taskId)),
     );
+    const mixedSessionIds = armSessions
+      .filter((item) =>
+        item.tasks.some((task) => !armRecord.taskIds.includes(task.taskId)),
+      )
+      .map((item) => item.sessionId);
+    const exclusiveCosts = mixedSessionIds.length === 0;
     outcomes[arm] = {
       taskIds: armRecord.taskIds,
       acceptedRefs: accepted.flatMap((event) => event.outputs),
@@ -626,15 +632,16 @@ async function report(cfg) {
           .map((event) => event.at)
           .filter(Boolean)
           .sort()[0] ?? null,
-      attemptCount: armSessions.length,
+      attemptCount: exclusiveCosts ? armSessions.length : null,
+      mixedSessionIds,
       reasoningEffortVerified: armSessions.every((item) =>
         attemptedSessions.has(item.sessionId),
       ),
-      generationCount: armSessions.reduce(
-        (total, item) => total + item.generationCount,
-        0,
-      ),
+      generationCount: exclusiveCosts
+        ? armSessions.reduce((total, item) => total + item.generationCount, 0)
+        : null,
       elapsedGenerationMs:
+        exclusiveCosts &&
         armSessions.length > 0 &&
         armSessions.every((item) => attemptedSessions.has(item.sessionId))
           ? armAttempts.reduce((total, item) => total + item.elapsedMs, 0)
@@ -670,12 +677,18 @@ async function report(cfg) {
     commonAcceptedRefs: stages.flatMap((id) =>
       completed(id).flatMap((event) => event.outputs),
     ),
-    commonAttemptCount: sessions.filter((item) =>
-      item.tasks.some((task) => stages.includes(task.taskId)),
-    ).length,
+    commonAttemptCount: sessions.some(
+      (item) =>
+        item.tasks.some((task) => stages.includes(task.taskId)) &&
+        item.tasks.some((task) => !stages.includes(task.taskId)),
+    )
+      ? null
+      : sessions.filter((item) =>
+          item.tasks.some((task) => stages.includes(task.taskId)),
+        ).length,
     outcomes,
     warning:
-      "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied.",
+      "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied.",
   };
 }
 const [command, configFile] = process.argv.slice(2);

@@ -273,6 +273,33 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.binding.reasoningEffortVerified, true);
   assert.equal(result.schemaVerification, "verified");
   assert.equal(result.repositoryInputs.templateMatches, true);
+  const shared = JSON.parse(
+    await readFile(
+      path.join(root, ".mimic/agent-sessions/attempt.json"),
+      "utf8",
+    ),
+  );
+  shared.checkpoint.tasks.s09_c1 = { phase: "rejected" };
+  await writeFile(
+    path.join(root, ".mimic/agent-sessions/attempt.json"),
+    JSON.stringify(shared),
+  );
+  const mixed = await report(cfg);
+  assert.deepEqual(mixed.outcomes.B0.mixedSessionIds, ["attempt"]);
+  assert.equal(mixed.outcomes.B0.attemptCount, null);
+  assert.equal(mixed.outcomes.B0.generationCount, null);
+  assert.equal(mixed.outcomes.B0.elapsedGenerationMs, null);
+  assert.equal(mixed.outcomes.C1.elapsedGenerationMs, null);
+  await writeFile(
+    path.join(root, ".mimic/agent-sessions/attempt.json"),
+    JSON.stringify({
+      ...shared,
+      checkpoint: {
+        ...shared.checkpoint,
+        tasks: { s09_b0: shared.checkpoint.tasks.s09_b0 },
+      },
+    }),
+  );
   const partial = JSON.parse(
     await readFile(
       path.join(root, ".mimic/agent-sessions/attempt.json"),
