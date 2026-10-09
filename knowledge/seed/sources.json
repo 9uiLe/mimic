@@ -364,6 +364,72 @@
         "failure:github-run"
       ],
       "rightsStrategy": "Original analysis; source supports the observed mechanism, not the effectiveness of transfer."
+    },
+    {
+      "id": "obs:gov-details",
+      "kind": "observation",
+      "sourceUrl": "https://design-system.service.gov.uk/components/details/",
+      "sourceTitle": "Details – GOV.UK Design System",
+      "author": "GOV.UK Design System team",
+      "relevantSection": "When to use this component; When not to use this component; live example",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party guidance and indicated live UI example visually inspected in the user's Mac Chrome; product outcomes unverified.",
+      "claim": "The live example expands one short summary into an optional explanation. The guidance reserves it for a single nonessential section, warns against hiding information most users need, and notes that some users mistake the disclosure for navigation.",
+      "claimLinkage": ["case:gov-details"],
+      "rightsStrategy": "Link and original paraphrase only; no copied screenshot, code, brand asset, or long passage."
+    },
+    {
+      "id": "hyp:gov-details",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://design-system.service.gov.uk/components/details/",
+      "sourceTitle": "Details – GOV.UK Design System",
+      "author": "GOV.UK Design System team",
+      "relevantSection": "When to use this component; When not to use this component; live example",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original Mimic application hypothesis; source does not test this transfer.",
+      "claim": "For a Mimic decision screen, use one descriptive disclosure for supplementary rationale only after the object, state, decisive evidence, and next action are visible. Verify that people find it when needed.",
+      "claimLinkage": [
+        "trait:gov-details",
+        "principle:gov-details",
+        "space:gov-details",
+        "mechanism:gov-details",
+        "pattern:gov-details",
+        "failure:gov-details"
+      ],
+      "rightsStrategy": "Original conditional analysis; observed source does not establish Mimic effectiveness."
+    },
+    {
+      "id": "obs:gov-task-list",
+      "kind": "observation",
+      "sourceUrl": "https://design-system.service.gov.uk/patterns/complete-multiple-tasks/",
+      "sourceTitle": "Complete multiple tasks – GOV.UK Design System",
+      "author": "GOV.UK Design System team",
+      "relevantSection": "When to use this pattern; When not to use this pattern; live task-list example",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party guidance and indicated live UI example visually inspected in the user's Mac Chrome; product outcomes unverified.",
+      "claim": "The live task-list example groups linked tasks and marks completed or incomplete state. The guidance applies to long transactions spanning multiple sessions and advises simplifying the journey before introducing a task list.",
+      "claimLinkage": ["case:gov-task-list"],
+      "rightsStrategy": "Link and original paraphrase only; no copied screenshot, code, brand asset, or long passage."
+    },
+    {
+      "id": "hyp:gov-task-list",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://design-system.service.gov.uk/patterns/complete-multiple-tasks/",
+      "sourceTitle": "Complete multiple tasks – GOV.UK Design System",
+      "author": "GOV.UK Design System team",
+      "relevantSection": "When to use this pattern; When not to use this pattern; live task-list example",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original Mimic application hypothesis; source does not test this transfer.",
+      "claim": "For a long Mimic workflow, group only user-actionable stages and show honest completed, pending, or blocked state with a next step. Do not expose every internal agent operation as a task.",
+      "claimLinkage": [
+        "trait:gov-task-list",
+        "principle:gov-task-list",
+        "space:gov-task-list",
+        "mechanism:gov-task-list",
+        "pattern:gov-task-list",
+        "failure:gov-task-list"
+      ],
+      "rightsStrategy": "Original conditional analysis; observed source does not establish Mimic effectiveness."
     }
   ]
 }

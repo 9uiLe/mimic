@@ -250,6 +250,48 @@
       ],
       "observedClaimRefs": ["obs:github-run"],
       "transferHypothesisRefs": ["hyp:github-run"]
+    },
+    {
+      "id": "space:gov-details",
+      "category": "bounded-explanation",
+      "label": "Optional explanation after the primary decision",
+      "problemTraits": ["trait:gov-details"],
+      "principles": ["principle:gov-details"],
+      "transferableMechanisms": ["mechanism:gov-details"],
+      "referenceCases": ["case:gov-details"],
+      "goodFit": [
+        "The same core decision is possible without opening one short explanation."
+      ],
+      "poorFit": [
+        "The majority needs the information, or several sections must be navigated."
+      ],
+      "failureModes": ["failure:gov-details"],
+      "superficialDoNotBorrow": [
+        "GOV.UK styling, wording, icon, exact markup, and sample text"
+      ],
+      "observedClaimRefs": ["obs:gov-details"],
+      "transferHypothesisRefs": ["hyp:gov-details"]
+    },
+    {
+      "id": "space:gov-task-list",
+      "category": "multi-session-task-progress",
+      "label": "Resume-oriented multi-task progress",
+      "problemTraits": ["trait:gov-task-list"],
+      "principles": ["principle:gov-task-list"],
+      "transferableMechanisms": ["mechanism:gov-task-list"],
+      "referenceCases": ["case:gov-task-list"],
+      "goodFit": [
+        "A transaction spans several user tasks or sessions and a person must resume reliably."
+      ],
+      "poorFit": [
+        "A journey can be simplified to one pass or its internal stages are not meaningful user actions."
+      ],
+      "failureModes": ["failure:gov-task-list"],
+      "superficialDoNotBorrow": [
+        "GOV.UK styling, status labels, exact task order, and sample content"
+      ],
+      "observedClaimRefs": ["obs:gov-task-list"],
+      "transferHypothesisRefs": ["hyp:gov-task-list"]
     }
   ]
 }
