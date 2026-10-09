@@ -758,6 +758,98 @@ describe("orchestrator over shared workspace", () => {
     ).toEqual([]);
   });
 
+  test("binds all and only the exact outputs of a completed producer task", async () => {
+    const x = await setup();
+    const source = route("diverge", "design-direction");
+    const compare: RoutedTask = {
+      ...route("compare", "evaluation", [
+        {
+          kind: "artifact",
+          name: "directions",
+          artifactType: "design-direction",
+          refsFromTask: source.id,
+        },
+      ]),
+      dependsOn: [source.id],
+    };
+    const tasks = [source, compare];
+    await x.orchestrator.start({
+      id: "run_producer_refs",
+      scopeOwnerId: "product_mimic",
+      entryMode: "hybrid",
+      actor: agent,
+      at: now,
+      tasks,
+    });
+    expect(
+      (await x.orchestrator.next("run_producer_refs", tasks)).actions.find(
+        (action) => action.taskId === compare.id,
+      )?.action,
+    ).toBe("BLOCK");
+    const sourceInvocation = (
+      await x.orchestrator.next("run_producer_refs", tasks)
+    ).actions.find((action) => action.taskId === source.id)!.invocation!;
+    const outputs: ArtifactSnapshot[] = [];
+    for (const id of ["art_direction_a", "art_direction_b"]) {
+      const candidate: ArtifactSnapshot = {
+        ...x.template,
+        meta: {
+          id,
+          type: "design-direction",
+          schemaVersion: "1.0.0",
+          revision: 1,
+          title: id,
+          createdAt: now,
+        },
+        scope: scopes[1]!,
+        lifecycle: { status: "provisional", freshness: "valid" },
+        origin: {
+          actorKind: "skill",
+          actorId: source.skillId,
+          runId: "run_producer_refs",
+          createdAt: now,
+        },
+        approval: { status: "pending" },
+        dependencies: [],
+        provenance: [
+          { path: "/content", kind: "assumption", rationale: "Test candidate" },
+        ],
+        content: {
+          summary: id,
+          principles: ["Keep task context"],
+          mechanisms: [id],
+          selectionStatus: "candidate",
+        },
+      };
+      await x.artifacts.create(candidate);
+      outputs.push(candidate);
+    }
+    const refs = outputs.map(reference);
+    await x.orchestrator.accept(
+      sourceInvocation,
+      {
+        runId: "run_producer_refs",
+        taskId: source.id,
+        skillId: source.skillId,
+        inputRefs: [],
+        outputRefs: refs,
+      },
+      { kind: "skill", id: source.skillId },
+      now,
+    );
+    const next = await x.orchestrator.next("run_producer_refs", tasks);
+    expect(
+      next.actions.find((action) => action.taskId === compare.id)?.invocation
+        ?.inputBindings,
+    ).toEqual([{ name: "directions", refs }]);
+    const completion = (await x.registry.snapshot()).events.find(
+      (event) =>
+        event.reason ===
+        `Skill task ${JSON.stringify(source.id)} completed with verified exact outputs`,
+    );
+    expect(completion?.outputs).toEqual(refs);
+  });
+
   test("one-of inputs choose only the supplied brief and optional gaps remain explicit", async () => {
     const x = await setup();
     const task: RoutedTask = {

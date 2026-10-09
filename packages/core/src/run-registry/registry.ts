@@ -1175,6 +1175,7 @@ export class RunRegistry {
     actor: Actor;
     at: string;
     reason: string;
+    outputs?: readonly ExactArtifactRef[];
     resolutions?: Record<
       string,
       { evidenceRefs?: readonly string[]; decisionId?: string }
@@ -1183,7 +1184,8 @@ export class RunRegistry {
     const x = jsonCopy(input);
     requireThat(
       Object.values(x.blockers).every((v) => v.trim()) &&
-        x.safeActions.every((v) => v.trim()),
+        x.safeActions.every((v) => v.trim()) &&
+        (x.outputs ?? []).every(validRef),
       "Work and blocker reasons required",
     );
     await this.storage.transact(async (state) => {
@@ -1242,14 +1244,30 @@ export class RunRegistry {
           "UNVERIFIED",
         );
       }
+      requireThat(
+        (x.outputs ?? []).every((ref) =>
+          [...run.base, ...run.artifacts].some((item) => same(item, ref)),
+        ),
+        "Work output is not in the Run",
+      );
       state.runs[x.runId] = {
         ...run,
         safeActions: x.safeActions,
         blockers: x.blockers,
       };
-      event(state, x.runId, "set-work", x.actor, x.at, x.reason, [], [], {
-        resolutions: x.resolutions ?? {},
-      });
+      event(
+        state,
+        x.runId,
+        "set-work",
+        x.actor,
+        x.at,
+        x.reason,
+        [],
+        x.outputs ?? [],
+        {
+          resolutions: x.resolutions ?? {},
+        },
+      );
       closeCompleted(state, x.runId, x.actor, x.at);
     });
   }

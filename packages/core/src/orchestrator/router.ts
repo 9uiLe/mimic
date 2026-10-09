@@ -40,6 +40,8 @@ export type InputNeed =
       readonly schemaVersion?: string;
       /** Explicit exact bindings when a task needs named or multiple assets. */
       readonly refs?: readonly ExactArtifactRef[];
+      /** Bind every matching exact output from a completed task in this Run. */
+      readonly refsFromTask?: string;
     }
   | { readonly kind: "human-brief"; readonly name: string }
   | { readonly kind: "evidence-file"; readonly name: string };
@@ -339,6 +341,25 @@ export class Orchestrator {
       return (ai < 0 ? rank.length : ai) - (bi < 0 ? rank.length : bi);
     });
     priorities.forEach(visit);
+    for (const task of tasks)
+      for (const need of [
+        ...task.inputs.required,
+        ...task.inputs.optional,
+        ...task.inputs.alternatives.flatMap((group) => group.oneOf),
+      ]) {
+        if (need.kind !== "artifact" || !need.refsFromTask) continue;
+        const source = byId.get(need.refsFromTask);
+        assert(
+          source &&
+            source.id !== task.id &&
+            task.dependsOn?.includes(source.id) &&
+            [
+              source.outputType,
+              ...(source.additionalOutputTypes ?? []),
+            ].includes(need.artifactType),
+          "Invalid producer output binding",
+        );
+      }
     const available = [...run.base, ...run.artifacts];
     const artifacts = new Map<string, ArtifactSnapshot>();
     for (const item of available)
@@ -519,6 +540,43 @@ export class Orchestrator {
       ): readonly ExactArtifactRef[] | boolean => {
         if (need.kind === "human-brief") return !!task.humanBrief?.trim();
         if (need.kind === "evidence-file") return !!task.evidenceFiles?.length;
+        if (need.refsFromTask) {
+          const source = byId.get(need.refsFromTask)!;
+          const completion = state.events.find(
+            (event) =>
+              event.runId === runId &&
+              event.action === "set-work" &&
+              event.actor.kind === "agent" &&
+              event.actor.id === "orchestrator" &&
+              event.reason === completionReason(source.id) &&
+              !event.runAfter.safeActions.includes(source.id),
+          );
+          if (!completion) return false;
+          const selected = completion.outputs.filter(
+            (ref) =>
+              artifacts.get(`${ref.artifactId}@${ref.revision}`)?.meta.type ===
+              need.artifactType,
+          );
+          return selected.length > 0 &&
+            selected.every(
+              (ref) =>
+                available.some((item) => equal(item, ref)) &&
+                isEligible(ref, need) &&
+                state.events.some(
+                  (event) =>
+                    event.sequence < completion.sequence &&
+                    event.runId === runId &&
+                    event.action === "produce-provisional" &&
+                    event.actor.kind === "skill" &&
+                    event.actor.id === source.skillId &&
+                    event.reason ===
+                      productionReason(source.id, source.skillId) &&
+                    event.outputs.some((item) => equal(item, ref)),
+                ),
+            )
+            ? selected
+            : false;
+        }
         if (need.refs) {
           if (
             !need.refs.length ||
@@ -572,6 +630,7 @@ export class Orchestrator {
           : need.name;
       const producerExists = (need: InputNeed): boolean =>
         need.kind === "artifact" &&
+        !need.refsFromTask &&
         tasks.some(
           (candidate) =>
             candidate.id !== task.id &&
@@ -583,7 +642,15 @@ export class Orchestrator {
         if (chosen) consume(need, chosen);
         else {
           gaps.push(`Missing required ${label(need)}`);
-          if (!producerExists(need)) hardMissing = true;
+          if (
+            !producerExists(need) &&
+            !(
+              need.kind === "artifact" &&
+              need.refsFromTask &&
+              !completed.has(need.refsFromTask)
+            )
+          )
+            hardMissing = true;
         }
       }
       for (const group of task.inputs.alternatives) {
@@ -987,6 +1054,7 @@ export class Orchestrator {
       reason: result.blocked
         ? "Skill reported a genuine affected-work blocker"
         : completionReason(invocation.taskId),
+      outputs: result.blocked ? [] : result.outputRefs,
     });
   }
 

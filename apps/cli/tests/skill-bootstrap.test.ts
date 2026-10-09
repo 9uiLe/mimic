@@ -9,6 +9,7 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -277,7 +278,7 @@ test("built source reader rejects symlinked Skill and schema ancestors", () => {
     expect(result.stdout).toBe("");
     expect(result.stderr).toMatch(/Source symlink is not allowed/);
   }
-  rmSync(path.join(root, "skills"));
+  unlinkSync(path.join(root, "skills"));
   mkdirSync(path.join(root, "skills"));
   cpSync(
     path.join(repo, "skills/s01-product-definition"),
