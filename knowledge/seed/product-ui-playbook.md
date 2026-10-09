@@ -25,14 +25,21 @@ that a user needs to compare or act.
 
 ## S09 → S10 → S11 handoff
 
-1. Pass this file as an S09 `evidenceFiles` entry when the current task concerns
-   proposal comparison or Run progress. The session prompt includes exact
-   evidence file contents; merely storing the corpus does not inject it.
+1. When the current task concerns proposal comparison or Run progress, copy
+   this file into the Run workspace and pass its workspace-relative path as an
+   S09 `evidenceFiles` entry. The session prompt includes exact evidence file
+   contents; merely storing the corpus does not inject it. Preserve the
+   copied file's bytes and record its digest for the Run evidence trail.
 2. Read the current Problem Profile and UI Contract first. Map their **actual**
    traits to graph trait IDs. Assess each case's structural fit and context
-   distance separately; a case has no permanent Near/Far/Anti role. Use
-   `retrieveDesignReferences` and retain selected and excluded case reasons.
-3. Carry the resulting `reference-selection` as an exact S10 input. Generate
+   distance separately; a case has no permanent Near/Far/Anti role. A host
+   preparation step can call `retrieveDesignReferences` with the graph and
+   those assessments, then put a compact source-linked projection inside the
+   Run workspace as another S09 evidence file. The S09 executor cannot call
+   that helper merely because it is named in this document. If no projection
+   is supplied, S09 must assess the four cases from this guide and must not
+   claim it ran graph retrieval. Retain selected and excluded case reasons.
+3. Carry S09's `reference-selection` as an exact S10 input. Generate
    directions that change navigation, information architecture, interaction,
    spatial arrangement, density, or temporal behavior. Compare every pair on
    these axes. The four sources support different mechanisms; they are not four

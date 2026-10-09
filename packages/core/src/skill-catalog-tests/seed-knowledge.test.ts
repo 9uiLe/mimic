@@ -90,7 +90,7 @@ test("public seed is a valid typed graph with no dangling or duplicate edges", (
   ).toThrow(/Dangling edge/);
 });
 
-test("product UI task retrieves distinct directions and projects source-linked S09 input", () => {
+test("product UI task retrieves distinct mechanisms and projects source-linked S09 input", () => {
   const categories = [
     "product-object-navigation",
     "product-comparison",
