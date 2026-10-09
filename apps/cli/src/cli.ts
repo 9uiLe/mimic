@@ -8,6 +8,7 @@ import {
   readdir,
 } from "node:fs/promises";
 import { inspectRun, pointerExists } from "./inspect.js";
+import { runMonitorCli } from "./monitor.js";
 import { atomicCreateJson } from "./atomic-file.js";
 import {
   LOCAL_MARKER,
@@ -755,6 +756,7 @@ export async function runCli(
     return EXIT.OK;
   }
   if (argv[0] === "skill") return runSkillCli(argv.slice(1), io);
+  if (argv[0] === "monitor") return runMonitorCli(argv.slice(1), io);
   try {
     const { command, options, positionals, json, browser } = parse(argv);
     const root = await realpath(path.resolve(options.root ?? process.cwd()));
