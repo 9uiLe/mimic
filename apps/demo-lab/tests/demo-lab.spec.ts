@@ -72,8 +72,10 @@ test("review shell renders genuine generated modes at desktop and mobile sizes",
   await page.getByRole("button", { name: "Mobile" }).click();
   await expect(page.locator("#device-frame")).toHaveClass(/mobile/);
   await expect
-    .poll(
-      async () => (await page.locator("#device-frame").boundingBox())?.width,
+    .poll(async () =>
+      Math.round(
+        (await page.locator("#device-frame").boundingBox())?.width ?? 0,
+      ),
     )
     .toBe(390);
   await page.getByRole("button", { name: "Proposed", exact: true }).focus();
