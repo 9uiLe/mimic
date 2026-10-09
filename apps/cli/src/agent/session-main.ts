@@ -8,7 +8,11 @@ import {
   createAuthorizedCodexReconciliationDispatch,
   createAuthorizedCodexSessionDispatch,
 } from "./session-authorized.js";
-import { AgentSession, FileSessionStore } from "./session.js";
+import {
+  AgentSession,
+  FileSessionStore,
+  SessionExecutionPolicyMismatch,
+} from "./session.js";
 import { createWorkspaceSessionPorts } from "./session-workspace.js";
 
 const allowedEnvironment = [
@@ -254,36 +258,29 @@ async function runConfiguredSession(
     const interrupt = () => {
       void session.cancel().catch(() => {});
     };
-    let operationStop: string | undefined;
     if (command !== "inspect") {
       process.once("SIGINT", interrupt);
       process.once("SIGTERM", interrupt);
       try {
-        operationStop = (
-          await session.advance({
-            resume: command === "resume",
-            reconciledUnknownOutcome: remaining.length === 1,
-            ...(authorized?.kind === "reconcile"
-              ? { reconcilePreparedWorkDigest: authorized.expectedWorkDigest }
-              : {}),
-          })
-        ).stop;
+        await session.advance({
+          resume: command === "resume",
+          reconciledUnknownOutcome: remaining.length === 1,
+          ...(authorized?.kind === "reconcile"
+            ? { reconcilePreparedWorkDigest: authorized.expectedWorkDigest }
+            : {}),
+        });
       } finally {
         process.removeListener("SIGINT", interrupt);
         process.removeListener("SIGTERM", interrupt);
       }
     }
-    const inspection = await session.inspect();
-    if (
-      operationStop === "reservation-invalid" &&
-      inspection.stop !== "reservation-invalid"
-    ) {
+    io.out(JSON.stringify(await session.inspect()));
+    return 0;
+  } catch (error) {
+    if (error instanceof SessionExecutionPolicyMismatch) {
       io.err("Session execution policy mismatch; checkpoint unchanged.");
       return 2;
     }
-    io.out(JSON.stringify(inspection));
-    return 0;
-  } catch {
     // Never print raw official diagnostics, configuration content or model output.
     io.err(
       "Session operation did not complete. Check configuration, exact bindings and process-owned lock; inspect before retry.",

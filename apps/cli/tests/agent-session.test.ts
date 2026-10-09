@@ -27,6 +27,7 @@ import {
   AgentSession,
   FileSessionStore,
   SessionCandidateRejected,
+  SessionExecutionPolicyMismatch,
   sessionDigest,
   type SessionBinding,
   type SessionPlan,
@@ -2091,14 +2092,15 @@ test("trusted one-call dispatch keeps Core acceptance durable and cannot become 
   ).toBe(before);
   expect(launch).toHaveBeenCalledOnce();
   expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
-  const switched = await new AgentSession(
-    "session_a",
-    h.store,
-    h.ports,
-    first.executor,
-    limits,
-  ).advance({ resume: true });
-  expect(switched.stop).toBe("reservation-invalid");
+  await expect(
+    new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      first.executor,
+      limits,
+    ).advance({ resume: true }),
+  ).rejects.toBeInstanceOf(SessionExecutionPolicyMismatch);
   expect(ordinary).not.toHaveBeenCalled();
   expect(
     () =>
@@ -2283,6 +2285,13 @@ test.each(["legacy-policy-stop", "prepared-before-stop"] as const)(
       delete stopped.stop;
     }
     await h.store.write(stopped);
+    if (recoveryState === "legacy-policy-stop") {
+      const legacyBytes = await readFile(checkpoint, "utf8");
+      expect(await runSessionCli(["resume", "--config", configPath], io)).toBe(
+        2,
+      );
+      expect(await readFile(checkpoint, "utf8")).toBe(legacyBytes);
+    }
     expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
       0,
     );
@@ -2307,7 +2316,7 @@ test.each(["legacy-policy-stop", "prepared-before-stop"] as const)(
       2,
     );
     expect(launch).toHaveBeenCalledOnce();
-    expect(errors).toHaveLength(4);
+    expect(errors).toHaveLength(recoveryState === "legacy-policy-stop" ? 5 : 4);
   },
 );
 

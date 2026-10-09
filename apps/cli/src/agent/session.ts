@@ -79,6 +79,11 @@ export type SessionStop =
   | "reservation-invalid"
   | "candidate-rejected"
   | "iteration-limit";
+export class SessionExecutionPolicyMismatch extends Error {
+  constructor() {
+    super("Saved session execution policy differs from this caller");
+  }
+}
 interface TaskCheckpoint {
   binding: TaskBinding;
   phase: "executing" | "prepared" | "accepted" | "blocked" | "rejected";
@@ -517,7 +522,7 @@ export class AgentSession {
       if (state.executionPolicy !== this.authorizedDispatch?.policy)
         // A caller without the original execution policy must not poison a
         // checkpoint that a trusted, model-free reconciliation can still use.
-        return { ...state, status: "stopped", stop: "reservation-invalid" };
+        throw new SessionExecutionPolicyMismatch();
 
       if (options.reconcilePreparedWorkDigest !== undefined) {
         const tasks = Object.values(state.tasks);
