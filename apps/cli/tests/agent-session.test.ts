@@ -39,7 +39,7 @@ import {
   runSessionCli,
   runAuthorizedSessionOnce,
 } from "../src/agent/session-main.js";
-import { CodexExecutor } from "../src/agent/codex.js";
+import { CodexExecutor, CodexJsonlDecoder } from "../src/agent/codex.js";
 import { createAuthorizedCodexSessionDispatch } from "../src/agent/session-authorized.js";
 import {
   type AgentExecutor,
@@ -318,79 +318,191 @@ test("unknown outcome requires reconciliation, and changed inputs/model require 
   );
 });
 
-test("safe failed-process diagnostics survive separate production resume/inspect without launch or raw data", async () => {
-  const h = await staticHarness();
-  const executor = fake((request) => [
-    { type: "started", requestId: request.requestId },
-    {
-      type: "stopped",
-      reason: "unknown-outcome",
-      resumeCondition: "reconcile-before-retry",
-    },
-  ]);
-  const start = executor.start;
-  executor.start = vi.fn(async (request) => ({
-    ...(await start(request)),
-    diagnostics: () => safeDiagnostic,
-  }));
-  const state = await new AgentSession(
-    "session_a",
-    h.store,
-    h.ports,
-    executor,
-    limits,
-  ).advance();
-  expect(state.stop).toBe("unknown-outcome");
-  expect(state.generationCount).toBe(1);
-  expect(state.tasks.first.diagnostics).toEqual(safeDiagnostic);
-  const before = await readFile(
-    path.join(h.store.directory, "session_a.json"),
-    "utf8",
-  );
-  const workspaceBefore = await readFile(
-    path.join(h.root, ".mimic/workspace.json"),
-    "utf8",
-  );
-  const configuration = path.join(h.root, "diagnostic-config.json");
-  await writeFile(
-    configuration,
-    JSON.stringify({
-      workspace: h.root,
-      executable: path.join(h.root, "missing-private-runtime"),
-      runId: binding.runId,
-      sessionId: "session_a",
-      packages: { first: "skill" },
-      model: binding.settings.model,
-    }),
-  );
-  for (const command of ["resume", "inspect"]) {
-    const child = spawnSync(
-      process.execPath,
-      [
-        path.join(repo, "apps/cli/dist/agent/session-main.js"),
-        command,
-        "--config",
-        configuration,
-      ],
-      { encoding: "utf8" },
+test.each(["legacy", "rejected-shape"])(
+  "safe %s diagnostics survive separate production resume/inspect without launch or raw data",
+  async (kind) => {
+    const diagnostic = structuredClone(safeDiagnostic);
+    if (kind === "rejected-shape") {
+      const decoder = new CodexJsonlDecoder("private-request");
+      decoder.push(
+        Buffer.from('{"type":"thread.started","thread_id":"private-thread"}\n'),
+      );
+      expect(() =>
+        decoder.push(
+          Buffer.from(
+            '{"type":"item.completed","item":{"id":"private-id","type":"private-tool","message":"private-token","private-key":"private-value"}}\n',
+          ),
+        ),
+      ).toThrow();
+      diagnostic.decoder = decoder.diagnostics();
+    }
+    const h = await staticHarness();
+    const executor = fake((request) => [
+      { type: "started", requestId: request.requestId },
+      {
+        type: "stopped",
+        reason: "unknown-outcome",
+        resumeCondition: "reconcile-before-retry",
+      },
+    ]);
+    const start = executor.start;
+    executor.start = vi.fn(async (request) => ({
+      ...(await start(request)),
+      diagnostics: () => diagnostic,
+    }));
+    const state = await new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      executor,
+      limits,
+    ).advance();
+    expect(state.stop).toBe("unknown-outcome");
+    expect(state.generationCount).toBe(1);
+    expect(state.tasks.first.diagnostics).toEqual(diagnostic);
+    const before = await readFile(
+      path.join(h.store.directory, "session_a.json"),
+      "utf8",
     );
-    expect(child.status, child.stderr).toBe(0);
-    const inspected = JSON.parse(child.stdout);
-    expect(inspected).toMatchObject({
-      stop: "unknown-outcome",
-      tasks: [{ phase: "executing", diagnostics: safeDiagnostic }],
-    });
-    expect(child.stdout).not.toMatch(
-      /private-runtime|Private prompt|stderr"|stdout"|output_tokens/,
+    const workspaceBefore = await readFile(
+      path.join(h.root, ".mimic/workspace.json"),
+      "utf8",
     );
-  }
-  expect(executor.start).toHaveBeenCalledOnce();
+    const configuration = path.join(h.root, "diagnostic-config.json");
+    await writeFile(
+      configuration,
+      JSON.stringify({
+        workspace: h.root,
+        executable: path.join(h.root, "missing-private-runtime"),
+        runId: binding.runId,
+        sessionId: "session_a",
+        packages: { first: "skill" },
+        model: binding.settings.model,
+      }),
+    );
+    for (const command of ["resume", "inspect"]) {
+      const child = spawnSync(
+        process.execPath,
+        [
+          path.join(repo, "apps/cli/dist/agent/session-main.js"),
+          command,
+          "--config",
+          configuration,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(child.status, child.stderr).toBe(0);
+      const inspected = JSON.parse(child.stdout);
+      expect(inspected).toMatchObject({
+        stop: "unknown-outcome",
+        tasks: [{ phase: "executing", diagnostics: diagnostic }],
+      });
+      expect(child.stdout).not.toMatch(
+        /private-runtime|private-thread|private-request|private-id|private-tool|private-token|private-key|private-value|Private prompt|stderr"|stdout"|output_tokens/,
+      );
+    }
+    expect(executor.start).toHaveBeenCalledOnce();
+    expect(
+      await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+    ).toBe(before);
+    expect(
+      await readFile(path.join(h.root, ".mimic/workspace.json"), "utf8"),
+    ).toBe(workspaceBefore);
+    expect(before).not.toMatch(
+      /private-thread|private-request|private-id|private-tool|private-token|private-key|private-value/,
+    );
+  },
+);
+
+test.each([
+  "type",
+  "item-type",
+  "count",
+  "negative",
+  "nan",
+  "flag",
+  "extra-key",
+  "getter",
+])(
+  "rejected-shape diagnostic rejects malicious %s metadata before persistence",
+  async (kind) => {
+    const diagnostic = structuredClone(safeDiagnostic);
+    const shape: Record<string, unknown> = {
+      eventType: "item.completed",
+      itemType: "error",
+      hasItem: true,
+      hasId: true,
+      hasType: true,
+      hasText: false,
+      hasMessage: true,
+      eventUnknownKeys: 0,
+      itemUnknownKeys: 0,
+    };
+    if (kind === "type") shape.eventType = "private-secret";
+    if (kind === "item-type") shape.itemType = "private-secret";
+    if (kind === "count") shape.itemUnknownKeys = 256;
+    if (kind === "negative") shape.eventUnknownKeys = -1;
+    if (kind === "nan") shape.eventUnknownKeys = NaN;
+    if (kind === "flag") shape.hasMessage = "private-secret";
+    if (kind === "extra-key") shape.message = "private-secret";
+    if (kind === "getter")
+      Object.defineProperty(shape, "eventType", {
+        get: () => "private-secret",
+        enumerable: true,
+      });
+    diagnostic.decoder!.rejectedShape = shape as unknown as NonNullable<
+      ExecutionDiagnostics["decoder"]
+    >["rejectedShape"];
+    expect(sanitizeExecutionDiagnostics(diagnostic)).toBeUndefined();
+    const h = await harness();
+    const state = await new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      fake("answer"),
+      limits,
+    ).advance();
+    const before = await readFile(
+      path.join(h.store.directory, "session_a.json"),
+      "utf8",
+    );
+    state.tasks.first.diagnostics = diagnostic;
+    await expect(h.store.write(state)).rejects.toThrow(
+      "Invalid task diagnostics",
+    );
+    expect(
+      await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
+    ).toBe(before);
+    const projected = await new AgentSession(
+      "session_a",
+      { ...h.store, read: async () => state } as FileSessionStore,
+      h.ports,
+      fake("unused"),
+      limits,
+    ).inspect();
+    expect(JSON.stringify(projected)).not.toContain("private-secret");
+  },
+);
+
+test("rejected-shape descriptor snapshot never reads hostile Proxy get traps", () => {
+  const diagnostic = structuredClone(safeDiagnostic);
+  const shape = {
+    eventType: "item.completed" as const,
+    itemType: "error" as const,
+    hasItem: true,
+    hasId: true,
+    hasType: true,
+    hasText: false,
+    hasMessage: true,
+    eventUnknownKeys: 0,
+    itemUnknownKeys: 0,
+  };
+  const trap = vi.fn(() => "private-secret");
+  diagnostic.decoder!.rejectedShape = new Proxy(shape, { get: trap });
   expect(
-    await readFile(path.join(h.store.directory, "session_a.json"), "utf8"),
-  ).toBe(before);
-  expect(
-    await readFile(path.join(h.root, ".mimic/workspace.json"), "utf8"),
-  ).toBe(workspaceBefore);
+    sanitizeExecutionDiagnostics(diagnostic)?.decoder?.rejectedShape,
+  ).toEqual(shape);
+  expect(trap).not.toHaveBeenCalled();
 });
 
 test.each([

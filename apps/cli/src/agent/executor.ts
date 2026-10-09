@@ -93,6 +93,27 @@ export interface ProcessDiagnostics {
     | "nonzero-exit"
     | "signal";
 }
+/** Only fixed protocol names and key presence survive a rejected native line. */
+export interface RejectedProtocolShape {
+  eventType:
+    | "thread.started"
+    | "turn.started"
+    | "item.started"
+    | "item.updated"
+    | "item.completed"
+    | "turn.completed"
+    | "turn.failed"
+    | "error"
+    | "other";
+  itemType: "none" | "reasoning" | "agent_message" | "error" | "other";
+  hasItem: boolean;
+  hasId: boolean;
+  hasType: boolean;
+  hasText: boolean;
+  hasMessage: boolean;
+  eventUnknownKeys: number;
+  itemUnknownKeys: number;
+}
 export interface ExecutionDiagnostics {
   version: 1;
   stage:
@@ -124,7 +145,9 @@ export interface ExecutionDiagnostics {
       | "output-limit"
       | "missing-terminal"
       | "invalid-output"
-      | "nonzero-exit";
+      | "nonzero-exit"
+      | "policy-stop";
+    rejectedShape?: RejectedProtocolShape;
   };
 }
 function closed(
@@ -268,7 +291,7 @@ export function sanitizeExecutionDiagnostics(
         "finished",
         "failed",
       ] as const;
-      const decoder = closed(d.decoder, [...keys, "failure"]);
+      const decoder = closed(d.decoder, [...keys, "failure", "rejectedShape"]);
       if (keys.some((key) => typeof decoder[key] !== "boolean"))
         return undefined;
       if (
@@ -282,6 +305,7 @@ export function sanitizeExecutionDiagnostics(
           "missing-terminal",
           "invalid-output",
           "nonzero-exit",
+          "policy-stop",
         ].includes(decoder.failure)
       )
         return undefined;
@@ -289,6 +313,59 @@ export function sanitizeExecutionDiagnostics(
         ...Object.fromEntries(keys.map((key) => [key, decoder[key]])),
         failure: decoder.failure,
       } as ExecutionDiagnostics["decoder"];
+      if (decoder.rejectedShape !== undefined) {
+        const flags = [
+          "hasItem",
+          "hasId",
+          "hasType",
+          "hasText",
+          "hasMessage",
+        ] as const;
+        const shape = closed(decoder.rejectedShape, [
+          "eventType",
+          "itemType",
+          ...flags,
+          "eventUnknownKeys",
+          "itemUnknownKeys",
+        ]);
+        if (
+          typeof shape.eventType !== "string" ||
+          ![
+            "thread.started",
+            "turn.started",
+            "item.started",
+            "item.updated",
+            "item.completed",
+            "turn.completed",
+            "turn.failed",
+            "error",
+            "other",
+          ].includes(shape.eventType) ||
+          typeof shape.itemType !== "string" ||
+          !["none", "reasoning", "agent_message", "error", "other"].includes(
+            shape.itemType,
+          ) ||
+          flags.some((key) => typeof shape[key] !== "boolean") ||
+          [shape.eventUnknownKeys, shape.itemUnknownKeys].some(
+            (value) =>
+              !Number.isSafeInteger(value) ||
+              Number(value) < 0 ||
+              Number(value) > 255,
+          )
+        )
+          return undefined;
+        result.decoder!.rejectedShape = {
+          eventType: shape.eventType as RejectedProtocolShape["eventType"],
+          itemType: shape.itemType as RejectedProtocolShape["itemType"],
+          hasItem: shape.hasItem as boolean,
+          hasId: shape.hasId as boolean,
+          hasType: shape.hasType as boolean,
+          hasText: shape.hasText as boolean,
+          hasMessage: shape.hasMessage as boolean,
+          eventUnknownKeys: shape.eventUnknownKeys as number,
+          itemUnknownKeys: shape.itemUnknownKeys as number,
+        };
+      }
     }
     return result;
   } catch {

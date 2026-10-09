@@ -9,6 +9,7 @@ import {
   type ResumeRequest,
   type StopReason,
   type ExecutionDiagnostics,
+  type RejectedProtocolShape,
   sanitizeExecutionDiagnostics,
 } from "./executor.js";
 import {
@@ -863,7 +864,10 @@ async function launchCodex(
       (error) =>
         publish([
           stopEvent(
-            error instanceof ExecutorFailure ? error.reason : "unknown-outcome",
+            decoder.policyStop() ??
+              (error instanceof ExecutorFailure
+                ? error.reason
+                : "unknown-outcome"),
           ),
         ]),
     )
@@ -1200,6 +1204,12 @@ export class CodexJsonlDecoder {
   >();
   private failed = false;
   private finished = false;
+  private rejectedShape: RejectedProtocolShape | undefined;
+  private policyReason: "unsupported" | "quota" | "authentication" | undefined;
+  /** Set only by the closed native warning handler, never an adapter error. */
+  policyStop(): "unsupported" | "quota" | "authentication" | undefined {
+    return this.policyReason;
+  }
   private failure: NonNullable<ExecutionDiagnostics["decoder"]>["failure"] =
     "none";
   private noteFailure(
@@ -1229,6 +1239,9 @@ export class CodexJsonlDecoder {
       finished: this.finished,
       failed: this.failed,
       failure: this.failure,
+      ...(this.rejectedShape
+        ? { rejectedShape: { ...this.rejectedShape } }
+        : {}),
     };
   }
   push(chunk: Buffer): ExecutorEvent[] {
@@ -1279,6 +1292,67 @@ export class CodexJsonlDecoder {
       this.noteFailure("json");
       throw new ExecutorFailure("unknown-outcome");
     }
+    try {
+      return this.event(decoded);
+    } catch (error) {
+      this.rejectedShape ??= this.shape(decoded);
+      throw error;
+    }
+  }
+  private shape(decoded: unknown): RejectedProtocolShape {
+    const event =
+      decoded && typeof decoded === "object" && !Array.isArray(decoded)
+        ? (decoded as Record<string, unknown>)
+        : {};
+    const item =
+      event.item && typeof event.item === "object" && !Array.isArray(event.item)
+        ? (event.item as Record<string, unknown>)
+        : undefined;
+    const eventTypes = [
+      "thread.started",
+      "turn.started",
+      "item.started",
+      "item.updated",
+      "item.completed",
+      "turn.completed",
+      "turn.failed",
+      "error",
+    ];
+    const itemTypes = ["reasoning", "agent_message", "error"];
+    const unknownKeys = (value: Record<string, unknown>, known: string[]) =>
+      Math.min(
+        255,
+        Object.keys(value).filter((key) => !known.includes(key)).length,
+      );
+    return {
+      eventType:
+        typeof event.type === "string" && eventTypes.includes(event.type)
+          ? (event.type as RejectedProtocolShape["eventType"])
+          : "other",
+      itemType: !item
+        ? "none"
+        : typeof item.type === "string" && itemTypes.includes(item.type)
+          ? (item.type as RejectedProtocolShape["itemType"])
+          : "other",
+      hasItem: Object.hasOwn(event, "item"),
+      hasId: !!item && Object.hasOwn(item, "id"),
+      hasType: !!item && Object.hasOwn(item, "type"),
+      hasText: !!item && Object.hasOwn(item, "text"),
+      hasMessage: !!item && Object.hasOwn(item, "message"),
+      eventUnknownKeys: unknownKeys(event, [
+        "type",
+        "item",
+        "thread_id",
+        "usage",
+        "error",
+        "message",
+      ]),
+      itemUnknownKeys: item
+        ? unknownKeys(item, ["id", "type", "text", "message"])
+        : 0,
+    };
+  }
+  private event(decoded: unknown): ExecutorEvent[] {
     const event = object(decoded);
     if (this.terminal) throw new ExecutorFailure("unknown-outcome");
     if (event.type === "thread.started") {
@@ -1304,6 +1378,43 @@ export class CodexJsonlDecoder {
     if (event.type === "turn.started") {
       if (this.turn) throw new ExecutorFailure("unknown-outcome");
       this.turn = true;
+      return [];
+    }
+    // rust-v0.160.0 warnings/deprecations are completed error items, including
+    // before turn.started. This exception never supplies turn/output authority.
+    if (
+      event.type === "item.completed" &&
+      object(event.item).type === "error"
+    ) {
+      const item = object(event.item);
+      if (
+        Object.keys(event).length !== 2 ||
+        Object.keys(event).some((key) => !["type", "item"].includes(key)) ||
+        Object.keys(item).length !== 3 ||
+        Object.keys(item).some(
+          (key) => !["id", "type", "message"].includes(key),
+        ) ||
+        typeof item.id !== "string" ||
+        !item.id.trim() ||
+        typeof item.message !== "string" ||
+        this.items.has(item.id)
+      )
+        throw new ExecutorFailure("unknown-outcome");
+      this.items.set(item.id, { type: "error", completed: true });
+      const reason = item.message.startsWith("model rerouted: ")
+        ? "unsupported"
+        : classifyCodexError(item.message);
+      if (
+        reason === "unsupported" ||
+        reason === "quota" ||
+        reason === "authentication"
+      ) {
+        this.policyReason = reason;
+        this.noteFailure("policy-stop");
+        // The shared stdout callback shuts down the process group. Preserve
+        // this fixed reason at settlement even if native events keep arriving.
+        throw new ExecutorFailure(reason);
+      }
       return [];
     }
     if (!this.turn) throw new ExecutorFailure("unknown-outcome");
@@ -1374,7 +1485,8 @@ export class CodexJsonlDecoder {
    * nonzero exit, cancellation or timeout cannot publish a completed candidate.
    */
   finish(exitCode: number): ExecutorEvent[] {
-    if (this.failed || this.finished) return [stopEvent("unknown-outcome")];
+    if (this.failed || this.finished)
+      return [stopEvent(this.policyReason ?? "unknown-outcome")];
     this.finished = true;
     try {
       let text: string;
@@ -1401,7 +1513,7 @@ export class CodexJsonlDecoder {
     } catch {
       this.failed = true;
       this.noteFailure("protocol");
-      return [stopEvent("unknown-outcome")];
+      return [stopEvent(this.policyReason ?? "unknown-outcome")];
     }
   }
 }
