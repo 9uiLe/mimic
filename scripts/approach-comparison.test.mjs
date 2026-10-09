@@ -43,7 +43,7 @@ test("matched comparison freezes one common upstream and three isolated branches
     reasoningEffort: "low",
     brief: "Compare three structures.",
     pageEvidenceFiles: ["inputs/page.html"],
-    traitIds: ["trait:smarthr-table"],
+    traitIds: ["trait:smarthr-table", "trait:google-expressive"],
     assessments: [
       {
         caseId: "case:smarthr-table",
@@ -53,7 +53,16 @@ test("matched comparison freezes one common upstream and three isolated branches
         rationale: "A fixed attribute table may support a choice.",
         evidenceRefs: ["obs:smarthr-table", "hyp:smarthr-table"],
       },
+      {
+        caseId: "case:google-expressive",
+        role: "anti-reference",
+        structuralFit: "low",
+        contextDistance: "high",
+        rationale: "Decorative emphasis can crowd out comparison data.",
+        evidenceRefs: ["obs:google-expressive", "hyp:google-expressive"],
+      },
     ],
+    limit: 1,
   };
   const manifest = await prepare(cfg);
   await writeFile(
@@ -123,6 +132,9 @@ test("matched comparison freezes one common upstream and three isolated branches
   );
   assert.match(c1, /case:smarthr-table/);
   assert.match(c1, /https:\/\/smarthr\.design/);
+  assert.match(c1, /One object per row with name, discriminating fields/);
+  assert.match(c1, /obs:google-expressive/);
+  assert.match(c1, /portfolio-limit/);
   const b0 = await readFile(
     path.join(root, manifest.arms.B0.evidencePath),
     "utf8",
@@ -199,7 +211,9 @@ test("matched comparison freezes one common upstream and three isolated branches
       },
     }),
   );
-  await assert.rejects(report(cfg), /Attempt settings differ/);
+  const noAttemptLog = await report(cfg);
+  assert.equal(noAttemptLog.binding.reasoningEffortVerified, false);
+  assert.equal(noAttemptLog.outcomes.B0.elapsedGenerationMs, null);
   await writeFile(
     path.join(root, "attempts.jsonl"),
     JSON.stringify({
@@ -222,6 +236,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   );
   assert.equal(result.binding.verifiedSessionCount, 1);
   assert.equal(result.binding.reasoningEffortLogCount, 1);
+  assert.equal(result.binding.reasoningEffortVerified, true);
   assert.equal(result.repositoryInputs.templateMatches, true);
   const sessionFile = path.join(root, ".mimic/agent-sessions/attempt.json");
   const mismatched = JSON.parse(await readFile(sessionFile, "utf8"));

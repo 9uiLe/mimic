@@ -54,7 +54,10 @@ branches. The manifest's task IDs and frozen plan specify exact bindings.
 files again and reads the official session checkpoints and completed `set-work`
 events for exact refs, attempts, stops, and the first S11 completion time.
 Elapsed time is reported only when a non-sensitive `attempts.jsonl` exists;
-otherwise it remains unknown. A static rejection or unknown outcome stays
+otherwise it remains unknown and reasoning effort is marked unverified for
+sessions without a matching attempt row. The report also shows whether the
+current checkout still matches the repository inputs frozen at preparation.
+A static rejection or unknown outcome stays
 with its original work and submission marker; the normal session recovery
 protocol determines whether the same work may be retried. Never rewrite a
 model output or marker to create a pass.

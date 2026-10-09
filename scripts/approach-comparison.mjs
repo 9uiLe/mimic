@@ -135,7 +135,9 @@ function makePlan(template, cohort, cfg) {
 }
 function sourceRows(sources, result) {
   const ids = new Set(
-    result.selected.flatMap((candidate) => candidate.evidenceRefs),
+    [...result.selected, ...result.exclusions].flatMap(
+      (candidate) => candidate.evidenceRefs,
+    ),
   );
   return sources.evidence
     .filter((row) => ids.has(row.id))
@@ -150,7 +152,7 @@ function sourceRows(sources, result) {
       claim: row.claim,
     }));
 }
-function referenceEvidence(arm, corpus, inventory, result, sources) {
+function referenceEvidence(arm, corpus, inventory, result, sources, graph) {
   const header = `# ${arm} reference evidence\n\nAll source claims below are local paraphrases or hypotheses; follow the source URLs. Complete corpus SHA-256 inventory: ${inventory.digest}. Do not treat a case as a UI to copy.\n\n`;
   const full = `## Product UI mechanisms\n\n${corpus.product}\n\n## Purpose and information amount\n\n${corpus.purpose}\n`;
   if (arm === "B0") return header + full;
@@ -160,6 +162,32 @@ function referenceEvidence(arm, corpus, inventory, result, sources) {
       "## Foregrounded before divergence\n\nExplore distinct information architectures, operation models, and progress representations. Preserve the choice and status facts; postpone the explicit counterexample check to S11. The complete common corpus follows for audit and remains usable here.\n\n" +
       full
     );
+  const nodeIds = new Set([
+    ...result.selected.flatMap((item) => [
+      item.caseId,
+      ...item.principleIds,
+      ...item.spaceIds,
+      ...item.mechanismIds,
+      ...item.patternIds,
+      ...item.failureIds,
+    ]),
+    ...result.exclusions.flatMap((item) => [
+      item.caseId,
+      ...item.mechanismIds,
+      ...item.failureIds,
+    ]),
+  ]);
+  const graphNodes = graph.nodes
+    .filter((node) => nodeIds.has(node.id))
+    .map((node) => ({
+      id: node.id,
+      kind: node.kind,
+      label: node.label,
+      evidenceRefs: node.evidenceRefs,
+    }));
+  const graphEdges = graph.edges.filter(
+    (edge) => nodeIds.has(edge.from) && nodeIds.has(edge.to),
+  );
   return (
     header +
     "## Host graph retrieval (provisional, reviewable)\n\n" +
@@ -178,6 +206,8 @@ function referenceEvidence(arm, corpus, inventory, result, sources) {
         })),
         exclusions: result.exclusions,
         gaps: result.gaps,
+        graphNodes,
+        graphEdges,
         sourceEvidence: sourceRows(sources, result),
       },
       null,
@@ -276,6 +306,7 @@ async function prepare(cfg) {
       inventory,
       retrieval,
       sources,
+      graph,
     );
     const evidencePath = `inputs/${cohort}-${arm.toLowerCase()}-s09.md`;
     written.push(await createFrozen(path.join(root, evidencePath), evidence));
@@ -494,8 +525,9 @@ async function report(cfg) {
   for (const session of sessions) {
     const attempt = attemptedSessions.get(session.sessionId);
     assert(
-      attempt?.model === manifest.model &&
-        attempt.reasoningEffort === manifest.reasoningEffort,
+      !attempt ||
+        (attempt.model === manifest.model &&
+          attempt.reasoningEffort === manifest.reasoningEffort),
       `Attempt settings differ from frozen comparison: ${session.sessionId}`,
     );
   }
@@ -518,6 +550,9 @@ async function report(cfg) {
           .filter(Boolean)
           .sort()[0] ?? null,
       attemptCount: armSessions.length,
+      reasoningEffortVerified: armSessions.every((item) =>
+        attemptedSessions.has(item.sessionId),
+      ),
       generationCount: armSessions.reduce(
         (total, item) => total + item.generationCount,
         0,
@@ -548,6 +583,9 @@ async function report(cfg) {
       reasoningEffortLogCount: sessions.filter((item) =>
         attemptedSessions.has(item.sessionId),
       ).length,
+      reasoningEffortVerified: sessions.every((item) =>
+        attemptedSessions.has(item.sessionId),
+      ),
     },
     commonAcceptedRefs: stages.flatMap((id) =>
       completed(id).flatMap((event) => event.outputs),
@@ -557,7 +595,7 @@ async function report(cfg) {
     ).length,
     outcomes,
     warning:
-      "Elapsed generation includes dispatch and static acceptance but not human response. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied.",
+      "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied.",
   };
 }
 const [command, configFile] = process.argv.slice(2);
