@@ -11,11 +11,11 @@ case "${1:-}" in
     test "$output" = '{"name":"mimic","state":"ready"}'
     printf '%s\n' "$output"
     ;;
-  browser)
-    pnpm run test:browser --project=chromium-desktop --project=chromium-mobile
+  chromium-desktop|chromium-mobile)
+    pnpm run test:browser --project="$1"
     ;;
   *)
-    echo 'Expected quality or browser' >&2
+    echo 'Expected quality, chromium-desktop, or chromium-mobile' >&2
     exit 1
     ;;
 esac

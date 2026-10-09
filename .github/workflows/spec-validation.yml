@@ -37,7 +37,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [quality, browser]
+        check: [quality, chromium-desktop, chromium-mobile]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,14 +61,14 @@ jobs:
         run: pnpm install --frozen-lockfile
       - if: steps.select.outputs.scope != 'docs'
         run: pnpm exec playwright install-deps chromium
-      - if: steps.select.outputs.scope != 'docs' && matrix.check == 'browser'
+      - if: steps.select.outputs.scope != 'docs' && matrix.check != 'quality'
         run: node scripts/chrome-for-testing.mjs
       - name: Quality, build and unit tests
         if: steps.select.outputs.scope != 'docs' && matrix.check == 'quality'
         run: pnpm run check
       - name: Chromium and axe smoke
-        if: steps.select.outputs.scope != 'docs' && matrix.check == 'browser'
-        run: pnpm run test:browser --project=chromium-desktop --project=chromium-mobile
+        if: steps.select.outputs.scope != 'docs' && matrix.check != 'quality'
+        run: pnpm run test:browser --project=${{ matrix.check }}
       - name: Built CLI startup
         if: steps.select.outputs.scope != 'docs' && matrix.check == 'quality'
         run: |
@@ -84,7 +84,7 @@ jobs:
     needs: bootstrap-matrix
     runs-on: ubuntu-latest
     steps:
-      - name: Require both bootstrap checks to pass
+      - name: Require all bootstrap checks to pass
         env:
           MATRIX_RESULT: ${{ needs.bootstrap-matrix.result }}
         run: test "$MATRIX_RESULT" = success

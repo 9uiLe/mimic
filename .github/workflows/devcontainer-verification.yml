@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [quality, browser]
+        check: [quality, chromium-desktop, chromium-mobile]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,7 +50,7 @@ jobs:
     needs: devcontainer-matrix
     runs-on: ubuntu-latest
     steps:
-      - name: Require both Dev Container checks to pass
+      - name: Require all Dev Container checks to pass
         env:
           MATRIX_RESULT: ${{ needs.devcontainer-matrix.result }}
         run: test "$MATRIX_RESULT" = success
