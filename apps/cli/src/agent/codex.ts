@@ -1197,6 +1197,7 @@ export class CodexJsonlDecoder {
   private threadId: string | undefined;
   private turn = false;
   private terminal: ExecutorEvent | undefined;
+  private awaitingFailedTurn = false;
   private finalText: string | undefined;
   private readonly items = new Map<
     string,
@@ -1354,7 +1355,16 @@ export class CodexJsonlDecoder {
   }
   private event(decoded: unknown): ExecutorEvent[] {
     const event = object(decoded);
-    if (this.terminal) throw new ExecutorFailure("unknown-outcome");
+    if (this.terminal) {
+      if (this.awaitingFailedTurn && event.type === "turn.failed") {
+        const failure = object(event.error);
+        if (typeof failure.message !== "string")
+          throw new ExecutorFailure("unknown-outcome");
+        this.awaitingFailedTurn = false;
+        return [];
+      }
+      throw new ExecutorFailure("unknown-outcome");
+    }
     if (event.type === "thread.started") {
       if (
         this.threadId ||
@@ -1370,6 +1380,7 @@ export class CodexJsonlDecoder {
       if (typeof error.message !== "string")
         throw new ExecutorFailure("unknown-outcome");
       this.terminal = stopEvent(classifyCodexError(error.message));
+      this.awaitingFailedTurn = event.type === "error";
       return this.threadId
         ? []
         : [{ type: "started", requestId: this.requestId }];

@@ -325,6 +325,33 @@ test.each([
   },
 );
 
+test("an official error followed by turn.failed retains the first safe stop classification", () => {
+  const decoder = new CodexJsonlDecoder("req_174");
+  decoder.push(
+    Buffer.from(
+      [
+        { type: "thread.started", thread_id: "t" },
+        { type: "turn.started" },
+        { type: "error", message: "Usage limit reached private detail" },
+        {
+          type: "turn.failed",
+          error: { message: "Usage limit reached private detail" },
+        },
+      ]
+        .map((event) => JSON.stringify(event))
+        .join("\n") + "\n",
+    ),
+  );
+  expect(decoder.finish(1)).toMatchObject([
+    { type: "stopped", reason: "quota" },
+  ]);
+  expect(decoder.diagnostics()).toMatchObject({
+    terminalObserved: true,
+    failed: false,
+    failure: "none",
+  });
+});
+
 test.each(["error", "turn.failed"])(
   "warning compatibility preserves fatal %s classification",
   (type) => {
