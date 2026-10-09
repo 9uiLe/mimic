@@ -851,7 +851,7 @@ async function report(cfg) {
           .sort()[0] ?? null,
       attemptCount: exclusiveCosts ? armSessions.length : null,
       mixedSessionIds,
-      reasoningEffortVerified: timingVerified,
+      reasoningEffortVerified: timingVerified && dispatchSettingsVerified,
       dispatchSettingsVerified:
         armSessions.length > 0 && dispatchSettingsVerified,
       generationCount: exclusiveCosts
@@ -893,7 +893,8 @@ async function report(cfg) {
       reasoningEffortVerified:
         sessions.length > 0 &&
         attempts.length === sessions.length &&
-        sessions.every((item) => attemptedSessions.has(item.sessionId)),
+        sessions.every((item) => attemptedSessions.has(item.sessionId)) &&
+        dispatchSettingsVerified,
       dispatchSettingsVerified,
     },
     commonAcceptedRefs: stages.flatMap((id) =>

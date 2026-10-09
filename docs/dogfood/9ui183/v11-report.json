@@ -97,7 +97,7 @@
       "firstReviewableAt": null,
       "attemptCount": 2,
       "mixedSessionIds": [],
-      "reasoningEffortVerified": true,
+      "reasoningEffortVerified": false,
       "dispatchSettingsVerified": false,
       "generationCount": 2,
       "elapsedGenerationMs": 153268,

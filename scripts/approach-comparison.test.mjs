@@ -402,7 +402,11 @@ test("matched comparison freezes one common upstream and three isolated branches
     configPath,
     JSON.stringify({ ...sessionConfig, timeoutMs: 1000 }),
   );
-  assert.equal((await report(cfg)).binding.dispatchSettingsVerified, false);
+  const changedDispatch = await report(cfg);
+  assert.equal(changedDispatch.binding.dispatchSettingsVerified, false);
+  assert.equal(changedDispatch.binding.reasoningEffortVerified, false);
+  assert.equal(changedDispatch.outcomes.B0.reasoningEffortVerified, false);
+  assert.equal(changedDispatch.outcomes.B0.elapsedGenerationMs, 20);
   await writeFile(configPath, configText);
   await writeFile(
     attemptPath,

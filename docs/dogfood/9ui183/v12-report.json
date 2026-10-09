@@ -23,7 +23,7 @@
     "reasoningEffort": "low",
     "verifiedSessionCount": 5,
     "reasoningEffortLogCount": 5,
-    "reasoningEffortVerified": true,
+    "reasoningEffortVerified": false,
     "dispatchSettingsVerified": false
   },
   "commonAcceptedRefs": [

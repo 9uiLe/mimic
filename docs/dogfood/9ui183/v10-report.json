@@ -23,7 +23,7 @@
     "reasoningEffort": "low",
     "verifiedSessionCount": 10,
     "reasoningEffortLogCount": 10,
-    "reasoningEffortVerified": true,
+    "reasoningEffortVerified": false,
     "dispatchSettingsVerified": false
   },
   "commonAcceptedRefs": [
@@ -108,7 +108,7 @@
       "firstReviewableAt": null,
       "attemptCount": 4,
       "mixedSessionIds": [],
-      "reasoningEffortVerified": true,
+      "reasoningEffortVerified": false,
       "dispatchSettingsVerified": false,
       "generationCount": 4,
       "elapsedGenerationMs": 228824,
