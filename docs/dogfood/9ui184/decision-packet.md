@@ -14,7 +14,7 @@ S09 は SmartHR table を近接、teamLab object・GitHub Actions Run・MediaWik
 
 ## 比較の条件
 
-[方式設計](../../development/approach-comparison.md) の B0 は平坦な出典付き事例一覧、C1 は task-conditioned graph 検索の投影、C2 は事例の機構を S09 に先に見せ、反例と目的上の失敗を S11 で強調する方式。同じ凍結ページ・観察、S01–S08 の exact refs、Skill/schema、モデル設定、事例 corpus を使う。三 arm は同じ Run の分岐 Task とし、先行 arm の方向案は後続 arm の入力にしない。実行は逐次なので順序効果は残る。
+[方式設計](../../development/approach-comparison.md) の B0 は平坦な出典付き事例一覧、C1 は task-conditioned graph 検索の投影、C2 は事例の機構を S09 に先に見せ、反例と目的上の失敗を S11 で強調する方式。同じ凍結ページ・観察、S01–S08 の exact refs、Skill/schema、モデル設定、事例 corpus を使う。三 arm は同じ Run の分岐 Task とし、先行 arm の方向案は後続 arm の入力にしない。9UI-182 の初期案は arm ごとに別 Run を想定したが、暫定 S01–S08 refs を別 Run の base に移すと router の必須参照を満たせなかった。9UI-183 では計画変更を明記して一つの Run に三つの分岐 Task を置き、Task・session・artifact prefix・evidence path を arm ごとに分離した。実行は逐次なので順序効果は残る。詳細は [9UI-183 runbook](../9ui183/README.md) を参照。
 
 比較で知りたいことは、(1) 事例が課題に合っているか、(2) 案が構造的に異なり、反例と不適用条件まで扱うか、(3) 共通基準から推奨・代案・不確実性を説明できるか、(4) 最初のレビュー可能な判断資料までの試行・時間・人間介入である。静的 CLI の受理は、この設計上の有効性や利用者の納得を証明しない。
 
