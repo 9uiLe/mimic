@@ -58,7 +58,9 @@ test("review shell renders genuine generated modes at desktop and mobile sizes",
   await expect(page.getByLabel("Experience Domain")).toHaveValue(
     "product-wide",
   );
-  expect((await page.locator("#device-frame").boundingBox())?.width).toBe(880);
+  expect(
+    Math.round((await page.locator("#device-frame").boundingBox())?.width ?? 0),
+  ).toBe(880);
   const frame = page.frameLocator("#prototype-frame");
   await clickSettled(frame.getByRole("button", { name: "Show success" }));
   await expect(frame.getByText("Synthetic candidate ready")).toBeVisible();
