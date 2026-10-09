@@ -1,0 +1,196 @@
+{
+  "strategies": [
+    {
+      "id": "warm-core-quiet-surfaces",
+      "intent": "Explore a provisional warm core with quiet work surfaces.",
+      "sourceCaseIds": [
+        "case:kintone-color",
+        "case:smarthr-color-roles"
+      ],
+      "roles": {
+        "text.primary": "#302A27",
+        "text.secondary": "#69605A",
+        "background": "#F6F2ED",
+        "surface": "#FFFCF8",
+        "surface.raised": "#FFFFFF",
+        "border": "#B4A69A",
+        "link": "#345F84",
+        "action.primary": "#854432",
+        "selection": "#EAD8CD",
+        "status.in-progress": "#536795",
+        "status.blocked": "#925019",
+        "status.complete": "#376A53",
+        "brand.accent": "#B85F46"
+      },
+      "contexts": {
+        "proposal comparison": [
+          "text.primary",
+          "background",
+          "surface",
+          "selection"
+        ],
+        "run in progress": [
+          "text.primary",
+          "surface",
+          "status.in-progress"
+        ],
+        "blocked work": [
+          "text.primary",
+          "surface",
+          "status.blocked"
+        ],
+        "selected proposal": [
+          "text.primary",
+          "selection",
+          "action.primary"
+        ],
+        "completed work": [
+          "text.primary",
+          "status.complete"
+        ]
+      },
+      "sharedValueReasons": [],
+      "rationale": "A muted terracotta core could give Mimic warmth while pale work surfaces keep structural comparisons readable. Brand warmth, recommendation emphasis, and operational status use separate roles.",
+      "fit": "Fits if a welcoming tone should remain perceptible throughout sustained review.",
+      "countercondition": "Reconsider if warm surfaces distract from comparing structure or make blocker emphasis difficult to distinguish.",
+      "tradeoff": "Persistent warmth gives the workspace character but consumes more visual attention than an almost neutral canvas.",
+      "screenDescriptions": {
+        "proposal comparison": "On the warm background, three equal pale cards show Resume Board, Criteria Comparison Studio, and Run Timeline Investigation View for the local monitor redesign. Dark primary text names each direction. A pale selection strip marks Criteria Comparison Studio with the explicit label 'Proposed recommendation — not human-approved'; it is not a success badge.",
+        "run in progress": "The current Mimic Run remains on a pale work surface with dark primary text and a muted blue 'Run in progress' icon and label. The three directions, proposed recommendation, pending blocker, and next action remain visible. No percentage or event timestamp appears.",
+        "blocked work": "A pale blocker panel uses a brown-orange icon, border accent, and 'Pending blocker' label with dark primary text. The next action reads 'Review the pending blocker.' Criteria Comparison Studio retains its proposed-only label.",
+        "selected proposal": "The proposed-selection detail uses the pale terracotta selection field behind Criteria Comparison Studio. Dark primary text explicitly says 'Proposed recommendation — not human-approved.' A dark warm action button labeled 'Review pending blocker' uses surface.raised text; its color does not imply approval.",
+        "completed work": "Completed-work entries, if present, use green check icons and 'Complete' labels with dark primary text. The current Run still reads 'In progress,' the blocker remains pending, and Criteria Comparison Studio remains proposed only. Completion styling never implies approval of the recommendation."
+      },
+      "sourceObservations": "Observed mechanisms supplied by the user: case:kintone-color connects core yellow to Warm Smart and tests subordinate support colors and pairings; case:smarthr-color-roles separates semantic color responsibilities. Neither source establishes a Mimic palette or outcome.",
+      "mimicPredictions": "The terracotta core, quiet warm surfaces, and separate recommendation and status colors are provisional Mimic predictions. Their usefulness for comparison and blocker recognition has not been tested. No source yellow or token values are copied."
+    },
+    {
+      "id": "sparse-signature-moments",
+      "intent": "Explore sparse signature brand moments on a restrained work canvas.",
+      "sourceCaseIds": [
+        "case:youtube-hue",
+        "case:smarthr-color-roles"
+      ],
+      "roles": {
+        "text.primary": "#242832",
+        "text.secondary": "#606775",
+        "background": "#F3F5F7",
+        "surface": "#FFFFFF",
+        "surface.raised": "#FAFBFD",
+        "border": "#A5AEBC",
+        "link": "#255F91",
+        "action.primary": "#344C72",
+        "selection": "#E8E1F3",
+        "status.in-progress": "#287588",
+        "status.blocked": "#956014",
+        "status.complete": "#3D7357",
+        "brand.accent": "#7550A3"
+      },
+      "contexts": {
+        "proposal comparison": [
+          "text.primary",
+          "background",
+          "surface",
+          "selection"
+        ],
+        "run in progress": [
+          "text.primary",
+          "surface",
+          "status.in-progress"
+        ],
+        "blocked work": [
+          "text.primary",
+          "surface",
+          "status.blocked"
+        ],
+        "selected proposal": [
+          "text.primary",
+          "selection",
+          "action.primary"
+        ],
+        "completed work": [
+          "text.primary",
+          "status.complete"
+        ]
+      },
+      "sharedValueReasons": [],
+      "rationale": "A neutral workspace could reserve violet for a small Mimic identity mark and the Run overview heading. Operational actions and statuses receive their own colors, keeping signature moments scarce.",
+      "fit": "Fits if Mimic should feel recognizable at entry and overview moments while comparison remains visually restrained.",
+      "countercondition": "Reconsider if identity needs to remain strongly visible throughout every working state.",
+      "tradeoff": "Sparse signature use preserves attention for work but may make detailed screens feel less recognizably Mimic.",
+      "screenDescriptions": {
+        "proposal comparison": "A cool neutral background holds three equal white cards for Resume Board, Criteria Comparison Studio, and Run Timeline Investigation View for the local monitor redesign. Dark primary text carries the comparison. A pale violet selection strip labels Criteria Comparison Studio 'Proposed recommendation — not human-approved.' Saturated violet appears only in the small Mimic mark.",
+        "run in progress": "The current Mimic Run uses a white surface, dark primary text, and a teal 'Run in progress' icon and label. A short violet accent appears at the Run overview heading, without filling the work panels. The same directions, proposed recommendation, pending blocker, and next action remain visible; no percentage or event timestamp appears.",
+        "blocked work": "A white panel gives the pending blocker an ochre icon, border accent, and 'Pending blocker' label. Dark primary text states the next action: 'Review the pending blocker.' Brand violet remains confined to the identity mark, and Criteria Comparison Studio stays proposed only.",
+        "selected proposal": "Criteria Comparison Studio appears on the pale violet selection field with dark primary text stating 'Proposed recommendation — not human-approved.' A slate-blue 'Review pending blocker' button uses surface text. Neither the signature accent nor the button acts as an approval indicator.",
+        "completed work": "Completed-work entries, if present, receive green check icons and 'Complete' labels alongside dark primary text. There is no saturated brand celebration. The current Run stays in progress, the blocker stays pending, and Criteria Comparison Studio stays proposed only."
+      },
+      "sourceObservations": "Observed mechanisms supplied by the user: case:youtube-hue adjusts recognizable red and limits strong color to signature moments; case:smarthr-color-roles distinguishes semantic roles. YouTube's legacy-recognition rationale does not transfer directly because Mimic has no legacy red.",
+      "mimicPredictions": "A new violet signature and its placement at identity and overview moments are provisional Mimic predictions. Reduced competition with work content is an untested expectation, not a research finding. No YouTube red or source token values are copied."
+    },
+    {
+      "id": "layered-utility-minimal-chroma",
+      "intent": "Explore layered utility with minimal brand chroma.",
+      "sourceCaseIds": [
+        "case:carbon-layers",
+        "case:smarthr-color-roles"
+      ],
+      "roles": {
+        "text.primary": "#252D31",
+        "text.secondary": "#5B686F",
+        "background": "#E8EDEF",
+        "surface": "#F4F7F8",
+        "surface.raised": "#FFFFFF",
+        "border": "#96A4AC",
+        "link": "#285E79",
+        "action.primary": "#354F60",
+        "selection": "#D5E2E8",
+        "status.in-progress": "#4D6585",
+        "status.blocked": "#895D2B",
+        "status.complete": "#466D5C",
+        "brand.accent": "#647E80"
+      },
+      "contexts": {
+        "proposal comparison": [
+          "text.primary",
+          "background",
+          "surface",
+          "selection"
+        ],
+        "run in progress": [
+          "text.primary",
+          "surface",
+          "status.in-progress"
+        ],
+        "blocked work": [
+          "text.primary",
+          "surface",
+          "status.blocked"
+        ],
+        "selected proposal": [
+          "text.primary",
+          "selection",
+          "action.primary"
+        ],
+        "completed work": [
+          "text.primary",
+          "status.complete"
+        ]
+      },
+      "sharedValueReasons": [],
+      "rationale": "Three neutral depth levels—workspace, work panel, and raised detail—could communicate containment and focus. Minimal brand chroma leaves labels, borders, and status marks to explain the Run.",
+      "fit": "Fits if distinguishing nested work areas matters more than maintaining a strong branded atmosphere.",
+      "countercondition": "Reconsider if the interface remains flat and simple enough that surface nesting adds unnecessary complexity.",
+      "tradeoff": "Layering provides spatial organization but requires consistent containment rules and can add visual weight.",
+      "screenDescriptions": {
+        "proposal comparison": "The gray workspace background contains a light comparison surface with three equal white raised cards: Resume Board, Criteria Comparison Studio, and Run Timeline Investigation View for the local monitor redesign. Dark primary text names each direction. A blue-gray selection strip marks Criteria Comparison Studio 'Proposed recommendation — not human-approved.'",
+        "run in progress": "The current Mimic Run sits on the light work surface; white raised regions contain its details. Dark primary text and a muted blue 'Run in progress' icon and label establish status. The same directions, proposed recommendation, pending blocker, and next action remain visible. No percentage or event timestamp appears.",
+        "blocked work": "A white raised blocker region inside the light work panel uses a muted brown icon, border accent, and 'Pending blocker' label. Dark primary text gives the next action: 'Review the pending blocker.' The surrounding hierarchy stays neutral, and Criteria Comparison Studio remains proposed only.",
+        "selected proposal": "The proposed-selection detail uses a blue-gray selection field within the work surface. Dark primary text says 'Proposed recommendation — not human-approved.' A dark slate 'Review pending blocker' button uses surface.raised text. The selection field communicates focus without representing approval.",
+        "completed work": "Completed-work entries, if present, remain in the same neutral surface hierarchy with muted green check icons and 'Complete' labels beside dark primary text. The current Run remains in progress, the blocker remains pending, and Criteria Comparison Studio remains proposed only."
+      },
+      "sourceObservations": "Observed mechanisms supplied by the user: case:carbon-layers uses context-aware nested surface, field, and border roles; its four-layer system may be too heavy here. case:smarthr-color-roles separates semantic color responsibilities. These mechanisms do not establish how many layers Mimic needs.",
+      "mimicPredictions": "Using three neutral depth levels and minimal brand chroma is a provisional Mimic adaptation. Improved containment and focus are untested predictions. This is not a reproduction of Carbon's full layering system, and no source token values are copied."
+    }
+  ]
+}

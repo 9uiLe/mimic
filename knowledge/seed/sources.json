@@ -430,6 +430,138 @@
         "failure:gov-task-list"
       ],
       "rightsStrategy": "Original conditional analysis; observed source does not establish Mimic effectiveness."
+    },
+    {
+      "id": "obs:kintone-color",
+      "kind": "observation",
+      "sourceUrl": "https://speakerdeck.com/kintone/kintone-style-book",
+      "sourceTitle": "kintone Style Book",
+      "author": "Cybozu / kintone",
+      "relevantSection": "Slides 24, 26, 28",
+      "accessDate": "2026-10-09",
+      "verificationScope": "41-slide transcript and actual slide images 24, 26, 28 inspected using speakerdeck-knowledge guidance.",
+      "claim": "The deck links its core yellow to the Warm Smart brand idea, subordinates support colors, and contrasts workable and weak color pairings on product surfaces.",
+      "claimLinkage": ["case:kintone-color"],
+      "rightsStrategy": "Link and original paraphrase only; no copied slide, screenshot, code, palette, brand asset or long passage."
+    },
+    {
+      "id": "hyp:kintone-color",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://speakerdeck.com/kintone/kintone-style-book",
+      "sourceTitle": "kintone Style Book",
+      "author": "Cybozu / kintone",
+      "relevantSection": "Slides 24, 26, 28",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original Mimic application hypothesis; effectiveness not demonstrated by the source.",
+      "claim": "If Mimic adopts an approachable warm brand character, compare a recognizable warm core in navigation and signature actions against quieter work surfaces. The kintone yellow is not a Mimic proposal.",
+      "claimLinkage": [
+        "trait:kintone-color",
+        "principle:kintone-color",
+        "space:kintone-color",
+        "mechanism:kintone-color",
+        "pattern:kintone-color",
+        "failure:kintone-color"
+      ],
+      "rightsStrategy": "Original conditional analysis; no source palette or asset is bundled."
+    },
+    {
+      "id": "obs:youtube-hue",
+      "kind": "observation",
+      "sourceUrl": "https://design.google/library/youtube-new-red-color",
+      "sourceTitle": "YouTube's New Hue",
+      "author": "Robyn Lee, Amy Yip, Jessie Zo, David Amichai, Tom Moran, Linda Hong / YouTube design team",
+      "relevantSection": "Research rationale; color exploration; gradient figure; product applications",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party article text, rationale and visible gradient/product examples inspected in the user's Mac Chrome.",
+      "claim": "The team retained recognizable red while adjusting its character after research and screen concerns, explored adjacent gradient hues, and concentrated red/gradient in brand and signature UI moments.",
+      "claimLinkage": ["case:youtube-hue"],
+      "rightsStrategy": "Link and original paraphrase only; no copied slide, screenshot, code, palette, brand asset or long passage."
+    },
+    {
+      "id": "hyp:youtube-hue",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://design.google/library/youtube-new-red-color",
+      "sourceTitle": "YouTube's New Hue",
+      "author": "Robyn Lee, Amy Yip, Jessie Zo, David Amichai, Tom Moran, Linda Hong / YouTube design team",
+      "relevantSection": "Research rationale; color exploration; gradient figure; product applications",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original Mimic application hypothesis; effectiveness not demonstrated by the source.",
+      "claim": "When brand recognition is important, compare selective color in signature moments against an always-visible accent. Mimic has no evidenced legacy red to preserve; do not import its hue or gradient.",
+      "claimLinkage": [
+        "trait:youtube-hue",
+        "principle:youtube-hue",
+        "space:youtube-hue",
+        "mechanism:youtube-hue",
+        "pattern:youtube-hue",
+        "failure:youtube-hue"
+      ],
+      "rightsStrategy": "Original conditional analysis; no source palette or asset is bundled."
+    },
+    {
+      "id": "obs:smarthr-color-roles",
+      "kind": "observation",
+      "sourceUrl": "https://smarthr.design/products/design-tokens/color/",
+      "sourceTitle": "カラー | SmartHR Design System",
+      "author": "SmartHR Design System",
+      "relevantSection": "Color tokens by text, background, surface, border, main, warning and danger roles",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party semantic token documentation read in the user's Mac Chrome; Mimic palette effects untested.",
+      "claim": "The first-party token documentation names purpose-based color roles for text, backgrounds, surfaces, borders, links/main emphasis, and warning/danger states rather than a flat swatch list.",
+      "claimLinkage": ["case:smarthr-color-roles"],
+      "rightsStrategy": "Link and original paraphrase only; no copied slide, screenshot, code, palette, brand asset or long passage."
+    },
+    {
+      "id": "hyp:smarthr-color-roles",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://smarthr.design/products/design-tokens/color/",
+      "sourceTitle": "カラー | SmartHR Design System",
+      "author": "SmartHR Design System",
+      "relevantSection": "Color tokens by text, background, surface, border, main, warning and danger roles",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original Mimic application hypothesis; effectiveness not demonstrated by the source.",
+      "claim": "Define Mimic semantic roles and state meaning before choosing values. Compare the same role map on proposal, run, blocker, selected and completed screens; keep brand accent from masquerading as status.",
+      "claimLinkage": [
+        "trait:smarthr-color-roles",
+        "principle:smarthr-color-roles",
+        "space:smarthr-color-roles",
+        "mechanism:smarthr-color-roles",
+        "pattern:smarthr-color-roles",
+        "failure:smarthr-color-roles"
+      ],
+      "rightsStrategy": "Original conditional analysis; no source palette or asset is bundled."
+    },
+    {
+      "id": "obs:carbon-layers",
+      "kind": "observation",
+      "sourceUrl": "https://www.carbondesignsystem.com/building-blocks/foundations/color/guidelines",
+      "sourceTitle": "Color guidelines – Carbon Design System",
+      "author": "IBM Carbon Design System",
+      "relevantSection": "Layering; contextual tokens; field and border examples; color token tables",
+      "accessDate": "2026-10-09",
+      "verificationScope": "First-party guideline text, token tables and actual layer/dropdown diagrams inspected in the user's Mac Chrome.",
+      "claim": "Carbon pairs base and nested layer surfaces with corresponding field and border tokens; contextual tokens let a component adapt to its surrounding layer.",
+      "claimLinkage": ["case:carbon-layers"],
+      "rightsStrategy": "Link and original paraphrase only; no copied slide, screenshot, code, palette, brand asset or long passage."
+    },
+    {
+      "id": "hyp:carbon-layers",
+      "kind": "transfer-hypothesis",
+      "sourceUrl": "https://www.carbondesignsystem.com/building-blocks/foundations/color/guidelines",
+      "sourceTitle": "Color guidelines – Carbon Design System",
+      "author": "IBM Carbon Design System",
+      "relevantSection": "Layering; contextual tokens; field and border examples; color token tables",
+      "accessDate": "2026-10-09",
+      "verificationScope": "Original Mimic application hypothesis; effectiveness not demonstrated by the source.",
+      "claim": "Use only the depth levels needed to distinguish Mimic overview, selected detail and nested diagnostics. Stable semantic roles should remain recognizable as components change context.",
+      "claimLinkage": [
+        "trait:carbon-layers",
+        "principle:carbon-layers",
+        "space:carbon-layers",
+        "mechanism:carbon-layers",
+        "pattern:carbon-layers",
+        "failure:carbon-layers"
+      ],
+      "rightsStrategy": "Original conditional analysis; no source palette or asset is bundled."
     }
   ]
 }

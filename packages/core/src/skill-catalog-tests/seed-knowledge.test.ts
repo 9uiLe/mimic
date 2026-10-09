@@ -230,9 +230,13 @@ test("all reference spaces carry fit boundaries and complete retrievable paths",
       "run-progress",
       "bounded-explanation",
       "multi-session-task-progress",
+      "brand-core-color",
+      "signature-brand-color",
+      "semantic-color-roles",
+      "layered-color-context",
     ]),
   );
-  expect(spaces.length).toBe(14);
+  expect(spaces.length).toBe(18);
   for (const space of spaces) {
     expect(nodes.get(space.id)?.kind).toBe("space");
     const trait = nodes.get(space.problemTraits[0]!);

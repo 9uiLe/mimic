@@ -1,0 +1,216 @@
+{
+  "type": "object",
+  "properties": {
+    "strategies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "string"
+          },
+          "sourceCaseIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "roles": {
+            "type": "object",
+            "properties": {
+              "text.primary": {
+                "type": "string"
+              },
+              "text.secondary": {
+                "type": "string"
+              },
+              "background": {
+                "type": "string"
+              },
+              "surface": {
+                "type": "string"
+              },
+              "surface.raised": {
+                "type": "string"
+              },
+              "border": {
+                "type": "string"
+              },
+              "link": {
+                "type": "string"
+              },
+              "action.primary": {
+                "type": "string"
+              },
+              "selection": {
+                "type": "string"
+              },
+              "status.in-progress": {
+                "type": "string"
+              },
+              "status.blocked": {
+                "type": "string"
+              },
+              "status.complete": {
+                "type": "string"
+              },
+              "brand.accent": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text.primary",
+              "text.secondary",
+              "background",
+              "surface",
+              "surface.raised",
+              "border",
+              "link",
+              "action.primary",
+              "selection",
+              "status.in-progress",
+              "status.blocked",
+              "status.complete",
+              "brand.accent"
+            ],
+            "additionalProperties": false
+          },
+          "contexts": {
+            "type": "object",
+            "properties": {
+              "proposal comparison": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "run in progress": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "blocked work": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "selected proposal": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "completed work": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "proposal comparison",
+              "run in progress",
+              "blocked work",
+              "selected proposal",
+              "completed work"
+            ],
+            "additionalProperties": false
+          },
+          "sharedValueReasons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "roles",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "rationale": {
+            "type": "string"
+          },
+          "fit": {
+            "type": "string"
+          },
+          "countercondition": {
+            "type": "string"
+          },
+          "tradeoff": {
+            "type": "string"
+          },
+          "screenDescriptions": {
+            "type": "object",
+            "properties": {
+              "proposal comparison": {
+                "type": "string"
+              },
+              "run in progress": {
+                "type": "string"
+              },
+              "blocked work": {
+                "type": "string"
+              },
+              "selected proposal": {
+                "type": "string"
+              },
+              "completed work": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "proposal comparison",
+              "run in progress",
+              "blocked work",
+              "selected proposal",
+              "completed work"
+            ],
+            "additionalProperties": false
+          },
+          "sourceObservations": {
+            "type": "string"
+          },
+          "mimicPredictions": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "intent",
+          "sourceCaseIds",
+          "roles",
+          "contexts",
+          "sharedValueReasons",
+          "rationale",
+          "fit",
+          "countercondition",
+          "tradeoff",
+          "screenDescriptions",
+          "sourceObservations",
+          "mimicPredictions"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "strategies"
+  ],
+  "additionalProperties": false
+}

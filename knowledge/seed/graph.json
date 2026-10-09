@@ -937,6 +937,268 @@
       "risks": [
         "Treating every internal process step as a user task inflates perceived work and obscures the actual next action."
       ]
+    },
+    {
+      "id": "trait:kintone-color",
+      "kind": "trait",
+      "label": "A product needs a recognizable brand signal without displacing working content",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:kintone-color"]
+    },
+    {
+      "id": "principle:kintone-color",
+      "kind": "principle",
+      "label": "Derive prominence of a core hue from brand intent, then test it on actual task surfaces",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:kintone-color"]
+    },
+    {
+      "id": "space:kintone-color",
+      "kind": "space",
+      "label": "Warm brand core with restrained support roles",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "doNotBorrow": ["kintone yellow, exact ratios, layouts, and artwork"],
+      "risks": [
+        "Brand prominence can turn routine work surfaces into visual noise."
+      ]
+    },
+    {
+      "id": "case:kintone-color",
+      "kind": "case",
+      "label": "kintone Style Book color system",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:kintone-color"],
+      "doNotBorrow": ["kintone yellow, exact ratios, layouts, and artwork"],
+      "risks": [
+        "Brand prominence can turn routine work surfaces into visual noise."
+      ]
+    },
+    {
+      "id": "mechanism:kintone-color",
+      "kind": "mechanism",
+      "label": "A stated brand character drives core-color priority while support colors and surface pairings are tested as a system",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "doNotBorrow": ["kintone yellow, exact ratios, layouts, and artwork"]
+    },
+    {
+      "id": "pattern:kintone-color",
+      "kind": "pattern",
+      "label": "Warm core with quiet work surfaces",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:kintone-color"]
+    },
+    {
+      "id": "failure:kintone-color",
+      "kind": "failure",
+      "label": "Broad brand-colored surfaces compete with comparison content or state meaning",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "risks": [
+        "Brand prominence can turn routine work surfaces into visual noise."
+      ]
+    },
+    {
+      "id": "trait:youtube-hue",
+      "kind": "trait",
+      "label": "A familiar brand color must evolve while work surfaces remain legible and coherent",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:youtube-hue"]
+    },
+    {
+      "id": "principle:youtube-hue",
+      "kind": "principle",
+      "label": "Preserve the meaning of brand recognition while limiting high-emphasis color to deliberate moments",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:youtube-hue"]
+    },
+    {
+      "id": "space:youtube-hue",
+      "kind": "space",
+      "label": "Signature brand moments on a restrained canvas",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "doNotBorrow": [
+        "YouTube red, magenta gradient, video imagery, and exact component styling"
+      ],
+      "risks": [
+        "A familiar successful brand redesign does not validate a new product's color identity."
+      ]
+    },
+    {
+      "id": "case:youtube-hue",
+      "kind": "case",
+      "label": "YouTube new red and gradient",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:youtube-hue"],
+      "doNotBorrow": [
+        "YouTube red, magenta gradient, video imagery, and exact component styling"
+      ],
+      "risks": [
+        "A familiar successful brand redesign does not validate a new product's color identity."
+      ]
+    },
+    {
+      "id": "mechanism:youtube-hue",
+      "kind": "mechanism",
+      "label": "Research and cross-surface mockups refine a recognizable hue; signature UI uses carry stronger brand color than routine surfaces",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "doNotBorrow": [
+        "YouTube red, magenta gradient, video imagery, and exact component styling"
+      ]
+    },
+    {
+      "id": "pattern:youtube-hue",
+      "kind": "pattern",
+      "label": "Selective brand emphasis rather than a saturated work canvas",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:youtube-hue"]
+    },
+    {
+      "id": "failure:youtube-hue",
+      "kind": "failure",
+      "label": "A borrowed gradient or sparse accent lacks brand rationale or interrupts dense tasks",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "risks": [
+        "A familiar successful brand redesign does not validate a new product's color identity."
+      ]
+    },
+    {
+      "id": "trait:smarthr-color-roles",
+      "kind": "trait",
+      "label": "The same color intent must remain consistent across components and task states",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-color-roles"]
+    },
+    {
+      "id": "principle:smarthr-color-roles",
+      "kind": "principle",
+      "label": "Name semantic roles and state relationships before selecting exact color values",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-color-roles"]
+    },
+    {
+      "id": "space:smarthr-color-roles",
+      "kind": "space",
+      "label": "Purpose-based UI color roles",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "doNotBorrow": [
+        "SmartHR palette values, labels, CSS tokens and HR-specific status semantics"
+      ],
+      "risks": [
+        "A complete token taxonomy can become bureaucracy if roles are never used or meanings overlap."
+      ]
+    },
+    {
+      "id": "case:smarthr-color-roles",
+      "kind": "case",
+      "label": "SmartHR semantic color tokens",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:smarthr-color-roles"],
+      "doNotBorrow": [
+        "SmartHR palette values, labels, CSS tokens and HR-specific status semantics"
+      ],
+      "risks": [
+        "A complete token taxonomy can become bureaucracy if roles are never used or meanings overlap."
+      ]
+    },
+    {
+      "id": "mechanism:smarthr-color-roles",
+      "kind": "mechanism",
+      "label": "Separate text, surface, action and state tokens so a palette can change without redefining component meaning",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "doNotBorrow": [
+        "SmartHR palette values, labels, CSS tokens and HR-specific status semantics"
+      ]
+    },
+    {
+      "id": "pattern:smarthr-color-roles",
+      "kind": "pattern",
+      "label": "Role map evaluated in several real screen states",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-color-roles"]
+    },
+    {
+      "id": "failure:smarthr-color-roles",
+      "kind": "failure",
+      "label": "Copied token values or reused accents conflate brand, selection and blocker meaning",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "risks": [
+        "A complete token taxonomy can become bureaucracy if roles are never used or meanings overlap."
+      ]
+    },
+    {
+      "id": "trait:carbon-layers",
+      "kind": "trait",
+      "label": "Nested work surfaces need visible containment without relying on extra brand chroma",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:carbon-layers"]
+    },
+    {
+      "id": "principle:carbon-layers",
+      "kind": "principle",
+      "label": "Use contextual surface and border roles to clarify depth while keeping status meaning stable",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:carbon-layers"]
+    },
+    {
+      "id": "space:carbon-layers",
+      "kind": "space",
+      "label": "Layered neutral utility surfaces",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "doNotBorrow": [
+        "Carbon exact grays, four-layer quota, component code and artwork"
+      ],
+      "risks": [
+        "A full enterprise layering system may burden a small interface and complicate maintenance."
+      ]
+    },
+    {
+      "id": "case:carbon-layers",
+      "kind": "case",
+      "label": "Carbon contextual color layering",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:carbon-layers"],
+      "doNotBorrow": [
+        "Carbon exact grays, four-layer quota, component code and artwork"
+      ],
+      "risks": [
+        "A full enterprise layering system may burden a small interface and complicate maintenance."
+      ]
+    },
+    {
+      "id": "mechanism:carbon-layers",
+      "kind": "mechanism",
+      "label": "Layer-aware background, field and border tokens adapt nested components without assigning a new arbitrary color each time",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "doNotBorrow": [
+        "Carbon exact grays, four-layer quota, component code and artwork"
+      ]
+    },
+    {
+      "id": "pattern:carbon-layers",
+      "kind": "pattern",
+      "label": "Minimal necessary surface depth for nested diagnostics",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:carbon-layers"]
+    },
+    {
+      "id": "failure:carbon-layers",
+      "kind": "failure",
+      "label": "Excess layers and token variants increase complexity without improving containment",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "risks": [
+        "A full enterprise layering system may burden a small interface and complicate maintenance."
+      ]
     }
   ],
   "edges": [
@@ -1527,6 +1789,174 @@
       "rationale": "A conditional transfer hypothesis links these concepts.",
       "evidenceRefs": ["hyp:gov-task-list"],
       "from": "principle:gov-task-list"
+    },
+    {
+      "to": "principle:kintone-color",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "from": "trait:kintone-color"
+    },
+    {
+      "to": "space:kintone-color",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "from": "principle:kintone-color"
+    },
+    {
+      "to": "case:kintone-color",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:kintone-color"],
+      "from": "space:kintone-color"
+    },
+    {
+      "to": "mechanism:kintone-color",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:kintone-color"],
+      "from": "case:kintone-color"
+    },
+    {
+      "to": "principle:kintone-color",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "from": "mechanism:kintone-color"
+    },
+    {
+      "to": "pattern:kintone-color",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "from": "principle:kintone-color"
+    },
+    {
+      "to": "failure:kintone-color",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:kintone-color"],
+      "from": "principle:kintone-color"
+    },
+    {
+      "to": "principle:youtube-hue",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "from": "trait:youtube-hue"
+    },
+    {
+      "to": "space:youtube-hue",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "from": "principle:youtube-hue"
+    },
+    {
+      "to": "case:youtube-hue",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:youtube-hue"],
+      "from": "space:youtube-hue"
+    },
+    {
+      "to": "mechanism:youtube-hue",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:youtube-hue"],
+      "from": "case:youtube-hue"
+    },
+    {
+      "to": "principle:youtube-hue",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "from": "mechanism:youtube-hue"
+    },
+    {
+      "to": "pattern:youtube-hue",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "from": "principle:youtube-hue"
+    },
+    {
+      "to": "failure:youtube-hue",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:youtube-hue"],
+      "from": "principle:youtube-hue"
+    },
+    {
+      "to": "principle:smarthr-color-roles",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "from": "trait:smarthr-color-roles"
+    },
+    {
+      "to": "space:smarthr-color-roles",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "from": "principle:smarthr-color-roles"
+    },
+    {
+      "to": "case:smarthr-color-roles",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:smarthr-color-roles"],
+      "from": "space:smarthr-color-roles"
+    },
+    {
+      "to": "mechanism:smarthr-color-roles",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:smarthr-color-roles"],
+      "from": "case:smarthr-color-roles"
+    },
+    {
+      "to": "principle:smarthr-color-roles",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "from": "mechanism:smarthr-color-roles"
+    },
+    {
+      "to": "pattern:smarthr-color-roles",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "from": "principle:smarthr-color-roles"
+    },
+    {
+      "to": "failure:smarthr-color-roles",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:smarthr-color-roles"],
+      "from": "principle:smarthr-color-roles"
+    },
+    {
+      "to": "principle:carbon-layers",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "from": "trait:carbon-layers"
+    },
+    {
+      "to": "space:carbon-layers",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "from": "principle:carbon-layers"
+    },
+    {
+      "to": "case:carbon-layers",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:carbon-layers"],
+      "from": "space:carbon-layers"
+    },
+    {
+      "to": "mechanism:carbon-layers",
+      "rationale": "The first-party source documents this example.",
+      "evidenceRefs": ["obs:carbon-layers"],
+      "from": "case:carbon-layers"
+    },
+    {
+      "to": "principle:carbon-layers",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "from": "mechanism:carbon-layers"
+    },
+    {
+      "to": "pattern:carbon-layers",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "from": "principle:carbon-layers"
+    },
+    {
+      "to": "failure:carbon-layers",
+      "rationale": "A conditional transfer hypothesis links these concepts.",
+      "evidenceRefs": ["hyp:carbon-layers"],
+      "from": "principle:carbon-layers"
     }
   ]
 }

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "status": "provisional",
+  "purpose": "Compare brand color strategies on the same Mimic content and states before any palette is approved.",
+  "requiredRoles": [
+    "text.primary",
+    "text.secondary",
+    "background",
+    "surface",
+    "surface.raised",
+    "border",
+    "link",
+    "action.primary",
+    "selection",
+    "status.in-progress",
+    "status.blocked",
+    "status.complete",
+    "brand.accent"
+  ],
+  "requiredContexts": [
+    "proposal comparison",
+    "run in progress",
+    "blocked work",
+    "selected proposal",
+    "completed work"
+  ],
+  "requiredContextRoles": {
+    "proposal comparison": [
+      "text.primary",
+      "background",
+      "surface",
+      "selection"
+    ],
+    "run in progress": ["text.primary", "surface", "status.in-progress"],
+    "blocked work": ["text.primary", "surface", "status.blocked"],
+    "selected proposal": ["text.primary", "selection", "action.primary"],
+    "completed work": ["text.primary", "status.complete"]
+  },
+  "decisions": {
+    "machine": "Verify a value or explicit deferment for each role, declared use of required roles in all contexts, a known source case, and reasons for shared values. Inspect rendered screens or style sources separately for raw colors outside this proposal.",
+    "model": "Compare the same content across strategies for brand expression, task hierarchy, surface depth, selection and status meaning. Describe observed screen differences and predicted effects separately.",
+    "human": "Approve or revise brand character, core hue, and product palette after viewing same-content alternatives. Until then all values remain provisional."
+  },
+  "collisionReview": [
+    {
+      "roles": ["brand.accent", "status.blocked"],
+      "question": "Could a decorative brand cue be mistaken for a blocker?"
+    },
+    {
+      "roles": ["brand.accent", "selection"],
+      "question": "Can a selected object be distinguished from a branded but unselected object?"
+    },
+    {
+      "roles": ["status.in-progress", "status.complete"],
+      "question": "Do these states retain different meanings across overview and detail?"
+    }
+  ],
+  "sourceCaseIds": [
+    "case:kintone-color",
+    "case:youtube-hue",
+    "case:smarthr-color-roles",
+    "case:carbon-layers"
+  ]
+}
