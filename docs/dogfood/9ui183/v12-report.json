@@ -1,0 +1,104 @@
+{
+  "cohort": "9ui183_matched_v12_20261009",
+  "runId": "run_9ui183_matched_v12_20261009",
+  "repositoryCommit": "fc373ac2500cffbdae30f91fb9480a1b23a63910",
+  "repositoryInputs": {
+    "commitMatches": false,
+    "templateMatches": true,
+    "implementationMatches": false,
+    "corpusMatches": {
+      "knowledge/seed/graph.json": true,
+      "knowledge/seed/spaces.json": true,
+      "knowledge/seed/sources.json": true,
+      "knowledge/seed/product-ui-playbook.md": true,
+      "knowledge/seed/purpose-information-playbook.md": true
+    }
+  },
+  "schemaVerification": "verified",
+  "compiledVerification": "not-frozen",
+  "runState": "active",
+  "binding": {
+    "planDigest": "8ac8a3e61b2859615d355ed07ed3df31a653fc2ebbc67415213a4c43b5359806",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "low",
+    "verifiedSessionCount": 5,
+    "reasoningEffortLogCount": 5,
+    "reasoningEffortVerified": false,
+    "dispatchSettingsVerified": false
+  },
+  "commonAcceptedRefs": [
+    {
+      "artifactId": "art_run_9ui183_matched_v12_20261009_s04_run_inspection",
+      "lockDigest": "sha256:1ce541269781fdbe1791501dfdd9ddf08fc06b775a8fa08a94d6ed88a35633d9",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v12_20261009_s04_state_polling",
+      "lockDigest": "sha256:ba6824447ea89c0e4f32781dd3c8d50306238e80fcf07c7c4363b572b298fec9",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v12_20261009_s04_separate_preview",
+      "lockDigest": "sha256:dfb49b2b25bb3236773dc753912eb312e4f0bf0241456f2a7830879be5d4d3bc",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v12_20261009_s01_product_definition",
+      "lockDigest": "sha256:77d0d04a137cb41c58dd4dc9adbbc0358f42dc49bfa48d63b561f797b37f0159",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v12_20261009_s02_user_task_model",
+      "lockDigest": "sha256:0156a0e95e90cb27fc09168f5f442e8da20b00b78b31848efd090bfa157d8731",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v12_20261009_s05_product_ui_contract",
+      "lockDigest": "sha256:34bcc617782d2971fcd11244eaeff55722c0051c2b5520fd31b4ad458f902225",
+      "revision": 1
+    }
+  ],
+  "commonAttemptCount": 5,
+  "outcomes": {
+    "B0": {
+      "taskIds": ["s09_b0", "s10_b0", "s11_b0"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    },
+    "C1": {
+      "taskIds": ["s09_c1", "s10_c1", "s11_c1"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    },
+    "C2": {
+      "taskIds": ["s09_c2", "s10_c2", "s11_c2"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    }
+  },
+  "warning": "Elapsed generation and reasoning effort require one-to-one attempt logs. Cross-arm comparison also requires frozen, hashed dispatch configurations and submission schema; absent evidence leaves dispatch settings unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+}

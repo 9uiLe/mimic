@@ -1,0 +1,157 @@
+{
+  "cohort": "9ui183_matched_v11_20261009",
+  "runId": "run_9ui183_matched_v11_20261009",
+  "repositoryCommit": "fc373ac2500cffbdae30f91fb9480a1b23a63910",
+  "repositoryInputs": {
+    "commitMatches": false,
+    "templateMatches": true,
+    "implementationMatches": false,
+    "corpusMatches": {
+      "knowledge/seed/graph.json": true,
+      "knowledge/seed/spaces.json": true,
+      "knowledge/seed/sources.json": true,
+      "knowledge/seed/product-ui-playbook.md": true,
+      "knowledge/seed/purpose-information-playbook.md": true
+    }
+  },
+  "schemaVerification": "verified",
+  "compiledVerification": "not-frozen",
+  "runState": "active",
+  "binding": {
+    "planDigest": "c6a6e93df6e63267008d88a41b6c94942d25fec71d6d30f0483e494dd0ffa85c",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "low",
+    "verifiedSessionCount": 10,
+    "reasoningEffortLogCount": 9,
+    "reasoningEffortVerified": false,
+    "dispatchSettingsVerified": false
+  },
+  "commonAcceptedRefs": [
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s04_run_inspection",
+      "lockDigest": "sha256:62c72f88d43da8279b3db61d128ed15a6ba27fd80633656c6086fd530aef0f8f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s04_state_polling",
+      "lockDigest": "sha256:668a8fedb23d56894f0f83b06cd0848370dc1c0b81cf825d0294592f46385488",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s04_separate_preview",
+      "lockDigest": "sha256:587c53928bd8011e7617ba5e729b5cecd9340c32222cc22c92f0d84401e1be19",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s01_product_definition",
+      "lockDigest": "sha256:ce3526c19739974f2bf6ab772a9e1c983ff571d71029bd815079c529b84f7638",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s02_user_task_model",
+      "lockDigest": "sha256:3eb758f14296ea257b3400ae4045ed8847533df4a8c87624d1c41cd0fc146d06",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s05_ui_contract",
+      "lockDigest": "sha256:15cb719bd54043dddfe91b3e11b11034db24c28258c7c0a4f531a924ec6cf396",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s07_review",
+      "lockDigest": "sha256:9ad048a559d45f92403f8649715cbb356edf06850523d1bcc8de01fd2348f26f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s07_preview",
+      "lockDigest": "sha256:711fb3a6ae7ec84a97564e0805a0e49c56824ae79453df081c55a61c83719b74",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s07_review_preview_journey",
+      "lockDigest": "sha256:c67132a9f31120ff382bee5a78e546ede19e0b5b03630064f785e9a5d5992663",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s07_boundary_decision",
+      "lockDigest": "sha256:7c6efb66fbdf9f21d58db13309294d765f173f85dcfbca7ed7367c681ef75c77",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s08_review_profile",
+      "lockDigest": "sha256:a706a6421cead054f8efc7a47626fba056405469e5d543a97a60371a14267e7d",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui183_matched_v11_20261009_s08_preview_profile",
+      "lockDigest": "sha256:5860383d410c9d5c38360886a0d2d5bbc16941982d34280b00a2026875e914e0",
+      "revision": 1
+    }
+  ],
+  "commonAttemptCount": 8,
+  "outcomes": {
+    "B0": {
+      "taskIds": ["s09_b0", "s10_b0", "s11_b0"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 2,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
+      "generationCount": 2,
+      "elapsedGenerationMs": 153268,
+      "stops": [
+        {
+          "sessionId": "session_9ui183_matched_v11_s09_b0_a_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s09_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui183_matched_v11_s09_b0_b_20261009",
+          "stop": "candidate-rejected",
+          "tasks": [
+            {
+              "taskId": "s09_b0",
+              "phase": "rejected",
+              "rejectionReason": "static-validation"
+            }
+          ]
+        }
+      ]
+    },
+    "C1": {
+      "taskIds": ["s09_c1", "s10_c1", "s11_c1"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    },
+    "C2": {
+      "taskIds": ["s09_c2", "s10_c2", "s11_c2"],
+      "acceptedRefs": [],
+      "lastAcceptedEvent": null,
+      "firstReviewableAt": null,
+      "attemptCount": 0,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
+      "dispatchSettingsVerified": false,
+      "generationCount": 0,
+      "elapsedGenerationMs": null,
+      "stops": []
+    }
+  },
+  "warning": "Elapsed generation and reasoning effort require one-to-one attempt logs. Cross-arm comparison also requires frozen, hashed dispatch configurations and submission schema; absent evidence leaves dispatch settings unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+}

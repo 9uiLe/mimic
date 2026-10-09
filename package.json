@@ -10,6 +10,8 @@
     "check:docs": "prettier --check \"**/*.md\" \"**/*.json\" && markdownlint-cli2 \"**/*.md\"",
     "check:schemas": "node scripts/check-schemas.mjs",
     "test:ci": "node --test scripts/check-schemas.test.mjs scripts/select-ci.test.mjs",
+    "test:comparison": "node --test scripts/approach-comparison.test.mjs",
+    "compare:approaches": "node scripts/approach-comparison.mjs",
     "test:dco": "node --test scripts/check-dco.test.mjs",
     "check:ci": "pnpm run test:ci && pnpm run check:docs && pnpm run check:schemas",
     "dev": "pnpm --filter @mimic/demo-lab dev",
@@ -21,7 +23,7 @@
     "validate": "pnpm run check:schemas && node scripts/check-yaml.mjs",
     "test": "node scripts/with-patched-chrome.mjs vitest run",
     "test:browser": "node scripts/with-patched-chrome.mjs playwright test",
-    "check:quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run validate && pnpm run build && pnpm run check:ci && pnpm run test:dco",
+    "check:quality": "pnpm run format:check && pnpm run lint && pnpm run typecheck && pnpm run validate && pnpm run build && pnpm run test:comparison && pnpm run check:ci && pnpm run test:dco",
     "check": "pnpm run check:quality && pnpm run test"
   },
   "devDependencies": {
