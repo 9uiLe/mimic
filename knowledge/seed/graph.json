@@ -535,6 +535,274 @@
       "risks": [
         "Incorrect semantic links can misroute search and imply false ancestry."
       ]
+    },
+    {
+      "id": "trait:teamlab-object",
+      "kind": "trait",
+      "label": "People explore and act on a set of persistent objects",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:teamlab-object"]
+    },
+    {
+      "id": "principle:teamlab-object",
+      "kind": "principle",
+      "label": "Make the object of interest the navigation anchor before contextual actions",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:teamlab-object"]
+    },
+    {
+      "id": "space:teamlab-object",
+      "kind": "space",
+      "label": "Object-first exploration",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "doNotBorrow": [
+        "Book covers, exact bookshelf layout, labels, and teamLab visual styling"
+      ],
+      "risks": [
+        "Object-first navigation adds selection steps when the task itself is the only meaningful choice."
+      ]
+    },
+    {
+      "id": "case:teamlab-object",
+      "kind": "case",
+      "label": "teamLab bookshelf UI comparison",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:teamlab-object"],
+      "doNotBorrow": [
+        "Book covers, exact bookshelf layout, labels, and teamLab visual styling"
+      ],
+      "risks": [
+        "Object-first navigation adds selection steps when the task itself is the only meaningful choice."
+      ]
+    },
+    {
+      "id": "mechanism:teamlab-object",
+      "kind": "mechanism",
+      "label": "Collection and single-object views connect through object navigation; edit and delete follow selection",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "doNotBorrow": [
+        "Book covers, exact bookshelf layout, labels, and teamLab visual styling"
+      ]
+    },
+    {
+      "id": "pattern:teamlab-object",
+      "kind": "pattern",
+      "label": "Object collection leading to a contextual single view and actions",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:teamlab-object"]
+    },
+    {
+      "id": "failure:teamlab-object",
+      "kind": "failure",
+      "label": "Task menus replace the object overview even when people need to compare objects",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "risks": [
+        "Object-first navigation adds selection steps when the task itself is the only meaningful choice."
+      ]
+    },
+    {
+      "id": "trait:smarthr-table",
+      "kind": "trait",
+      "label": "People must distinguish and compare many candidates without losing current state or actions",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-table"]
+    },
+    {
+      "id": "principle:smarthr-table",
+      "kind": "principle",
+      "label": "Show the fields needed to identify and compare objects, plus their actionable state",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-table"]
+    },
+    {
+      "id": "space:smarthr-table",
+      "kind": "space",
+      "label": "Decision-focused object comparison",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "doNotBorrow": [
+        "SmartHR labels, icons, colors, sample data, and exact table layout"
+      ],
+      "risks": [
+        "Removing columns solely for visual calm can conceal the reason to choose or the current state."
+      ]
+    },
+    {
+      "id": "case:smarthr-table",
+      "kind": "case",
+      "label": "SmartHR common table pattern",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:smarthr-table"],
+      "doNotBorrow": [
+        "SmartHR labels, icons, colors, sample data, and exact table layout"
+      ],
+      "risks": [
+        "Removing columns solely for visual calm can conceal the reason to choose or the current state."
+      ]
+    },
+    {
+      "id": "mechanism:smarthr-table",
+      "kind": "mechanism",
+      "label": "One object per row with name, discriminating fields, task-specific status, and reachable row actions; secondary information can move to detail",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "doNotBorrow": [
+        "SmartHR labels, icons, colors, sample data, and exact table layout"
+      ]
+    },
+    {
+      "id": "pattern:smarthr-table",
+      "kind": "pattern",
+      "label": "Comparison table with explicit status and restrained actions",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-table"]
+    },
+    {
+      "id": "failure:smarthr-table",
+      "kind": "failure",
+      "label": "Minimal rows hide decisive differences or status; extra columns bury the next action",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "risks": [
+        "Removing columns solely for visual calm can conceal the reason to choose or the current state."
+      ]
+    },
+    {
+      "id": "trait:google-expressive",
+      "kind": "trait",
+      "label": "The primary action competes with supporting controls for attention",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:google-expressive"]
+    },
+    {
+      "id": "principle:google-expressive",
+      "kind": "principle",
+      "label": "Use visual emphasis to make a task-critical action locatable without breaking familiar structure",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:google-expressive"]
+    },
+    {
+      "id": "space:google-expressive",
+      "kind": "space",
+      "label": "Function-led visual emphasis",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "doNotBorrow": [
+        "Google brand palette, expressive shapes, email content, and experimental screen compositions"
+      ],
+      "risks": [
+        "Emphasis can become visual noise or falsely imply priority; Google reports an unstructured playlist and unlabeled email actions harmed usability."
+      ]
+    },
+    {
+      "id": "case:google-expressive",
+      "kind": "case",
+      "label": "Google Material 3 Expressive email and playlist concepts",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:google-expressive"],
+      "doNotBorrow": [
+        "Google brand palette, expressive shapes, email content, and experimental screen compositions"
+      ],
+      "risks": [
+        "Emphasis can become visual noise or falsely imply priority; Google reports an unstructured playlist and unlabeled email actions harmed usability."
+      ]
+    },
+    {
+      "id": "mechanism:google-expressive",
+      "kind": "mechanism",
+      "label": "Size, placement, color and containment distinguish the primary action from adjacent controls",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "doNotBorrow": [
+        "Google brand palette, expressive shapes, email content, and experimental screen compositions"
+      ]
+    },
+    {
+      "id": "pattern:google-expressive",
+      "kind": "pattern",
+      "label": "Task-critical action receives context-specific emphasis within a recognizable interaction model",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:google-expressive"]
+    },
+    {
+      "id": "failure:google-expressive",
+      "kind": "failure",
+      "label": "Decorative novelty removes labels or familiar ordering and obscures meaning",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "risks": [
+        "Emphasis can become visual noise or falsely imply priority; Google reports an unstructured playlist and unlabeled email actions harmed usability."
+      ]
+    },
+    {
+      "id": "trait:github-run",
+      "kind": "trait",
+      "label": "People need to know run status, current work, and where to inspect a problem",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:github-run"]
+    },
+    {
+      "id": "principle:github-run",
+      "kind": "principle",
+      "label": "Expose progress and hierarchy at the level needed to act, with a route to diagnostic detail",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:github-run"]
+    },
+    {
+      "id": "space:github-run",
+      "kind": "space",
+      "label": "Hierarchical run progress with detail on demand",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:github-run"],
+      "doNotBorrow": [
+        "GitHub iconography, job names, exact Actions sidebar, and green/yellow status styling"
+      ],
+      "risks": [
+        "Exposing every internal step can flood the overview; collapsing all children can conceal a failure or the next action."
+      ]
+    },
+    {
+      "id": "case:github-run",
+      "kind": "case",
+      "label": "GitHub Actions workflow run navigation",
+      "maturity": "provisional",
+      "evidenceRefs": ["obs:github-run"],
+      "doNotBorrow": [
+        "GitHub iconography, job names, exact Actions sidebar, and green/yellow status styling"
+      ],
+      "risks": [
+        "Exposing every internal step can flood the overview; collapsing all children can conceal a failure or the next action."
+      ]
+    },
+    {
+      "id": "mechanism:github-run",
+      "kind": "mechanism",
+      "label": "Parent workflow groups child jobs, status marks each row, expandable descendants and local navigation preserve context",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:github-run"],
+      "doNotBorrow": [
+        "GitHub iconography, job names, exact Actions sidebar, and green/yellow status styling"
+      ]
+    },
+    {
+      "id": "pattern:github-run",
+      "kind": "pattern",
+      "label": "Run overview with grouped status, expandable work units, and path to details",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:github-run"]
+    },
+    {
+      "id": "failure:github-run",
+      "kind": "failure",
+      "label": "Only raw logs or only a success badge hides current step, failed branch, or return path",
+      "maturity": "provisional",
+      "evidenceRefs": ["hyp:github-run"],
+      "risks": [
+        "Exposing every internal step can flood the overview; collapsing all children can conceal a failure or the next action."
+      ]
     }
   ],
   "edges": [
@@ -873,6 +1141,174 @@
       "rationale": "This failure mode limits application of the principle.",
       "evidenceRefs": ["hyp:skos-relations"],
       "from": "principle:skos-relations"
+    },
+    {
+      "to": "principle:teamlab-object",
+      "rationale": "The problem trait calls for this decision principle.",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "from": "trait:teamlab-object"
+    },
+    {
+      "to": "space:teamlab-object",
+      "rationale": "The space allows this principle to be examined in a real interface.",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "from": "principle:teamlab-object"
+    },
+    {
+      "to": "case:teamlab-object",
+      "rationale": "This first-party case demonstrates the reference space.",
+      "evidenceRefs": ["obs:teamlab-object"],
+      "from": "space:teamlab-object"
+    },
+    {
+      "to": "mechanism:teamlab-object",
+      "rationale": "The visible screen and author description establish the mechanism.",
+      "evidenceRefs": ["obs:teamlab-object"],
+      "from": "case:teamlab-object"
+    },
+    {
+      "to": "principle:teamlab-object",
+      "rationale": "Transfer may serve this principle only under the stated fit conditions.",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "from": "mechanism:teamlab-object"
+    },
+    {
+      "to": "pattern:teamlab-object",
+      "rationale": "This is a conditional application pattern, not a universal template.",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "from": "principle:teamlab-object"
+    },
+    {
+      "to": "failure:teamlab-object",
+      "rationale": "This failure mode limits the proposed transfer.",
+      "evidenceRefs": ["hyp:teamlab-object"],
+      "from": "principle:teamlab-object"
+    },
+    {
+      "to": "principle:smarthr-table",
+      "rationale": "The problem trait calls for this decision principle.",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "from": "trait:smarthr-table"
+    },
+    {
+      "to": "space:smarthr-table",
+      "rationale": "The space allows this principle to be examined in a real interface.",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "from": "principle:smarthr-table"
+    },
+    {
+      "to": "case:smarthr-table",
+      "rationale": "This first-party case demonstrates the reference space.",
+      "evidenceRefs": ["obs:smarthr-table"],
+      "from": "space:smarthr-table"
+    },
+    {
+      "to": "mechanism:smarthr-table",
+      "rationale": "The visible screen and author description establish the mechanism.",
+      "evidenceRefs": ["obs:smarthr-table"],
+      "from": "case:smarthr-table"
+    },
+    {
+      "to": "principle:smarthr-table",
+      "rationale": "Transfer may serve this principle only under the stated fit conditions.",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "from": "mechanism:smarthr-table"
+    },
+    {
+      "to": "pattern:smarthr-table",
+      "rationale": "This is a conditional application pattern, not a universal template.",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "from": "principle:smarthr-table"
+    },
+    {
+      "to": "failure:smarthr-table",
+      "rationale": "This failure mode limits the proposed transfer.",
+      "evidenceRefs": ["hyp:smarthr-table"],
+      "from": "principle:smarthr-table"
+    },
+    {
+      "to": "principle:google-expressive",
+      "rationale": "The problem trait calls for this decision principle.",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "from": "trait:google-expressive"
+    },
+    {
+      "to": "space:google-expressive",
+      "rationale": "The space allows this principle to be examined in a real interface.",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "from": "principle:google-expressive"
+    },
+    {
+      "to": "case:google-expressive",
+      "rationale": "This first-party case demonstrates the reference space.",
+      "evidenceRefs": ["obs:google-expressive"],
+      "from": "space:google-expressive"
+    },
+    {
+      "to": "mechanism:google-expressive",
+      "rationale": "The visible screen and author description establish the mechanism.",
+      "evidenceRefs": ["obs:google-expressive"],
+      "from": "case:google-expressive"
+    },
+    {
+      "to": "principle:google-expressive",
+      "rationale": "Transfer may serve this principle only under the stated fit conditions.",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "from": "mechanism:google-expressive"
+    },
+    {
+      "to": "pattern:google-expressive",
+      "rationale": "This is a conditional application pattern, not a universal template.",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "from": "principle:google-expressive"
+    },
+    {
+      "to": "failure:google-expressive",
+      "rationale": "This failure mode limits the proposed transfer.",
+      "evidenceRefs": ["hyp:google-expressive"],
+      "from": "principle:google-expressive"
+    },
+    {
+      "to": "principle:github-run",
+      "rationale": "The problem trait calls for this decision principle.",
+      "evidenceRefs": ["hyp:github-run"],
+      "from": "trait:github-run"
+    },
+    {
+      "to": "space:github-run",
+      "rationale": "The space allows this principle to be examined in a real interface.",
+      "evidenceRefs": ["hyp:github-run"],
+      "from": "principle:github-run"
+    },
+    {
+      "to": "case:github-run",
+      "rationale": "This first-party case demonstrates the reference space.",
+      "evidenceRefs": ["obs:github-run"],
+      "from": "space:github-run"
+    },
+    {
+      "to": "mechanism:github-run",
+      "rationale": "The visible screen and author description establish the mechanism.",
+      "evidenceRefs": ["obs:github-run"],
+      "from": "case:github-run"
+    },
+    {
+      "to": "principle:github-run",
+      "rationale": "Transfer may serve this principle only under the stated fit conditions.",
+      "evidenceRefs": ["hyp:github-run"],
+      "from": "mechanism:github-run"
+    },
+    {
+      "to": "pattern:github-run",
+      "rationale": "This is a conditional application pattern, not a universal template.",
+      "evidenceRefs": ["hyp:github-run"],
+      "from": "principle:github-run"
+    },
+    {
+      "to": "failure:github-run",
+      "rationale": "This failure mode limits the proposed transfer.",
+      "evidenceRefs": ["hyp:github-run"],
+      "from": "principle:github-run"
     }
   ]
 }

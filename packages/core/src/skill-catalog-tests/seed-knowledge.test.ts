@@ -3,6 +3,7 @@ import path from "node:path";
 import { expect, test } from "vitest";
 import {
   profileTraitIds,
+  referenceSelectionFromRetrieval,
   retrieveDesignReferences,
   validateDesignKnowledgeGraph,
   type DesignKnowledgeGraph,
@@ -35,8 +36,10 @@ interface Evidence {
   kind: "observation" | "transfer-hypothesis";
   sourceUrl: string;
   sourceTitle: string;
+  author?: string;
   relevantSection: string;
   accessDate: string;
+  verificationScope?: string;
   claim: string;
   claimLinkage: string[];
   rightsStrategy: string;
@@ -87,6 +90,64 @@ test("public seed is a valid typed graph with no dangling or duplicate edges", (
   ).toThrow(/Dangling edge/);
 });
 
+test("product UI task retrieves distinct mechanisms and projects source-linked S09 input", () => {
+  const categories = [
+    "product-object-navigation",
+    "product-comparison",
+    "visual-priority",
+    "run-progress",
+  ];
+  const references = categories.map((category) =>
+    spaces.find((space) => space.category === category)!,
+  );
+  const roles = ["near", "adjacent", "far", "wildcard"] as const;
+  const result = retrieveDesignReferences(graph, {
+    traitIds: references.flatMap((space) => space.problemTraits),
+    assessments: references.map((space, index) => ({
+      caseId: space.referenceCases[0]!,
+      role: roles[index]!,
+      structuralFit: index === 1 ? "medium" : "high",
+      contextDistance: index === 0 ? "low" : index === 1 ? "medium" : "high",
+      unconventional: index === 3,
+      rationale: `Assess ${space.category} for a proposal comparison and run overview.`,
+      evidenceRefs: space.transferHypothesisRefs,
+    })),
+  });
+  expect(result.status).toBe("ready");
+  if (result.status !== "ready") return;
+  expect(result.selected.map((candidate) => candidate.caseId).sort()).toEqual(
+    references.map((space) => space.referenceCases[0]!).sort(),
+  );
+  expect(
+    new Set(result.selected.flatMap((candidate) => candidate.mechanismIds))
+      .size,
+  ).toBe(4);
+  const selection = referenceSelectionFromRetrieval(result);
+  expect(selection.content.references).toHaveLength(4);
+  for (const candidate of result.selected) {
+    expect(candidate.evidenceRefs).toContain(
+      `obs:${candidate.caseId.slice(5)}`,
+    );
+    expect(candidate.evidenceRefs).toContain(
+      `hyp:${candidate.caseId.slice(5)}`,
+    );
+    for (const ref of [
+      `obs:${candidate.caseId.slice(5)}`,
+      `hyp:${candidate.caseId.slice(5)}`,
+    ]) {
+      expect(ledger.get(ref)?.author?.trim()).toBeTruthy();
+      expect(ledger.get(ref)?.verificationScope?.trim()).toBeTruthy();
+    }
+    expect(candidate.failureIds).toHaveLength(1);
+    expect(candidate.doNotBorrow.length).toBeGreaterThan(0);
+    expect(candidate.risks.length).toBeGreaterThan(0);
+  }
+  expect(selection.provenance).toHaveLength(5);
+  expect(selection.provenance.every((item) => item.kind === "hypothesis")).toBe(
+    true,
+  );
+});
+
 test("every graph claim resolves to a specific observation or transfer hypothesis", () => {
   expect(new Set(evidence.map((item) => item.id)).size).toBe(evidence.length);
   for (const item of evidence) {
@@ -112,7 +173,7 @@ test("every graph claim resolves to a specific observation or transfer hypothesi
     for (const ref of edge.evidenceRefs) expect(ledger.has(ref)).toBe(true);
 });
 
-test("all eight reference spaces carry fit boundaries and complete retrievable paths", () => {
+test("all reference spaces carry fit boundaries and complete retrievable paths", () => {
   expect(new Set(spaces.map((space) => space.category))).toEqual(
     new Set([
       "digital-interfaces",
@@ -123,9 +184,13 @@ test("all eight reference spaces carry fit boundaries and complete retrievable p
       "commerce-service",
       "communication",
       "spatial-conceptual-systems",
+      "product-object-navigation",
+      "product-comparison",
+      "visual-priority",
+      "run-progress",
     ]),
   );
-  expect(spaces.length).toBe(8);
+  expect(spaces.length).toBe(12);
   for (const space of spaces) {
     expect(nodes.get(space.id)?.kind).toBe("space");
     const trait = nodes.get(space.problemTraits[0]!);
