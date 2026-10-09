@@ -1,0 +1,37 @@
+{
+  "runId": "run_9ui183_matched_final_20261009",
+  "recoveryImplementationCommit": "dd201ae90f0ee7ff93f367a4187d6daddb6a18da",
+  "method": "runAuthorizedSessionResume",
+  "modelGenerations": 0,
+  "sameSavedWork": true,
+  "sameSubmissionMarker": true,
+  "coreWorkspaceUnchanged": true,
+  "startedAt": "2026-10-09T23:01:43.759Z",
+  "finishedAt": "2026-10-09T23:01:44.081Z",
+  "elapsedMs": 321,
+  "sessionId": "session_9ui183_final_s07_b_20261009",
+  "expectedWorkDigest": "9b16ef025a62790784eb2a2dadc7a29e878789e643a796992760d31580f3c627",
+  "exitCode": 0,
+  "failureClass": null,
+  "before": {
+    "checkpointSha256": "2bbf40ec1338542cd05bdcdc3dad451171d56089b3edd9b6e1f71806925cf628",
+    "workSha256": "b7962d9be5903ab29cb9294b0988553028026c6cd574cf2c28e7d66a4c5b831b",
+    "markerSha256": "aa08ddb234f32f4549f7e42986d58e776de22e3bce9484d62bfa4755d1ddccf5",
+    "workspaceSha256": "77c992205f849691440e3e6fa778e5faf5241575d5d4cf1648e5e38c43c4ab8e"
+  },
+  "after": {
+    "checkpointSha256": "9c522983961c0f7b2e78bacc084e1ab3c6b9f19e44cd3c38b5a6196a01ddf03f",
+    "workSha256": "b7962d9be5903ab29cb9294b0988553028026c6cd574cf2c28e7d66a4c5b831b",
+    "markerSha256": "aa08ddb234f32f4549f7e42986d58e776de22e3bce9484d62bfa4755d1ddccf5",
+    "workspaceSha256": "77c992205f849691440e3e6fa778e5faf5241575d5d4cf1648e5e38c43c4ab8e"
+  },
+  "status": "stopped",
+  "stop": "unknown-outcome",
+  "tasks": [
+    {
+      "taskId": "s07",
+      "phase": "prepared",
+      "outputRefs": []
+    }
+  ]
+}
