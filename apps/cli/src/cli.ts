@@ -119,10 +119,13 @@ class CliError extends Error {
   constructor(
     readonly code: number,
     message: string,
+    readonly candidate = false,
   ) {
     super(message);
   }
 }
+const candidateError = (message: string) =>
+  new CliError(EXIT.INVALID, message, true);
 function required(value: string | undefined, name: string): string {
   if (!value) throw new CliError(EXIT.USAGE, `Missing ${name}`);
   return value;
@@ -1010,10 +1013,7 @@ export async function runCli(
           !submission.work ||
           typeof submission.work !== "object"
         )
-          throw new CliError(
-            EXIT.INVALID,
-            "Invalid file-backed Skill submission",
-          );
+          throw candidateError("Invalid file-backed Skill submission");
         const work = submission.work as SkillWork;
         if (
           !work.result ||
@@ -1030,10 +1030,7 @@ export async function runCli(
               typeof ref.lockDigest === "string",
           )
         )
-          throw new CliError(
-            EXIT.INVALID,
-            "Invalid Skill result identity or references",
-          );
+          throw candidateError("Invalid Skill result identity or references");
         const routable = (
           await runtime.orchestrator.next(id, tasks)
         ).actions.find((action) => action.taskId === taskId)?.invocation;
@@ -1083,7 +1080,7 @@ export async function runCli(
                   unknown.affectedTaskIds.includes(taskId),
               )))
         )
-          throw new CliError(EXIT.INVALID, "Invalid Skill work structure");
+          throw candidateError("Invalid Skill work structure");
         if (work.revisionRequests !== undefined) {
           const exact = (a: unknown, b: unknown) =>
             canonicalJson(a) === canonicalJson(b);
@@ -1112,10 +1109,7 @@ export async function runCli(
                 ),
             )
           )
-            throw new CliError(
-              EXIT.INVALID,
-              "Invalid revision request exact bindings",
-            );
+            throw candidateError("Invalid revision request exact bindings");
         }
         for (const artifact of submission.artifacts as ArtifactSnapshot[]) {
           const origin = artifact?.origin as
@@ -1127,13 +1121,18 @@ export async function runCli(
             origin.actorId !== skill.manifest.skillId ||
             origin.runId !== id
           )
-            throw new CliError(
-              EXIT.INVALID,
+            throw candidateError(
               "Candidate origin does not match Skill and Run",
             );
           // Provenance pointer errors are deterministic candidate errors.
           // Check them before creating the immutable submission reservation.
-          await assessProvenance(artifact);
+          try {
+            await assessProvenance(artifact);
+          } catch (error) {
+            throw candidateError(
+              `Invalid candidate provenance: ${error instanceof Error ? error.message : String(error)}`,
+            );
+          }
           const exact = artifactDigest(artifact);
           if (
             !work.result.outputRefs.some(
@@ -1143,8 +1142,7 @@ export async function runCli(
                 ref.lockDigest === exact,
             )
           )
-            throw new CliError(
-              EXIT.INVALID,
+            throw candidateError(
               "Candidate does not match an exact output reference",
             );
           if (
@@ -1158,8 +1156,7 @@ export async function runCli(
                 ),
             )
           )
-            throw new CliError(
-              EXIT.INVALID,
+            throw candidateError(
               "Candidate dependency differs from exact input",
             );
         }
@@ -1776,7 +1773,7 @@ export async function runCli(
                     ? EXIT.INVALID
                     : EXIT.IO;
     io.err(
-      `MIMIC_${code}: ${error instanceof Error ? error.message : String(error)}`,
+      `MIMIC_${code}: ${error instanceof CliError && error.candidate ? "[candidate] " : ""}${error instanceof Error ? error.message : String(error)}`,
     );
     return code;
   }

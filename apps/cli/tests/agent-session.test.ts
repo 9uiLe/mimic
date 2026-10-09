@@ -26,6 +26,7 @@ import {
 import {
   AgentSession,
   FileSessionStore,
+  SessionCandidateRejected,
   sessionDigest,
   type SessionBinding,
   type SessionPlan,
@@ -207,6 +208,42 @@ async function harness() {
     },
   };
 }
+test("a rejected candidate is preserved and only an explicit resume generates again", async () => {
+  const h = await harness();
+  h.setPlan({
+    runnable: [task("first")],
+    reviewReady: false,
+    questionIds: [],
+    complete: true,
+  });
+  const accept = h.ports.submit;
+  h.ports.submit = vi
+    .fn()
+    .mockRejectedValueOnce(new SessionCandidateRejected("static-validation"))
+    .mockImplementation(accept);
+  const executor = fake("generated answer");
+  const session = new AgentSession(
+    "session_rejection",
+    h.store,
+    h.ports,
+    executor,
+    limits,
+  );
+  const rejected = await session.advance();
+  expect(rejected.stop).toBe("candidate-rejected");
+  expect(rejected.tasks.first).toMatchObject({
+    phase: "rejected",
+    rejectionReason: "static-validation",
+  });
+  expect(rejected.tasks.first.work).toBeDefined();
+  expect(h.accepted.size).toBe(0);
+  expect((await session.advance()).stop).toBe("candidate-rejected");
+  expect(executor.start).toHaveBeenCalledOnce();
+  const resumed = await session.advance({ resume: true });
+  expect(resumed.status).toBe("complete");
+  expect(resumed.tasks.first.phase).toBe("accepted");
+  expect(executor.start).toHaveBeenCalledTimes(2);
+});
 test("runs independent work despite review-ready, then restores accepted work in a fresh process/session instance", async () => {
   const h = await harness(),
     executor = fake("new model answer");
@@ -978,6 +1015,40 @@ async function staticHarness() {
     store: new FileSessionStore(root),
   };
 }
+test("real static validation rejects invalid model work before submission reservation", async () => {
+  const h = await staticHarness();
+  const candidate = JSON.parse(h.output);
+  candidate.artifacts[0].dependencies[0].onChange = "freeform explanation";
+  candidate.work.result.outputRefs[0].lockDigest = HOST_DERIVED_DIGEST;
+  const saved = await h.ports.saveWork(h.frozen, JSON.stringify(candidate));
+  await expect(h.ports.submit(h.frozen, saved)).rejects.toMatchObject({
+    reason: "static-validation",
+  });
+  expect(
+    await readdir(path.join(h.root, ".mimic", "submissions")).catch(() => []),
+  ).toEqual([]);
+  const snapshot = await h.runtime.registry.snapshot();
+  expect(snapshot.runs[binding.runId].artifacts).toHaveLength(1);
+  expect(await readFile(path.join(h.root, saved.path), "utf8")).toContain(
+    "freeform explanation",
+  );
+});
+test("workspace configuration failure preserves saved candidate for retry", async () => {
+  const h = await staticHarness();
+  const saved = await h.ports.saveWork(h.frozen, h.output);
+  const file = path.join(h.root, ".mimic/config.json");
+  const original = await readFile(file, "utf8");
+  await writeFile(file, "{}");
+  await expect(h.ports.submit(h.frozen, saved)).rejects.toMatchObject({
+    code: 3,
+    candidate: false,
+  });
+  expect(await readFile(path.join(h.root, saved.path), "utf8")).toContain(
+    '"artifacts"',
+  );
+  await writeFile(file, original);
+  expect((await h.ports.submit(h.frozen, saved)).length).toBeGreaterThan(0);
+});
 test("real static CLI reconciles acceptance after a lost response; fresh resume never regenerates or approves", async () => {
   const h = await staticHarness(),
     executor = fake(h.output);
@@ -1193,7 +1264,7 @@ test.each(["output", "proposal", "request", "content"])(
     const before = await h.runtime.registry.snapshot();
     await expect(
       h.ports.saveWork(h.frozen, JSON.stringify(generated)),
-    ).rejects.toThrow(/digest differs/);
+    ).rejects.toMatchObject({ reason: "preparation" });
     expect(await readdir(path.join(h.root, ".mimic/agent-work"))).toEqual([
       expect.stringMatching(/\.rejected\.raw\.json$/),
     ]);

@@ -21,7 +21,7 @@ const session = new AgentSession(
   new FileSessionStore(workspace),
   ports,
   officialExecutor,
-  { maxGenerations: 4, timeoutMs: 60_000, maxOutputBytes: 1_000_000 },
+  { maxGenerations: 4, timeoutMs: 120_000, maxOutputBytes: 1_000_000 },
 );
 await session.advance();
 await session.inspect(); // read-only, including when no checkpoint exists
@@ -31,6 +31,8 @@ await session.advance({ resume: true }); // explicit; never an automatic retry
 The factory reconstructs prompts from the saved plan, official static Skill text, exact authority-readable inputs, declared evidence, and output schemas. Model output is an untrusted JSON Skill-work envelope. The static CLI validates it with `--package` and `--work`; `CliHost.executeSkill` is not used. Existing immutable work reservations and revision-request handoffs remain in effect. Local confirmation receipts use the static CLI's verifier. Signed operator history without a trusted host is unsupported and fails closed. The loop cannot approve a candidate or create a confirmation.
 
 For a newly emitted artifact, the model may omit `lockDigest` or use `"host-derived"` in its output reference and matching proposal/request reference. Before immutable save, Mimic computes Core's canonical `artifactDigest` from the unchanged artifact and fills only those fresh references. Concrete hashes must already match; a wrong `meta.contentDigest` is rejected, never repaired. Duplicate identities and attempts to replace an exact input fail. Input references, dependencies, revision-request sources and affected locks retain their supplied exact hashes. The original model string is saved separately in private immutable `agent-work/*.raw.json` metadata with its digest and the prepared work digest. This preparation grants no approval; ordinary static submission still validates schemas, origin, exact bindings and Core authority.
+
+An invalid generated envelope is retained as `*.rejected.raw.json` and stops as `candidate-rejected` with reason `preparation`. When the static CLI explicitly identifies candidate validation failure and no immutable submission marker exists, the checkpoint retains that work and stops as `candidate-rejected` with reason `static-validation`. Other CLI failures, including workspace configuration errors, preserve the saved candidate for retry after repair. Neither candidate rejection is automatically retried. A fresh, explicitly authorized generation may replace the rejected candidate while preserving its original bytes. If a submission marker exists or its absence cannot be established, the stop remains `unknown-outcome` and requires reconciliation; a candidate is never silently regenerated across that boundary.
 
 ## Durable state and safe boundaries
 
@@ -82,4 +84,4 @@ The entry retains the existing private checkpoint, frozen Core inputs, process l
 
 The output schema is an explicit workspace-contained regular file supplied by the trusted host. Core still validates generated work and artifact schemas through static submission. A small raw JSON connection smoke can use the adapter's authorized method without claiming Core acceptance; session generation requires the full static work envelope. Contract tests use mocked/fake runtime data with real Core and do not authorize or prove a real model call.
 
-The configured session deadline also bounds generation (default adapter bound 30 seconds, configured maximum 60 seconds). Metadata commands retain their separate 10-second maximum; extending a generation deadline does not extend those metadata probes or permit another generation.
+The configured session deadline also bounds generation (default adapter bound 30 seconds, configured maximum 120 seconds). Metadata commands retain their separate 10-second maximum; extending a generation deadline does not extend those metadata probes or permit another generation.

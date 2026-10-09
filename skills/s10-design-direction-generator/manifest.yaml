@@ -1,7 +1,7 @@
 {
   "skillId": "mimic.s10.design-direction-generator",
   "manifestVersion": "1.0.0",
-  "packageVersion": "0.1.0",
+  "packageVersion": "0.1.2",
   "skillFile": "SKILL.md",
   "inputs":
     {

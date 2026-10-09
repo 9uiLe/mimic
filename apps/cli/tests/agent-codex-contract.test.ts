@@ -1034,7 +1034,7 @@ test("profile rejects arbitrary argv, model flags, long budgets, external schema
   );
   for (const mutation of [
     { ...options, args: ["--oss"] },
-    { ...options, timeoutMs: 60_001 },
+    { ...options, timeoutMs: 120_001 },
     { ...options, reasoningEffort: "none" },
     { ...options, env: { HOME: "relative" } },
     { ...options, workspace: outside.workspace },
@@ -1293,7 +1293,7 @@ test("decoded candidate uses production static Skill submit with immutable retry
   duplicate.work.result.outputRefs = [duplicateRef];
   duplicate.work.result.proposal.items[0]!.ref = duplicateRef;
   await writeFile(path.join(workspace, "work.json"), JSON.stringify(duplicate));
-  expect(await dispatchCli(handoff.argv)).toBe(6);
+  expect(await dispatchCli(handoff.argv)).toBe(3);
   expect(
     await readdir(path.join(workspace, ".mimic/submissions")).catch(() => []),
   ).toEqual([]);

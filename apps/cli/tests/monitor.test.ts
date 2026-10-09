@@ -12,7 +12,7 @@ import { spawn } from "node:child_process";
 import { request as httpRequest } from "node:http";
 import path from "node:path";
 import os from "node:os";
-import { chromium } from "@playwright/test";
+import { chromium, expect as browserExpect } from "@playwright/test";
 import {
   artifactDigest,
   buildPrototype,
@@ -232,10 +232,25 @@ test("live Core records, exact artifacts and validated stops are projected witho
     /private-|rationale|questionIds|prompt|"model"|"work"|receipt|token|stdout|stderr/,
   );
   expect(await files(root)).toEqual(before);
+  await runtime.registry.setWork({
+    runId: "run_monitor",
+    safeActions: [],
+    blockers: {},
+    actor,
+    at,
+    reason: "private-accepted-completion",
+  });
   await new FileSessionStore(root).write(checkpoint("approval", true));
   const updated = await state(monitor.url);
-  expect(updated.runs[0].tasks[0].phase).toBe("approval");
+  expect(updated.runs[0].tasks[0].phase).toBe("accepted");
   expect(updated.runs[0].sessions[0].tasks[0].phase).toBe("accepted");
+  await new FileSessionStore(root).write({
+    ...checkpoint("timeout"),
+    sessionId: "session_monitor_update",
+  });
+  expect((await state(monitor.url)).runs[0].tasks[0].phase).toBe(
+    "multiple-sessions",
+  );
   await runtime.registry.start({
     id: "run_latest",
     scope: "org_local",
@@ -300,6 +315,45 @@ test("Core freeform safe work without a plan remains readable through active-to-
   });
 });
 
+test("design review distinguishes an empty workspace from a loading state", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "mimic-monitor-empty-"));
+  roots.push(root);
+  expect(
+    await runCli(["init", "--root", root], { out: () => {}, err: () => {} }),
+  ).toBe(0);
+  await writeFile(
+    path.join(root, ".mimic/workspace.json"),
+    JSON.stringify({
+      version: 1,
+      snapshots: {},
+      registry: {
+        canonical: {},
+        freshness: {},
+        runs: {},
+        packets: {},
+        decisions: {},
+        commits: {},
+        events: [],
+      },
+    }),
+  );
+  const monitor = await server(root);
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.goto(monitor.url + "/design-review");
+    await browserExpect(page.locator("#review-resume")).toContainText(
+      "Runはありません",
+    );
+    expect(await page.locator("#review-run").isDisabled()).toBe(true);
+    expect(await page.locator("#review-preview-link").isHidden()).toBe(true);
+  } finally {
+    await browser.close();
+  }
+}, 15_000);
+
 test("loopback fixed routes reject Host/origin/method/traversal and never expose private files", async () => {
   const { root } = await setup();
   const monitor = await server(root);
@@ -337,6 +391,9 @@ test("loopback fixed routes reject Host/origin/method/traversal and never expose
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
     expect(response.headers.get("cache-control")).toBe("no-store");
   }
+  const reviewHtml = await (await fetch(monitor.url + "/design-review")).text();
+  expect(reviewHtml).toContain("固定ケーススタディ");
+  expect(reviewHtml).toMatch(/id="review-preview-link"[^>]*hidden/);
   expect(
     (
       await fetch(monitor.url + "/api/state", {
@@ -463,15 +520,22 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(
       await page.locator('[data-run-id="run_monitor"]').textContent(),
     ).toContain("進行可能");
+    expect(
+      await page.locator('[data-run-id="run_monitor"]').textContent(),
+    ).toContain("run_monitor");
     await page.locator('[data-run-id="run_monitor"]').click();
     expect(
       await page
         .locator('[data-run-id="run_monitor"]')
         .getAttribute("aria-current"),
     ).toBe("true");
-    expect(await page.locator("#run-detail").textContent()).toContain(
-      "Core の保存状態",
+    expect(await page.locator("#run-detail h2").textContent()).toBe(
+      "今の進捗と次の行動",
     );
+    expect(
+      await page.locator("#run-detail .technical-detail").getAttribute("open"),
+    ).toBeNull();
+    await page.locator("#run-detail .technical-detail summary").focus();
     await runtime.registry.setWork({
       runId: "run_monitor",
       safeActions: [],
@@ -485,6 +549,9 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
         timeout: 6000,
       })
       .toContain("Run 終了");
+    expect(await page.evaluate(() => document.activeElement?.tagName)).toBe(
+      "SUMMARY",
+    );
     expect(
       await page
         .locator('[data-run-id="run_monitor"]')
@@ -497,6 +564,13 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
       })
       .toContain("結果不明・要照合");
     await new FileSessionStore(root).write(checkpoint("approval", true));
+    expect(
+      (await state(monitor.url)).runs
+        .find((run: { runId: string }) => run.runId === "run_monitor")
+        .tasks.find(
+          (task: { taskId: string }) => task.taskId === "task_monitor",
+        ).phase,
+    ).toBe("accepted");
     await expect
       .poll(async () => page.locator("#run-detail").textContent(), {
         timeout: 6000,
@@ -521,9 +595,9 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(await page.locator("#run-count").textContent()).toContain("2 / 2");
     await page.locator('[data-run-id="run_second"]').focus();
     await page.keyboard.press("Enter");
-    expect(await page.locator("#run-detail h2").textContent()).toBe(
-      "run_second",
-    );
+    expect(
+      await page.locator("#run-detail .technical-detail").textContent(),
+    ).toContain("run_second");
     await runtime.registry.setWork({
       runId: "run_second",
       safeActions: [],
@@ -548,9 +622,9 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(390);
     await page.locator('[data-run-id="run_monitor"]').click();
-    expect(await page.locator("#run-detail h2").textContent()).toBe(
-      "run_monitor",
-    );
+    expect(
+      await page.locator("#run-detail .technical-detail").textContent(),
+    ).toContain("run_monitor");
     expect(await page.locator(".table-scroll").getAttribute("tabindex")).toBe(
       "0",
     );
@@ -583,6 +657,19 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
     expect(
       await page.locator(".table-scroll").evaluate((table) => table.scrollLeft),
     ).toBe(0);
+    const review = await context.newPage();
+    await review.goto(monitor.url + "/design-review");
+    expect(await review.locator("h1").textContent()).toContain("設計案を比べ");
+    expect(await review.locator("#review-preview-link").isVisible()).toBe(true);
+    expect(await review.locator(".review-grid .direction").count()).toBe(3);
+    await review
+      .locator("#review-run option[value=run_monitor]")
+      .waitFor({ state: "attached" });
+    await review.locator("#review-run").selectOption("run_second");
+    expect(await review.locator("#review-resume").textContent()).toContain(
+      "second",
+    );
+    expect(await review.locator(".compare tbody tr").count()).toBe(4);
     const opened = context.waitForEvent("page");
     await page.locator("#product-preview-link").click();
     const tab = await opened;
@@ -594,18 +681,22 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
         .getAttribute("href"),
     ).toBe("/");
     const frame = tab.frameLocator('iframe[title="Product preview"]');
+    await frame.locator('body[data-controls-ready="true"]').waitFor();
     await frame
       .getByRole("button", { name: "Show success", exact: true })
-      .click();
+      .press("Enter");
+    await browserExpect(frame.locator("#prototype-status")).toContainText(
+      "success",
+    );
     await frame
       .getByRole("button", { name: "Choose candidate", exact: true })
-      .click();
+      .press("Enter");
     expect(await frame.locator("#prototype-status").textContent()).toContain(
       "disabled",
     );
     await frame
       .getByRole("button", { name: "Show success", exact: true })
-      .click();
+      .press("Enter");
     expect(await frame.locator("#prototype-status").textContent()).toContain(
       "success",
     );

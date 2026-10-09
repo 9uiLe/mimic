@@ -12,6 +12,7 @@ import { parseCodexWorkEnvelope } from "./codex.js";
 import {
   sessionDigest,
   SessionQuestion,
+  SessionCandidateRejected,
   SessionBindingChanged,
   type SessionBinding,
   type SessionPlan,
@@ -158,6 +159,15 @@ async function contained(root: string, relative: string): Promise<string> {
 }
 /** No executeSkill host: the public CLI retains static package checks, immutable
  * work reservations, acceptance reconciliation and revision-request handoff. */
+class StaticCliFailure extends Error {
+  constructor(
+    readonly code: number,
+    readonly candidate: boolean,
+  ) {
+    super("Static session operation did not complete");
+  }
+}
+
 export function createStaticSessionPorts(
   config: StaticSessionConfiguration,
 ): SessionPorts {
@@ -165,12 +175,16 @@ export function createStaticSessionPorts(
     throw new Error("Invalid session ID");
   const invoke = async (args: string[]) => {
     const values: string[] = [];
+    const errors: string[] = [];
     const code = await runCli([...args, "--root", config.workspace, "--json"], {
       out: (value) => values.push(value),
-      err: () => {},
+      err: (value) => errors.push(value),
     });
     if (code !== EXIT.OK)
-      throw new Error("Static session operation did not complete");
+      throw new StaticCliFailure(
+        code,
+        errors.some((value) => value.startsWith("MIMIC_3: [candidate] ")),
+      );
     return JSON.parse(values.at(-1)!) as Record<string, unknown>;
   };
   let frozenBinding: SessionBinding | undefined;
@@ -221,7 +235,7 @@ export function createStaticSessionPorts(
       let value: unknown;
       try {
         value = deriveOutputDigests(parseCodexWorkEnvelope(output), task);
-      } catch (error) {
+      } catch {
         // Preserve rejected model data for local diagnosis without granting it
         // a static submission reservation or artifact authority.
         const rejected = {
@@ -238,7 +252,7 @@ export function createStaticSessionPorts(
           ),
           rejected,
         );
-        throw error;
+        throw new SessionCandidateRejected("preparation");
       }
       const digest = sessionDigest(value);
       const relative = path.join(
@@ -279,16 +293,42 @@ export function createStaticSessionPorts(
       )
         throw new SessionBindingChanged();
       const work = await readWork(saved);
-      const result = await invoke([
-        "submit",
-        (await bound()).runId,
-        "--task",
-        task.taskId,
-        "--package",
-        packagePath,
-        "--work",
-        saved.path,
-      ]);
+      let result: Record<string, unknown>;
+      try {
+        result = await invoke([
+          "submit",
+          (await bound()).runId,
+          "--task",
+          task.taskId,
+          "--package",
+          packagePath,
+          "--work",
+          saved.path,
+        ]);
+      } catch (error) {
+        if (
+          error instanceof StaticCliFailure &&
+          error.code === EXIT.INVALID &&
+          error.candidate
+        ) {
+          // Static CLI reserves before any Core effect. An absent marker proves
+          // rejection happened before the immutable handoff.
+          const marker = path.join(
+            config.workspace,
+            ".mimic",
+            "submissions",
+            `${(await bound()).runId}-${sessionDigest(task.taskId)}.json`,
+          );
+          try {
+            await lstat(marker);
+          } catch (readError) {
+            if ((readError as NodeJS.ErrnoException).code === "ENOENT")
+              throw new SessionCandidateRejected("static-validation");
+            throw readError;
+          }
+        }
+        throw error;
+      }
       if (result.submissionState === "blocked")
         throw new SessionQuestion(task.taskId);
       if (result.submissionState !== "accepted")

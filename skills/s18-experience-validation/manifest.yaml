@@ -1,7 +1,7 @@
 {
   "skillId": "mimic.s18-experience-validation",
   "manifestVersion": "1.0.0",
-  "packageVersion": "0.2.0",
+  "packageVersion": "0.2.1",
   "skillFile": "SKILL.md",
   "inputs":
     {

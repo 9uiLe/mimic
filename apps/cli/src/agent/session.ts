@@ -77,10 +77,12 @@ export type SessionStop =
   | "approval"
   | "waiting"
   | "reservation-invalid"
+  | "candidate-rejected"
   | "iteration-limit";
 interface TaskCheckpoint {
   binding: TaskBinding;
-  phase: "executing" | "prepared" | "accepted" | "blocked";
+  phase: "executing" | "prepared" | "accepted" | "blocked" | "rejected";
+  rejectionReason?: "preparation" | "static-validation";
   work?: SavedWork;
   outputRefs?: readonly ExactArtifactRef[];
   diagnostics?: ExecutionDiagnostics;
@@ -277,10 +279,21 @@ export class FileSessionStore {
           validateTask(task.binding);
           if (
             taskId !== task.binding.taskId ||
-            !["executing", "prepared", "accepted", "blocked"].includes(
-              task.phase,
-            ) ||
-            (task.phase !== "executing" && !task.work) ||
+            ![
+              "executing",
+              "prepared",
+              "accepted",
+              "blocked",
+              "rejected",
+            ].includes(task.phase) ||
+            (task.phase !== "executing" &&
+              task.phase !== "rejected" &&
+              !task.work) ||
+            (task.phase === "rejected" &&
+              !["preparation", "static-validation"].includes(
+                task.rejectionReason ?? "",
+              )) ||
+            (task.phase !== "rejected" && task.rejectionReason !== undefined) ||
             (task.phase === "accepted" && !Array.isArray(task.outputRefs)) ||
             (task.diagnostics !== undefined &&
               !sanitizeExecutionDiagnostics(task.diagnostics))
@@ -351,6 +364,12 @@ export class SessionQuestion extends Error {
     super("Saved Skill work requires a human answer");
   }
 }
+/** A candidate failed before any immutable static submission reservation. */
+export class SessionCandidateRejected extends Error {
+  constructor(readonly reason: "preparation" | "static-validation") {
+    super("Generated candidate rejected before static reservation");
+  }
+}
 export interface SessionLimits {
   maxGenerations: number;
   timeoutMs: number;
@@ -409,6 +428,7 @@ export class AgentSession {
       tasks: Object.values(state?.tasks ?? {}).map((task) => ({
         taskId: task.binding.taskId,
         phase: task.phase,
+        rejectionReason: task.rejectionReason,
         inputRefs: task.binding.inputRefs,
         outputRefs: task.outputRefs,
         work: task.work,
@@ -499,6 +519,7 @@ export class AgentSession {
         try {
           if (task.phase === "accepted")
             await this.ports.verifyAccepted(task.binding, task.outputRefs!);
+          else if (task.phase === "rejected") continue;
           else if (task.phase === "prepared" || task.phase === "blocked") {
             task.outputRefs = await this.ports.submit(task.binding, task.work!);
             task.phase = "accepted";
@@ -521,6 +542,11 @@ export class AgentSession {
             task.phase = "blocked";
             state.questionIds = [error.taskId];
             return stop("question");
+          }
+          if (error instanceof SessionCandidateRejected) {
+            task.phase = "rejected";
+            task.rejectionReason = error.reason;
+            return stop("candidate-rejected");
           }
           return stop("unknown-outcome");
         }
@@ -715,6 +741,11 @@ export class AgentSession {
             state.tasks[task.binding.taskId]!.phase = "blocked";
             state.questionIds = [error.taskId];
             return stop("question");
+          }
+          if (error instanceof SessionCandidateRejected) {
+            state.tasks[task.binding.taskId]!.phase = "rejected";
+            state.tasks[task.binding.taskId]!.rejectionReason = error.reason;
+            return stop("candidate-rejected");
           }
           return stop("unknown-outcome");
         }
