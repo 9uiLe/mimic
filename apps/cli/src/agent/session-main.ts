@@ -254,23 +254,34 @@ async function runConfiguredSession(
     const interrupt = () => {
       void session.cancel().catch(() => {});
     };
+    let operationStop: string | undefined;
     if (command !== "inspect") {
       process.once("SIGINT", interrupt);
       process.once("SIGTERM", interrupt);
       try {
-        await session.advance({
-          resume: command === "resume",
-          reconciledUnknownOutcome: remaining.length === 1,
-          ...(authorized?.kind === "reconcile"
-            ? { reconcilePreparedWorkDigest: authorized.expectedWorkDigest }
-            : {}),
-        });
+        operationStop = (
+          await session.advance({
+            resume: command === "resume",
+            reconciledUnknownOutcome: remaining.length === 1,
+            ...(authorized?.kind === "reconcile"
+              ? { reconcilePreparedWorkDigest: authorized.expectedWorkDigest }
+              : {}),
+          })
+        ).stop;
       } finally {
         process.removeListener("SIGINT", interrupt);
         process.removeListener("SIGTERM", interrupt);
       }
     }
-    io.out(JSON.stringify(await session.inspect()));
+    const inspection = await session.inspect();
+    if (
+      operationStop === "reservation-invalid" &&
+      inspection.stop !== "reservation-invalid"
+    ) {
+      io.err("Session execution policy mismatch; checkpoint unchanged.");
+      return 2;
+    }
+    io.out(JSON.stringify(inspection));
     return 0;
   } catch {
     // Never print raw official diagnostics, configuration content or model output.

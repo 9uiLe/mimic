@@ -2187,116 +2187,129 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   expect(launch).toHaveBeenCalledOnce();
 });
 
-test("trusted resume reconciles only the exact prepared authorized work, including a legacy policy-mismatch stop", async () => {
-  const h = await staticHarness();
-  const decision = {
-    consumeUserDecision: vi.fn(async () => ({
-      decisionId: "test-only-resume-origin",
-      expiresAt: Date.now() + 60_000,
-    })),
-  };
-  const options = { executable: process.execPath, workspace: h.root, env: {} };
-  const originalSubmit = h.ports.submit;
-  h.ports.submit = async (...args) => {
-    await originalSubmit(...args);
-    throw new Error("Response lost after static Core acceptance");
-  };
-  const launch = vi
-    .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
-    .mockImplementation(async (request) => fake(h.output).start(request));
-  const first = createAuthorizedCodexSessionDispatch(
-    options,
-    "schema.json",
-    decision,
-  );
-  const stopped = await new AgentSession(
-    "session_a",
-    h.store,
-    h.ports,
-    first.executor,
-    { ...limits, maxGenerations: 1 },
-    first.dispatch,
-  ).advance();
-  expect(stopped.stop).toBe("unknown-outcome");
-  expect(stopped.tasks.first.phase).toBe("prepared");
-  const saved = stopped.tasks.first.work!;
-  const beforeCore = await h.runtime.registry.snapshot();
-  const markerDirectory = path.join(h.root, ".mimic/submissions");
-  const markerNames = await readdir(markerDirectory);
-  const markerBytes = await Promise.all(
-    markerNames.map((name) =>
-      readFile(path.join(markerDirectory, name), "utf8"),
-    ),
-  );
-  const configPath = path.join(h.root, "authorized-resume.json");
-  const configuration = {
-    workspace: h.root,
-    executable: process.execPath,
-    runId: binding.runId,
-    sessionId: "session_a",
-    packages: { first: "skill" },
-    model: binding.settings.model,
-  };
-  await writeFile(configPath, JSON.stringify(configuration));
-  const output: string[] = [],
-    errors: string[] = [];
-  const io = {
-    out: (value: string) => output.push(value),
-    err: (value: string) => errors.push(value),
-  };
-  const checkpoint = path.join(h.store.directory, "session_a.json");
-  const checkpointBefore = await readFile(checkpoint, "utf8");
-  expect(await runSessionCli(["resume", "--config", configPath], io)).toBe(0);
-  expect(JSON.parse(output.at(-1)!).stop).toBe("unknown-outcome");
-  expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
-
-  expect(await runAuthorizedSessionResume(configPath, "0".repeat(64), io)).toBe(
-    2,
-  );
-  expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
-  await writeFile(
-    path.join(h.root, "other-session.json"),
-    JSON.stringify({ ...configuration, sessionId: "session_other" }),
-  );
-  expect(
-    await runAuthorizedSessionResume(
-      path.join(h.root, "other-session.json"),
-      saved.digest,
-      io,
-    ),
-  ).toBe(2);
-  expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
-
-  // Simulate the terminal stop written by older public CLI builds. The saved
-  // candidate, marker and Core state remain unchanged.
-  stopped.stop = "reservation-invalid";
-  await h.store.write(stopped);
-  expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
-    0,
-  );
-  const resumed = await h.store.read("session_a");
-  expect(resumed?.tasks.first.phase).toBe("accepted");
-  expect(resumed?.tasks.first.work).toEqual(saved);
-  expect(resumed?.generationCount).toBe(1);
-  expect((await h.runtime.registry.snapshot()).events).toEqual(
-    beforeCore.events,
-  );
-  expect(await readdir(markerDirectory)).toEqual(markerNames);
-  expect(
-    await Promise.all(
+test.each(["legacy-policy-stop", "prepared-before-stop"] as const)(
+  "trusted resume reconciles only the exact prepared authorized work from %s",
+  async (recoveryState) => {
+    const h = await staticHarness();
+    const decision = {
+      consumeUserDecision: vi.fn(async () => ({
+        decisionId: "test-only-resume-origin",
+        expiresAt: Date.now() + 60_000,
+      })),
+    };
+    const options = {
+      executable: process.execPath,
+      workspace: h.root,
+      env: {},
+    };
+    const originalSubmit = h.ports.submit;
+    h.ports.submit = async (...args) => {
+      await originalSubmit(...args);
+      throw new Error("Response lost after static Core acceptance");
+    };
+    const launch = vi
+      .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
+      .mockImplementation(async (request) => fake(h.output).start(request));
+    const first = createAuthorizedCodexSessionDispatch(
+      options,
+      "schema.json",
+      decision,
+    );
+    const stopped = await new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      first.executor,
+      { ...limits, maxGenerations: 1 },
+      first.dispatch,
+    ).advance();
+    expect(stopped.stop).toBe("unknown-outcome");
+    expect(stopped.tasks.first.phase).toBe("prepared");
+    const saved = stopped.tasks.first.work!;
+    const beforeCore = await h.runtime.registry.snapshot();
+    const markerDirectory = path.join(h.root, ".mimic/submissions");
+    const markerNames = await readdir(markerDirectory);
+    const markerBytes = await Promise.all(
       markerNames.map((name) =>
         readFile(path.join(markerDirectory, name), "utf8"),
       ),
-    ),
-  ).toEqual(markerBytes);
-  expect(launch).toHaveBeenCalledOnce();
-  expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
-  expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
-    2,
-  );
-  expect(launch).toHaveBeenCalledOnce();
-  expect(errors).toHaveLength(3);
-});
+    );
+    const configPath = path.join(h.root, "authorized-resume.json");
+    const configuration = {
+      workspace: h.root,
+      executable: process.execPath,
+      runId: binding.runId,
+      sessionId: "session_a",
+      packages: { first: "skill" },
+      model: binding.settings.model,
+    };
+    await writeFile(configPath, JSON.stringify(configuration));
+    const output: string[] = [],
+      errors: string[] = [];
+    const io = {
+      out: (value: string) => output.push(value),
+      err: (value: string) => errors.push(value),
+    };
+    const checkpoint = path.join(h.store.directory, "session_a.json");
+    const checkpointBefore = await readFile(checkpoint, "utf8");
+    expect(await runSessionCli(["resume", "--config", configPath], io)).toBe(2);
+    expect(errors.at(-1)).toContain("checkpoint unchanged");
+    expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
+
+    expect(
+      await runAuthorizedSessionResume(configPath, "0".repeat(64), io),
+    ).toBe(2);
+    expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
+    await writeFile(
+      path.join(h.root, "other-session.json"),
+      JSON.stringify({ ...configuration, sessionId: "session_other" }),
+    );
+    expect(
+      await runAuthorizedSessionResume(
+        path.join(h.root, "other-session.json"),
+        saved.digest,
+        io,
+      ),
+    ).toBe(2);
+    expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
+
+    // Simulate either the terminal stop written by an older public CLI or a
+    // process crash just after persisting prepared work. No candidate or marker
+    // is changed by the test setup.
+    if (recoveryState === "legacy-policy-stop")
+      stopped.stop = "reservation-invalid";
+    else {
+      stopped.status = "ready";
+      delete stopped.stop;
+    }
+    await h.store.write(stopped);
+    expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+      0,
+    );
+    const resumed = await h.store.read("session_a");
+    expect(resumed?.tasks.first.phase).toBe("accepted");
+    expect(resumed?.tasks.first.work).toEqual(saved);
+    expect(resumed?.generationCount).toBe(1);
+    expect((await h.runtime.registry.snapshot()).events).toEqual(
+      beforeCore.events,
+    );
+    expect(await readdir(markerDirectory)).toEqual(markerNames);
+    expect(
+      await Promise.all(
+        markerNames.map((name) =>
+          readFile(path.join(markerDirectory, name), "utf8"),
+        ),
+      ),
+    ).toEqual(markerBytes);
+    expect(launch).toHaveBeenCalledOnce();
+    expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+    expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+      2,
+    );
+    expect(launch).toHaveBeenCalledOnce();
+    expect(errors).toHaveLength(4);
+  },
+);
 
 test("trusted resume refuses changed binding and saved candidate without launching a model", async () => {
   const h = await staticHarness();

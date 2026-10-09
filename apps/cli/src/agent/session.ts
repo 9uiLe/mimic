@@ -457,7 +457,7 @@ export class AgentSession {
   ): Promise<SessionCheckpoint> {
     return this.store.exclusive(this.id, async () => {
       let state = await this.store.read(this.id);
-      if (options.reconcilePreparedWorkDigest && !state)
+      if (options.reconcilePreparedWorkDigest !== undefined && !state)
         throw new Error("No saved authorized session to reconcile");
       let binding: SessionBinding;
       try {
@@ -526,9 +526,12 @@ export class AgentSession {
           options.reconciledUnknownOutcome ||
           !this.authorizedDispatch ||
           this.limits.maxGenerations !== 1 ||
-          state.status !== "stopped" ||
-          !["unknown-outcome", "reservation-invalid"].includes(
-            state.stop ?? "",
+          !(
+            (state.status === "stopped" &&
+              ["unknown-outcome", "reservation-invalid"].includes(
+                state.stop ?? "",
+              )) ||
+            (state.status === "ready" && state.stop === undefined)
           ) ||
           state.generationCount !== 1 ||
           tasks.length !== 1 ||
