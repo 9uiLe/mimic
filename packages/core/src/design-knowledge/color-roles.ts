@@ -22,6 +22,14 @@ export interface ColorRoleProposal {
 }
 
 /** Reports only verifiable omissions and ambiguous role reuse; visual quality needs review on actual screens. */
+const normalizedValue = (value: string): string => {
+  const trimmed = value.trim().toLowerCase();
+  const shortHex = /^#([0-9a-f]{3}|[0-9a-f]{4})$/.exec(trimmed)?.[1];
+  return shortHex
+    ? `#${[...shortHex].map((character) => character.repeat(2)).join("")}`
+    : trimmed;
+};
+
 export function checkColorRoleProposal(
   contract: ColorRoleContract,
   proposal: ColorRoleProposal,
@@ -60,7 +68,10 @@ export function checkColorRoleProposal(
     for (let j = i + 1; j < mapped.length; j++) {
       const left = mapped[i]!;
       const right = mapped[j]!;
-      if (proposal.roles[left]?.trim() !== proposal.roles[right]?.trim())
+      if (
+        normalizedValue(proposal.roles[left]!) !==
+        normalizedValue(proposal.roles[right]!)
+      )
         continue;
       const explained = proposal.sharedValueReasons?.some(
         (entry) =>

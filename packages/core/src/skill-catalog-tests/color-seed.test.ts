@@ -133,7 +133,11 @@ test("role proposal checker catches missing mappings, unknown sources and ambigu
   );
   const stateInvalid: ColorRoleProposal = {
     ...valid,
-    roles: { ...roles, "status.complete": roles["status.blocked"]! },
+    roles: {
+      ...roles,
+      "status.blocked": "#ABCDEF",
+      "status.complete": "#abcdef",
+    },
     contexts: {
       ...contexts,
       "blocked work": ["text.primary", "surface"],
@@ -145,4 +149,14 @@ test("role proposal checker catches missing mappings, unknown sources and ambigu
       "unexplained-shared-value:status.blocked:status.complete",
     ]),
   );
+  expect(
+    checkColorRoleProposal(contract, {
+      ...valid,
+      roles: {
+        ...roles,
+        "status.blocked": "#fff",
+        "status.complete": "#FFFFFF",
+      },
+    }),
+  ).toContain("unexplained-shared-value:status.blocked:status.complete");
 });

@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dir = path.dirname(new URL(import.meta.url).pathname);
+const dir = path.dirname(fileURLToPath(import.meta.url));
 const raw = JSON.parse(
   readFileSync(path.join(dir, "9ui181-color-probe-output.json.raw"), "utf8"),
 );
