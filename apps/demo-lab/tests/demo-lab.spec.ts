@@ -17,6 +17,32 @@ async function ready(page: import("@playwright/test").Page) {
   ).toBeVisible();
 }
 
+async function clickSettled(control: import("@playwright/test").Locator) {
+  await control.scrollIntoViewIfNeeded();
+  // Focus changes can scroll the shell around the iframe. Wait for the actual
+  // pointer target to stop moving before sending one ordinary click.
+  let previousBox: string | undefined;
+  let stableSamples = 0;
+  await expect
+    .poll(
+      async () => {
+        const bounds = await control.boundingBox();
+        if (!bounds) {
+          previousBox = undefined;
+          stableSamples = 0;
+          return 0;
+        }
+        const box = JSON.stringify(bounds);
+        stableSamples = box === previousBox ? stableSamples + 1 : 0;
+        previousBox = box;
+        return stableSamples;
+      },
+      { intervals: [100] },
+    )
+    .toBeGreaterThanOrEqual(2);
+  await control.click();
+}
+
 test("committed catalog matches the genuine mode builder bytes", async () => {
   test.setTimeout(60_000);
   await verifyCatalog(false);
@@ -25,24 +51,31 @@ test("committed catalog matches the genuine mode builder bytes", async () => {
 test("review shell renders genuine generated modes at desktop and mobile sizes", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await ready(page);
   await expect(page.getByLabel("Project")).toHaveValue("product_mimic");
   await expect(page.getByLabel("Experience Domain")).toHaveValue(
     "product-wide",
   );
+  expect(
+    Math.round((await page.locator("#device-frame").boundingBox())?.width ?? 0),
+  ).toBe(880);
   const frame = page.frameLocator("#prototype-frame");
-  await frame.getByRole("button", { name: "Show success" }).click();
+  await clickSettled(frame.getByRole("button", { name: "Show success" }));
   await expect(frame.getByText("Synthetic candidate ready")).toBeVisible();
-  await frame.getByRole("button", { name: "Choose candidate" }).click();
+  await clickSettled(frame.getByRole("button", { name: "Choose candidate" }));
   await expect(
     frame.getByText("Synthetic candidate selected; action disabled"),
   ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Mobile" }).click();
   await expect(page.locator("#device-frame")).toHaveClass(/mobile/);
   await expect
-    .poll(
-      async () => (await page.locator("#device-frame").boundingBox())?.width,
+    .poll(async () =>
+      Math.round(
+        (await page.locator("#device-frame").boundingBox())?.width ?? 0,
+      ),
     )
     .toBe(390);
   await page.getByRole("button", { name: "Proposed", exact: true }).focus();
@@ -56,11 +89,11 @@ test("review shell renders genuine generated modes at desktop and mobile sizes",
   await expect(
     frame.getByText(/Proposed, not implemented: candidateCompare/).first(),
   ).toBeVisible();
-  await frame.getByRole("button", { name: "Show success" }).click();
+  await clickSettled(frame.getByRole("button", { name: "Show success" }));
   await expect(
     frame.getByRole("button", { name: "Compare candidates" }),
   ).toBeVisible();
-  await frame.getByRole("button", { name: "Compare candidates" }).click();
+  await clickSettled(frame.getByRole("button", { name: "Compare candidates" }));
   await expect(
     frame.getByText("Synthetic candidate selected; action disabled"),
   ).toBeVisible();
@@ -170,10 +203,13 @@ test("failed and rapidly superseded selections never leave stale controls active
   await page.goto("/");
   await ready(page);
   await page.getByRole("button", { name: "Proposed", exact: true }).click();
-  await page
+  await expect(
+    page.getByRole("link", { name: /Open standalone prototype/ }),
+  ).toBeVisible();
+  const showSuccess = page
     .frameLocator("#prototype-frame")
-    .getByRole("button", { name: "Show success" })
-    .click();
+    .getByRole("button", { name: "Show success" });
+  await clickSettled(showSuccess);
   await expect(
     page
       .frameLocator("#prototype-frame")
