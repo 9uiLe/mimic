@@ -13,9 +13,19 @@ permissions:
 
 jobs:
   browser-matrix:
-    name: Firefox, WebKit and mobile emulation
+    name: ${{ matrix.project }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: firefox-desktop
+            browser: firefox
+          - project: webkit-desktop
+            browser: webkit
+          - project: webkit-mobile
+            browser: webkit
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -30,7 +40,18 @@ jobs:
           version: 12.9.1
           run_install: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps firefox webkit
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
       - run: pnpm exec playwright install-deps chromium
       - run: node scripts/chrome-for-testing.mjs
-      - run: pnpm run test:browser --project=firefox-desktop --project=webkit-desktop --project=webkit-mobile
+      - run: pnpm run test:browser --project=${{ matrix.project }}
+
+  browser-matrix-result:
+    name: Firefox, WebKit and mobile emulation
+    if: always()
+    needs: browser-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every browser project to pass
+        env:
+          MATRIX_RESULT: ${{ needs.browser-matrix.result }}
+        run: test "$MATRIX_RESULT" = success
