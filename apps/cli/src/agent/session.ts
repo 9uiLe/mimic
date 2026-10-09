@@ -79,6 +79,11 @@ export type SessionStop =
   | "reservation-invalid"
   | "candidate-rejected"
   | "iteration-limit";
+export class SessionExecutionPolicyMismatch extends Error {
+  constructor() {
+    super("Saved session execution policy differs from this caller");
+  }
+}
 interface TaskCheckpoint {
   binding: TaskBinding;
   phase: "executing" | "prepared" | "accepted" | "blocked" | "rejected";
@@ -448,10 +453,24 @@ export class AgentSession {
   /** A stop remains stopped until an explicit resume. For an interrupted model
    * call, reconcile external effects before acknowledging a new generation. */
   async advance(
-    options: { resume?: boolean; reconciledUnknownOutcome?: boolean } = {},
+    options: {
+      resume?: boolean;
+      reconciledUnknownOutcome?: boolean;
+      /** Trusted, model-free replay of exactly one authorized saved work. */
+      reconcilePreparedWorkDigest?: string;
+    } = {},
   ): Promise<SessionCheckpoint> {
+    if (
+      this.authorizedDispatch?.reconciliationOnly &&
+      (!options.resume ||
+        options.reconciledUnknownOutcome ||
+        !/^[a-f0-9]{64}$/.test(options.reconcilePreparedWorkDigest ?? ""))
+    )
+      throw new Error("Reconciliation requires an exact saved work digest");
     return this.store.exclusive(this.id, async () => {
       let state = await this.store.read(this.id);
+      if (options.reconcilePreparedWorkDigest !== undefined && !state)
+        throw new Error("No saved authorized session to reconcile");
       let binding: SessionBinding;
       try {
         binding = validateBinding(await this.ports.binding());
@@ -508,10 +527,38 @@ export class AgentSession {
       if (sessionDigest(binding) !== sessionDigest(state.binding))
         return stop("reservation-invalid");
       if (state.executionPolicy !== this.authorizedDispatch?.policy)
-        return stop("reservation-invalid");
+        // A caller without the original execution policy must not poison a
+        // checkpoint that a trusted, model-free reconciliation can still use.
+        throw new SessionExecutionPolicyMismatch();
+
+      if (options.reconcilePreparedWorkDigest !== undefined) {
+        const tasks = Object.values(state.tasks);
+        if (
+          !options.resume ||
+          options.reconciledUnknownOutcome ||
+          !this.authorizedDispatch ||
+          this.limits.maxGenerations !== 1 ||
+          !(
+            (state.status === "stopped" &&
+              ["unknown-outcome", "reservation-invalid"].includes(
+                state.stop ?? "",
+              )) ||
+            (state.status === "ready" && state.stop === undefined)
+          ) ||
+          state.generationCount !== 1 ||
+          tasks.length !== 1 ||
+          tasks[0].phase !== "prepared" ||
+          tasks[0].work?.digest !== options.reconcilePreparedWorkDigest
+        )
+          throw new Error("Saved authorized work does not match");
+      }
 
       if (state.status === "stopped" && !options.resume) return state;
-      if (state.stop === "reservation-invalid") return state;
+      if (
+        state.stop === "reservation-invalid" &&
+        options.reconcilePreparedWorkDigest === undefined
+      )
+        return state;
       this.cancelled = false;
       // Reconcile exact persisted work before any new model invocation. If Core
       // accepted before a crash, static submit replays only its sealed handoff.

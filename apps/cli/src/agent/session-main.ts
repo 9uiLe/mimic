@@ -4,8 +4,15 @@ import { open, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CodexExecutor, type CodexCreditRiskDecisionPort } from "./codex.js";
-import { createAuthorizedCodexSessionDispatch } from "./session-authorized.js";
-import { AgentSession, FileSessionStore } from "./session.js";
+import {
+  createAuthorizedCodexReconciliationDispatch,
+  createAuthorizedCodexSessionDispatch,
+} from "./session-authorized.js";
+import {
+  AgentSession,
+  FileSessionStore,
+  SessionExecutionPolicyMismatch,
+} from "./session.js";
 import { createWorkspaceSessionPorts } from "./session-workspace.js";
 
 const allowedEnvironment = [
@@ -119,18 +126,42 @@ export async function runAuthorizedSessionOnce(
   },
 ): Promise<number> {
   return runConfiguredSession(["start", "--config", configPath], io, {
+    kind: "generate",
     decision,
     outputSchemaPath,
+  });
+}
+
+/** Trusted host reconciliation of one previously authorized, prepared work.
+ * No decision is consumed and this entry has no model-generation capability. */
+export async function runAuthorizedSessionResume(
+  configPath: string,
+  expectedWorkDigest: string,
+  io: { out(value: string): void; err(value: string): void } = {
+    out: console.log,
+    err: console.error,
+  },
+): Promise<number> {
+  if (!/^[a-f0-9]{64}$/.test(expectedWorkDigest)) {
+    io.err("Invalid expected work digest");
+    return 2;
+  }
+  return runConfiguredSession(["resume", "--config", configPath], io, {
+    kind: "reconcile",
+    expectedWorkDigest,
   });
 }
 
 async function runConfiguredSession(
   argv: readonly string[],
   io: { out(value: string): void; err(value: string): void },
-  authorized?: {
-    decision: CodexCreditRiskDecisionPort;
-    outputSchemaPath: string;
-  },
+  authorized?:
+    | {
+        kind: "generate";
+        decision: CodexCreditRiskDecisionPort;
+        outputSchemaPath: string;
+      }
+    | { kind: "reconcile"; expectedWorkDigest: string },
 ): Promise<number> {
   const [command, flag, configPath, ...remaining] = argv;
   if (
@@ -194,13 +225,16 @@ async function runConfiguredSession(
         ? { reasoningEffort: config.reasoningEffort }
         : {}),
     };
-    const oneShot = authorized
-      ? createAuthorizedCodexSessionDispatch(
-          codexOptions,
-          authorized.outputSchemaPath,
-          authorized.decision,
-        )
-      : undefined;
+    const oneShot =
+      authorized?.kind === "generate"
+        ? createAuthorizedCodexSessionDispatch(
+            codexOptions,
+            authorized.outputSchemaPath,
+            authorized.decision,
+          )
+        : authorized?.kind === "reconcile"
+          ? createAuthorizedCodexReconciliationDispatch(codexOptions)
+          : undefined;
     const executor = oneShot?.executor ?? new CodexExecutor(codexOptions);
     const ports = await createWorkspaceSessionPorts({
       workspace: config.workspace,
@@ -231,6 +265,9 @@ async function runConfiguredSession(
         await session.advance({
           resume: command === "resume",
           reconciledUnknownOutcome: remaining.length === 1,
+          ...(authorized?.kind === "reconcile"
+            ? { reconcilePreparedWorkDigest: authorized.expectedWorkDigest }
+            : {}),
         });
       } finally {
         process.removeListener("SIGINT", interrupt);
@@ -239,7 +276,11 @@ async function runConfiguredSession(
     }
     io.out(JSON.stringify(await session.inspect()));
     return 0;
-  } catch {
+  } catch (error) {
+    if (error instanceof SessionExecutionPolicyMismatch) {
+      io.err("Session execution policy mismatch; checkpoint unchanged.");
+      return 2;
+    }
     // Never print raw official diagnostics, configuration content or model output.
     io.err(
       "Session operation did not complete. Check configuration, exact bindings and process-owned lock; inspect before retry.",

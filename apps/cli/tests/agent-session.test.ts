@@ -27,6 +27,7 @@ import {
   AgentSession,
   FileSessionStore,
   SessionCandidateRejected,
+  SessionExecutionPolicyMismatch,
   sessionDigest,
   type SessionBinding,
   type SessionPlan,
@@ -39,9 +40,13 @@ import { runCli } from "../src/cli.js";
 import {
   runSessionCli,
   runAuthorizedSessionOnce,
+  runAuthorizedSessionResume,
 } from "../src/agent/session-main.js";
 import { CodexExecutor, CodexJsonlDecoder } from "../src/agent/codex.js";
-import { createAuthorizedCodexSessionDispatch } from "../src/agent/session-authorized.js";
+import {
+  createAuthorizedCodexReconciliationDispatch,
+  createAuthorizedCodexSessionDispatch,
+} from "../src/agent/session-authorized.js";
 import {
   type AgentExecutor,
   type ExecutorEvent,
@@ -2090,14 +2095,15 @@ test("trusted one-call dispatch keeps Core acceptance durable and cannot become 
   ).toBe(before);
   expect(launch).toHaveBeenCalledOnce();
   expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
-  const switched = await new AgentSession(
-    "session_a",
-    h.store,
-    h.ports,
-    first.executor,
-    limits,
-  ).advance({ resume: true });
-  expect(switched.stop).toBe("reservation-invalid");
+  await expect(
+    new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      first.executor,
+      limits,
+    ).advance({ resume: true }),
+  ).rejects.toBeInstanceOf(SessionExecutionPolicyMismatch);
   expect(ordinary).not.toHaveBeenCalled();
   expect(
     () =>
@@ -2184,6 +2190,247 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   );
   expect(await runSessionCli(["start", "--config", configPath], io)).toBe(2);
   expect(launch).toHaveBeenCalledOnce();
+});
+
+test.each(["legacy-policy-stop", "prepared-before-stop"] as const)(
+  "trusted resume reconciles only the exact prepared authorized work from %s",
+  async (recoveryState) => {
+    const h = await staticHarness();
+    const decision = {
+      consumeUserDecision: vi.fn(async () => ({
+        decisionId: "test-only-resume-origin",
+        expiresAt: Date.now() + 60_000,
+      })),
+    };
+    const options = {
+      executable: process.execPath,
+      workspace: h.root,
+      env: {},
+    };
+    const originalSubmit = h.ports.submit;
+    h.ports.submit = async (...args) => {
+      await originalSubmit(...args);
+      throw new Error("Response lost after static Core acceptance");
+    };
+    const launch = vi
+      .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
+      .mockImplementation(async (request) => fake(h.output).start(request));
+    const first = createAuthorizedCodexSessionDispatch(
+      options,
+      "schema.json",
+      decision,
+    );
+    const stopped = await new AgentSession(
+      "session_a",
+      h.store,
+      h.ports,
+      first.executor,
+      { ...limits, maxGenerations: 1 },
+      first.dispatch,
+    ).advance();
+    expect(stopped.stop).toBe("unknown-outcome");
+    expect(stopped.tasks.first.phase).toBe("prepared");
+    const saved = stopped.tasks.first.work!;
+    const beforeCore = await h.runtime.registry.snapshot();
+    const markerDirectory = path.join(h.root, ".mimic/submissions");
+    const markerNames = await readdir(markerDirectory);
+    const markerBytes = await Promise.all(
+      markerNames.map((name) =>
+        readFile(path.join(markerDirectory, name), "utf8"),
+      ),
+    );
+    const configPath = path.join(h.root, "authorized-resume.json");
+    const configuration = {
+      workspace: h.root,
+      executable: process.execPath,
+      runId: binding.runId,
+      sessionId: "session_a",
+      packages: { first: "skill" },
+      model: binding.settings.model,
+    };
+    await writeFile(configPath, JSON.stringify(configuration));
+    const output: string[] = [],
+      errors: string[] = [];
+    const io = {
+      out: (value: string) => output.push(value),
+      err: (value: string) => errors.push(value),
+    };
+    const checkpoint = path.join(h.store.directory, "session_a.json");
+    const checkpointBefore = await readFile(checkpoint, "utf8");
+    expect(await runSessionCli(["resume", "--config", configPath], io)).toBe(2);
+    expect(errors.at(-1)).toContain("checkpoint unchanged");
+    expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
+
+    expect(
+      await runAuthorizedSessionResume(configPath, "0".repeat(64), io),
+    ).toBe(2);
+    expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
+    await writeFile(
+      path.join(h.root, "other-session.json"),
+      JSON.stringify({ ...configuration, sessionId: "session_other" }),
+    );
+    expect(
+      await runAuthorizedSessionResume(
+        path.join(h.root, "other-session.json"),
+        saved.digest,
+        io,
+      ),
+    ).toBe(2);
+    expect(await readFile(checkpoint, "utf8")).toBe(checkpointBefore);
+
+    // Simulate either the terminal stop written by an older public CLI or a
+    // process crash just after persisting prepared work. No candidate or marker
+    // is changed by the test setup.
+    if (recoveryState === "legacy-policy-stop")
+      stopped.stop = "reservation-invalid";
+    else {
+      stopped.status = "ready";
+      delete stopped.stop;
+    }
+    await h.store.write(stopped);
+    if (recoveryState === "legacy-policy-stop") {
+      const legacyBytes = await readFile(checkpoint, "utf8");
+      expect(await runSessionCli(["resume", "--config", configPath], io)).toBe(
+        2,
+      );
+      expect(await readFile(checkpoint, "utf8")).toBe(legacyBytes);
+    }
+    expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+      0,
+    );
+    const resumed = await h.store.read("session_a");
+    expect(resumed?.tasks.first.phase).toBe("accepted");
+    expect(resumed?.tasks.first.work).toEqual(saved);
+    expect(resumed?.generationCount).toBe(1);
+    expect((await h.runtime.registry.snapshot()).events).toEqual(
+      beforeCore.events,
+    );
+    expect(await readdir(markerDirectory)).toEqual(markerNames);
+    expect(
+      await Promise.all(
+        markerNames.map((name) =>
+          readFile(path.join(markerDirectory, name), "utf8"),
+        ),
+      ),
+    ).toEqual(markerBytes);
+    expect(launch).toHaveBeenCalledOnce();
+    expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+    expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+      2,
+    );
+    expect(launch).toHaveBeenCalledOnce();
+    expect(errors).toHaveLength(recoveryState === "legacy-policy-stop" ? 5 : 4);
+  },
+);
+
+test("trusted resume refuses changed binding and saved candidate without launching a model", async () => {
+  const h = await staticHarness();
+  const decision = {
+    consumeUserDecision: vi.fn(async () => ({
+      decisionId: "test-only-resume-tamper",
+      expiresAt: Date.now() + 60_000,
+    })),
+  };
+  const launch = vi
+    .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
+    .mockImplementation(async (request) => fake(h.output).start(request));
+  const first = createAuthorizedCodexSessionDispatch(
+    { executable: process.execPath, workspace: h.root, env: {} },
+    "schema.json",
+    decision,
+  );
+  const originalSubmit = h.ports.submit;
+  h.ports.submit = async (...args) => {
+    await originalSubmit(...args);
+    throw new Error("Response lost after static Core acceptance");
+  };
+  const stopped = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    first.executor,
+    { ...limits, maxGenerations: 1 },
+    first.dispatch,
+  ).advance();
+  const saved = stopped.tasks.first.work!;
+  const beforeCore = await h.runtime.registry.snapshot();
+  const configPath = path.join(h.root, "authorized-resume.json");
+  const configuration = {
+    workspace: h.root,
+    executable: process.execPath,
+    runId: binding.runId,
+    sessionId: "session_a",
+    packages: { first: "skill" },
+    model: "different-model",
+  };
+  await writeFile(configPath, JSON.stringify(configuration));
+  const io = { out: vi.fn(), err: vi.fn() };
+  expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+    0,
+  );
+  expect(JSON.parse(io.out.mock.lastCall![0]).stop).toBe("reservation-invalid");
+  expect((await h.store.read("session_a"))?.tasks.first.phase).toBe("prepared");
+  expect((await h.runtime.registry.snapshot()).events).toEqual(
+    beforeCore.events,
+  );
+
+  await writeFile(
+    configPath,
+    JSON.stringify({ ...configuration, model: binding.settings.model }),
+  );
+  const workFile = path.join(h.root, saved.path);
+  const originalWork = await readFile(workFile, "utf8");
+  await writeFile(workFile, "tampered candidate");
+  expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+    0,
+  );
+  expect((await h.store.read("session_a"))?.tasks.first.phase).toBe("prepared");
+  expect((await h.runtime.registry.snapshot()).events).toEqual(
+    beforeCore.events,
+  );
+
+  await writeFile(workFile, originalWork);
+  const markerDirectory = path.join(h.root, ".mimic/submissions");
+  const marker = (await readdir(markerDirectory))[0];
+  await writeFile(path.join(markerDirectory, marker), "tampered marker");
+  expect(await runAuthorizedSessionResume(configPath, saved.digest, io)).toBe(
+    2,
+  );
+  expect((await h.store.read("session_a"))?.tasks.first.phase).toBe("prepared");
+  expect((await h.runtime.registry.snapshot()).events).toEqual(
+    beforeCore.events,
+  );
+  expect(launch).toHaveBeenCalledOnce();
+  expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
+});
+
+test("reconciliation-only dispatch refuses omitted digest or start before creating a checkpoint", async () => {
+  const h = await staticHarness();
+  const oneShot = createAuthorizedCodexReconciliationDispatch({
+    executable: process.execPath,
+    workspace: h.root,
+    env: {},
+  });
+  const session = new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    oneShot.executor,
+    { ...limits, maxGenerations: 1 },
+    oneShot.dispatch,
+  );
+  await expect(session.advance()).rejects.toThrow("digest");
+  await expect(session.advance({ resume: true })).rejects.toThrow("digest");
+  await expect(
+    session.advance({ resume: true, reconcilePreparedWorkDigest: "wrong" }),
+  ).rejects.toThrow("digest");
+  await expect(
+    session.advance({ resume: true, reconcilePreparedWorkDigest: digest }),
+  ).rejects.toThrow("No saved authorized session");
+  expect(await h.store.read("session_a")).toBeUndefined();
+  expect(
+    (await h.runtime.registry.snapshot()).runs[binding.runId].artifacts,
+  ).toHaveLength(1);
 });
 
 test.each(["cancel", "deadline"] as const)(

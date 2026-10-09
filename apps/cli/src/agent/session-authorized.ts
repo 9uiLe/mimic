@@ -16,6 +16,7 @@ import {
  * confirmed subscription-only entitlement. It is never decoded from JSON. */
 export interface AuthorizedSessionDispatch {
   readonly policy: "authorized-existing-credit-risk-once";
+  readonly reconciliationOnly?: true;
   diagnostics?(): unknown;
   start(
     request: ExecutionRequest,
@@ -73,6 +74,24 @@ export function createAuthorizedCodexSessionDispatch(
           signal,
         );
       }),
+  });
+  executors.set(dispatch, executor);
+  return { executor, dispatch };
+}
+
+/** Reconcile a previously authorized saved candidate without a model call.
+ * The checkpoint and Core's immutable submission marker remain the authority;
+ * this dispatch can never consume another decision or start a generation. */
+export function createAuthorizedCodexReconciliationDispatch(
+  options: CodexOptions,
+): { executor: CodexExecutor; dispatch: AuthorizedSessionDispatch } {
+  const executor = new CodexExecutor({ ...options, env: { ...options.env } });
+  const dispatch: AuthorizedSessionDispatch = Object.freeze({
+    policy: "authorized-existing-credit-risk-once" as const,
+    reconciliationOnly: true as const,
+    start: async () => {
+      throw new ExecutorFailure("unsupported");
+    },
   });
   executors.set(dispatch, executor);
   return { executor, dispatch };
