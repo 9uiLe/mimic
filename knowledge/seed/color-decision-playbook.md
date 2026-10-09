@@ -70,10 +70,11 @@ intent when no brand has been approved. S16 can critique the same-content
 screen applications. Keep exact input and output artifact references in the
 Run record and present every candidate as proposed until a human decides.
 
-- **Machine-checkable:** every required role is mapped, target screens and
-  important states use the declared roles consistently, and no unassigned
-  raw color silently enters the proposal. This verifies completeness and
-  consistency, not design quality.
+- **Machine-checkable:** `checkColorRoleProposal` verifies that every required
+  role is mapped, the declared contexts use their required roles, cited cases
+  are known, and shared values have an explicit reason. Inspect rendered
+  screens or style sources separately for raw colors outside the proposal.
+  These checks do not establish design quality.
 - **Model comparison:** explain how each strategy changes brand emphasis,
   information hierarchy, nested surfaces, selection and status meaning;
   inspect screenshots for noisy saturation, weak text/background pairings,

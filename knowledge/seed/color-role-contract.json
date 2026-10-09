@@ -37,7 +37,7 @@
     "completed work": ["text.primary", "status.complete"]
   },
   "decisions": {
-    "machine": "Verify a value or explicit deferment for each role, consistent use in all required contexts, cited source and stated exceptions. Report unmapped raw colors and role collisions for review.",
+    "machine": "Verify a value or explicit deferment for each role, declared use of required roles in all contexts, a known source case, and reasons for shared values. Inspect rendered screens or style sources separately for raw colors outside this proposal.",
     "model": "Compare the same content across strategies for brand expression, task hierarchy, surface depth, selection and status meaning. Describe observed screen differences and predicted effects separately.",
     "human": "Approve or revise brand character, core hue, and product palette after viewing same-content alternatives. Until then all values remain provisional."
   },
