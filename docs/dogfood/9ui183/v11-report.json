@@ -3,9 +3,9 @@
   "runId": "run_9ui183_matched_v11_20261009",
   "repositoryCommit": "fc373ac2500cffbdae30f91fb9480a1b23a63910",
   "repositoryInputs": {
-    "commitMatches": true,
+    "commitMatches": false,
     "templateMatches": true,
-    "implementationMatches": true,
+    "implementationMatches": false,
     "corpusMatches": {
       "knowledge/seed/graph.json": true,
       "knowledge/seed/spaces.json": true,
@@ -15,6 +15,7 @@
     }
   },
   "schemaVerification": "verified",
+  "compiledVerification": "not-frozen",
   "runState": "active",
   "binding": {
     "planDigest": "c6a6e93df6e63267008d88a41b6c94942d25fec71d6d30f0483e494dd0ffa85c",
@@ -94,6 +95,7 @@
       "lastAcceptedEvent": null,
       "firstReviewableAt": null,
       "attemptCount": 2,
+      "mixedSessionIds": [],
       "reasoningEffortVerified": true,
       "generationCount": 2,
       "elapsedGenerationMs": 153268,
@@ -128,7 +130,8 @@
       "lastAcceptedEvent": null,
       "firstReviewableAt": null,
       "attemptCount": 0,
-      "reasoningEffortVerified": true,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
@@ -139,11 +142,12 @@
       "lastAcceptedEvent": null,
       "firstReviewableAt": null,
       "attemptCount": 0,
-      "reasoningEffortVerified": true,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
     }
   },
-  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
 }

@@ -46,7 +46,7 @@ repository's `skills/` and `schemas/` directories into that workspace, and
 place the fixed page/observation files under `inputs/` before preparation.
 It freezes the repository commit, source file hashes, Skill package files,
 page evidence, model name/effort, retrieval input, artifact and submission
-schema files, and generated plan/evidence hashes. The repository contains the nine-stage
+schema files, compiled Core/CLI modules used by preparation, and generated plan/evidence hashes. The repository contains the nine-stage
 [plan template](plan-template.json). Keep each model attempt's session config
 and authorized decision receipt separate; use a new session ID for every new
 invocation. The trusted host calls `runAuthorizedSessionOnce`, checks the

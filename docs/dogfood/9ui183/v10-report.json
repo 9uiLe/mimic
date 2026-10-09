@@ -3,9 +3,9 @@
   "runId": "run_9ui183_matched_v10_20261009",
   "repositoryCommit": "fc373ac2500cffbdae30f91fb9480a1b23a63910",
   "repositoryInputs": {
-    "commitMatches": true,
+    "commitMatches": false,
     "templateMatches": true,
-    "implementationMatches": true,
+    "implementationMatches": false,
     "corpusMatches": {
       "knowledge/seed/graph.json": true,
       "knowledge/seed/spaces.json": true,
@@ -15,6 +15,7 @@
     }
   },
   "schemaVerification": "verified",
+  "compiledVerification": "not-frozen",
   "runState": "active",
   "binding": {
     "planDigest": "398418fc483e8d8e86af939d7d98c04c0b69b05f6de93274adde83b84dd13ec4",
@@ -105,6 +106,7 @@
       "lastAcceptedEvent": "2026-10-09T20:18:22.478Z",
       "firstReviewableAt": null,
       "attemptCount": 4,
+      "mixedSessionIds": [],
       "reasoningEffortVerified": true,
       "generationCount": 4,
       "elapsedGenerationMs": 228824,
@@ -161,7 +163,8 @@
       "lastAcceptedEvent": null,
       "firstReviewableAt": null,
       "attemptCount": 0,
-      "reasoningEffortVerified": true,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
@@ -172,11 +175,12 @@
       "lastAcceptedEvent": null,
       "firstReviewableAt": null,
       "attemptCount": 0,
-      "reasoningEffortVerified": true,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": false,
       "generationCount": 0,
       "elapsedGenerationMs": null,
       "stops": []
     }
   },
-  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+  "warning": "Elapsed generation and reasoning effort require the optional attempt log; absent rows remain unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
 }

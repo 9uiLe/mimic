@@ -31,7 +31,9 @@ const inside = (root, target) =>
   target === root || target.startsWith(`${root}${path.sep}`);
 const safeName = (value) => {
   assert(
-    typeof value === "string" && /^[a-z0-9][a-z0-9_-]*$/.test(value),
+    typeof value === "string" &&
+      value.length <= 76 &&
+      /^[a-z0-9][a-z0-9_-]*$/.test(value),
     "Invalid cohort ID",
   );
   return value;
@@ -321,6 +323,10 @@ async function prepare(cfg) {
     repository: await treeFiles(repo, "schemas"),
     workspace: await treeFiles(root, "schemas"),
   };
+  const compiledModules = {
+    ...(await treeFiles(repo, "packages/core/dist")),
+    ...(await treeFiles(repo, "apps/cli/dist")),
+  };
   const graph = await readJson(path.join(repo, corpusFiles[0]));
   const sources = await readJson(path.join(repo, corpusFiles[2]));
   const retrieval = retrieveDesignReferences(graph, {
@@ -405,6 +411,7 @@ async function prepare(cfg) {
     reasoningEffort: cfg.reasoningEffort,
     packages,
     schemas,
+    compiledModules,
     commonTaskIds: stages,
     pageEvidence,
     corpus: inventory,
@@ -464,6 +471,26 @@ async function report(cfg) {
       currentImplementation.bytes === manifest.implementation.bytes,
     corpusMatches,
   };
+  let compiledVerification = "not-frozen";
+  if (manifest.compiledModules) {
+    const currentModules = {
+      ...(await treeFiles(repo, "packages/core/dist")),
+      ...(await treeFiles(repo, "apps/cli/dist")),
+    };
+    assert(
+      JSON.stringify(Object.keys(currentModules).sort()) ===
+        JSON.stringify(Object.keys(manifest.compiledModules).sort()),
+      "Changed compiled module set",
+    );
+    for (const [name, expected] of Object.entries(manifest.compiledModules)) {
+      const actual = currentModules[name];
+      assert(
+        actual.sha256 === expected.sha256 && actual.bytes === expected.bytes,
+        `Changed compiled module: ${name}`,
+      );
+    }
+    compiledVerification = "verified";
+  }
   for (const file of manifest.frozenFiles) {
     const actual = await frozenFile(path.join(root, file.path));
     assert(
@@ -490,16 +517,23 @@ async function report(cfg) {
     for (const [location, base] of [
       ["repository", repo],
       ["workspace", root],
-    ])
+    ]) {
+      const current = await treeFiles(base, "schemas");
+      assert(
+        JSON.stringify(Object.keys(current).sort()) ===
+          JSON.stringify(Object.keys(manifest.schemas[location]).sort()),
+        `Changed schema set: ${location}`,
+      );
       for (const [name, expected] of Object.entries(
         manifest.schemas[location],
       )) {
-        const actual = await frozenFile(path.join(base, name));
+        const actual = current[name];
         assert(
           actual.sha256 === expected.sha256 && actual.bytes === expected.bytes,
           `Changed schema: ${location}/${name}`,
         );
       }
+    }
     schemaVerification = "verified";
   }
   const scopeConfig = await readJson(path.join(root, ".mimic/config.json"));
@@ -634,9 +668,9 @@ async function report(cfg) {
           .sort()[0] ?? null,
       attemptCount: exclusiveCosts ? armSessions.length : null,
       mixedSessionIds,
-      reasoningEffortVerified: armSessions.every((item) =>
-        attemptedSessions.has(item.sessionId),
-      ),
+      reasoningEffortVerified:
+        armSessions.length > 0 &&
+        armSessions.every((item) => attemptedSessions.has(item.sessionId)),
       generationCount: exclusiveCosts
         ? armSessions.reduce((total, item) => total + item.generationCount, 0)
         : null,
@@ -659,6 +693,7 @@ async function report(cfg) {
     repositoryCommit: manifest.repositoryCommit,
     repositoryInputs,
     schemaVerification,
+    compiledVerification,
     runState: workspace.registry.runs[manifest.runId]
       ? deriveRunState(workspace.registry.runs[manifest.runId])
       : "not-started",
@@ -670,9 +705,9 @@ async function report(cfg) {
       reasoningEffortLogCount: sessions.filter((item) =>
         attemptedSessions.has(item.sessionId),
       ).length,
-      reasoningEffortVerified: sessions.every((item) =>
-        attemptedSessions.has(item.sessionId),
-      ),
+      reasoningEffortVerified:
+        sessions.length > 0 &&
+        sessions.every((item) => attemptedSessions.has(item.sessionId)),
     },
     commonAcceptedRefs: stages.flatMap((id) =>
       completed(id).flatMap((event) => event.outputs),

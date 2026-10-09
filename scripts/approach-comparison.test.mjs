@@ -76,7 +76,12 @@ test("matched comparison freezes one common upstream and three isolated branches
     ],
     limit: 1,
   };
+  await assert.rejects(
+    prepare({ ...cfg, cohortId: "x".repeat(77) }),
+    /Invalid cohort ID/,
+  );
   const manifest = await prepare(cfg);
+  assert.ok(Object.keys(manifest.compiledModules).length > 0);
   await rm(path.join(root, ".mimic/workspace.json"));
   const unstarted = await prepare({ ...cfg, cohortId: "test_missing_state" });
   assert.equal(unstarted.runId, "run_test_missing_state");
@@ -272,6 +277,8 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.binding.reasoningEffortLogCount, 1);
   assert.equal(result.binding.reasoningEffortVerified, true);
   assert.equal(result.schemaVerification, "verified");
+  assert.equal(result.compiledVerification, "verified");
+  assert.equal(result.outcomes.C2.reasoningEffortVerified, false);
   assert.equal(result.repositoryInputs.templateMatches, true);
   const shared = JSON.parse(
     await readFile(
@@ -329,6 +336,17 @@ test("matched comparison freezes one common upstream and three isolated branches
   await writeFile(schemaFile, "{}\n");
   await assert.rejects(report(cfg), /Changed schema/);
   await writeFile(schemaFile, originalSchema);
+  const extraSchema = path.join(root, "schemas/artifacts/extra.schema.json");
+  await writeFile(extraSchema, "{}\n");
+  await assert.rejects(report(cfg), /Changed schema set/);
+  await rm(extraSchema);
+  const manifestFile = path.join(root, `plans/${cfg.cohortId}-manifest.json`);
+  const changedManifest = JSON.parse(await readFile(manifestFile, "utf8"));
+  const compiledName = Object.keys(changedManifest.compiledModules)[0];
+  changedManifest.compiledModules[compiledName].sha256 = "invalid";
+  await writeFile(manifestFile, JSON.stringify(changedManifest));
+  await assert.rejects(report(cfg), /Changed compiled module/);
+  await writeFile(manifestFile, JSON.stringify(manifest));
   await writeFile(path.join(root, manifest.arms.B0.evidencePath), "changed\n");
   await assert.rejects(report(cfg), /Changed frozen file/);
   await writeFile(
