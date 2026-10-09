@@ -436,7 +436,7 @@ async function prepare(cfg) {
   return manifest;
 }
 async function report(cfg) {
-  const { canonicalJson, deriveRunState } =
+  const { artifactDigest, canonicalJson, deriveRunState } =
     await import("../packages/core/dist/index.js");
   const { preflightPlan } = await import("../apps/cli/dist/plan.js");
   const root = await realpath(cfg.workspace);
@@ -505,8 +505,14 @@ async function report(cfg) {
       `Changed page evidence: ${name}`,
     );
   }
+  const currentPackages = await treeFiles(root, "skills");
+  assert(
+    JSON.stringify(Object.keys(currentPackages).sort()) ===
+      JSON.stringify(Object.keys(manifest.packages).sort()),
+    "Changed Skill package set",
+  );
   for (const [name, expected] of Object.entries(manifest.packages)) {
-    const actual = await frozenFile(path.join(root, name));
+    const actual = currentPackages[name];
     assert(
       actual.sha256 === expected.sha256 && actual.bytes === expected.bytes,
       `Changed Skill package: ${name}`,
@@ -646,18 +652,43 @@ async function report(cfg) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
+  const attemptRows = new Map();
+  for (const item of attempts) {
+    const rows = attemptRows.get(item.sessionId) ?? [];
+    rows.push(item);
+    attemptRows.set(item.sessionId, rows);
+  }
+  const sessionIds = new Set(sessions.map((item) => item.sessionId));
   const attemptedSessions = new Map(
-    attempts.map((item) => [item.sessionId, item]),
+    [...attemptRows]
+      .filter(([id, rows]) => sessionIds.has(id) && rows.length === 1)
+      .map(([id, rows]) => [id, rows[0]]),
   );
   for (const session of sessions) {
-    const attempt = attemptedSessions.get(session.sessionId);
-    assert(
-      !attempt ||
-        (attempt.model === manifest.model &&
-          attempt.reasoningEffort === manifest.reasoningEffort),
-      `Attempt settings differ from frozen comparison: ${session.sessionId}`,
-    );
+    for (const attempt of attemptRows.get(session.sessionId) ?? [])
+      assert(
+        attempt.model === manifest.model &&
+          attempt.reasoningEffort === manifest.reasoningEffort &&
+          Array.isArray(attempt.tasks) &&
+          JSON.stringify(attempt.tasks.map((item) => item.taskId).sort()) ===
+            JSON.stringify(session.tasks.map((item) => item.taskId).sort()),
+        `Attempt settings differ from frozen comparison: ${session.sessionId}`,
+      );
   }
+  const hasProposedDecision = (event) =>
+    event.outputs?.some((ref) => {
+      const snapshot =
+        workspace.snapshots?.[`${ref.artifactId}@${ref.revision}`];
+      if (!snapshot) return false;
+      const locked = JSON.parse(snapshot);
+      return (
+        locked.digest === ref.lockDigest &&
+        locked.digest === artifactDigest(locked.artifact) &&
+        locked.artifact?.meta?.type === "decision" &&
+        locked.artifact?.lifecycle?.status === "proposed" &&
+        locked.artifact?.approval?.status === "pending"
+      );
+    }) ?? false;
   const outcomes = {};
   for (const [arm, armRecord] of Object.entries(manifest.arms)) {
     const accepted = armRecord.taskIds.flatMap((id) => completed(id));
@@ -673,28 +704,40 @@ async function report(cfg) {
       )
       .map((item) => item.sessionId);
     const exclusiveCosts = mixedSessionIds.length === 0;
+    const timingVerified =
+      armSessions.length > 0 &&
+      armAttempts.length === armSessions.length &&
+      armSessions.every((item) => {
+        const attempt = attemptedSessions.get(item.sessionId);
+        return (
+          attempt &&
+          Number.isFinite(attempt.elapsedMs) &&
+          attempt.elapsedMs >= 0
+        );
+      });
     outcomes[arm] = {
       taskIds: armRecord.taskIds,
       acceptedRefs: accepted.flatMap((event) => event.outputs),
       lastAcceptedEvent: accepted.at(-1)?.at ?? null,
       firstReviewableAt:
         completed(`s11_${arm.toLowerCase()}`)
+          .filter(hasProposedDecision)
           .map((event) => event.at)
           .filter(Boolean)
           .sort()[0] ?? null,
       attemptCount: exclusiveCosts ? armSessions.length : null,
       mixedSessionIds,
-      reasoningEffortVerified:
-        armSessions.length > 0 &&
-        armSessions.every((item) => attemptedSessions.has(item.sessionId)),
+      reasoningEffortVerified: timingVerified,
       generationCount: exclusiveCosts
         ? armSessions.reduce((total, item) => total + item.generationCount, 0)
         : null,
       elapsedGenerationMs:
-        exclusiveCosts &&
-        armSessions.length > 0 &&
-        armSessions.every((item) => attemptedSessions.has(item.sessionId))
-          ? armAttempts.reduce((total, item) => total + item.elapsedMs, 0)
+        exclusiveCosts && timingVerified
+          ? armSessions.reduce(
+              (total, item) =>
+                total + attemptedSessions.get(item.sessionId).elapsedMs,
+              0,
+            )
           : null,
       stops: armSessions.map((item) => ({
         sessionId: item.sessionId,
@@ -723,6 +766,7 @@ async function report(cfg) {
       ).length,
       reasoningEffortVerified:
         sessions.length > 0 &&
+        attempts.length === sessions.length &&
         sessions.every((item) => attemptedSessions.has(item.sessionId)),
     },
     commonAcceptedRefs: stages.flatMap((id) =>

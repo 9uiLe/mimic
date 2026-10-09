@@ -58,10 +58,11 @@ workspace. Dispatch common stages once, followed by the three S09–S11
 branches. The manifest's task IDs and frozen plan specify exact bindings.
 `scripts/approach-comparison.mjs report <config.json>` checks the frozen
 files again and reads the official session checkpoints and completed `set-work`
-events for exact refs, attempts, stops, and the first S11 completion time.
-Elapsed time is reported only when a non-sensitive `attempts.jsonl` exists;
-otherwise it remains unknown and reasoning effort is marked unverified for
-sessions without a matching attempt row. The report also shows whether the
+events for exact refs, attempts, stops, and the first S11 completion with a
+verified proposed decision artifact. Elapsed time is reported only when
+non-sensitive `attempts.jsonl` rows match checkpoint sessions one to one;
+duplicate, unmatched, or missing rows leave the affected arm's timing and
+reasoning effort unverified. The report also shows whether the
 current checkout still matches the repository inputs frozen at preparation.
 A static rejection or unknown outcome stays
 with its original work and submission marker; the normal session recovery

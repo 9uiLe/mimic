@@ -15,7 +15,7 @@ import os from "node:os";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { preflightPlan } from "../apps/cli/dist/plan.js";
-import { canonicalJson } from "../packages/core/dist/index.js";
+import { artifactDigest, canonicalJson } from "../packages/core/dist/index.js";
 import { makePlan, prepare, report } from "./approach-comparison.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -203,13 +203,28 @@ test("matched comparison freezes one common upstream and three isolated branches
       { artifactId: "art_completed", revision: 1, lockDigest: "sha256:1" },
     ],
   };
+  const proposedDecision = {
+    meta: { type: "decision" },
+    lifecycle: { status: "proposed" },
+    approval: { status: "pending" },
+  };
+  const decisionRef = {
+    artifactId: "art_decision",
+    revision: 1,
+    lockDigest: artifactDigest(proposedDecision),
+  };
   const firstReviewable = {
     action: "set-work",
     actor: { kind: "agent", id: "orchestrator" },
     runId: manifest.runId,
     reason: 'Skill task "s11_c1" completed with verified exact outputs',
     at: "2026-10-09T10:00:00.000Z",
-    outputs: [],
+    outputs: [decisionRef],
+  };
+  const evaluationOnly = {
+    ...firstReviewable,
+    at: "2026-10-09T09:30:00.000Z",
+    outputs: [{ artifactId: "art_evaluation", revision: 1 }],
   };
   const laterReview = {
     ...firstReviewable,
@@ -237,6 +252,7 @@ test("matched comparison freezes one common upstream and three isolated branches
           unrelatedWork,
           unrelatedReason,
           completed,
+          evaluationOnly,
           firstReviewable,
           laterReview,
         ],
@@ -249,7 +265,12 @@ test("matched comparison freezes one common upstream and three isolated branches
           },
         },
       },
-      snapshots: {},
+      snapshots: {
+        "art_decision@1": JSON.stringify({
+          digest: decisionRef.lockDigest,
+          artifact: proposedDecision,
+        }),
+      },
     }),
   );
   const frozenReport = await report(cfg);
@@ -309,6 +330,34 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.equal(result.compiledVerification, "verified");
   assert.equal(result.outcomes.C2.reasoningEffortVerified, false);
   assert.equal(result.repositoryInputs.templateMatches, true);
+  const attemptPath = path.join(root, "attempts.jsonl");
+  const originalAttempt = JSON.parse(await readFile(attemptPath, "utf8"));
+  await writeFile(
+    attemptPath,
+    [originalAttempt, originalAttempt].map(JSON.stringify).join("\n") + "\n",
+  );
+  const duplicateTiming = await report(cfg);
+  assert.equal(duplicateTiming.outcomes.B0.elapsedGenerationMs, null);
+  assert.equal(duplicateTiming.outcomes.B0.reasoningEffortVerified, false);
+  assert.equal(duplicateTiming.binding.reasoningEffortVerified, false);
+  await writeFile(
+    attemptPath,
+    [originalAttempt, { ...originalAttempt, sessionId: "missing-checkpoint" }]
+      .map(JSON.stringify)
+      .join("\n") + "\n",
+  );
+  const unmatchedTiming = await report(cfg);
+  assert.equal(unmatchedTiming.outcomes.B0.elapsedGenerationMs, null);
+  assert.equal(unmatchedTiming.outcomes.B0.reasoningEffortVerified, false);
+  assert.equal(unmatchedTiming.binding.reasoningEffortVerified, false);
+  await writeFile(attemptPath, JSON.stringify(originalAttempt) + "\n");
+  await writeFile(
+    attemptPath,
+    JSON.stringify({ ...originalAttempt, tasks: [{ taskId: "s09_c1" }] }) +
+      "\n",
+  );
+  await assert.rejects(report(cfg), /Attempt settings differ/);
+  await writeFile(attemptPath, JSON.stringify(originalAttempt) + "\n");
   const shared = JSON.parse(
     await readFile(
       path.join(root, ".mimic/agent-sessions/attempt.json"),
@@ -319,6 +368,13 @@ test("matched comparison freezes one common upstream and three isolated branches
   await writeFile(
     path.join(root, ".mimic/agent-sessions/attempt.json"),
     JSON.stringify(seal(shared.checkpoint)),
+  );
+  await writeFile(
+    attemptPath,
+    JSON.stringify({
+      ...originalAttempt,
+      tasks: [{ taskId: "s09_b0" }, { taskId: "s09_c1" }],
+    }) + "\n",
   );
   const mixed = await report(cfg);
   assert.deepEqual(mixed.outcomes.B0.mixedSessionIds, ["attempt"]);
@@ -335,6 +391,7 @@ test("matched comparison freezes one common upstream and three isolated branches
       }),
     ),
   );
+  await writeFile(attemptPath, JSON.stringify(originalAttempt) + "\n");
   const partial = JSON.parse(
     await readFile(
       path.join(root, ".mimic/agent-sessions/attempt.json"),
@@ -363,6 +420,13 @@ test("matched comparison freezes one common upstream and three isolated branches
     "schemas/agent/codex-submission-output.schema.json",
   );
   const originalSchema = await readFile(schemaFile);
+  const extraSkillFile = path.join(
+    root,
+    "skills/s09-design-space-explorer/extra.json",
+  );
+  await writeFile(extraSkillFile, "{}\n");
+  await assert.rejects(report(cfg), /Changed Skill package set/);
+  await rm(extraSkillFile);
   await writeFile(schemaFile, "{}\n");
   await assert.rejects(report(cfg), /Changed schema/);
   await writeFile(schemaFile, originalSchema);
