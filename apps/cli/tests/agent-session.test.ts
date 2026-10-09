@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import {
   mkdtemp,
   mkdir,
@@ -33,6 +33,7 @@ import {
   type SessionTask,
 } from "../src/agent/session.js";
 import { createWorkspaceSessionPorts } from "../src/agent/session-workspace.js";
+import { HOST_DERIVED_DIGEST } from "../src/agent/session-cli.js";
 import { runCli } from "../src/cli.js";
 import {
   runSessionCli,
@@ -50,24 +51,6 @@ const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../..",
 );
-// This file owns its compiled production-entry prerequisite. Unit CI runs tests
-// without prebuilding; another test worker's build is not a dependency barrier.
-beforeAll(() => {
-  const built = spawnSync(
-    process.execPath,
-    [
-      path.join(repo, "node_modules/typescript/bin/tsc"),
-      "-b",
-      "apps/cli",
-      "--force",
-    ],
-    { cwd: repo, encoding: "utf8", timeout: 120_000 },
-  );
-  expect(
-    built.status,
-    built.stderr || built.stdout || built.error?.message,
-  ).toBe(0);
-}, 180_000);
 const roots: string[] = [];
 afterEach(async () => {
   vi.unstubAllEnvs();
@@ -629,6 +612,199 @@ test("real static submission rejects changed saved work and changed Skill packag
     "Frozen session binding changed",
   );
 });
+
+test("host-derived candidate locks accept through Core, retain raw provenance and resume without generation", async () => {
+  const h = await staticHarness();
+  const generated = JSON.parse(h.output);
+  generated.work.result.outputRefs[0].lockDigest = HOST_DERIVED_DIGEST;
+  const output = JSON.stringify(generated, null, 3);
+  const executor = fake(output);
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    executor,
+    limits,
+  ).advance();
+  expect(state.status).toBe("complete");
+  const saved = state.tasks.first.work!;
+  const prepared = JSON.parse(
+    await readFile(path.join(h.root, saved.path), "utf8"),
+  );
+  expect(prepared.artifacts).toEqual(generated.artifacts);
+  expect(prepared.work.result.inputRefs).toEqual(
+    generated.work.result.inputRefs,
+  );
+  expect(prepared.work.result.outputRefs).toEqual(
+    JSON.parse(h.output).work.result.outputRefs,
+  );
+  expect(saved.digest).toBe(sessionDigest(prepared));
+  const rawFile = path.join(
+    h.root,
+    ".mimic/agent-work",
+    `session_a-first-${sessionDigest(output)}.raw.json`,
+  );
+  expect(JSON.parse(await readFile(rawFile, "utf8"))).toEqual({
+    version: 1,
+    output,
+    outputDigest: sessionDigest(output),
+    normalizedDigest: saved.digest,
+  });
+  expect((await stat(rawFile)).mode & 0o777).toBe(0o600);
+  const before = await h.runtime.registry.snapshot();
+  const resumed = await new AgentSession(
+    "session_a",
+    new FileSessionStore(h.root),
+    h.ports,
+    executor,
+    limits,
+  ).advance({ resume: true });
+  expect(resumed.status).toBe("complete");
+  expect(executor.start).toHaveBeenCalledOnce();
+  expect(await h.runtime.registry.snapshot()).toEqual(before);
+  expect(before.canonical).toEqual({});
+  expect(before.decisions).toEqual({});
+});
+
+test.each(["missing", "marker", "correct"])(
+  "fresh proposal/request hashes are derived narrowly (%s)",
+  async (mode) => {
+    const h = await staticHarness();
+    const generated = JSON.parse(h.output);
+    const fresh = generated.work.result.outputRefs[0];
+    if (mode === "missing") delete fresh.lockDigest;
+    if (mode === "marker") fresh.lockDigest = HOST_DERIVED_DIGEST;
+    generated.work.result.proposal = {
+      items: [
+        {
+          id: "proposal_output",
+          ref: { ...fresh },
+          rationale: "Candidate requires human review",
+        },
+      ],
+    };
+    generated.work.revisionRequests = [
+      {
+        runId: binding.runId,
+        source: { ...h.frozen.inputRefs[0] },
+        request: { ...fresh },
+        affectedLocks: [{ ...h.frozen.inputRefs[0] }],
+        reason: "Explicit upstream question",
+        evidenceRefs: ["evidence://fixture"],
+      },
+    ];
+    const originalArtifacts = structuredClone(generated.artifacts);
+    const saved = await h.ports.saveWork(h.frozen, JSON.stringify(generated));
+    const prepared = JSON.parse(
+      await readFile(path.join(h.root, saved.path), "utf8"),
+    );
+    const expected = JSON.parse(h.output).work.result.outputRefs[0];
+    expect(prepared.work.result.outputRefs).toEqual([expected]);
+    expect(prepared.work.result.proposal.items[0].ref).toEqual(expected);
+    expect(prepared.work.revisionRequests[0].request).toEqual(expected);
+    expect(prepared.artifacts).toEqual(originalArtifacts);
+    expect(prepared.work.result.inputRefs).toEqual(
+      generated.work.result.inputRefs,
+    );
+    expect(prepared.work.revisionRequests[0].source).toEqual(
+      generated.work.revisionRequests[0].source,
+    );
+    expect(prepared.work.revisionRequests[0].affectedLocks).toEqual(
+      generated.work.revisionRequests[0].affectedLocks,
+    );
+  },
+);
+
+test("raw provenance is immutable and a damaged existing receipt prevents saving", async () => {
+  const h = await staticHarness();
+  const saved = await h.ports.saveWork(h.frozen, h.output);
+  expect(await h.ports.saveWork(h.frozen, h.output)).toEqual(saved);
+  const raw = path.join(
+    h.root,
+    ".mimic/agent-work",
+    `session_a-first-${sessionDigest(h.output)}.raw.json`,
+  );
+  await writeFile(raw, "{}");
+  await expect(h.ports.saveWork(h.frozen, h.output)).rejects.toThrow(
+    "Saved work changed",
+  );
+  expect(await h.runtime.registry.snapshot()).toMatchObject({
+    canonical: {},
+    decisions: {},
+  });
+});
+
+test.each(["output", "proposal", "request", "content"])(
+  "wrong concrete %s digest fails before any immutable work reservation",
+  async (where) => {
+    const h = await staticHarness();
+    const generated = JSON.parse(h.output);
+    const wrong = {
+      ...generated.work.result.outputRefs[0],
+      lockDigest: `sha256:${"0".repeat(64)}`,
+    };
+    if (where === "output") generated.work.result.outputRefs = [wrong];
+    if (where === "proposal")
+      generated.work.result.proposal = { items: [{ ref: wrong }] };
+    if (where === "request")
+      generated.work.revisionRequests = [{ request: wrong }];
+    if (where === "content")
+      generated.artifacts[0].meta.contentDigest = wrong.lockDigest;
+    const before = await h.runtime.registry.snapshot();
+    await expect(
+      h.ports.saveWork(h.frozen, JSON.stringify(generated)),
+    ).rejects.toThrow(/digest differs/);
+    await expect(
+      stat(path.join(h.root, ".mimic/agent-work")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await h.runtime.registry.snapshot()).toEqual(before);
+  },
+);
+
+test.each([
+  "artifacts",
+  "outputs",
+  "proposals",
+  "requests",
+  "input-replacement",
+  "unemitted",
+  "unknown-handoff",
+])(
+  "ambiguous or unauthorized generated refs are rejected (%s)",
+  async (kind) => {
+    const h = await staticHarness();
+    const generated = JSON.parse(h.output);
+    const fresh = generated.work.result.outputRefs[0];
+    fresh.lockDigest = HOST_DERIVED_DIGEST;
+    if (kind === "artifacts")
+      generated.artifacts.push(structuredClone(generated.artifacts[0]));
+    if (kind === "outputs") generated.work.result.outputRefs.push({ ...fresh });
+    if (kind === "proposals")
+      generated.work.result.proposal = {
+        items: [{ ref: { ...fresh } }, { ref: { ...fresh } }],
+      };
+    if (kind === "requests")
+      generated.work.revisionRequests = [
+        { request: { ...fresh } },
+        { request: { ...fresh } },
+      ];
+    if (kind === "input-replacement") {
+      generated.artifacts[0].meta.id = h.frozen.inputRefs[0].artifactId;
+      generated.artifacts[0].meta.revision = h.frozen.inputRefs[0].revision;
+    }
+    if (kind === "unemitted") generated.artifacts = [];
+    if (kind === "unknown-handoff")
+      generated.work.revisionRequests = [
+        { request: { ...fresh, artifactId: "art_not_emitted" } },
+      ];
+    await expect(
+      h.ports.saveWork(h.frozen, JSON.stringify(generated)),
+    ).rejects.toThrow();
+    await expect(
+      stat(path.join(h.root, ".mimic/agent-work")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  },
+);
 
 test("legal inherited-property task IDs run and remain accepted after reload", async () => {
   const h = await harness(),
@@ -1447,11 +1623,21 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
     packages: { first: "skill" },
     model: binding.settings.model,
     maxGenerations: 20,
+    timeoutMs: 45_000,
   };
   await writeFile(configPath, JSON.stringify(configuration));
+  const generationBounds: number[] = [];
   const launch = vi
     .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
-    .mockImplementation(async (request) => fake(h.output).start(request));
+    .mockImplementation(async function (this: CodexExecutor, request) {
+      // Observe the adapter actually used by the fixed entry, without replacing
+      // its constructor or authorizing any real official subprocess.
+      generationBounds.push(
+        (this as unknown as { options: { timeoutMs: number } }).options
+          .timeoutMs,
+      );
+      return fake(h.output).start(request);
+    });
   const decision = {
     consumeUserDecision: vi.fn(async () => ({
       decisionId: "test-only-host-entry-decision",
@@ -1472,6 +1658,7 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   );
   expect((await h.store.read("session_a"))?.generationCount).toBe(1);
   expect(launch).toHaveBeenCalledOnce();
+  expect(generationBounds).toEqual([45_000]);
   expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
   expect(err).toEqual([]);
   expect(

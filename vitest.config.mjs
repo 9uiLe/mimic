@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   test: {
+    globalSetup: ["./scripts/test-build-setup.mjs"],
     include: [
       "packages/**/*.test.ts",
       "apps/cli/tests/**/*.test.ts",
