@@ -81,7 +81,7 @@ function parseConfiguration(value: unknown): SessionConfiguration {
     throw new Error("Invalid reasoning effort");
   for (const [key, maximum] of [
     ["maxGenerations", 20],
-    ["timeoutMs", 60000],
+    ["timeoutMs", 120000],
     ["maxOutputBytes", 4 * 1024 * 1024],
   ] as const) {
     if (

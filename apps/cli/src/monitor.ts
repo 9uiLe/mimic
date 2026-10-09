@@ -11,6 +11,7 @@ import {
 import { FileSessionStore, sessionDigest } from "./agent/session.js";
 import { sanitizeExecutionDiagnostics } from "./agent/executor.js";
 import { monitorPage, monitorScript, previewPage } from "./monitor-ui.js";
+import { designReviewPage, designReviewScript } from "./design-review-ui.js";
 import type { CliIO } from "./cli.js";
 
 const idPattern = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
@@ -45,6 +46,7 @@ const stops = [
   "approval",
   "waiting",
   "reservation-invalid",
+  "candidate-rejected",
   "iteration-limit",
 ];
 function object(value: unknown): Record<string, unknown> {
@@ -299,25 +301,29 @@ export async function readMonitorState(root: string) {
       const observed = runSessions.filter((s) =>
         s.tasks.some((t) => t.taskId === taskId),
       );
-      const phases = new Set(
-        observed.map((s) =>
-          s.status === "stopped"
-            ? (s.stop ?? "stopped")
-            : s.tasks.find((t) => t.taskId === taskId)!.phase,
-        ),
+      const phases = new Set<string>(
+        observed.map((session) => {
+          const saved = session.tasks.find((task) => task.taskId === taskId)!;
+          return saved.phase === "accepted" || session.status !== "stopped"
+            ? saved.phase
+            : (session.stop ?? "stopped");
+        }),
       );
+      if (safeActions.includes(taskId) && phases.has("accepted"))
+        phases.add("runnable");
+      const phase =
+        phases.size > 1
+          ? "multiple-sessions"
+          : phases.size === 1
+            ? [...phases][0]!
+            : safeActions.includes(taskId)
+              ? "runnable"
+              : "recorded";
       return {
         taskId,
         outputType,
         stage: stage(outputType),
-        phase:
-          phases.size === 1
-            ? [...phases][0]!
-            : phases.size > 1
-              ? "multiple-sessions"
-              : safeActions.includes(taskId)
-                ? "runnable"
-                : "recorded",
+        phase,
       };
     });
     const stageCounts: Record<string, number> = {};
@@ -447,10 +453,15 @@ export async function startMonitor(options: {
         );
       } else if (
         request.url === "/" ||
-        (request.url === "/preview" && preview)
+        (request.url === "/preview" && preview) ||
+        request.url === "/design-review"
       ) {
         const page =
-          request.url === "/" ? monitorPage() : previewPage(preview!);
+          request.url === "/"
+            ? monitorPage()
+            : request.url === "/design-review"
+              ? designReviewPage()
+              : previewPage(preview!);
         response.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": page.csp,
@@ -461,6 +472,11 @@ export async function startMonitor(options: {
           "Content-Type": "text/javascript; charset=utf-8",
         });
         response.end(monitorScript);
+      } else if (request.url === "/design-review.js") {
+        response.writeHead(200, {
+          "Content-Type": "text/javascript; charset=utf-8",
+        });
+        response.end(designReviewScript);
       } else reject(404, "not-found");
     } catch {
       reject(503, "workspace-unavailable");

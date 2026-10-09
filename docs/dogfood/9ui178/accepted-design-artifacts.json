@@ -1,0 +1,1058 @@
+{
+  "runId": "run_mimic_monitor_cycle2_v2_20261009",
+  "acceptance": "provisional static CLI acceptance; no human adoption",
+  "artifacts": [
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+        "lockDigest": "sha256:5968be4736d294f953e2005926b4889dace3d50e6e57fbf96db265f5750d749e",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "references": [
+            {
+              "classification": "adjacent",
+              "contextDistance": "medium",
+              "reference": "case:teamlab-object — bookshelf comparison leading to a selected book and its actions (inputs/9ui178-reference-sources.md)",
+              "structuralRelevance": "high",
+              "transferableMechanisms": [
+                "A persistent collection can lead to a selected proposal and its available actions, supporting return to and comparison of options.",
+                "Transfer hypothesis: preserve a clear route from a chosen design option back to the full set; do not copy bookshelf layout."
+              ]
+            },
+            {
+              "classification": "near",
+              "contextDistance": "low",
+              "reference": "case:smarthr-table — common table guidance distinguishes essential comparison columns from all available fields (inputs/9ui178-reference-sources.md)",
+              "structuralRelevance": "high",
+              "transferableMechanisms": [
+                "Show decision-relevant attributes, status, and actions together when comparing proposals.",
+                "Transfer hypothesis: keep shared criteria and status visible while leaving secondary detail inspectable; avoid omitting decisive evidence or crowding the comparison."
+              ]
+            },
+            {
+              "classification": "far",
+              "contextDistance": "high",
+              "reference": "case:google-expressive — email action emphasis and findings about recognizable structure (inputs/9ui178-reference-sources.md)",
+              "structuralRelevance": "high",
+              "transferableMechanisms": [
+                "Emphasize a primary next action while retaining recognizable surrounding choices and labels.",
+                "Transfer hypothesis: use emphasis only if one review action is genuinely primary; the cited study does not predict a Mimic effect."
+              ]
+            },
+            {
+              "classification": "adjacent",
+              "contextDistance": "medium",
+              "reference": "case:github-run — Actions run view with parent and child status, expandable hierarchy, and route back to workflow list (inputs/9ui178-reference-sources.md)",
+              "structuralRelevance": "high",
+              "transferableMechanisms": [
+                "Show status at more than one level, expose detail on demand, and provide a return route to the overview.",
+                "Transfer hypothesis: distinguish current progress from saved phase and reveal Task, session, artifact references, and logs when investigating; avoid raw-step overload or misleading aggregate status."
+              ]
+            },
+            {
+              "classification": "adjacent",
+              "contextDistance": "medium",
+              "reference": "case:wiki-history — MediaWiki page history (inputs/reference-graph-9ui174.json)",
+              "structuralRelevance": "medium",
+              "transferableMechanisms": [
+                "Dated revisions with links to inspect versions and compare selected revisions.",
+                "Transfer hypothesis: retain decision context and comparison targets so review can resume; applicability depends on privacy and retention rules, which are not established here."
+              ]
+            },
+            {
+              "classification": "far",
+              "contextDistance": "high",
+              "reference": "case:factorio-chain — Factorio quick-start production chain (inputs/reference-graph-9ui174.json)",
+              "structuralRelevance": "high",
+              "transferableMechanisms": [
+                "Connect inputs, transformations, and outputs to make dependencies inspectable, with local bottleneck feedback.",
+                "Transfer hypothesis: represent how evidence or unresolved questions constrain a design choice only if domain validation supports that model; avoid implying validated causal or throughput rules."
+              ]
+            }
+          ],
+          "summary": "Use complementary reference mechanisms to explore persistent proposal comparison, recognizable actions, current Run state with inspectable details, and retained decision history. Structural fit and context distance are assessed separately. Sources document mechanisms; all Mimic applications remain transfer hypotheses, not validated UI directions. The supplied graph lacks links to the supplied four reference cases, so graph traversal, exclusions, and a complete candidate portfolio cannot be established."
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s07_experience_domain",
+            "lockDigest": "sha256:f2975ef56113fcb166a9b60d4448cbf5f290223bed9d090535e0ae3df1143ae3",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Run Monitor Design Reference Selection",
+          "type": "reference-selection"
+        },
+        "origin": {
+          "actorId": "mimic.s09.design-space-explorer",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s07_experience_domain"
+            ],
+            "kind": "derived",
+            "path": "/content/summary",
+            "rationale": "Synthesizes the supplied design problem, UI contract, experience model, and reference source guide. The source guide explicitly treats transfers as hypotheses and warns against copying screens."
+          },
+          {
+            "evidenceRefs": ["inputs/9ui178-reference-sources.md"],
+            "kind": "hypothesis",
+            "path": "/content/references/0",
+            "rationale": "The supplied source guide reports the bookshelf-to-selected-book mechanism and proposes persistent collections as a fit to test. Structural relevance is high to comparing persistent design proposals; context distance is medium because bookshelf navigation is a different product context. Do not copy its layout."
+          },
+          {
+            "evidenceRefs": ["inputs/9ui178-reference-sources.md"],
+            "kind": "hypothesis",
+            "path": "/content/references/1",
+            "rationale": "The source guide documents comparison fields, status, actions, and the distinction between essential and available columns. This is structurally close to shared-criteria proposal comparison; transfer effectiveness is untested. The guide warns that removing decisive fields misleads and excess columns bury action."
+          },
+          {
+            "evidenceRefs": ["inputs/9ui178-reference-sources.md"],
+            "kind": "hypothesis",
+            "path": "/content/references/2",
+            "rationale": "The source guide describes emphasis near a primary action and the cost of breaking recognizable structure. Action emphasis is structurally relevant, but the email context differs substantially from a calm, multi-action monitor. The reported research is not a predicted Mimic outcome."
+          },
+          {
+            "evidenceRefs": [
+              "inputs/9ui178-reference-sources.md",
+              "inputs/9ui178-monitor-page.html",
+              "inputs/9ui178-monitor-observations.json"
+            ],
+            "kind": "hypothesis",
+            "path": "/content/references/3",
+            "rationale": "The source guide describes parent and child run status, expandable hierarchy, and return navigation. These mechanisms closely inform Run investigation while the application remains a transfer hypothesis. Preserve child failures and avoid false precision or progress claims."
+          },
+          {
+            "evidenceRefs": ["inputs/reference-graph-9ui174.json"],
+            "kind": "hypothesis",
+            "path": "/content/references/4",
+            "rationale": "The graph source documents revision links and comparison controls. This is relevant to resuming a decision with inspectable history, though editorial revision context is distinct and privacy/retention constraints remain unknown. Graph evidence is provisional."
+          },
+          {
+            "evidenceRefs": ["inputs/reference-graph-9ui174.json"],
+            "kind": "hypothesis",
+            "path": "/content/references/5",
+            "rationale": "The graph source documents a production dependency chain. Its cause-and-effect mechanism may help reason about evidence dependencies, but the product domain and causal validity differ; domain validation is required. Graph evidence is provisional."
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board",
+        "lockDigest": "sha256:1037bf9bd1c7c4d26d5d78769f9148c71a342ca43415435a45a6290a6f697ab5",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "mechanisms": [
+            "Use a persistent Run collection as the return route; selecting an entry opens a review board with the saved Run's current progress, recorded phase, last relevant evidence, unresolved questions, and next action grouped together.",
+            "Place a compact evidence trail beside the resume context, with links to Task, session, exact artifact references, and detailed logs available on demand; retain failures and unverified states.",
+            "Provide search by Run, Task, or artifact ID, and label the observed 18-Run count with its capture context; do not imply the two-second polling guarantees backend execution.",
+            "Provide a separately labeled control to open the separately selected preview in a new tab, without attributing it to the selected Run."
+          ],
+          "principles": [
+            "Keep review location, relevant evidence, unresolved questions, and next action together.",
+            "Show current progress separately from saved phase; captured counts and polling are observations, not backend guarantees.",
+            "Keep Run evidence distinct from the independently selected product preview.",
+            "Make exact record details and audit evidence available without letting them displace the resume context."
+          ],
+          "selectionStatus": "candidate",
+          "summary": "A returnable review board organizes saved Runs around the decision context needed to resume work: current location, evidence, unresolved questions, and next action. The selected Run's record and investigation details remain accessible within that context."
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+            "lockDigest": "sha256:5968be4736d294f953e2005926b4889dace3d50e6e57fbf96db265f5750d749e",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s04_cap_run_monitor",
+            "lockDigest": "sha256:1a7417cf6a182a31333d481fa0883c17bcc9c069b6e87c4ebcccf448072270c4",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Resume Board with Evidence Trail",
+          "type": "design-direction"
+        },
+        "origin": {
+          "actorId": "mimic.s10.design-direction-generator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract"
+            ],
+            "kind": "derived",
+            "path": "/content/principles"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s04_cap_run_monitor"
+            ],
+            "kind": "derived",
+            "path": "/content/mechanisms"
+          },
+          {
+            "kind": "assumption",
+            "path": "/content/selectionStatus",
+            "rationale": "A candidate direction is being offered for later comparison; no selection or human approval is recorded."
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio",
+        "lockDigest": "sha256:b82b14bed9f1e25ffaa3507f140aed3bef25c6d0e99293a71aac899ada39c915",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "mechanisms": [
+            "Use a persistent option rail and a criteria-by-option comparison matrix, with supporting evidence and trade-offs attached to the relevant criterion.",
+            "Show a provisional recommendation, viable alternative, rationale, and unresolved uncertainty in a review panel; provide a route back to the full option set.",
+            "Keep a separate Run inspector searchable by Run, Task, or artifact ID; selecting a Run reveals progress and saved phase as distinct fields, with Task, session, exact artifact references, and logs expandable on demand.",
+            "Label the captured snapshot as 18 Runs at its capture context and describe two-second polling as observed interface behavior only; preserve failure and unverified audit states.",
+            "Label the product preview as separately selected and open it in a new tab without implying it is output from any selected Run."
+          ],
+          "principles": [
+            "Compare meaningfully different options using common criteria and inspectable evidence.",
+            "Keep recommendation reasoning provisional and its uncertainty visible.",
+            "Separate product design evidence from saved Run state and from the separately selected preview.",
+            "Keep record investigation read-only and expose identifying details when needed."
+          ],
+          "selectionStatus": "candidate",
+          "summary": "A comparison workspace treats design review as the primary task. Shared criteria structure a side-by-side comparison of distinct options, while a separate Run inspector keeps saved-record investigation available."
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+            "lockDigest": "sha256:5968be4736d294f953e2005926b4889dace3d50e6e57fbf96db265f5750d749e",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s04_cap_run_monitor",
+            "lockDigest": "sha256:1a7417cf6a182a31333d481fa0883c17bcc9c069b6e87c4ebcccf448072270c4",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Criteria Comparison Studio",
+          "type": "design-direction"
+        },
+        "origin": {
+          "actorId": "mimic.s10.design-direction-generator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract"
+            ],
+            "kind": "derived",
+            "path": "/content/principles"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s04_cap_run_monitor"
+            ],
+            "kind": "derived",
+            "path": "/content/mechanisms"
+          },
+          {
+            "kind": "assumption",
+            "path": "/content/selectionStatus",
+            "rationale": "A candidate direction is being offered for later comparison; no selection or human approval is recorded."
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline",
+        "lockDigest": "sha256:204865341c795150928b464c8960be62f2e62414639e9b7e4661c048605350e8",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "mechanisms": [
+            "Use a searchable Run index with a selected Run opening a time ordered detail timeline; group event evidence by phase and expose Task, session, exact artifact references, and logs from relevant entries.",
+            "Show current progress and saved phase in separate fields; present the 18-Run count with its capture context and explain that observed two-second polling does not verify backend execution.",
+            "Pin the current review location, unresolved question, and next action above the timeline so investigation can resume after interruption.",
+            "Retain failure and unverified evidence in the audit trail; keep all monitor actions read-only.",
+            "Offer a separately selected preview link that opens in a new tab and carries no implied relationship to the selected Run."
+          ],
+          "principles": [
+            "Make Run progress and audit context central while distinguishing observed current progress from recorded phase.",
+            "Keep captured counts and polling explicitly contextual and avoid claims about backend guarantees.",
+            "Preserve failures, unverified states, and exact evidence for investigation.",
+            "Keep a resume route and next action visible, and distinguish the independent product preview."
+          ],
+          "selectionStatus": "candidate",
+          "summary": "A saved Run is the central record for monitoring and investigation. A time ordered event view separates current progress from saved phase and preserves evidence needed to diagnose failures or unverified states."
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+            "lockDigest": "sha256:5968be4736d294f953e2005926b4889dace3d50e6e57fbf96db265f5750d749e",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s04_cap_run_monitor",
+            "lockDigest": "sha256:1a7417cf6a182a31333d481fa0883c17bcc9c069b6e87c4ebcccf448072270c4",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Run Timeline Investigation View",
+          "type": "design-direction"
+        },
+        "origin": {
+          "actorId": "mimic.s10.design-direction-generator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract"
+            ],
+            "kind": "derived",
+            "path": "/content/principles"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s09_reference_selection",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s04_cap_run_monitor"
+            ],
+            "kind": "derived",
+            "path": "/content/mechanisms"
+          },
+          {
+            "kind": "assumption",
+            "path": "/content/selectionStatus",
+            "rationale": "A candidate direction is being offered for later comparison; no selection or human approval is recorded."
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s11_evaluation_resume_board",
+        "lockDigest": "sha256:8969a6bf3e74d9cf706d05f533ebcb7d0235650169dc6fcf7190a65584d9a291",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "findings": [
+            {
+              "criterion": "Visible decision information",
+              "reason": "Groups current location, relevant evidence, unresolved questions and next action in the return view.",
+              "severity": "MINOR",
+              "state": "PASS"
+            },
+            {
+              "criterion": "Hidden decisive information",
+              "reason": "Exact record details are on demand; the direction does not specify how recommendation reasoning, a viable alternative and uncertainty are exposed for design comparison.",
+              "severity": "MAJOR",
+              "state": "CONCERN"
+            },
+            {
+              "criterion": "Unnecessary noise",
+              "reason": "Compact evidence links preserve investigation detail without displacing resume context.",
+              "severity": "MINOR",
+              "state": "PASS"
+            },
+            {
+              "criterion": "Next action",
+              "reason": "Keeps the next action alongside the saved Run context; the action itself remains read-only inspection.",
+              "severity": "MINOR",
+              "state": "PASS"
+            }
+          ],
+          "summary": "Strong fit for resuming work: it groups location, evidence, open questions and next action, while keeping record details inspectable. Empirical usability and whether its evidence supports the next design decision remain unverified.",
+          "target": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1"
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board",
+            "lockDigest": "sha256:1037bf9bd1c7c4d26d5d78769f9148c71a342ca43415435a45a6290a6f697ab5",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s01_product_definition",
+            "lockDigest": "sha256:4571bced99b4431b01bd24b1f15a4b22c365456979c68f13be28abd87f0edfb0",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model",
+            "lockDigest": "sha256:8029974555dec48fd524b52dc45140d2c8807d3913834e20fb1410869aea2410",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s11_evaluation_resume_board",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Resume Board Direction Evaluation",
+          "type": "evaluation"
+        },
+        "origin": {
+          "actorId": "mimic.s11.direction-evaluator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/0"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/1"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/2"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/3"
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s11_evaluation_compare_studio",
+        "lockDigest": "sha256:af77ee62fbff728d4e6dfabce5b9fa1eba3b9317bdb8fa8f44048e64d2c91a2f",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "findings": [
+            {
+              "criterion": "Visible decision information",
+              "reason": "Compares distinct options on shared criteria and exposes provisional recommendation, viable alternative and uncertainty.",
+              "severity": "MINOR",
+              "state": "PASS"
+            },
+            {
+              "criterion": "Hidden decisive information",
+              "reason": "Run records and detailed evidence are available in a separate inspector or on demand, adding a route during review.",
+              "severity": "MINOR",
+              "state": "CONCERN"
+            },
+            {
+              "criterion": "Unnecessary noise",
+              "reason": "A comparison workspace plus a separate Run inspector may split attention across two review purposes.",
+              "severity": "MINOR",
+              "state": "CONCERN"
+            },
+            {
+              "criterion": "Next action",
+              "reason": "Provides a route back to the full option set and a separate searchable Run inspector; no decision is auto-committed.",
+              "severity": "MINOR",
+              "state": "PASS"
+            }
+          ],
+          "summary": "Best fit for the stated design choice: common criteria organize distinct options and a provisional recommendation, alternative and uncertainty are inspectable. The separate Run inspector and preview preserve monitor context; criteria adequacy and human usefulness remain unverified.",
+          "target": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1"
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio",
+            "lockDigest": "sha256:b82b14bed9f1e25ffaa3507f140aed3bef25c6d0e99293a71aac899ada39c915",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s01_product_definition",
+            "lockDigest": "sha256:4571bced99b4431b01bd24b1f15a4b22c365456979c68f13be28abd87f0edfb0",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model",
+            "lockDigest": "sha256:8029974555dec48fd524b52dc45140d2c8807d3913834e20fb1410869aea2410",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s11_evaluation_compare_studio",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Criteria Comparison Studio Direction Evaluation",
+          "type": "evaluation"
+        },
+        "origin": {
+          "actorId": "mimic.s11.direction-evaluator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/0"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/1"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/2"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/3"
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s11_evaluation_run_timeline",
+        "lockDigest": "sha256:da20968caf573d38cde8c611bc387238f65a5b9f0d27a8cd4b1d07d8bb32314a",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "findings": [
+            {
+              "criterion": "Visible decision information",
+              "reason": "Pinned review location, unresolved question and next action support resumption, but option comparison and recommendation reasoning are not specified.",
+              "severity": "MAJOR",
+              "state": "CONCERN"
+            },
+            {
+              "criterion": "Hidden decisive information",
+              "reason": "Task, session, exact artifact references and logs are reachable from relevant timeline entries.",
+              "severity": "MINOR",
+              "state": "PASS"
+            },
+            {
+              "criterion": "Unnecessary noise",
+              "reason": "A time ordered event trail can make the next design choice less prominent during cross-option review.",
+              "severity": "MINOR",
+              "state": "CONCERN"
+            },
+            {
+              "criterion": "Next action",
+              "reason": "Pins the next action above the timeline and keeps monitor inspection read-only.",
+              "severity": "MINOR",
+              "state": "PASS"
+            }
+          ],
+          "summary": "Strong for record investigation: time ordered events, phase grouping, audit evidence and a pinned resume context support diagnosis. It does not organize cross-option design comparison or recommendation trade-offs; timeline usefulness is unverified.",
+          "target": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1"
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline",
+            "lockDigest": "sha256:204865341c795150928b464c8960be62f2e62414639e9b7e4661c048605350e8",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s01_product_definition",
+            "lockDigest": "sha256:4571bced99b4431b01bd24b1f15a4b22c365456979c68f13be28abd87f0edfb0",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model",
+            "lockDigest": "sha256:8029974555dec48fd524b52dc45140d2c8807d3913834e20fb1410869aea2410",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s11_evaluation_run_timeline",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Run Timeline Direction Evaluation",
+          "type": "evaluation"
+        },
+        "origin": {
+          "actorId": "mimic.s11.direction-evaluator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/0"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/1"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/2"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/findings/3"
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    },
+    {
+      "ref": {
+        "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s11_decision_direction_review",
+        "lockDigest": "sha256:a476c96a3146f60f390567a916e6b9bdeca471ce3617229171fe6cede8c81ede",
+        "revision": 1
+      },
+      "artifact": {
+        "approval": {
+          "status": "pending"
+        },
+        "content": {
+          "alternatives": [
+            "Recommend art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1, with a bounded resume-context mechanism drawn from art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1 for return to interrupted review.",
+            "Viable alternative: art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1, prioritizing persistent Run review context; validate how it will expose option comparison, recommendation, alternative and uncertainty.",
+            "Also retain art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1 as a strong investigation pattern; it needs a clearer cross-option decision view to meet the product choice task."
+          ],
+          "outcome": "proposed",
+          "question": "Which direction should guide the read-only monitor so people can compare design options and resume saved Run investigation with the necessary evidence and next action?",
+          "rationale": "The product definition and task model make option comparison and evidence-based design choice central, while the problem profile also requires resumption, Run investigation, visible uncertainty and read-only behavior. Compare Studio explicitly supplies shared criteria, provisional recommendation, viable alternative and uncertainty. Resume Board and Timeline better foreground return context or audit investigation, but do not specify equivalent cross-option decision support. A bounded resume context can retain location, evidence, unresolved questions and next action without displacing comparison. This recommendation is provisional: the criteria and interface outcomes lack user research or empirical validation, and the observed Run count and polling do not establish backend guarantees. The separately selected preview must remain distinct from Run output. Accessibility is excluded from this cycle's evaluation and convergence as instructed.",
+          "summary": "Propose Criteria Comparison Studio as the leading direction for review because it directly supports comparing options on shared criteria and exposes provisional reasoning, alternatives and uncertainty. Keep Resume Board as a viable alternative for interrupted Run review; incorporate its pinned location, evidence and next action as a bounded review-context mechanism if it does not obscure comparison. Unknown: whether reviewers find criteria adequate, whether evidence density is usable, and whether the observed direction supports effective decisions. No human adoption is recorded."
+        },
+        "dependencies": [
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board",
+            "lockDigest": "sha256:1037bf9bd1c7c4d26d5d78769f9148c71a342ca43415435a45a6290a6f697ab5",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio",
+            "lockDigest": "sha256:b82b14bed9f1e25ffaa3507f140aed3bef25c6d0e99293a71aac899ada39c915",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline",
+            "lockDigest": "sha256:204865341c795150928b464c8960be62f2e62414639e9b7e4661c048605350e8",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile",
+            "lockDigest": "sha256:d04cb7de15f6d99e9ec44ae9bc6b5798c3e74b650dc578707ab9074a50956bd7",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract",
+            "lockDigest": "sha256:6beedde2162cfa6d5921a4e176b22e2a526ddfdd79d7c73d765b576f3f4c5717",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s01_product_definition",
+            "lockDigest": "sha256:4571bced99b4431b01bd24b1f15a4b22c365456979c68f13be28abd87f0edfb0",
+            "onChange": "validate",
+            "revision": 1
+          },
+          {
+            "artifactId": "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model",
+            "lockDigest": "sha256:8029974555dec48fd524b52dc45140d2c8807d3913834e20fb1410869aea2410",
+            "onChange": "validate",
+            "revision": 1
+          }
+        ],
+        "lifecycle": {
+          "freshness": "valid",
+          "status": "provisional"
+        },
+        "meta": {
+          "createdAt": "2026-10-10T00:00:00Z",
+          "id": "art_run_mimic_monitor_cycle2_v2_20261009_s11_decision_direction_review",
+          "revision": 1,
+          "schemaVersion": "1.0.0",
+          "title": "Proposed Design Direction Review",
+          "type": "decision"
+        },
+        "origin": {
+          "actorId": "mimic.s11.direction-evaluator",
+          "actorKind": "skill",
+          "createdAt": "2026-10-10T00:00:00Z",
+          "runId": "run_mimic_monitor_cycle2_v2_20261009"
+        },
+        "provenance": [
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1"
+            ],
+            "kind": "derived",
+            "path": "/content/summary"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s01_product_definition@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1"
+            ],
+            "kind": "derived",
+            "path": "/content/question"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1"
+            ],
+            "kind": "derived",
+            "path": "/content/alternatives"
+          },
+          {
+            "inputRefs": [
+              "art_run_mimic_monitor_cycle2_v2_20261009_s08_problem_profile@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s05_product_ui_contract@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s01_product_definition@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s02_user_task_model@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_compare_studio@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_resume_board@1",
+              "art_run_mimic_monitor_cycle2_v2_20261009_s10_direction_run_timeline@1"
+            ],
+            "kind": "derived",
+            "path": "/content/rationale"
+          }
+        ],
+        "scope": {
+          "level": "organization",
+          "ownerId": "org_local"
+        }
+      }
+    }
+  ]
+}

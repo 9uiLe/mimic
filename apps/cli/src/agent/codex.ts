@@ -971,7 +971,7 @@ export async function createCodexGenerationProfile(
   if (
     !Number.isSafeInteger(timeoutMs) ||
     timeoutMs < 1 ||
-    timeoutMs > 60_000 ||
+    timeoutMs > 120_000 ||
     (options.reasoningEffort !== undefined &&
       !["low", "medium"].includes(options.reasoningEffort)) ||
     outputSchemaPath.includes("\0")
