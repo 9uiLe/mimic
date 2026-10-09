@@ -52,6 +52,38 @@ For the current design comparison, accessibility is not an evaluation or
 convergence criterion or gate. Existing interaction features and other
 independent product quality checks are not removed by this document.
 
+### Where repeated model judgment can be replaced
+
+- **Before S09:** a host graph traversal can check path, source ID, prior
+  rejection, fit-role consistency and portfolio omissions deterministically.
+  S09 still judges whether a connected mechanism fits this task; the graph
+  cannot establish that semantic fit. The accepted 178 S09 lacked graph links
+  for its four new cases, so this is a testable improvement, not an observed
+  gain.
+- **After S10:** exact input locks, declared pairwise structural axes and
+  missing capability labels can be checked before asking S11 to interpret
+  trade-offs. Mechanical diversity does not prove useful diversity; a model
+  still explains how the options change the user's task.
+- **At S11:** freeze one problem-derived criterion set and require every
+  candidate to answer it. Compare missing decisive facts and excess noise
+  separately, as the 180 playbook and 178 four-axis comparison suggest.
+  The machine checks coverage and provenance; the model weighs contextual
+  consequences; a person chooses a consequential direction.
+- **At S12–S18:** exact approved-asset locks, color-role completeness and
+  static/browser observations should be computed once and reused by exact
+  digest. A model may critique meaning and propose a repair, but cannot
+  relabel a failed check or create approval. No automatic accept/reject
+  threshold is inferred from the research.
+
+Static rejection before immutable reservation permits an explicit fresh
+invocation with the rejected bytes retained. A timeout, cancellation or
+unknown outcome requires the existing lease/recovery protocol before retry.
+Semantic disagreement at S11 returns to S10 with an explicit changed
+question or constraint; a repeated identical prompt is not a design method.
+Changes to a source, contract, approved asset or knowledge snapshot require
+new exact refs and a new comparison cohort rather than silently updating one
+arm. These rules preserve the existing Human Commit Point and history.
+
 ## Three comparison arms
 
 The [9UI-178 historical Run](https://github.com/9uiLe/mimic/blob/ai/9ui-178-next-dogfood/docs/dogfood/9ui178/design-cycle.md) is a valuable
