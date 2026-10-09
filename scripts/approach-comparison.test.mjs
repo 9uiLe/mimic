@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, readFile, cp } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, cp, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { test } from "node:test";
@@ -65,6 +65,13 @@ test("matched comparison freezes one common upstream and three isolated branches
     limit: 1,
   };
   const manifest = await prepare(cfg);
+  await rm(path.join(root, ".mimic/workspace.json"));
+  const unstarted = await prepare({ ...cfg, cohortId: "test_missing_state" });
+  assert.equal(unstarted.runId, "run_test_missing_state");
+  await writeFile(
+    path.join(root, ".mimic/workspace.json"),
+    JSON.stringify({ registry: { events: [], runs: {} }, snapshots: {} }),
+  );
   await writeFile(
     path.join(root, ".mimic/workspace.json"),
     JSON.stringify({
@@ -148,6 +155,7 @@ test("matched comparison freezes one common upstream and three isolated branches
   assert.match(c1, /case:smarthr-table/);
   assert.match(c1, /https:\/\/smarthr\.design/);
   assert.match(c1, /One object per row with name, discriminating fields/);
+  assert.match(c1, /"from": "trait:smarthr-table"/);
   assert.match(c1, /obs:google-expressive/);
   assert.match(c1, /portfolio-limit/);
   const b0 = await readFile(

@@ -157,7 +157,15 @@ function sourceRows(sources, result) {
       claim: row.claim,
     }));
 }
-function referenceEvidence(arm, corpus, inventory, result, sources, graph) {
+function referenceEvidence(
+  arm,
+  corpus,
+  inventory,
+  result,
+  sources,
+  graph,
+  traitIds,
+) {
   const header = `# ${arm} reference evidence\n\nAll source claims below are local paraphrases or hypotheses; follow the source URLs. Complete corpus SHA-256 inventory: ${inventory.digest}. Do not treat a case as a UI to copy.\n\n`;
   const full = `## Product UI mechanisms\n\n${corpus.product}\n\n## Purpose and information amount\n\n${corpus.purpose}\n`;
   if (arm === "B0") return header + full;
@@ -168,6 +176,7 @@ function referenceEvidence(arm, corpus, inventory, result, sources, graph) {
       full
     );
   const nodeIds = new Set([
+    ...traitIds,
     ...result.selected.flatMap((item) => [
       item.caseId,
       ...item.principleIds,
@@ -240,7 +249,13 @@ async function prepare(cfg) {
     "Repository commit changed",
   );
   const scopeConfig = await readJson(path.join(root, ".mimic/config.json"));
-  const existing = await readJson(path.join(root, ".mimic/workspace.json"));
+  const existing = await readJson(
+    path.join(root, ".mimic/workspace.json"),
+  ).catch((error) => {
+    if (error.code === "ENOENT")
+      return { registry: { runs: {}, canonical: {} } };
+    throw error;
+  });
   assert(
     Object.keys(existing.registry?.runs ?? {}).length === 0 &&
       Object.keys(existing.registry?.canonical ?? {}).length === 0,
@@ -315,6 +330,7 @@ async function prepare(cfg) {
       retrieval,
       sources,
       graph,
+      cfg.traitIds,
     );
     const evidencePath = `inputs/${cohort}-${arm.toLowerCase()}-s09.md`;
     written.push(await createFrozen(path.join(root, evidencePath), evidence));
