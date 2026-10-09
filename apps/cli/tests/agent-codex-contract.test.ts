@@ -118,6 +118,302 @@ const protocol = (output = final) =>
     .map((event) => JSON.stringify(event))
     .join("\n") + "\n";
 
+// Official rust-v0.160.0 collect_warning/DeprecationNotice wire shape.
+const warning = (message = "private configuration warning", id = "item_0") => ({
+  type: "item.completed",
+  item: { id, type: "error", message },
+});
+const withWarning = (position: number, notice = warning()) => {
+  const lines = protocol().trimEnd().split("\n");
+  lines.splice(position, 0, JSON.stringify(notice));
+  return lines.join("\n") + "\n";
+};
+test.each([1, 2])(
+  "official completed warning at position %i does not replace turn/output/terminal validation",
+  (position) => {
+    const decoder = new CodexJsonlDecoder("req_168");
+    expect(decoder.push(Buffer.from(withWarning(position)))).toEqual([
+      { type: "started", requestId: "req_168" },
+      { type: "output", text: final },
+    ]);
+    expect(decoder.finish(0)).toEqual([{ type: "completed", output: final }]);
+    expect(JSON.stringify(decoder.diagnostics())).not.toContain("private");
+  },
+);
+
+test.each([1, 2])(
+  "official warning survives the production fake-process adapter at position %i",
+  async (position) => {
+    const options = await fakeCodex();
+    await fakeRuntime(options, undefined, { wire: withWarning(position) });
+    const input = request(options.workspace);
+    const permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+    const executor = new CodexExecutor(options);
+    const handle = await executor.startAuthorizedOnce(
+      input,
+      await schema(options),
+      permit,
+    );
+    expect(await events(handle)).toEqual([
+      { type: "started", requestId: input.requestId },
+      { type: "output", text: final },
+      { type: "completed", output: final },
+    ]);
+    expect(handle.diagnostics?.()).toMatchObject({
+      backendReach: "unknown",
+      process: { settled: true, exitCode: 0, failure: "none" },
+      decoder: {
+        threadStarted: true,
+        turnStarted: true,
+        outputObserved: true,
+        terminalObserved: true,
+        finished: true,
+        failed: false,
+        failure: "none",
+      },
+    });
+    expect(JSON.stringify(handle.diagnostics?.())).not.toContain("private");
+  },
+);
+
+test.each(["item.started", "item.updated"])(
+  "warning %s remains rejected after turn start",
+  (type) => {
+    const decoder = new CodexJsonlDecoder("req_168");
+    expect(() =>
+      decoder.push(Buffer.from(withWarning(2, { ...warning(), type }))),
+    ).toThrow("unknown-outcome");
+    expect(decoder.finish(0)).toMatchObject([{ reason: "unknown-outcome" }]);
+  },
+);
+
+test("warning cannot complete or overwrite an unfinished text item ID", () => {
+  const decoder = new CodexJsonlDecoder("req_168");
+  decoder.push(
+    Buffer.from(protocol().split("\n").slice(0, 2).join("\n") + "\n"),
+  );
+  decoder.push(
+    Buffer.from(
+      JSON.stringify({
+        type: "item.started",
+        item: { id: "same", type: "reasoning", text: "private reasoning" },
+      }) + "\n",
+    ),
+  );
+  expect(() =>
+    decoder.push(
+      Buffer.from(JSON.stringify(warning(undefined, "same")) + "\n"),
+    ),
+  ).toThrow("unknown-outcome");
+  expect(decoder.finish(0)).toMatchObject([{ reason: "unknown-outcome" }]);
+});
+
+test.each([
+  { type: "item.started", item: warning().item },
+  { type: "item.updated", item: warning().item },
+  { ...warning(), privateKey: "private-value" },
+  {
+    type: "item.completed",
+    item: { ...warning().item, text: "private-value" },
+  },
+  { type: "item.completed", item: { id: "item_0", type: "error" } },
+  { type: "item.completed", item: { ...warning().item, id: " " } },
+  { type: "item.completed", item: { ...warning().item, message: {} } },
+  {
+    type: "item.completed",
+    item: { ...warning().item, type: "private-unknown" },
+  },
+  { type: "private-event", item: warning().item },
+])("warning compatibility rejects malformed/unknown event %j", (notice) => {
+  const decoder = new CodexJsonlDecoder("req_168");
+  expect(() =>
+    decoder.push(
+      Buffer.from(withWarning(1, notice as ReturnType<typeof warning>)),
+    ),
+  ).toThrow("unknown-outcome");
+  expect(decoder.finish(0)).toMatchObject([{ reason: "unknown-outcome" }]);
+  expect(JSON.stringify(decoder.diagnostics())).not.toMatch(/private/);
+});
+
+test.each([
+  JSON.stringify(warning()) + "\n" + protocol(),
+  protocol() + JSON.stringify(warning()) + "\n",
+  withWarning(1, warning(undefined, "reason")),
+  withWarning(1, warning(undefined, "answer")),
+  withWarning(3, warning(undefined, "reason")),
+  withWarning(1).replace(
+    '"type":"turn.started"',
+    JSON.stringify(warning()).slice(1, -1),
+  ),
+])("warning IDs/order remain fail closed: %s", (wire) => {
+  const decoder = new CodexJsonlDecoder("req_168");
+  expect(() => decoder.push(Buffer.from(wire))).toThrow("unknown-outcome");
+  expect(decoder.finish(0)).toMatchObject([{ reason: "unknown-outcome" }]);
+});
+
+test.each([
+  { wire: withWarning(1).split("\n").slice(0, 2).join("\n") + "\n", exit: 0 },
+  { wire: withWarning(1).replace('{"type":"turn.started"}\n', ""), exit: 0 },
+  { wire: withWarning(1), exit: 7 },
+  { wire: withWarning(1) + "{private-malformed}\n", exit: 0 },
+  { wire: withWarning(1).replace('"usage":{', '"wrong-usage":{'), exit: 0 },
+])(
+  "warnings never supply missing terminal/turn/usage or clean exit: %j",
+  ({ wire, exit }) => {
+    const decoder = new CodexJsonlDecoder("req_168");
+    try {
+      decoder.push(Buffer.from(wire));
+    } catch {
+      /* malformed protocol */
+    }
+    expect(decoder.finish(exit)).toMatchObject([{ reason: "unknown-outcome" }]);
+  },
+);
+
+test.each([
+  {
+    message: "model rerouted: private-model -> private-other (Unknown)",
+    reason: "unsupported",
+  },
+  { message: "private-account quota exhausted", reason: "quota" },
+  { message: "private-token authentication failed", reason: "authentication" },
+])(
+  "known warning policy stop survives continuation: $reason",
+  async ({ message, reason }) => {
+    const options = await fakeCodex();
+    await fakeRuntime(options, undefined, {
+      wire: withWarning(1, warning(message)),
+      lingerAfterWire: true,
+    });
+    const input = request(options.workspace);
+    const permit = await createCodexCreditRiskPermit(fakeDecisionPort(), input);
+    const executor = new CodexExecutor(options);
+    const handle = await executor.startAuthorizedOnce(
+      input,
+      await schema(options),
+      permit,
+    );
+    const result = await events(handle);
+    expect(result).toEqual([
+      { type: "started", requestId: input.requestId },
+      expect.objectContaining({ type: "stopped", reason }),
+    ]);
+    expect(handle.diagnostics?.()).toMatchObject({
+      backendReach: "unknown",
+      process: {
+        spawned: true,
+        settled: true,
+        failure: "stdout-callback",
+        signal: "SIGTERM",
+      },
+      decoder: {
+        threadStarted: true,
+        turnStarted: false,
+        outputObserved: false,
+        terminalObserved: false,
+        failed: true,
+        failure: "policy-stop",
+        rejectedShape: { eventType: "item.completed", itemType: "error" },
+      },
+    });
+    expect(JSON.stringify(handle.diagnostics?.())).not.toMatch(
+      /private|rerouted/,
+    );
+    await expect(
+      executor.startAuthorizedOnce(input, await schema(options), permit),
+    ).rejects.toMatchObject({ reason: "billing-unconfirmed" });
+  },
+);
+
+test.each(["error", "turn.failed"])(
+  "warning compatibility preserves fatal %s classification",
+  (type) => {
+    const decoder = new CodexJsonlDecoder("req_168");
+    const prefix = withWarning(1).split("\n").slice(0, 2).join("\n") + "\n";
+    const error = { message: "private-account quota exhausted" };
+    decoder.push(
+      Buffer.from(
+        prefix +
+          JSON.stringify(
+            type === "error" ? { type, ...error } : { type, error },
+          ) +
+          "\n",
+      ),
+    );
+    expect(decoder.finish(1)).toMatchObject([
+      { type: "stopped", reason: "quota" },
+    ]);
+  },
+);
+
+test.each([1, 2])(
+  "unterminated reroute notice preserves the fixed EOF policy stop at position %i",
+  (position) => {
+    const decoder = new CodexJsonlDecoder("req_168");
+    const prefix = protocol().split("\n").slice(0, position).join("\n") + "\n";
+    decoder.push(
+      Buffer.from(
+        prefix +
+          JSON.stringify(
+            warning("model rerouted: private-from -> private-to (Unknown)"),
+          ),
+      ),
+    );
+    expect(decoder.finish(0)).toMatchObject([
+      { type: "stopped", reason: "unsupported" },
+    ]);
+    expect(decoder.diagnostics()).toMatchObject({
+      failure: "policy-stop",
+      rejectedShape: { eventType: "item.completed", itemType: "error" },
+    });
+    expect(JSON.stringify(decoder.diagnostics())).not.toContain("private");
+  },
+);
+
+test("rejected shape saturates counts, redacts names/values and retains first rejection", () => {
+  const decoder = new CodexJsonlDecoder("private-request");
+  decoder.push(Buffer.from(protocol().split("\n")[0] + "\n"));
+  const item = {
+    id: "private-id",
+    type: "private-tool",
+    message: "private-message",
+    ...Object.fromEntries(
+      Array.from({ length: 260 }, (_, i) => [
+        `private-key-${i}`,
+        "private-value",
+      ]),
+    ),
+  };
+  expect(() =>
+    decoder.push(
+      Buffer.from(
+        JSON.stringify({
+          type: "item.completed",
+          item,
+          "private-key": "private-value",
+        }) + "\n",
+      ),
+    ),
+  ).toThrow("unknown-outcome");
+  const shape = decoder.diagnostics().rejectedShape;
+  expect(shape).toEqual({
+    eventType: "item.completed",
+    itemType: "other",
+    hasItem: true,
+    hasId: true,
+    hasType: true,
+    hasText: false,
+    hasMessage: true,
+    eventUnknownKeys: 1,
+    itemUnknownKeys: 255,
+  });
+  expect(() =>
+    decoder.push(Buffer.from('{"type":"error","message":"secret"}\n')),
+  ).toThrow();
+  expect(decoder.diagnostics().rejectedShape).toEqual(shape);
+  expect(JSON.stringify(decoder.diagnostics())).not.toMatch(/private|secret/);
+});
+
 test("read-only official version/login probes redact raw streams and never infer model entitlement", async () => {
   const options = await fakeCodex();
   expect(await inspectCodex(options)).toEqual({
@@ -1001,6 +1297,7 @@ async function fakeRuntime(
     spawnFailure?: boolean;
     wire?: string;
     stderr?: string;
+    lingerAfterWire?: boolean;
   } = {},
 ) {
   if (!options.env.HOME) options.env = { HOME: options.workspace };
@@ -1107,7 +1404,7 @@ else if(args[0]==='app-server'){
   });
 }else if(args[0]==='exec'){
   if(!args.includes('features.code_mode_host={enabled=false,disable_in_process_fallback=false}')||!args.includes('notify=[]')||!args.includes('default_permissions="mimic"')||args.includes('--sandbox')||args.includes('--last'))process.exit(96);
-  let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{fs.writeFileSync(${JSON.stringify(path.join(options.workspace, "execution.json"))},JSON.stringify({model:args[args.indexOf('--model')+1],input})); ${behavior.hang ? "setInterval(()=>{},1000);" : `process.stderr.write(${JSON.stringify(behavior.stderr ?? "")});process.stdout.write(${JSON.stringify(behavior.wire ?? (behavior.malformed ? "{malformed}\n" : protocol(behavior.output ?? final)))});process.exitCode=${behavior.exit ?? 0};`} });
+  let input='';process.stdin.on('data',chunk=>input+=chunk);process.stdin.on('end',()=>{fs.writeFileSync(${JSON.stringify(path.join(options.workspace, "execution.json"))},JSON.stringify({model:args[args.indexOf('--model')+1],input})); ${behavior.hang ? "setInterval(()=>{},1000);" : `process.stderr.write(${JSON.stringify(behavior.stderr ?? "")});process.stdout.write(${JSON.stringify(behavior.wire ?? (behavior.malformed ? "{malformed}\n" : protocol(behavior.output ?? final)))});process.exitCode=${behavior.exit ?? 0};${behavior.lingerAfterWire ? "setInterval(()=>{},1000);" : ""}`} });
 }else process.exit(99);
 `,
   );
