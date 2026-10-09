@@ -87,6 +87,13 @@ test("role proposal checker catches missing mappings, unknown sources and ambigu
   expect(new Set(contract.requiredContexts).size).toBe(
     contract.requiredContexts.length,
   );
+  expect(Object.keys(contract.requiredContextRoles).sort()).toEqual(
+    [...contract.requiredContexts].sort(),
+  );
+  for (const roles of Object.values(contract.requiredContextRoles))
+    expect(roles.every((role) => contract.requiredRoles.includes(role))).toBe(
+      true,
+    );
   const roles = Object.fromEntries(
     contract.requiredRoles.map((role, index) => [
       role,
@@ -121,7 +128,21 @@ test("role proposal checker catches missing mappings, unknown sources and ambigu
       "unknown-source-case:case:uncited",
       "unmapped-role:text.primary",
       "undeclared-role:extra",
-      "unexplained-shared-value:brand.accent:status.blocked",
+      "unexplained-shared-value:status.blocked:brand.accent",
+    ]),
+  );
+  const stateInvalid: ColorRoleProposal = {
+    ...valid,
+    roles: { ...roles, "status.complete": roles["status.blocked"]! },
+    contexts: {
+      ...contexts,
+      "blocked work": ["text.primary", "surface"],
+    },
+  };
+  expect(checkColorRoleProposal(contract, stateInvalid)).toEqual(
+    expect.arrayContaining([
+      "missing-context-role:blocked work:status.blocked",
+      "unexplained-shared-value:status.blocked:status.complete",
     ]),
   );
 });

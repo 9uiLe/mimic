@@ -24,6 +24,18 @@
     "selected proposal",
     "completed work"
   ],
+  "requiredContextRoles": {
+    "proposal comparison": [
+      "text.primary",
+      "background",
+      "surface",
+      "selection"
+    ],
+    "run in progress": ["text.primary", "surface", "status.in-progress"],
+    "blocked work": ["text.primary", "surface", "status.blocked"],
+    "selected proposal": ["text.primary", "selection", "action.primary"],
+    "completed work": ["text.primary", "status.complete"]
+  },
   "decisions": {
     "machine": "Verify a value or explicit deferment for each role, consistent use in all required contexts, cited source and stated exceptions. Report unmapped raw colors and role collisions for review.",
     "model": "Compare the same content across strategies for brand expression, task hierarchy, surface depth, selection and status meaning. Describe observed screen differences and predicted effects separately.",

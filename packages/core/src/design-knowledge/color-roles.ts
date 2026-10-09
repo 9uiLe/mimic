@@ -2,6 +2,7 @@
 export interface ColorRoleContract {
   readonly requiredRoles: readonly string[];
   readonly requiredContexts: readonly string[];
+  readonly requiredContextRoles: Readonly<Record<string, readonly string[]>>;
   readonly sourceCaseIds: readonly string[];
   readonly collisionReview: readonly {
     readonly roles: readonly [string, string];
@@ -45,22 +46,30 @@ export function checkColorRoleProposal(
     for (const role of used)
       if (!required.has(role) || !proposal.roles[role]?.trim())
         issues.push(`invalid-context-role:${context}:${role}`);
+    for (const role of contract.requiredContextRoles[context] ?? [])
+      if (!used.includes(role))
+        issues.push(`missing-context-role:${context}:${role}`);
   }
   for (const context of Object.keys(proposal.contexts))
     if (!contract.requiredContexts.includes(context))
       issues.push(`undeclared-context:${context}`);
-  for (const {
-    roles: [left, right],
-  } of contract.collisionReview) {
-    const value = proposal.roles[left]?.trim();
-    if (!value || value !== proposal.roles[right]?.trim()) continue;
-    const explained = proposal.sharedValueReasons?.some(
-      (entry) =>
-        entry.reason.trim() &&
-        entry.roles.includes(left) &&
-        entry.roles.includes(right),
-    );
-    if (!explained) issues.push(`unexplained-shared-value:${left}:${right}`);
+  const mapped = contract.requiredRoles.filter((role) =>
+    proposal.roles[role]?.trim(),
+  );
+  for (let i = 0; i < mapped.length; i++) {
+    for (let j = i + 1; j < mapped.length; j++) {
+      const left = mapped[i]!;
+      const right = mapped[j]!;
+      if (proposal.roles[left]?.trim() !== proposal.roles[right]?.trim())
+        continue;
+      const explained = proposal.sharedValueReasons?.some(
+        (entry) =>
+          entry.reason.trim() &&
+          entry.roles.includes(left) &&
+          entry.roles.includes(right),
+      );
+      if (!explained) issues.push(`unexplained-shared-value:${left}:${right}`);
+    }
   }
   return issues;
 }
