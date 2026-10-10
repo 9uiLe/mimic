@@ -427,9 +427,9 @@ async function capturePreviews(config, artifacts, workspace) {
             : "PASS",
         );
         const screenshot = `capture-${config.runId}-${ref.artifactId}-${ref.revision}-${ref.lockDigest.slice(7, 19)}.png`;
-        await page.screenshot({
-          path: path.join(workspace, screenshot),
-          fullPage: true,
+        const pixels = await page.screenshot({ fullPage: true });
+        await writeFile(path.join(workspace, screenshot), pixels, {
+          mode: 0o600,
         });
         const primaryOperations = [];
         for (const operation of config.operations?.[key] ?? []) {
@@ -475,6 +475,7 @@ async function capturePreviews(config, artifacts, workspace) {
             : "UNVERIFIED",
           overflow,
           screenshot,
+          screenshotDigest: digest(pixels),
         };
       } finally {
         await page.close();
@@ -712,6 +713,23 @@ async function main(args) {
             JSON.stringify(snapshot.artifacts.map(({ ref }) => ref)),
         "Capture does not bind current artifacts",
       );
+      for (const [key, observation] of Object.entries(capture.observations)) {
+        assert(
+          exactRef(observation.ref) && key === choiceKey(observation.ref),
+          "Capture key is not an exact ref",
+        );
+        const expectedName = `capture-${config.runId}-${observation.ref.artifactId}-${observation.ref.revision}-${observation.ref.lockDigest.slice(7, 19)}.png`;
+        assert(
+          observation.screenshot === expectedName,
+          "Capture screenshot name changed",
+        );
+        const imagePath = path.join(workspace, expectedName);
+        assert(
+          (await realpath(imagePath)) === imagePath &&
+            digest(await readFile(imagePath)) === observation.screenshotDigest,
+          "Capture screenshot changed",
+        );
+      }
       captures = capture.observations;
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
