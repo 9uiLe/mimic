@@ -57,5 +57,10 @@
       { "artifactType": "reference-selection", "schemaVersion": "1.0.0" },
     ],
   "examples": ["examples/selection.json"],
-  "tests": ["tests/scenarios.json", "tests/graph.json"],
+  "tests":
+    [
+      "tests/scenarios.json",
+      "tests/graph.json",
+      "tests/provenance-duplicate.json",
+    ],
 }

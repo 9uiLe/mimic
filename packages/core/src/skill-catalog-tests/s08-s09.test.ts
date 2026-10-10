@@ -18,6 +18,7 @@ import {
   type RoutedTask,
 } from "../orchestrator/router.js";
 import { loadSchemaDirectory } from "../schema-registry.js";
+import { assessProvenance } from "../runtime-engines/provenance.js";
 import {
   loadSkillPackage,
   runSkillPackage,
@@ -170,6 +171,29 @@ for (const slug of directories)
       expect(artifact.approval.status).toBe("pending");
     }
   });
+
+test("S09 schema-valid duplicate provenance is rejected by Core", async () => {
+  const skill = await loadSkillPackage(
+    path.join(repository, "skills/s09-design-space-explorer"),
+    schemaRoot,
+  );
+  expect(skill.instructions).toContain(
+    "each exact `/content` path occurs at most once",
+  );
+  const example = fixture<ArtifactSnapshot>(
+    skill.examples["examples/selection.json"]!,
+  );
+  const reproduction = fixture<{ provenance: ArtifactSnapshot["provenance"] }>(
+    skill.tests["tests/provenance-duplicate.json"]!,
+  );
+  const rejected = { ...example, provenance: reproduction.provenance };
+  const schemas = await loadSchemaDirectory(path.join(schemaRoot, "artifacts"));
+  expect(schemas.validate(rejected).valid).toBe(true);
+  await expect(assessProvenance(rejected)).rejects.toThrow(
+    "Duplicate provenance pointer: /content/summary",
+  );
+  expect(await assessProvenance(example)).toHaveLength(3);
+});
 
 test("S08 scenarios trace traits, preserve unknowns, and block a missing contract", async () => {
   const skill = await loadSkillPackage(
