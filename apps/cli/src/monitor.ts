@@ -337,6 +337,18 @@ async function loadWorkingPreview(
   ].at(-1);
   const chosenCard = cards.length === 1 ? embeddedRecord(cards[0]!) : undefined;
   const workingProvenance = embeddedRecord(html);
+  const reviewCandidates = [
+    ...review.html.matchAll(/<article>([\s\S]*?)<\/article>/g),
+  ].map((match) => {
+    const record = embeddedRecord(match[1]!);
+    return { ref: ref(record.ref), verification: record.verification };
+  });
+  const workingCandidates = Array.isArray(workingProvenance.candidates)
+    ? workingProvenance.candidates.map((value) => {
+        const record = object(value);
+        return { ref: ref(record.ref), verification: record.verification };
+      })
+    : [];
   const reviewSelection = reviewProvenance
     ? embeddedRecord(reviewProvenance[0])
     : undefined;
@@ -359,6 +371,8 @@ async function loadWorkingPreview(
     chosenRef.artifactId !== selectedRef[1] ||
     chosenRef.revision !== Number(working[3]) ||
     chosenRef.artifactId !== working[2] ||
+    reviewCandidates.length === 0 ||
+    JSON.stringify(reviewCandidates) !== JSON.stringify(workingCandidates) ||
     !reviewSelection ||
     typeof reviewSelection.humanSelectionId !== "string" ||
     reviewSelection.humanSelectionId.length === 0 ||
