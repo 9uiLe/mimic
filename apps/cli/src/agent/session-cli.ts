@@ -1,4 +1,5 @@
 import { constants } from "node:fs";
+import { createHash } from "node:crypto";
 import { mkdir, open, realpath, lstat } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -13,6 +14,7 @@ import {
   sessionDigest,
   SessionQuestion,
   SessionCandidateRejected,
+  SessionStaticSubmissionFailure,
   SessionBindingChanged,
   type SessionBinding,
   type SessionPlan,
@@ -157,17 +159,6 @@ async function contained(root: string, relative: string): Promise<string> {
     throw new Error("Uncontained session path");
   return resolved;
 }
-/** No executeSkill host: the public CLI retains static package checks, immutable
- * work reservations, acceptance reconciliation and revision-request handoff. */
-class StaticCliFailure extends Error {
-  constructor(
-    readonly code: number,
-    readonly candidate: boolean,
-  ) {
-    super("Static session operation did not complete");
-  }
-}
-
 export function createStaticSessionPorts(
   config: StaticSessionConfiguration,
 ): SessionPorts {
@@ -180,11 +171,37 @@ export function createStaticSessionPorts(
       out: (value) => values.push(value),
       err: (value) => errors.push(value),
     });
-    if (code !== EXIT.OK)
-      throw new StaticCliFailure(
-        code,
-        errors.some((value) => value.startsWith("MIMIC_3: [candidate] ")),
+    if (code !== EXIT.OK) {
+      const stderr = errors.join("\n");
+      const candidate = errors.some((value) =>
+        value.startsWith("MIMIC_3: [candidate] "),
       );
+      const exactReason = (message: string) =>
+        errors.some(
+          (value) =>
+            value === `MIMIC_${code}: ${message}` ||
+            value === `MIMIC_${code}: [candidate] ${message}`,
+        );
+      const reason = exactReason(
+        "Proposed output requires PROPOSE_ONLY authority",
+      )
+        ? "proposal-authority-mismatch"
+        : exactReason("Proposed output requires matching review proposal")
+          ? "proposal-binding-missing"
+          : exactReason("Skill output cannot be durable")
+            ? "output-contract-rejected"
+            : candidate
+              ? "candidate-validation"
+              : code === EXIT.CONFLICT
+                ? "submission-conflict"
+                : "unclassified";
+      throw new SessionStaticSubmissionFailure({
+        exitCode: code,
+        candidate,
+        reason,
+        stderrSha256: createHash("sha256").update(stderr).digest("hex"),
+      });
+    }
     return JSON.parse(values.at(-1)!) as Record<string, unknown>;
   };
   let frozenBinding: SessionBinding | undefined;
@@ -307,7 +324,7 @@ export function createStaticSessionPorts(
         ]);
       } catch (error) {
         if (
-          error instanceof StaticCliFailure &&
+          error instanceof SessionStaticSubmissionFailure &&
           error.code === EXIT.INVALID &&
           error.candidate
         ) {
@@ -323,7 +340,10 @@ export function createStaticSessionPorts(
             await lstat(marker);
           } catch (readError) {
             if ((readError as NodeJS.ErrnoException).code === "ENOENT")
-              throw new SessionCandidateRejected("static-validation");
+              throw new SessionCandidateRejected(
+                "static-validation",
+                error.failure,
+              );
             throw readError;
           }
         }

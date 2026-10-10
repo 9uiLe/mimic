@@ -28,6 +28,7 @@ import {
   FileSessionStore,
   SessionCandidateRejected,
   SessionExecutionPolicyMismatch,
+  SessionStaticSubmissionFailure,
   sessionDigest,
   type SessionBinding,
   type SessionPlan,
@@ -697,6 +698,30 @@ test("checkpoint read/write reject forged diagnostics and custom-store inspect s
   );
 });
 
+test("static submit failure checkpoint rejects raw CLI text and extra fields", async () => {
+  const h = await harness();
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    fake("answer"),
+    limits,
+  ).advance();
+  const file = path.join(h.store.directory, "session_a.json");
+  const before = await readFile(file, "utf8");
+  state.tasks.first.staticFailure = {
+    exitCode: 3,
+    candidate: true,
+    reason: "candidate-validation",
+    stderrSha256: sessionDigest("private CLI text"),
+    raw: "private CLI text",
+  } as never;
+  await expect(h.store.write(state)).rejects.toThrow(
+    "Invalid static submission failure",
+  );
+  expect(await readFile(file, "utf8")).toBe(before);
+});
+
 test("pre-handle authorization failure has its own stage and cannot borrow a claimed process diagnostic", async () => {
   const h = await harness();
   const decision = {
@@ -858,7 +883,9 @@ async function call(root: string, ...args: string[]) {
     submissionState: string;
   };
 }
-async function staticHarness() {
+async function staticHarness(
+  authority: "AUTONOMOUS" | "PROPOSE_ONLY" = "AUTONOMOUS",
+) {
   const root = await temporary();
   await call(root, "init");
   const source = JSON.parse(
@@ -905,7 +932,7 @@ async function staticHarness() {
       },
       humanBrief: "Read fixture evidence only",
       intent: "create",
-      authority: "AUTONOMOUS",
+      authority,
     },
   ];
   await writeFile(path.join(root, "tasks.json"), JSON.stringify(tasks));
@@ -960,7 +987,10 @@ async function staticHarness() {
       },
       outputs: ["system-capability"],
       forbiddenResponsibilities: ["Do not approve"],
-      humanGates: [],
+      humanGates:
+        authority === "PROPOSE_ONLY"
+          ? [{ decision: "system-change", authority }]
+          : [],
       supportedArtifactSchemas: [
         { artifactType: "system-capability", schemaVersion: "1.0.0" },
         { artifactType: "product-definition", schemaVersion: "1.0.0" },
@@ -1038,6 +1068,187 @@ test("real static validation rejects invalid model work before submission reserv
     "freeform explanation",
   );
 });
+test("proposed output is rejected before marker under AUTONOMOUS authority with a bounded actual CLI reason", async () => {
+  const h = await staticHarness();
+  const candidate = JSON.parse(h.output);
+  candidate.artifacts[0].lifecycle.status = "proposed";
+  candidate.work.result.outputRefs[0].lockDigest = HOST_DERIVED_DIGEST;
+  const state = await new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    fake(JSON.stringify(candidate)),
+    limits,
+  ).advance();
+  expect(state.stop).toBe("candidate-rejected");
+  expect(state.tasks.first).toMatchObject({
+    phase: "rejected",
+    rejectionReason: "static-validation",
+    staticFailure: {
+      exitCode: 3,
+      candidate: true,
+      reason: "proposal-authority-mismatch",
+    },
+  });
+  expect(state.tasks.first.staticFailure?.stderrSha256).toMatch(
+    /^[a-f0-9]{64}$/,
+  );
+  expect(
+    await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
+  ).toEqual([]);
+  expect((await h.runtime.registry.snapshot()).events).toHaveLength(2);
+  expect(
+    JSON.stringify(
+      await new AgentSession(
+        "session_a",
+        h.store,
+        h.ports,
+        fake("unused"),
+        limits,
+      ).inspect(),
+    ),
+  ).not.toContain("Proposed output requires");
+});
+test("PROPOSE_ONLY proposal remains pending and identical static retry does not duplicate Core effects", async () => {
+  const h = await staticHarness("PROPOSE_ONLY");
+  const candidate = JSON.parse(h.output);
+  candidate.artifacts[0].lifecycle.status = "proposed";
+  candidate.work.result.outputRefs[0].lockDigest = HOST_DERIVED_DIGEST;
+  candidate.work.result.proposal = {
+    packetId: "packet_session_output",
+    reason: "Human review of a candidate, not adoption",
+    items: [
+      {
+        id: "proposal_session_output",
+        ref: { ...candidate.work.result.outputRefs[0] },
+        alternatives: ["Keep the existing capability"],
+        rationale: "Review the proposed capability boundary",
+        evidenceLimits: ["No human adoption recorded"],
+        dependents: [],
+      },
+    ],
+  };
+  const saved = await h.ports.saveWork(h.frozen, JSON.stringify(candidate));
+  const first = await h.ports.submit(h.frozen, saved);
+  const before = await h.runtime.registry.snapshot();
+  expect(before.packets.packet_session_output).toBeDefined();
+  expect(
+    before.runs[binding.runId].proposals.proposal_session_output.status,
+  ).toBe("pending");
+  expect(before.canonical).toEqual({});
+  expect(await h.ports.submit(h.frozen, saved)).toEqual(first);
+  expect(await h.runtime.registry.snapshot()).toEqual(before);
+});
+test("a proposed output without its review proposal is rejected before marker", async () => {
+  const h = await staticHarness("PROPOSE_ONLY");
+  const candidate = JSON.parse(h.output);
+  candidate.artifacts[0].lifecycle.status = "proposed";
+  candidate.work.result.outputRefs[0].lockDigest = HOST_DERIVED_DIGEST;
+  const saved = await h.ports.saveWork(h.frozen, JSON.stringify(candidate));
+  await expect(h.ports.submit(h.frozen, saved)).rejects.toMatchObject({
+    staticFailure: { reason: "proposal-binding-missing", candidate: true },
+  });
+  expect(
+    await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
+  ).toEqual([]);
+});
+test.each([{}, { items: [null] }, { items: [{}] }])(
+  "a malformed review proposal is a candidate error before marker (%j)",
+  async (proposal) => {
+    const h = await staticHarness("PROPOSE_ONLY");
+    const candidate = JSON.parse(h.output);
+    candidate.artifacts[0].lifecycle.status = "proposed";
+    candidate.work.result.outputRefs[0].lockDigest = artifactDigest(
+      candidate.artifacts[0],
+    );
+    candidate.work.result.proposal = proposal;
+    await writeFile(
+      path.join(h.root, "malformed.json"),
+      JSON.stringify(candidate),
+    );
+    const errors: string[] = [];
+    const code = await runCli(
+      [
+        "submit",
+        binding.runId,
+        "--task",
+        "first",
+        "--package",
+        "skill",
+        "--work",
+        "malformed.json",
+        "--root",
+        h.root,
+        "--json",
+      ],
+      { out: () => {}, err: (value) => errors.push(value) },
+    );
+    expect(code).toBe(3);
+    expect(errors.join("\n")).toContain("Invalid review proposal items");
+    expect(
+      await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
+    ).toEqual([]);
+  },
+);
+test("post-marker Core durability rejection keeps its generic reason and exact work for safe retry", async () => {
+  const h = await staticHarness();
+  const candidate = JSON.parse(h.output);
+  const unexpected = JSON.parse(
+    await readFile(
+      path.join(repo, "fixtures/artifacts/valid/product-definition.json"),
+      "utf8",
+    ),
+  ) as ArtifactSnapshot;
+  unexpected.meta.id = "art_unexpected_output";
+  unexpected.scope = { level: "organization", ownerId: "org_local" };
+  unexpected.lifecycle = { status: "provisional", freshness: "valid" };
+  unexpected.approval = { status: "pending" };
+  unexpected.origin = candidate.artifacts[0].origin;
+  unexpected.dependencies = candidate.artifacts[0].dependencies;
+  candidate.artifacts = [unexpected];
+  candidate.work.result.outputRefs = [
+    {
+      artifactId: unexpected.meta.id,
+      revision: unexpected.meta.revision,
+      lockDigest: HOST_DERIVED_DIGEST,
+    },
+  ];
+  const executor = fake(JSON.stringify(candidate));
+  const session = new AgentSession(
+    "session_a",
+    h.store,
+    h.ports,
+    executor,
+    limits,
+  );
+  const stopped = await session.advance();
+  expect(stopped).toMatchObject({
+    stop: "unknown-outcome",
+    tasks: {
+      first: {
+        phase: "prepared",
+        staticFailure: {
+          candidate: false,
+          reason: "output-contract-rejected",
+        },
+      },
+    },
+  });
+  const markerDirectory = path.join(h.root, ".mimic/submissions");
+  const names = await readdir(markerDirectory);
+  expect(names).toHaveLength(1);
+  const marker = await readFile(path.join(markerDirectory, names[0]!), "utf8");
+  const before = await h.runtime.registry.snapshot();
+  expect(before.events).toHaveLength(2);
+  expect((await session.advance({ resume: true })).stop).toBe(
+    "unknown-outcome",
+  );
+  expect(await readFile(path.join(markerDirectory, names[0]!), "utf8")).toBe(
+    marker,
+  );
+  expect(await h.runtime.registry.snapshot()).toEqual(before);
+  expect(executor.start).toHaveBeenCalledOnce();
+});
 test("workspace configuration failure preserves saved candidate for retry", async () => {
   const h = await staticHarness();
   const saved = await h.ports.saveWork(h.frozen, h.output);
@@ -1063,7 +1274,12 @@ test("real static CLI reconciles acceptance after a lost response; fresh resume 
     const refs = await submit(...args);
     if (lost) {
       lost = false;
-      throw new Error("Lost response after Core accepted");
+      throw new SessionStaticSubmissionFailure({
+        exitCode: 5,
+        candidate: false,
+        reason: "unclassified",
+        stderrSha256: sessionDigest("private CLI diagnostic"),
+      });
     }
     return refs;
   };
@@ -1078,6 +1294,23 @@ test("real static CLI reconciles acceptance after a lost response; fresh resume 
       ).advance()
     ).stop,
   ).toBe("unknown-outcome");
+  expect((await h.store.read("session_a"))?.tasks.first.staticFailure).toEqual({
+    exitCode: 5,
+    candidate: false,
+    reason: "unclassified",
+    stderrSha256: sessionDigest("private CLI diagnostic"),
+  });
+  expect(
+    JSON.stringify(
+      await new AgentSession(
+        "session_a",
+        h.store,
+        h.ports,
+        executor,
+        limits,
+      ).inspect(),
+    ),
+  ).not.toContain("private CLI diagnostic");
   const before = await h.runtime.registry.snapshot();
   expect(before.runs[binding.runId].artifacts).toHaveLength(2);
   const resumed = await new AgentSession(

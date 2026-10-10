@@ -274,7 +274,7 @@
       "alternatives": []
     },
     "intent": "create",
-    "authority": "AUTONOMOUS",
+    "authority": "PROPOSE_ONLY",
     "additionalOutputTypes": ["journey", "decision"]
   },
   {
