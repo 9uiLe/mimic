@@ -9,6 +9,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { request as httpRequest } from "node:http";
 import path from "node:path";
 import os from "node:os";
@@ -417,6 +418,135 @@ test("loopback fixed routes reject Host/origin/method/traversal and never expose
   ).toBe(200);
 });
 
+test("explicit trial reviews expose only bounded static snapshots with honest provenance", async () => {
+  const { root } = await setup();
+  const reviewRoot = await mkdtemp(path.join(os.tmpdir(), "mimic-reviews-"));
+  roots.push(reviewRoot);
+  const currentFile = path.join(reviewRoot, "current.html");
+  const stoppedFile = path.join(reviewRoot, "stopped.html");
+  const replayFile = path.join(reviewRoot, "replay.html");
+  const alternateIdFile = path.join(reviewRoot, "alternate-id.html");
+  const captureName = "capture-run_trial-art_direction-1-abc.png";
+  const pixels = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9lcQAAAABJRU5ErkJggg==",
+    "base64",
+  );
+  const review = (condition: string, status: string) =>
+    `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Mimic 候補レビュー</title></head><body><p>Run run_trial · ${condition} · ${status}</p></body></html>`;
+  const stoppedHtml = review("guided", "stopped");
+  const currentHtml = review("guided", "awaiting-human-selection").replace(
+    "</body>",
+    `<a href="${captureName}">実画面の撮影を開く</a></body>`,
+  );
+  const replayHtml = review("historical-replay", "awaiting-human-selection");
+  await writeFile(currentFile, currentHtml);
+  await writeFile(path.join(reviewRoot, captureName), pixels);
+  await writeFile(
+    path.join(reviewRoot, "capture-run_trial.json"),
+    JSON.stringify({
+      runId: "run_trial",
+      observations: {
+        candidate: {
+          screenshot: captureName,
+          screenshotDigest: `sha256:${createHash("sha256").update(pixels).digest("hex")}`,
+        },
+      },
+    }),
+  );
+  await writeFile(stoppedFile, stoppedHtml);
+  await writeFile(replayFile, replayHtml);
+  await writeFile(
+    alternateIdFile,
+    review("baseline", "awaiting-human-selection").replace(
+      "run_trial",
+      "trialA",
+    ),
+  );
+  const monitor = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: currentFile,
+    reviewStopped: stoppedFile,
+    reviewReplay: replayFile,
+  });
+  monitors.push(monitor);
+  for (const route of ["/", "/design-review"]) {
+    const html = await (await fetch(monitor.url + route)).text();
+    expect(html).toContain('href="/trial-review/current"');
+    expect(html).toContain('href="/trial-review/stopped"');
+    expect(html).toContain('href="/trial-review/replay"');
+    expect(html).toContain("停止状態は新しい候補の生成成功を示しません");
+    expect(html).toContain("過去成果物の再生も新規生成ではありません");
+    expect(html).not.toContain(reviewRoot);
+  }
+  const stopped = await fetch(monitor.url + "/trial-review/stopped");
+  expect(stopped.status).toBe(200);
+  expect(stopped.headers.get("content-security-policy")).toContain(
+    "default-src 'none'",
+  );
+  expect(await stopped.text()).toBe(stoppedHtml);
+  expect(
+    await (await fetch(monitor.url + "/trial-review/current")).text(),
+  ).toBe(currentHtml.replace(captureName, "/trial-review/current/capture/0"));
+  const capture = await fetch(monitor.url + "/trial-review/current/capture/0");
+  expect(capture.status).toBe(200);
+  expect(capture.headers.get("content-type")).toBe("image/png");
+  expect(Buffer.from(await capture.arrayBuffer())).toEqual(pixels);
+  expect(
+    (await fetch(monitor.url + "/trial-review/current/capture/1")).status,
+  ).toBe(404);
+  expect(await (await fetch(monitor.url + "/trial-review/replay")).text()).toBe(
+    replayHtml,
+  );
+  await writeFile(stoppedFile, "changed after startup");
+  expect(
+    await (await fetch(monitor.url + "/trial-review/stopped")).text(),
+  ).toBe(stoppedHtml);
+  expect((await fetch(monitor.url + "/trial-review/other")).status).toBe(404);
+
+  const linked = path.join(reviewRoot, "linked.html");
+  const partialStoppedFile = path.join(reviewRoot, "partial-stopped.html");
+  await writeFile(partialStoppedFile, review("guided", "partial-stopped"));
+  await symlink(replayFile, linked);
+  const invalid = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: partialStoppedFile,
+    reviewStopped: linked,
+    reviewReplay: stoppedFile,
+  });
+  monitors.push(invalid);
+  const invalidHtml = await (await fetch(invalid.url)).text();
+  expect(invalidHtml).toContain("安全に読み込めません");
+  expect(invalidHtml).not.toContain('href="/trial-review/stopped"');
+  expect(invalidHtml).not.toContain('href="/trial-review/current"');
+  expect(invalidHtml).not.toContain('href="/trial-review/replay"');
+  expect((await fetch(invalid.url + "/trial-review/stopped")).status).toBe(404);
+  expect((await fetch(invalid.url + "/trial-review/current")).status).toBe(404);
+  expect((await fetch(invalid.url + "/trial-review/replay")).status).toBe(404);
+
+  const alternate = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: alternateIdFile,
+  });
+  monitors.push(alternate);
+  expect((await fetch(alternate.url + "/trial-review/current")).status).toBe(
+    200,
+  );
+
+  await writeFile(path.join(reviewRoot, captureName), Buffer.from("not a PNG"));
+  const tampered = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: currentFile,
+  });
+  monitors.push(tampered);
+  expect((await fetch(tampered.url + "/trial-review/current")).status).toBe(
+    404,
+  );
+});
+
 test("forged/malformed checkpoints, private errors and metadata links fail closed", async () => {
   const { root } = await setup();
   const store = new FileSessionStore(root);
@@ -814,6 +944,11 @@ test("browser observes actual Core polling, stopped/accepted checkpoints and int
 
 test("production CLI monitor starts/stops and rejects invalid options without disclosing paths", async () => {
   const { root } = await setup();
+  const reviewFile = path.join(root, "stopped-review.html");
+  await writeFile(
+    reviewFile,
+    '<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src none"><title>Mimic 候補レビュー</title></head><body><p>Run run_trial · guided · stopped</p></body></html>',
+  );
   const errors: string[] = [];
   expect(
     await runCli(["monitor", "--root", root, "--port", "invalid"], {
@@ -831,6 +966,8 @@ test("production CLI monitor starts/stops and rejects invalid options without di
       root,
       "--port",
       "0",
+      "--review-stopped",
+      reviewFile,
     ],
     { stdio: ["ignore", "pipe", "pipe"] },
   );
@@ -844,6 +981,7 @@ test("production CLI monitor starts/stops and rejects invalid options without di
     });
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     expect((await state(url)).readOnly).toBe(true);
+    expect((await fetch(url + "/trial-review/stopped")).status).toBe(200);
     const ended = new Promise<number | null>((resolve) =>
       child.once("exit", resolve),
     );
