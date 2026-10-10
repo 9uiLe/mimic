@@ -119,6 +119,63 @@ const protocol = (output = final) =>
     .map((event) => JSON.stringify(event))
     .join("\n") + "\n";
 
+test("distinct completed agent messages use the final message as the work candidate", () => {
+  const decoder = new CodexJsonlDecoder("req_168");
+  const wire = protocol().trim().split("\n");
+  wire.splice(
+    3,
+    0,
+    JSON.stringify({
+      type: "item.completed",
+      item: {
+        id: "progress",
+        type: "agent_message",
+        text: "Working on the contract",
+      },
+    }),
+  );
+  expect(decoder.push(Buffer.from(wire.join("\n") + "\n"))).toEqual([
+    { type: "started", requestId: "req_168" },
+    { type: "output", text: "Working on the contract" },
+    { type: "output", text: final },
+  ]);
+  expect(decoder.finish(0)).toEqual([{ type: "completed", output: final }]);
+});
+
+test("a malformed final message cannot borrow a valid earlier work candidate", () => {
+  const decoder = new CodexJsonlDecoder("req_168");
+  const wire = protocol("not JSON").trim().split("\n");
+  wire.splice(
+    3,
+    0,
+    JSON.stringify({
+      type: "item.completed",
+      item: { id: "earlier", type: "agent_message", text: final },
+    }),
+  );
+  expect(() => decoder.push(Buffer.from(wire.join("\n") + "\n"))).toThrow(
+    "unknown-outcome",
+  );
+  expect(decoder.finish(0)).toMatchObject([{ reason: "unknown-outcome" }]);
+});
+
+test("a repeated completed agent message identity remains invalid", () => {
+  const decoder = new CodexJsonlDecoder("req_168");
+  const wire = protocol().trim().split("\n");
+  wire.splice(
+    3,
+    0,
+    JSON.stringify({
+      type: "item.completed",
+      item: { id: "answer", type: "agent_message", text: "Earlier" },
+    }),
+  );
+  expect(() => decoder.push(Buffer.from(wire.join("\n") + "\n"))).toThrow(
+    "unknown-outcome",
+  );
+  expect(decoder.finish(0)).toMatchObject([{ reason: "unknown-outcome" }]);
+});
+
 // Official rust-v0.160.0 collect_warning/DeprecationNotice wire shape.
 const warning = (message = "private configuration warning", id = "item_0") => ({
   type: "item.completed",
