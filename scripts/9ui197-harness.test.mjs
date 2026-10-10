@@ -158,6 +158,13 @@ test("capture binding changes with preview and screen checks", () => {
       requiredSelectors: ["#main", "#status"],
     }),
   );
+  assert.notEqual(
+    captureSettingsDigest(config),
+    captureSettingsDigest({
+      ...config,
+      readySelectors: { [exactChoice("art_one")]: "[data-ready]" },
+    }),
+  );
 });
 
 test("an operation only passes when its own result changes after the click", () => {
@@ -333,6 +340,25 @@ test("a revision of an unselected direction is flagged", () => {
   );
   assert.equal(report.status, "unselected-revision");
   assert.deepEqual(report.unrelatedRevisionRefs, [ref("art_other", 2)]);
+});
+
+test("a revision of the prior human choice waits for the current choice", () => {
+  const report = reviewTrial(
+    base({
+      manifest: {
+        runId: "run_revision_one",
+        condition: "guided",
+        brief,
+        revisionBudget: 2,
+        baseRef: ref("art_one"),
+      },
+      artifacts: [candidate("art_one", 2), proposedDecision],
+      history: [ref("art_one")],
+    }),
+  );
+  assert.equal(report.status, "awaiting-human-selection");
+  assert.deepEqual(report.unrelatedRevisionRefs, []);
+  assert.equal(report.selectedRef, null);
 });
 
 test("a capture belongs to one exact revision", () => {

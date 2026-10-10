@@ -35,6 +35,7 @@ export const captureSettingsDigest = (config) =>
     JSON.stringify(
       canonical({
         previewUrls: config.previewUrls ?? {},
+        readySelectors: config.readySelectors ?? {},
         operations: config.operations ?? {},
         requiredSelectors: config.requiredSelectors ?? [],
       }),
@@ -299,7 +300,10 @@ export function reviewTrial({
   const unrelatedRevisions = candidates.filter(
     ({ artifact }) =>
       artifact.meta.supersedesRevision !== undefined &&
-      artifact.meta.id !== selected?.ref.artifactId,
+      (selected
+        ? artifact.meta.id !== selected.ref.artifactId
+        : artifact.meta.id !== manifest.baseRef?.artifactId ||
+          artifact.meta.supersedesRevision !== manifest.baseRef.revision),
   );
   // A new Run may publish the selected artifact's next revision; count that
   // attempt once, whether represented in history or in local artifact metadata.
@@ -465,9 +469,15 @@ export function compareTrials(left, right) {
 }
 
 /** Browser evidence is optional; no capture means no PASS. Actions use declared selectors. */
-async function capturePreviews(config, artifacts, workspace) {
+export async function capturePreviews(config, artifacts, workspace) {
   const { chromium, expect } = await import("@playwright/test");
-  const browser = await chromium.launch();
+  assert(
+    nonempty(process.env.MIMIC_CHROME_EXECUTABLE),
+    "Run capture through scripts/with-patched-chrome.mjs",
+  );
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
   const observations = {};
   try {
     for (const { ref } of artifacts.filter(
@@ -476,11 +486,20 @@ async function capturePreviews(config, artifacts, workspace) {
       const key = choiceKey(ref);
       const url = config.previewUrls?.[key];
       if (!previewUrl(url)) continue;
+      const readySelector = config.readySelectors?.[key];
+      assert(
+        nonempty(readySelector),
+        "Preview needs a declared ready selector",
+      );
       const page = await browser.newPage({
         viewport: { width: 1280, height: 800 },
       });
       try {
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await page
+          .locator(readySelector)
+          .first()
+          .waitFor({ state: "visible", timeout: 15000 });
         const screenText = await page.locator("body").innerText();
         const requiredElements = [];
         for (const selector of config.requiredSelectors ?? []) {
@@ -514,12 +533,27 @@ async function capturePreviews(config, artifacts, workspace) {
               nonempty(operation.expectedText),
             "Invalid operation check",
           );
+          const operationPage = await browser.newPage({
+            viewport: { width: 1280, height: 800 },
+          });
           try {
-            const result = page.locator(operation.resultSelector).first();
+            await operationPage.goto(url, {
+              waitUntil: "domcontentloaded",
+              timeout: 15000,
+            });
+            await operationPage
+              .locator(readySelector)
+              .first()
+              .waitFor({ state: "visible", timeout: 15000 });
+            const result = operationPage
+              .locator(operation.resultSelector)
+              .first();
             const before = (await result.count())
               ? await result.innerText()
               : "";
-            await page.locator(operation.selector).click({ timeout: 3000 });
+            await operationPage
+              .locator(operation.selector)
+              .click({ timeout: 3000 });
             await expect(result).toContainText(operation.expectedText, {
               timeout: 3000,
             });
@@ -536,6 +570,8 @@ async function capturePreviews(config, artifacts, workspace) {
               selector: operation.selector,
               state: "FAIL",
             });
+          } finally {
+            await operationPage.close();
           }
         }
         observations[key] = {
