@@ -23,6 +23,7 @@
         ],
       "optional":
         [
+          { "name": "comparison-brief", "kind": "human-brief" },
           {
             "name": "experience-domain",
             "kind": "artifact",

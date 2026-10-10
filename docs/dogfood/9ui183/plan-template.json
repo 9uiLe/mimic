@@ -361,6 +361,10 @@
       ],
       "optional": [
         {
+          "name": "comparison-brief",
+          "kind": "human-brief"
+        },
+        {
           "name": "experience-domain",
           "kind": "artifact",
           "artifactType": "experience-domain",
@@ -410,6 +414,10 @@
         }
       ],
       "optional": [
+        {
+          "name": "comparison-brief",
+          "kind": "human-brief"
+        },
         {
           "name": "brand",
           "kind": "artifact",
@@ -466,6 +474,10 @@
         }
       ],
       "optional": [
+        {
+          "name": "comparison-brief",
+          "kind": "human-brief"
+        },
         {
           "name": "product-definition",
           "kind": "artifact",
