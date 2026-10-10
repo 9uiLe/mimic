@@ -79,5 +79,6 @@
       "tests/negative.json",
       "tests/domain-surfaces.json",
       "tests/journey-context.json",
+      "tests/provenance-duplicate.json",
     ],
 }

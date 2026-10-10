@@ -1,0 +1,40 @@
+{
+  "source": "S07 candidate rejected by static validation in run_9ui197_guided_20261010_a; reduced to repeated provenance paths without copying the model output",
+  "provenance": [
+    {
+      "path": "/content/summary",
+      "kind": "derived",
+      "inputRefs": ["art_s05_product_ui_contract", "art_s02_user_task_model"]
+    },
+    {
+      "path": "/content/summary",
+      "kind": "assumption",
+      "rationale": "Proposed boundary is awaiting human review"
+    },
+    {
+      "path": "/content/temporalBehavior",
+      "kind": "derived",
+      "inputRefs": ["art_s05_product_ui_contract"]
+    },
+    {
+      "path": "/content/temporalBehavior",
+      "kind": "unknown",
+      "rationale": "The source does not define the iteration budget semantics"
+    },
+    {
+      "path": "/content/sessionModel",
+      "kind": "derived",
+      "inputRefs": ["art_s05_product_ui_contract"]
+    },
+    {
+      "path": "/content/sessionModel",
+      "kind": "assumption",
+      "rationale": "Resume behavior is proposed"
+    },
+    {
+      "path": "/content/sessionModel",
+      "kind": "unknown",
+      "rationale": "Persistence behavior is unverified"
+    }
+  ]
+}
