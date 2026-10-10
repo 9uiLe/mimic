@@ -2,7 +2,7 @@ export type TrialReviewAvailability =
   "available" | "unavailable" | "not-selected";
 
 export type TrialReviews = {
-  current: TrialReviewAvailability;
+  current: TrialReviewAvailability | "stopped";
   stopped: TrialReviewAvailability;
   replay: TrialReviewAvailability;
 };
@@ -18,8 +18,8 @@ export function trialReviewNotice(reviews: TrialReviews): string {
   )
     return "";
   const current =
-    reviews.current === "available"
-      ? '<li><a href="/trial-review/current">選択した実 Run の保存済みレビューを開く →</a></li>'
+    reviews.current === "available" || reviews.current === "stopped"
+      ? `<li><a href="/trial-review/current">${reviews.current === "stopped" ? "現在の実 Run · 停止中の途中レビューを開く →" : "選択した実 Run の保存済みレビューを開く →"}</a></li>`
       : reviews.current === "unavailable"
         ? "<li>選択した実 Run のレビューを安全に読み込めません。</li>"
         : "";

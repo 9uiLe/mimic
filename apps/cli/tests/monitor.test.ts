@@ -498,6 +498,21 @@ test("explicit trial reviews expose only bounded static snapshots with honest pr
   expect(await (await fetch(monitor.url + "/trial-review/replay")).text()).toBe(
     replayHtml,
   );
+  const stoppedCurrent = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: stoppedFile,
+  });
+  monitors.push(stoppedCurrent);
+  for (const route of ["/", "/design-review"]) {
+    const html = await (await fetch(stoppedCurrent.url + route)).text();
+    expect(html).toContain("現在の実 Run · 停止中の途中レビューを開く");
+    expect(html).toContain('href="/trial-review/current"');
+    expect(html).toContain("停止状態は新しい候補の生成成功を示しません");
+  }
+  expect(
+    await (await fetch(stoppedCurrent.url + "/trial-review/current")).text(),
+  ).toBe(stoppedHtml);
   await writeFile(stoppedFile, "changed after startup");
   expect(
     await (await fetch(monitor.url + "/trial-review/stopped")).text(),
@@ -507,11 +522,21 @@ test("explicit trial reviews expose only bounded static snapshots with honest pr
   const linked = path.join(reviewRoot, "linked.html");
   const partialStoppedFile = path.join(reviewRoot, "partial-stopped.html");
   await writeFile(partialStoppedFile, review("guided", "partial-stopped"));
+  const partial = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: partialStoppedFile,
+  });
+  monitors.push(partial);
+  expect((await fetch(partial.url + "/trial-review/current")).status).toBe(200);
+  expect(await (await fetch(partial.url)).text()).toContain(
+    "停止中の途中レビュー",
+  );
   await symlink(replayFile, linked);
   const invalid = await startMonitor({
     root,
     port: 0,
-    reviewCurrent: partialStoppedFile,
+    reviewCurrent: replayFile,
     reviewStopped: linked,
     reviewReplay: stoppedFile,
   });

@@ -204,7 +204,11 @@ async function loadPreview(selected?: string): Promise<Preview | undefined> {
   return { html, css, js };
 }
 
-type TrialReviewSnapshot = { html: string; captures: Buffer[] };
+type TrialReviewSnapshot = {
+  html: string;
+  captures: Buffer[];
+  stopped: boolean;
+};
 async function loadTrialReview(
   selected: string | undefined,
   kind: "current" | "stopped" | "replay",
@@ -228,7 +232,7 @@ async function loadTrialReview(
     !runId ||
     !condition ||
     !status ||
-    (kind === "current" && (stopped || condition === "historical-replay")) ||
+    (kind === "current" && condition === "historical-replay") ||
     (kind === "stopped" && (!stopped || condition === "historical-replay")) ||
     (kind === "replay" && condition !== "historical-replay")
   )
@@ -276,6 +280,7 @@ async function loadTrialReview(
         `<a href="/trial-review/${kind}/capture/${index++}">実画面の撮影を開く</a>`,
     ),
     captures,
+    stopped,
   };
 }
 
@@ -487,7 +492,9 @@ export async function startMonitor(options: {
   ]);
   const reviews: TrialReviews = {
     current: reviewCurrent
-      ? "available"
+      ? reviewCurrent.stopped
+        ? "stopped"
+        : "available"
       : options.reviewCurrent
         ? "unavailable"
         : "not-selected",
