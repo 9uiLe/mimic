@@ -292,11 +292,24 @@ function checkTask(task: RoutedTask, manifest: SkillManifest): void {
     ),
     "Task requests undeclared output type",
   );
-  for (const key of ["required", "optional"] as const)
+  assert(
+    same(task.inputs.required.map(declaredInput), manifest.inputs.required),
+    "Task required inputs differ from manifest",
+  );
+  let optionalIndex = 0;
+  for (const need of task.inputs.optional) {
+    const declared = declaredInput(need);
+    while (
+      optionalIndex < manifest.inputs.optional.length &&
+      !same(declared, manifest.inputs.optional[optionalIndex])
+    )
+      optionalIndex++;
     assert(
-      same(task.inputs[key].map(declaredInput), manifest.inputs[key]),
-      `Task ${key} inputs differ from manifest`,
+      optionalIndex < manifest.inputs.optional.length,
+      "Task optional inputs differ from manifest",
     );
+    optionalIndex++;
+  }
   assert(
     same(
       task.inputs.alternatives.map((group) => group.oneOf.map(declaredInput)),
@@ -352,13 +365,18 @@ export async function runSkillPackage(input: {
       const bound = new Set(
         invocation.inputBindings.map((binding) => binding.name),
       );
+      const selectedOptional = new Set(
+        task.inputs.optional.map((need) => need.name),
+      );
       const gaps = input.package.manifest.inputs.optional
         .filter((need) =>
-          need.kind === "artifact"
-            ? !bound.has(need.name)
-            : need.kind === "human-brief"
-              ? !invocation.humanBrief
-              : invocation.evidenceFiles.length === 0,
+          !selectedOptional.has(need.name)
+            ? true
+            : need.kind === "artifact"
+              ? !bound.has(need.name)
+              : need.kind === "human-brief"
+                ? !invocation.humanBrief
+                : invocation.evidenceFiles.length === 0,
         )
         .map((need) => need.name);
       work = jsonCopy(

@@ -535,6 +535,73 @@ test("missing required intent blocks only its task; optional evidence is an expl
   });
 });
 
+test("omits optional Skill inputs without accepting undeclared or changed needs", async () => {
+  const x = await setup();
+  const taskEvidence = {
+    name: "task-evidence",
+    kind: "evidence-file",
+  } as const;
+  const skill = {
+    ...x.skill,
+    manifest: {
+      ...x.skill.manifest,
+      inputs: {
+        ...x.skill.manifest.inputs,
+        optional: [...x.skill.manifest.inputs.optional, taskEvidence],
+      },
+    },
+  };
+  const task: RoutedTask = {
+    ...x.task,
+    inputs: { ...x.task.inputs, optional: [taskEvidence] },
+  };
+  await x.start([task]);
+  await runSkillPackage({
+    orchestrator: x.orchestrator,
+    package: skill,
+    runId: "run_skill",
+    tasks: [task],
+    taskId: "demo",
+    at: now,
+    executor: async (context) => {
+      expect(context.gaps).toEqual(["research"]);
+      expect(context.invocation.evidenceFiles).toEqual(["research.txt"]);
+      return {
+        result: {
+          runId: "run_skill",
+          taskId: "demo",
+          skillId: task.skillId,
+          inputRefs: [],
+          outputRefs: [],
+          blocked: { reason: "Need research", affectedTaskIds: [task.id] },
+        },
+      };
+    },
+  });
+  expect((await x.registry.run("run_skill")).run.blockers.demo).toBe(
+    "Need research",
+  );
+  for (const optional of [
+    [{ name: "other", kind: "evidence-file" }],
+    [{ name: "research", kind: "human-brief" }, taskEvidence],
+    [taskEvidence, { name: "research", kind: "evidence-file" }],
+  ] as const) {
+    await expect(
+      runSkillPackage({
+        orchestrator: x.orchestrator,
+        package: skill,
+        runId: "run_skill",
+        tasks: [{ ...task, inputs: { ...task.inputs, optional } }],
+        taskId: "demo",
+        at: now,
+        executor: async () => {
+          throw new Error("must not run");
+        },
+      }),
+    ).rejects.toThrow(/Task optional inputs differ from manifest/);
+  }
+});
+
 test("reuses an unchanged approved exact output from the Run base", async () => {
   const x = await setup();
   const approved = await seedApprovedDefinition(x);
