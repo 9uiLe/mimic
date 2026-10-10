@@ -1,14 +1,35 @@
 #!/usr/bin/env node
 /** A small plan/review adapter for the existing Mimic Run, Skill and decision contracts. */
-import { createHash } from "node:crypto";
-import { readFile, readdir, realpath, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import {
+  readFile,
+  readdir,
+  realpath,
+  rename,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateFile = path.join(repo, "docs/dogfood/9ui183/plan-template.json");
 const digest = (text) =>
   `sha256:${createHash("sha256").update(text).digest("hex")}`;
+export async function writeWorkingOutput(target, content) {
+  const temporary = path.join(
+    path.dirname(target),
+    `.${path.basename(target)}.${randomUUID()}.tmp`,
+  );
+  try {
+    await writeFile(temporary, content, { flag: "wx", mode: 0o600 });
+    await rename(temporary, target);
+  } finally {
+    await unlink(temporary).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  }
+}
 const canonical = (value) =>
   Array.isArray(value)
     ? value.map(canonical)
@@ -478,6 +499,7 @@ export function reviewTrial({
     }));
   return {
     runId: manifest.runId,
+    previousRunId: manifest.previousRunId ?? null,
     condition: manifest.condition,
     status:
       !candidates.length && stops.length
@@ -554,7 +576,7 @@ const htmlEscape = (value) =>
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-export function renderReviewHtml(report, previewUrls = {}) {
+export function renderReviewHtml(report, previewUrls = {}, workingPreviewHref) {
   const cards = report.candidates
     .map((candidate) => {
       const url = previewUrls[choiceKey(candidate.ref)];
@@ -575,7 +597,175 @@ export function renderReviewHtml(report, previewUrls = {}) {
           `<p>${htmlEscape(item.summary)} — 提案: ${htmlEscape(item.suggestedChoice ?? "未特定")}</p>`,
       )
       .join("") || "<p>推奨提案: 未取得</p>";
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p><section><h2>提案と未確定事項</h2>${recommendation}<p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p>${workingPreviewHref ? `<p><a href="${htmlEscape(workingPreviewHref)}">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p>` : ""}<section><h2>提案と未確定事項</h2>${recommendation}<p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
+}
+
+/** A local, unapproved interaction sketch of the human-selected matrix direction. */
+const workingPreviewScript = `const trial = document.getElementById("trial-selection-status");
+const confirmation = document.getElementById("revision-confirmation");
+for (const button of document.querySelectorAll("[data-try-choice]")) {
+  button.addEventListener("click", () => {
+    trial.textContent = "画面内で試した候補: " + button.dataset.tryChoice + "（未保存。実際の選択記録は変更されません）";
+  });
+}
+for (const button of document.querySelectorAll("[data-open-detail]")) {
+  button.addEventListener("click", () => {
+    const index = Number(button.dataset.openDetail);
+    if (!Number.isSafeInteger(index)) return;
+    const detail = document.querySelector("#detail-" + index + " details");
+    if (!detail) return;
+    detail.open = true;
+    detail.scrollIntoView();
+  });
+}
+document.getElementById("trial-revise").addEventListener("click", () => {
+  confirmation.hidden = false;
+});`;
+export function renderWorkingMatrixHtml(report, brief, expectedRef) {
+  assert(
+    exactRef(expectedRef) &&
+      sameRef(report.selectedRef, expectedRef) &&
+      nonempty(report.humanSelectionId),
+    "Working preview needs the verified human-selected exact direction",
+  );
+  const selected = report.candidates.find(({ ref }) =>
+    sameRef(ref, expectedRef),
+  );
+  assert(
+    selected?.mechanisms?.some((item) =>
+      item.includes("候補を列、共通判断項目を行"),
+    ),
+    "Selected direction does not specify the candidate matrix",
+  );
+  const candidates = report.candidates;
+  assert(candidates.length > 1, "Matrix preview needs multiple candidates");
+  const label = (candidate, index) =>
+    candidate.summary.match(/^案[A-Z]/u)?.[0] ?? `候補${index + 1}`;
+  const value = (text) => htmlEscape(nonempty(text) ? text : "未提供");
+  const rows = [
+    ["概要", (candidate) => candidate.summary],
+    ["主操作と構造", (candidate) => candidate.mechanisms?.[0]],
+    ["詳細と比較への復帰", (candidate) => candidate.mechanisms?.[1]],
+    ["選択と改訂", (candidate) => candidate.mechanisms?.[2]],
+    ["関係と未確定事項", (candidate) => candidate.mechanisms?.[3]],
+    [
+      "AI の懸念（提案の評価）",
+      (candidate) =>
+        Array.isArray(candidate.evaluation)
+          ? candidate.evaluation
+              .filter((item) => item.state === "CONCERN")
+              .map((item) => `${item.criterion}: ${item.reason}`)
+              .join(" / ") || "未提供"
+          : "未提供",
+    ],
+  ];
+  const cell = (candidate) => `<td>${value(candidate)}</td>`;
+  const matrix = rows
+    .map(
+      ([heading, read]) =>
+        `<tr><th scope="row">${value(heading)}</th>${candidates.map((candidate) => cell(read(candidate))).join("")}</tr>`,
+    )
+    .join("");
+  const detailRow = `<tr><th scope="row">詳細</th>${candidates.map((candidate, index) => `<td><button type="button" data-open-detail="${index}">${value(label(candidate, index))}の詳細へ進む</button></td>`).join("")}</tr>`;
+  const mobile = candidates
+    .map(
+      (candidate, index) =>
+        `<article><h3>${value(label(candidate, index))}${sameRef(candidate.ref, expectedRef) ? " · 現在の作業用ベース" : ""}</h3><dl>${rows.map(([heading, read]) => `<dt>${value(heading)}</dt><dd>${value(read(candidate))}</dd>`).join("")}</dl><button type="button" data-open-detail="${index}">詳細へ進む</button></article>`,
+    )
+    .join("");
+  const details = candidates
+    .map(
+      (candidate, index) =>
+        `<article id="detail-${index}"><details><summary>${value(label(candidate, index))}の詳細を開く</summary><p>${value(candidate.summary)}</p><ul>${candidate.mechanisms.map((item) => `<li>${value(item)}</li>`).join("")}</ul><p>向く条件・利点・失うもの: ${value(candidate.rationale.join(" / "))}</p><p>画面操作とブランド適合: 未検証</p><a href="#comparison">比較に戻る</a></details></article>`,
+    )
+    .join("");
+  const trialButtons = candidates
+    .map(
+      (candidate, index) =>
+        `<button type="button" data-try-choice="${value(label(candidate, index))}">${value(label(candidate, index))}を画面内で仮選択</button>`,
+    )
+    .join("");
+  const fixed = brief.content
+    .filter((item) => ["fixed-fact", "fixed-copy"].includes(item.policy))
+    .map((item) => `<li>${value(item.text)}</li>`)
+    .join("");
+  const unresolved = report.unresolved
+    .map((item) => `<li>${value(item)}</li>`)
+    .join("");
+  const proposed = (report.proposedDecisions ?? [])
+    .map(
+      (item) =>
+        `<p>${value(item.summary)} · 推奨対象: ${value(item.suggestedChoice)}</p>`,
+    )
+    .join("");
+  const history = (report.priorSelectedRefs ?? [])
+    .map((ref) => `${ref.artifactId}@${ref.revision}`)
+    .join(" → ");
+  const scriptHash = createHash("sha256")
+    .update(workingPreviewScript)
+    .digest("base64");
+  const canTryRevision =
+    Number.isSafeInteger(report.revisionCount) &&
+    Number.isSafeInteger(report.revisionBudget) &&
+    report.revisionCount < report.revisionBudget;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>作業用プレビュー · ${value(brief.primaryAction)}</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1300px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.notice{border:2px solid #8b4e0b;background:#fff7e7;padding:16px}section,article{background:#fff;border:1px solid #d9e4da;padding:18px;margin:16px 0}a{color:#075c4b}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid currentColor}.matrix-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #cad8cf;text-align:left;vertical-align:top;padding:12px;overflow-wrap:anywhere}thead th{background:#e5eee8}tbody th{width:15%;background:#f0f5f0}td{min-width:210px}dl{margin:0}dt{font-weight:700;margin-top:12px}dd{margin:0}.mobile{display:none}small{color:#4d655a}button{font:inherit;padding:8px;margin:4px;border:1px solid #075c4b;background:#fff;color:#075c4b;cursor:pointer}button:hover{background:#e5eee8}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:700px){.matrix-scroll{display:none}.mobile{display:block}}</style></head><body><main data-working-preview="unapproved"><div class="notice"><strong>作業用・未承認の操作プレビュー</strong><p>人が選んだ ${value(label(selected, candidates.indexOf(selected)))} の構造を、Mimic の保存済み候補から決定論的に描画した試作です。S10 が完成画面を生成したという意味ではありません。最終採用・公開・ブランド適合は未承認または未検証です。下の選択・改訂操作は画面内の試用で、保存しません。</p></div><h1>${value(brief.primaryAction)}</h1><section id="recorded-selection"><h2>Run と現在の選択</h2><p>Run ${value(report.runId)} · 親 Run: ${value(report.previousRunId ?? "初期 Run")} · 現在の作業用ベース: ${value(expectedRef.artifactId)}@${expectedRef.revision} · 最終採用: 未承認</p><p>前の作業用選択: ${value(history || "記録なし")} · 改訂済み回数: ${value(String(report.revisionCount ?? "未確認"))} / ${value(String(report.revisionBudget ?? "未確認"))}</p></section><p><a href="#comparison">候補を比較</a></p><section><h2>固定情報</h2><ul>${fixed}</ul><p>保存・改訂開始と残回数は未検証です。画面内の試用は選択記録を変更しません。</p></section><section id="comparison"><h2>候補の比較</h2><div class="matrix-scroll"><table><thead><tr><th scope="col">共通項目</th>${candidates.map((candidate, index) => `<th scope="col">${value(label(candidate, index))}${sameRef(candidate.ref, expectedRef) ? " · 作業用ベース" : ""}</th>`).join("")}</tr></thead><tbody>${matrix}${detailRow}</tbody></table></div><div class="mobile">${mobile}</div></section><section><h2>AI の推奨提案と保留</h2>${proposed || "<p>推奨提案: 未取得</p>"}<p>AI の提案は人間の選択ではありません。</p></section><section><h2>候補の詳細</h2>${details}</section><section><h2>選択と改訂を試す</h2><p>ここでの操作は画面内だけで、Run や選択記録を変更しません。</p>${trialButtons}<p id="trial-selection-status" role="status">画面内で試した候補: なし（保存なし）</p><button id="trial-revise" type="button"${canTryRevision ? "" : " disabled"}>改訂前の確認を試す</button>${canTryRevision ? "" : '<p id="revision-limit-status">改訂上限に達したため試用できません。人の判断へ戻します。</p>'}<div id="revision-confirmation" hidden><h3>改訂前の確認（試用・保存なし）</h3><p>実際の作業用ベース: ${value(expectedRef.artifactId)}@${expectedRef.revision}</p><ul>${fixed}</ul><p>改訂は開始されません。履歴と残回数の運用は未検証です。</p></div></section><section><h2>未確定事項</h2><ul>${unresolved || "<li>要確認事項なし</li>"}</ul><p>比較のしやすさ、選択の手間、人の満足度: 未測定</p></section><details><summary>出典と検査状態</summary><pre>${value(JSON.stringify({ selectedRef: expectedRef, humanSelectionId: report.humanSelectionId, candidates: candidates.map(({ ref, verification }) => ({ ref, verification })) }, null, 2))}</pre></details><small>画面は保存済み方向案の試作であり、承認済み prototype artifact ではありません。</small></main><script>${workingPreviewScript}</script></body></html>`;
+}
+
+export function workingCaptureConfig(report, previewPath) {
+  const key = choiceKey(report.selectedRef);
+  const trialIndex = report.candidates.findIndex(
+    ({ ref }) => !sameRef(ref, report.selectedRef),
+  );
+  assert(trialIndex >= 0, "Working preview needs another trial candidate");
+  const trialName =
+    report.candidates[trialIndex].summary.match(/^案[A-Z]/u)?.[0] ??
+    `候補${trialIndex + 1}`;
+  const firstName =
+    report.candidates[0].summary.match(/^案[A-Z]/u)?.[0] ?? "候補1";
+  const canTryRevision = report.revisionCount < report.revisionBudget;
+  return {
+    canTryRevision,
+    settings: {
+      runId: report.runId,
+      previewUrls: { [key]: pathToFileURL(previewPath).href },
+      readySelectors: { [key]: '[data-working-preview="unapproved"]' },
+      requiredSelectors: [
+        "#comparison",
+        "#recorded-selection",
+        "#trial-selection-status",
+        ...(canTryRevision ? [] : ["#revision-limit-status"]),
+      ],
+      operations: {
+        [key]: [
+          {
+            selector: '.matrix-scroll [data-open-detail="0"]',
+            resultSelector: "#detail-0 details[open]",
+            expectedText: `${firstName}の詳細を開く`,
+          },
+          {
+            selector: '.mobile [data-open-detail="0"]',
+            resultSelector: "#detail-0 details[open]",
+            expectedText: `${firstName}の詳細を開く`,
+            viewport: { width: 390, height: 844 },
+          },
+          {
+            selector: `[data-try-choice]:nth-of-type(${trialIndex + 1})`,
+            resultSelector: "#trial-selection-status",
+            expectedText: `画面内で試した候補: ${trialName}（未保存`,
+          },
+          ...(canTryRevision
+            ? [
+                {
+                  selector: "#trial-revise",
+                  resultSelector: "#revision-confirmation:not([hidden])",
+                  expectedText: "改訂前の確認",
+                },
+              ]
+            : []),
+        ],
+      },
+    },
+  };
 }
 
 export function compareTrials(left, right) {
@@ -611,8 +801,22 @@ export function compareTrials(left, right) {
 }
 
 /** Browser evidence is optional; no capture means no PASS. Actions use declared selectors. */
-export async function capturePreviews(config, artifacts, workspace) {
+export async function capturePreviews(
+  config,
+  artifacts,
+  workspace,
+  localPreview,
+) {
   const { chromium, expect } = await import("@playwright/test");
+  if (localPreview)
+    assert(
+      exactRef(localPreview.ref) &&
+        path.dirname(localPreview.path) === workspace &&
+        path.basename(localPreview.path) ===
+          `working-preview-${config.runId}.html` &&
+        (await realpath(localPreview.path)) === localPreview.path,
+      "Working capture needs its generated local preview",
+    );
   assert(
     nonempty(process.env.MIMIC_CHROME_EXECUTABLE),
     "Run capture through scripts/with-patched-chrome.mjs",
@@ -627,7 +831,12 @@ export async function capturePreviews(config, artifacts, workspace) {
     )) {
       const key = choiceKey(ref);
       const url = config.previewUrls?.[key];
-      if (!previewUrl(url)) continue;
+      const localUrl = localPreview && pathToFileURL(localPreview.path).href;
+      if (
+        !previewUrl(url) &&
+        !(localPreview && sameRef(ref, localPreview.ref) && url === localUrl)
+      )
+        continue;
       const readySelector = config.readySelectors?.[key];
       assert(
         nonempty(readySelector),
@@ -662,11 +871,14 @@ export async function capturePreviews(config, artifacts, workspace) {
             ? "FAIL"
             : "PASS",
         );
-        const screenshot = `capture-${config.runId}-${ref.artifactId}-${ref.revision}-${ref.lockDigest.slice(7, 19)}.png`;
+        const screenshot = `${localPreview ? "working-capture" : "capture"}-${config.runId}-${ref.artifactId}-${ref.revision}-${ref.lockDigest.slice(7, 19)}.png`;
         const pixels = await page.screenshot({ fullPage: true });
-        await writeFile(path.join(workspace, screenshot), pixels, {
-          mode: 0o600,
-        });
+        if (localPreview)
+          await writeWorkingOutput(path.join(workspace, screenshot), pixels);
+        else
+          await writeFile(path.join(workspace, screenshot), pixels, {
+            mode: 0o600,
+          });
         const primaryOperations = [];
         for (const operation of config.operations?.[key] ?? []) {
           assert(
@@ -676,7 +888,7 @@ export async function capturePreviews(config, artifacts, workspace) {
             "Invalid operation check",
           );
           const operationPage = await browser.newPage({
-            viewport: { width: 1280, height: 800 },
+            viewport: operation.viewport ?? { width: 1280, height: 800 },
           });
           try {
             await operationPage.goto(url, {
@@ -700,12 +912,40 @@ export async function capturePreviews(config, artifacts, workspace) {
               timeout: 3000,
             });
             const after = await result.innerText();
+            const operationOverflow = operation.viewport
+              ? await operationPage.evaluate(() =>
+                  globalThis.document.documentElement.scrollWidth >
+                  globalThis.innerWidth
+                    ? "FAIL"
+                    : "PASS",
+                )
+              : undefined;
+            let operationScreenshot;
+            if (localPreview && operation.viewport) {
+              operationScreenshot = screenshot.replace(
+                /\.png$/u,
+                "-mobile.png",
+              );
+              await writeWorkingOutput(
+                path.join(workspace, operationScreenshot),
+                await operationPage.screenshot({ fullPage: true }),
+              );
+            }
             primaryOperations.push({
               selector: operation.selector,
               resultSelector: operation.resultSelector,
-              state: operationChanged(before, after, operation.expectedText)
-                ? "PASS"
-                : "FAIL",
+              ...(operation.viewport
+                ? {
+                    viewport: operation.viewport,
+                    overflow: operationOverflow,
+                    screenshot: operationScreenshot,
+                  }
+                : {}),
+              state:
+                operationChanged(before, after, operation.expectedText) &&
+                operationOverflow !== "FAIL"
+                  ? "PASS"
+                  : "FAIL",
             });
           } catch {
             primaryOperations.push({
@@ -1027,8 +1267,15 @@ export async function approvedHistory(workspace, manifest) {
 async function main(args) {
   const [command, configPath] = args;
   assert(
-    ["prepare", "capture", "review", "compare"].includes(command) && configPath,
-    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare> <config.json> [other-config.json]",
+    [
+      "prepare",
+      "capture",
+      "review",
+      "compare",
+      "working-preview",
+      "capture-working-preview",
+    ].includes(command) && configPath,
+    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview> <config.json> [other-config.json]",
   );
   const config = JSON.parse(await readFile(configPath, "utf8"));
   if (command === "compare") {
@@ -1184,6 +1431,73 @@ async function main(args) {
     );
     const snapshot = await acceptedRun(workspace, config.runId);
     const history = await approvedHistory(workspace, manifest);
+    if (["working-preview", "capture-working-preview"].includes(command)) {
+      const report = reviewTrial({
+        manifest,
+        ...snapshot,
+        history: history.refs,
+      });
+      const html = renderWorkingMatrixHtml(
+        report,
+        manifest.brief,
+        config.workingPreviewRef,
+      );
+      const previewPath = path.join(
+        workspace,
+        `working-preview-${config.runId}.html`,
+      );
+      await writeWorkingOutput(previewPath, html);
+      if (command === "capture-working-preview") {
+        const key = choiceKey(report.selectedRef);
+        const { settings: captureConfig, canTryRevision } =
+          workingCaptureConfig(report, previewPath);
+        const observations = await capturePreviews(
+          captureConfig,
+          snapshot.artifacts,
+          workspace,
+          { ref: report.selectedRef, path: previewPath },
+        );
+        const observed = observations[key];
+        assert(observed, "Working preview was not captured");
+        const lockedContent = checkLockedContent(
+          manifest.brief,
+          observed.screenText,
+        );
+        const result = {
+          runId: config.runId,
+          selectedRef: report.selectedRef,
+          approval: "unapproved-working-preview",
+          state:
+            lockedContent.state === "PASS" &&
+            observed.requiredElements.every((item) => item.state === "PASS") &&
+            observed.primaryOperations.every((item) => item.state === "PASS") &&
+            observed.overflow === "PASS"
+              ? "PASS"
+              : "FAIL",
+          revisionOperation: canTryRevision ? "TESTED" : "BLOCKED_LIMIT",
+          lockedContent,
+          requiredElements: observed.requiredElements,
+          primaryOperations: observed.primaryOperations,
+          overflow: observed.overflow,
+          screenshot: observed.screenshot,
+          screenshotDigest: observed.screenshotDigest,
+        };
+        await writeWorkingOutput(
+          path.join(workspace, `working-capture-${config.runId}.json`),
+          JSON.stringify(result, null, 2) + "\n",
+        );
+        console.log(JSON.stringify({ previewPath, ...result }));
+        return;
+      }
+      console.log(
+        JSON.stringify({
+          previewPath,
+          selectedRef: report.selectedRef,
+          approval: "unapproved-working-preview",
+        }),
+      );
+      return;
+    }
     if (command === "capture") {
       const observations = await capturePreviews(
         config,
@@ -1261,7 +1575,34 @@ async function main(args) {
       history: history.refs,
     });
     report.captureState = captureState;
-    const html = renderReviewHtml(report, config.previewUrls);
+    let workingPreviewHref;
+    if (
+      exactRef(config.workingPreviewRef) &&
+      exactRef(report.selectedRef) &&
+      sameRef(config.workingPreviewRef, report.selectedRef) &&
+      report.candidates
+        .find(({ ref }) => sameRef(ref, report.selectedRef))
+        ?.mechanisms?.some((item) =>
+          item.includes("候補を列、共通判断項目を行"),
+        )
+    ) {
+      const name = `working-preview-${config.runId}.html`;
+      try {
+        const saved = await readFile(path.join(workspace, name), "utf8");
+        if (
+          saved ===
+          renderWorkingMatrixHtml(report, manifest.brief, report.selectedRef)
+        )
+          workingPreviewHref = name;
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    }
+    const html = renderReviewHtml(
+      report,
+      config.previewUrls,
+      workingPreviewHref,
+    );
     const reviewPath = path.join(workspace, `review-${config.runId}.html`);
     await writeFile(reviewPath, html, { mode: 0o600 });
     console.log(JSON.stringify({ ...report, reviewPath }, null, 2));
