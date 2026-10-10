@@ -440,6 +440,8 @@ export function compareTrials(left, right) {
   const fixed =
     [left.manifest.condition, right.manifest.condition].sort().join(",") ===
       "baseline,guided" &&
+    !left.manifest.previousRunId &&
+    !right.manifest.previousRunId &&
     sameContent(left.manifest.brief, right.manifest.brief) &&
     left.manifest.referenceDigest === right.manifest.referenceDigest &&
     left.manifest.templateDigest === right.manifest.templateDigest &&
@@ -589,15 +591,66 @@ async function acceptedRun(workspace, runId) {
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
   }
+  let sessionPlanDigest;
+  let sessionStore;
   for (const name of sessionNames) {
     if (!/^[A-Za-z][A-Za-z0-9_-]*\.json$/.test(name)) continue;
-    const checkpoint = JSON.parse(
-      await readFile(
-        path.join(workspace, ".mimic/agent-sessions", name),
-        "utf8",
-      ),
-    ).checkpoint;
-    if (checkpoint?.binding?.runId === runId) sessions.push(checkpoint);
+    if (!sessionStore) {
+      const { FileSessionStore } =
+        await import("../apps/cli/dist/agent/session.js");
+      sessionStore = new FileSessionStore(workspace);
+    }
+    const checkpoint = await sessionStore.read(name.slice(0, -5));
+    if (checkpoint?.binding?.runId !== runId) continue;
+    if (!sessionPlanDigest) {
+      const { preflightPlan } = await import("../apps/cli/dist/plan.js");
+      const { canonicalJson } =
+        await import("../packages/core/dist/artifact-canonical.js");
+      const scopeConfig = JSON.parse(
+        await readFile(path.join(workspace, ".mimic/config.json"), "utf8"),
+      );
+      const plan = JSON.parse(
+        await readFile(
+          path.join(workspace, `.mimic/runs/${runId}.json`),
+          "utf8",
+        ),
+      );
+      const normalized = preflightPlan(
+        plan,
+        scopeConfig.scopes,
+        scopeConfig.defaultScope,
+      );
+      const packages = new Map();
+      for (const entry of await readdir(path.join(workspace, "skills"), {
+        withFileTypes: true,
+      })) {
+        if (!entry.isDirectory()) continue;
+        const content = await readFile(
+          path.join(workspace, "skills", entry.name, "manifest.yaml"),
+          "utf8",
+        );
+        const skillId = content.match(/^\s*"skillId":\s*"([^"]+)"/m)?.[1];
+        assert(skillId && !packages.has(skillId), "Invalid Skill mapping");
+        packages.set(skillId, `skills/${entry.name}`);
+      }
+      const bindings = Object.fromEntries(
+        normalized.map((task) => {
+          const location = packages.get(task.skillId);
+          assert(location, "Missing Skill package");
+          return [task.id, location];
+        }),
+      );
+      sessionPlanDigest = createHash("sha256")
+        .update(canonicalJson({ tasks: normalized, packages: bindings }))
+        .digest("hex");
+    }
+    assert(
+      checkpoint.binding.planDigest === sessionPlanDigest &&
+        checkpoint.binding.settings?.provider === "codex" &&
+        checkpoint.binding.settings?.billingMode === "subscription-only",
+      "Session checkpoint does not bind to the authorized Run plan",
+    );
+    sessions.push(checkpoint);
   }
   assert(
     before === (await readFile(file, "utf8")),

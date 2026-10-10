@@ -9,7 +9,7 @@
 3. `node scripts/9ui197-harness.mjs prepare <workspace>/trial-config.json` で既存 S04–S11 plan template から不変の plan と manifest を書く。`mimic run --id <runId> --tasks tasks-<runId>.json` と公式サブスクリプションの認可済み session dispatcher で実行する。出力の手修正や保存 marker の編集は行わない。S07 は既存の `PROPOSE_ONLY` 経路を使う。
 4. 受理済み候補を得たら `node scripts/9ui197-harness.mjs review <config>` で exact artifact、停止、未確定事項を確認する。`review-<runId>.html` は比較・推奨と保留を先に見せ、詳細を折りたたむ。`previewUrls` がある場合だけ候補の操作画面へリンクする。画面検査は `capture <config>` を別途実行するまで `UNVERIFIED` である。
 5. 選択は人が既存の `mimic decide` に正規の確認を渡して行う。人が確定した decision の `chosenAlternative` に候補の `artifactId@revision#lockDigest` がない場合、レポートは `selection-needs-exact-ref` とし、選択済みとはみなさない。改訂は同じ workspace の新しい Run で行い、設定に `previousRunId`、人が選んだ `baseRef`、`revisionRequest` を入れる。`prepare` は前 Run の提案と人間の確定記録、候補の exact ref を再照合し、選ばれた内容だけを新しい S10/S11 brief に渡す。連続する前 Run を数え、初期予算 2 回を超える改訂を拒否する。途中案は保存される。生成結果が意図どおりの改善かどうかは人が判断し、ハーネスは自動採用しない。保存済み plan は書き換えない。
-6. 両条件の manifest がそろったら `compare <baseline-config> <guided-config>` で宣言した課題・事実・出典・モデル・予算の一致を確認する。実行 checkpoint のモデル一致は各 review の `usage.model` を見る。実 budget、参照/批評コスト、選択・修正の手間、人間の回答時間と満足度は実測しない限り `UNVERIFIED` または `UNMEASURED` のままにする。
+6. 両条件の初期 Run の manifest がそろったら `compare <baseline-config> <guided-config>` で宣言した課題・事実・出典・モデル・予算の一致を確認する。改訂 Run は選択済み案と修正依頼が追加入力になるので、この初期条件比較には含めない。実行 checkpoint は既存の保存検証と plan binding を通ったものだけ使用し、モデル一致は各 review の `usage.model` を見る。実 budget、参照/批評コスト、選択・修正の手間、人間の回答時間と満足度は実測しない限り `UNVERIFIED` または `UNMEASURED` のままにする。
 
 設定例（`workspace` と出典ファイルは実環境に合わせて置く）:
 

@@ -558,6 +558,15 @@ test("a revision verifies the prior Run's committed human choice and exact base"
       approvedHistory(workspace, { ...child, revisionBudget: 0 }),
       /Revision budget exhausted/,
     );
+    await mkdir(path.join(workspace, ".mimic/agent-sessions"));
+    await writeFile(
+      path.join(workspace, ".mimic/agent-sessions/Session_1.json"),
+      JSON.stringify({ digest: "invalid", checkpoint: { version: 1 } }),
+    );
+    await assert.rejects(
+      approvedHistory(workspace, child),
+      /Invalid checkpoint/,
+    );
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
@@ -697,5 +706,18 @@ test("comparison requires identical declared task, sources, model and budget", (
     compareTrials({ manifest: left }, { manifest: right })
       .matchedDeclaredInputs,
     true,
+  );
+  assert.equal(
+    compareTrials(
+      { manifest: left },
+      {
+        manifest: {
+          ...right,
+          previousRunId: "run_prior",
+          revisionRequest: "Improve the selected action",
+        },
+      },
+    ).observedOutcome,
+    "NOT_COMPARABLE",
   );
 });
