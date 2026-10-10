@@ -130,6 +130,15 @@ export function makePlan(template, config) {
     "Invalid Run ID",
   );
   assert(
+    config.previousRunId
+      ? /^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(config.previousRunId) &&
+          config.previousRunId !== config.runId &&
+          exactRef(config.baseRef) &&
+          nonempty(config.revisionRequest)
+      : config.baseRef === undefined && config.revisionRequest === undefined,
+    "Revision needs a prior Run, exact chosen base and human revision request",
+  );
+  assert(
     nonempty(config.model) &&
       config.budget &&
       Number.isSafeInteger(config.budget.maxGenerations) &&
@@ -137,6 +146,13 @@ export function makePlan(template, config) {
       Number.isSafeInteger(config.budget.timeoutMs) &&
       config.budget.timeoutMs > 0,
     "Missing model or generation budget",
+  );
+  assert(
+    config.revisionBudget === undefined ||
+      (Number.isSafeInteger(config.revisionBudget) &&
+        config.revisionBudget >= 0 &&
+        config.revisionBudget <= 2),
+    "Invalid revision budget",
   );
   validateBrief(config.brief);
   assert(
@@ -168,6 +184,8 @@ export function makePlan(template, config) {
       config.condition === "guided",
       task.id,
     );
+    if (config.previousRunId && ["s10", "s11"].includes(task.id))
+      task.humanBrief += `\nHuman-selected prior direction: ${choiceKey(config.baseRef)} from Run ${config.previousRunId}. Its accepted content is ${JSON.stringify(config.selectedBase ?? "UNVERIFIED")}. Address only this requested issue: ${config.revisionRequest}. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`;
     if (task.id === "s09") task.evidenceFiles = [config.referenceFile];
     else if (config.evidenceFiles[task.id])
       task.evidenceFiles = config.evidenceFiles[task.id];
@@ -202,6 +220,7 @@ export function reviewTrial({
   decisions,
   sessions = [],
   captures = {},
+  history = [],
 }) {
   const candidates = artifacts.filter(
     ({ artifact }) =>
@@ -231,6 +250,10 @@ export function reviewTrial({
   const recordedDecision = approved.length === 1 ? approved[0] : undefined;
   const choice = recordedDecision?.output?.artifact?.content?.chosenAlternative;
   const selected = candidates.find(({ ref }) => choiceKey(ref) === choice);
+  assert(
+    Array.isArray(history) && history.every(exactRef),
+    "Invalid approved revision history",
+  );
   const revisions = candidates.filter(
     ({ artifact }) =>
       artifact.meta.id === selected?.ref.artifactId &&
@@ -241,6 +264,9 @@ export function reviewTrial({
       artifact.meta.supersedesRevision !== undefined &&
       artifact.meta.id !== selected?.ref.artifactId,
   );
+  // A new Run may publish the selected artifact's next revision; count that
+  // attempt once, whether represented in history or in local artifact metadata.
+  const revisionCount = Math.max(history.length, revisions.length);
   const limit = manifest.revisionBudget ?? 2;
   assert(
     Number.isSafeInteger(limit) && limit >= 0 && limit <= 2,
@@ -269,8 +295,9 @@ export function reviewTrial({
         screenshot: capture?.screenshot ?? null,
       },
       evaluation:
-        evaluations.find(({ artifact: item }) =>
-          item.content.target.includes(ref.artifactId),
+        evaluations.find(
+          ({ artifact: item }) =>
+            item.content.target === `${ref.artifactId}@${ref.revision}`,
         )?.artifact.content.findings ?? "UNVERIFIED",
     };
   });
@@ -301,7 +328,7 @@ export function reviewTrial({
                   ? "awaiting-human-selection"
                   : !selected
                     ? "selection-needs-exact-ref"
-                    : revisions.length >= limit
+                    : revisionCount >= limit
                       ? "revision-limit"
                       : "selected",
     candidates: byCandidate,
@@ -313,8 +340,9 @@ export function reviewTrial({
     selectedRef: selected?.ref ?? null,
     humanDecisionId: recordedDecision?.id ?? null,
     unrelatedRevisionRefs: unrelatedRevisions.map(({ ref }) => ref),
-    revisionCount: revisions.length,
+    revisionCount,
     revisionBudget: limit,
+    priorSelectedRefs: history,
     stops,
     unresolved: manifest.brief.content
       .filter((item) => item.policy === "confirm")
@@ -368,7 +396,7 @@ export function renderReviewHtml(report, previewUrls = {}) {
           `<p>${htmlEscape(item.summary)} — 提案: ${htmlEscape(item.suggestedChoice ?? "未特定")}</p>`,
       )
       .join("") || "<p>推奨提案: 未取得</p>";
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p><section><h2>提案と未確定事項</h2>${recommendation}<p>人間の選択: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p><section><h2>提案と未確定事項</h2>${recommendation}<p>人間の選択: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
 }
 
 export function compareTrials(left, right) {
@@ -382,7 +410,9 @@ export function compareTrials(left, right) {
     left.manifest.templateDigest === right.manifest.templateDigest &&
     same(left.manifest.evidenceDigests, right.manifest.evidenceDigests) &&
     same(left.manifest.model, right.manifest.model) &&
-    same(left.manifest.budget, right.manifest.budget);
+    same(left.manifest.budget, right.manifest.budget) &&
+    (left.manifest.revisionBudget ?? 2) ===
+      (right.manifest.revisionBudget ?? 2);
   return {
     matchedDeclaredInputs: fixed,
     observedOutcome: fixed
@@ -415,9 +445,14 @@ async function capturePreviews(config, artifacts, workspace) {
         const requiredElements = [];
         for (const selector of config.requiredSelectors ?? []) {
           assert(nonempty(selector), "Invalid required selector");
+          const matches = await page.locator(selector).all();
           requiredElements.push({
             selector,
-            state: (await page.locator(selector).count()) ? "PASS" : "FAIL",
+            state: (
+              await Promise.all(matches.map((item) => item.isVisible()))
+            ).some(Boolean)
+              ? "PASS"
+              : "FAIL",
           });
         }
         const overflow = await page.evaluate(() =>
@@ -533,6 +568,74 @@ async function acceptedRun(workspace, runId) {
   return { run, artifacts, decisions, sessions };
 }
 
+/** Re-read each prior Run's actual human decision; a config ref alone is never proof. */
+export async function approvedHistory(workspace, manifest) {
+  const history = [];
+  const seen = new Set([manifest.runId]);
+  let child = manifest;
+  let baseContent;
+  while (child.previousRunId) {
+    assert(!seen.has(child.previousRunId), "Revision Run cycle");
+    seen.add(child.previousRunId);
+    assert(
+      history.length < (manifest.revisionBudget ?? 2),
+      "Revision budget exhausted",
+    );
+    const prior = JSON.parse(
+      await readFile(
+        path.join(workspace, `trial-${child.previousRunId}.json`),
+        "utf8",
+      ),
+    );
+    assert(
+      prior.runId === child.previousRunId &&
+        prior.condition === manifest.condition &&
+        JSON.stringify(prior.brief) === JSON.stringify(manifest.brief) &&
+        prior.model === manifest.model &&
+        JSON.stringify(prior.budget) === JSON.stringify(manifest.budget) &&
+        (prior.revisionBudget ?? 2) === (manifest.revisionBudget ?? 2) &&
+        prior.referenceDigest === manifest.referenceDigest &&
+        JSON.stringify(prior.evidenceDigests) ===
+          JSON.stringify(manifest.evidenceDigests) &&
+        prior.templateDigest === manifest.templateDigest,
+      "Revision changes frozen trial inputs",
+    );
+    const priorPlan = await readFile(
+      path.join(workspace, `tasks-${prior.runId}.json`),
+      "utf8",
+    );
+    assert(digest(priorPlan) === prior.planDigest, "Prior plan changed");
+    const priorRunPlan = JSON.parse(
+      await readFile(
+        path.join(workspace, `.mimic/runs/${prior.runId}.json`),
+        "utf8",
+      ),
+    );
+    assert(
+      JSON.stringify(JSON.parse(priorPlan)) === JSON.stringify(priorRunPlan),
+      "Prior Run did not use prepared plan",
+    );
+    const snapshot = await acceptedRun(workspace, prior.runId);
+    const report = reviewTrial({ manifest: prior, ...snapshot });
+    assert(
+      report.humanDecisionId && sameRef(child.baseRef, report.selectedRef),
+      "Revision base lacks matching human-approved exact choice",
+    );
+    if (baseContent === undefined) {
+      baseContent = snapshot.artifacts.find(({ ref }) =>
+        sameRef(ref, report.selectedRef),
+      )?.artifact.content;
+      assert(
+        baseContent && JSON.stringify(baseContent).length <= 30000,
+        "Selected base content unavailable or too long",
+      );
+    }
+    history.unshift(report.selectedRef);
+    child = prior;
+  }
+  return { refs: history, baseContent };
+}
+
 async function main(args) {
   const [command, configPath] = args;
   assert(
@@ -573,7 +676,7 @@ async function main(args) {
   );
   if (command === "prepare") {
     const template = JSON.parse(await readFile(templateFile, "utf8"));
-    const plan = makePlan(template, config);
+    let plan = makePlan(template, config);
     await readFile(path.join(workspace, ".mimic/config.json"), "utf8");
     let current = { registry: { runs: {} } };
     try {
@@ -584,8 +687,11 @@ async function main(args) {
       if (error.code !== "ENOENT") throw error;
     }
     assert(
-      !Object.keys(current.registry?.runs ?? {}).length,
-      "Trial needs a fresh Mimic workspace",
+      config.previousRunId
+        ? current.registry?.runs?.[config.previousRunId] &&
+            !current.registry?.runs?.[config.runId]
+        : !Object.keys(current.registry?.runs ?? {}).length,
+      "Initial trial needs a fresh workspace; revision needs its prior Run",
     );
     const reference = path.resolve(workspace, config.referenceFile);
     assert(
@@ -611,6 +717,12 @@ async function main(args) {
       templateDigest: digest(await readFile(templateFile)),
       revisionBudget: config.revisionBudget ?? 2,
     };
+    const history = await approvedHistory(workspace, manifest);
+    if (config.previousRunId)
+      plan = makePlan(template, {
+        ...config,
+        selectedBase: history.baseContent,
+      });
     const planText = JSON.stringify(plan, null, 2) + "\n";
     await writeFile(
       path.join(workspace, `tasks-${config.runId}.json`),
@@ -672,6 +784,7 @@ async function main(args) {
         "Evidence changed",
       );
     const snapshot = await acceptedRun(workspace, config.runId);
+    const history = await approvedHistory(workspace, manifest);
     if (command === "capture") {
       const observations = await capturePreviews(
         config,
@@ -734,7 +847,12 @@ async function main(args) {
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
-    const report = reviewTrial({ manifest, ...snapshot, captures });
+    const report = reviewTrial({
+      manifest,
+      ...snapshot,
+      captures,
+      history: history.refs,
+    });
     const html = renderReviewHtml(report, config.previewUrls);
     const reviewPath = path.join(workspace, `review-${config.runId}.html`);
     await writeFile(reviewPath, html, { mode: 0o600 });

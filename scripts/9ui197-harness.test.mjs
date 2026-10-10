@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
+  approvedHistory,
   briefForTask,
   checkLockedContent,
   compareTrials,
@@ -313,6 +317,217 @@ test("a capture belongs to one exact revision", () => {
   assert.equal(report.candidates[1].verification.state, "PASS");
 });
 
+test("evaluation findings belong to the exact candidate revision", () => {
+  const report = reviewTrial(
+    base({
+      artifacts: [
+        candidate("art_one"),
+        candidate("art_one", 2),
+        {
+          ref: ref("art_eval"),
+          artifact: {
+            meta: { type: "evaluation" },
+            content: {
+              target: "art_one@1",
+              findings: ["Only the first revision was evaluated"],
+            },
+          },
+        },
+      ],
+    }),
+  );
+  assert.deepEqual(report.candidates[0].evaluation, [
+    "Only the first revision was evaluated",
+  ]);
+  assert.equal(report.candidates[1].evaluation, "UNVERIFIED");
+});
+
+test("approved prior Run selections consume the revision budget", () => {
+  const proposal = {
+    id: "proposal_1",
+    packetId: "packet_1",
+    ref: proposedDecision.ref,
+  };
+  const report = reviewTrial(
+    base({
+      artifacts: [candidate("art_new"), proposedDecision],
+      run: { proposals: { [proposal.id]: proposal } },
+      decisions: [
+        {
+          id: "human_decision",
+          actor: { kind: "human" },
+          outcome: "approved",
+          proposalId: proposal.id,
+          packetId: proposal.packetId,
+          output: {
+            artifact: {
+              content: { chosenAlternative: exactChoice("art_new") },
+            },
+          },
+        },
+      ],
+      history: [ref("art_initial"), ref("art_revision_one")],
+    }),
+  );
+  assert.equal(report.status, "revision-limit");
+  assert.equal(report.revisionCount, 2);
+  assert.deepEqual(report.priorSelectedRefs, [
+    ref("art_initial"),
+    ref("art_revision_one"),
+  ]);
+});
+
+test("one revised Run is counted once when it publishes revision metadata", () => {
+  const proposal = {
+    id: "proposal_1",
+    packetId: "packet_1",
+    ref: proposedDecision.ref,
+  };
+  const report = reviewTrial(
+    base({
+      artifacts: [candidate("art_one", 2), proposedDecision],
+      run: { proposals: { [proposal.id]: proposal } },
+      decisions: [
+        {
+          id: "human_decision",
+          actor: { kind: "human" },
+          outcome: "approved",
+          proposalId: proposal.id,
+          packetId: proposal.packetId,
+          output: {
+            artifact: {
+              content: { chosenAlternative: exactChoice("art_one", 2) },
+            },
+          },
+        },
+      ],
+      history: [ref("art_one")],
+    }),
+  );
+  assert.equal(report.revisionCount, 1);
+  assert.equal(report.status, "selected");
+});
+
+test("a revision verifies the prior Run's committed human choice and exact base", async () => {
+  const accepted = JSON.parse(
+    await readFile(
+      new URL(
+        "../docs/dogfood/9ui178/accepted-design-artifacts.json",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const chosen = accepted.artifacts.find(
+    ({ artifact }) => artifact.meta.type === "design-direction",
+  );
+  const proposalArtifact = accepted.artifacts.find(
+    ({ artifact }) =>
+      artifact.meta.type === "decision" &&
+      artifact.origin?.actorId === "mimic.s11.direction-evaluator",
+  );
+  assert(chosen && proposalArtifact);
+  const workspace = await mkdtemp(path.join(tmpdir(), "mimic-9ui197-history-"));
+  try {
+    await mkdir(path.join(workspace, ".mimic/runs"), { recursive: true });
+    const priorRunId = accepted.runId;
+    const plan = "[]";
+    const planDigest = `sha256:${createHash("sha256").update(plan).digest("hex")}`;
+    const prior = {
+      runId: priorRunId,
+      condition: "guided",
+      brief,
+      model: "model-1",
+      budget: { maxGenerations: 2, timeoutMs: 120000 },
+      revisionBudget: 2,
+      referenceDigest: "sha256:reference",
+      evidenceDigests: { "inputs/task.md": "sha256:task" },
+      templateDigest: "sha256:template",
+      planDigest,
+    };
+    const proposal = {
+      id: "proposal_s11",
+      packetId: "packet_s11",
+      ref: proposalArtifact.ref,
+    };
+    const saved = {
+      registry: {
+        runs: {
+          [priorRunId]: {
+            artifacts: accepted.artifacts.map(({ ref }) => ref),
+            proposals: { [proposal.id]: proposal },
+          },
+        },
+        packets: { [proposal.packetId]: { runId: priorRunId } },
+        decisions: {
+          decision_1: {
+            id: "decision_1",
+            actor: { kind: "human" },
+            outcome: "approved",
+            proposalId: proposal.id,
+            packetId: proposal.packetId,
+            output: {
+              artifact: {
+                content: {
+                  chosenAlternative: `${chosen.ref.artifactId}@${chosen.ref.revision}#${chosen.ref.lockDigest}`,
+                },
+              },
+            },
+          },
+        },
+      },
+      snapshots: Object.fromEntries(
+        accepted.artifacts.map(({ ref, artifact }) => [
+          `${ref.artifactId}@${ref.revision}`,
+          JSON.stringify({ artifact }),
+        ]),
+      ),
+    };
+    await writeFile(
+      path.join(workspace, `trial-${priorRunId}.json`),
+      JSON.stringify(prior),
+    );
+    await writeFile(path.join(workspace, `tasks-${priorRunId}.json`), plan);
+    await writeFile(
+      path.join(workspace, `.mimic/runs/${priorRunId}.json`),
+      plan,
+    );
+    await writeFile(
+      path.join(workspace, ".mimic/workspace.json"),
+      JSON.stringify(saved),
+    );
+    const child = {
+      ...prior,
+      runId: "run_revision_one",
+      previousRunId: priorRunId,
+      baseRef: chosen.ref,
+      revisionRequest: "Improve the selected action",
+    };
+    const history = await approvedHistory(workspace, child);
+    assert.deepEqual(history.refs, [chosen.ref]);
+    assert.deepEqual(history.baseContent, chosen.artifact.content);
+    const other = accepted.artifacts.find(
+      ({ artifact, ref }) =>
+        artifact.meta.type === "design-direction" &&
+        ref.artifactId !== chosen.ref.artifactId,
+    );
+    assert(other);
+    await assert.rejects(
+      approvedHistory(workspace, {
+        ...child,
+        baseRef: other.ref,
+      }),
+      /matching human-approved exact choice/,
+    );
+    await assert.rejects(
+      approvedHistory(workspace, { ...child, revisionBudget: 0 }),
+      /Revision budget exhausted/,
+    );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
 test("an S07 human decision does not hide the later S11 selection", () => {
   const s07Ref = ref("art_s07_decision");
   const s11Proposal = {
@@ -407,6 +622,13 @@ test("comparison requires identical declared task, sources, model and budget", (
     compareTrials(
       { manifest },
       { manifest: { ...manifest, condition: "guided", model: "model-2" } },
+    ).observedOutcome,
+    "NOT_COMPARABLE",
+  );
+  assert.equal(
+    compareTrials(
+      { manifest: { ...manifest, revisionBudget: 1 } },
+      { manifest: { ...manifest, condition: "guided", revisionBudget: 2 } },
     ).observedOutcome,
     "NOT_COMPARABLE",
   );

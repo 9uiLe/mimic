@@ -8,7 +8,7 @@
 2. 各 workspace に `trial-config.json` を保存する。二つの設定では `condition` と `runId`、`workspace` 以外の課題・事実・モデル・予算・証拠ファイルの内容を同じにする。guided 条件だけが brief の適用理由、構造案、批評指示を受ける。追加参照の処理と批評の費用は後で分けて測る。
 3. `node scripts/9ui197-harness.mjs prepare <workspace>/trial-config.json` で既存 S04–S11 plan template から不変の plan と manifest を書く。`mimic run --id <runId> --tasks tasks-<runId>.json` と公式サブスクリプションの認可済み session dispatcher で実行する。出力の手修正や保存 marker の編集は行わない。S07 は既存の `PROPOSE_ONLY` 経路を使う。
 4. 受理済み候補を得たら `node scripts/9ui197-harness.mjs review <config>` で exact artifact、停止、未確定事項を確認する。`review-<runId>.html` は比較・推奨と保留を先に見せ、詳細を折りたたむ。`previewUrls` がある場合だけ候補の操作画面へリンクする。画面検査は `capture <config>` を別途実行するまで `UNVERIFIED` である。
-5. 選択は人が既存の `mimic decide` に正規の確認を渡して行う。人が確定した decision の `chosenAlternative` に候補の `artifactId@revision#lockDigest` がない場合、レポートは `selection-needs-exact-ref` とし、選択済みとはみなさない。改訂は選ばれた候補だけを対象にし、初期予算は最大 2 回。上限後は途中案を含め人へ返す。Mimic の Run plan は固定なので、改訂には正規の新しい Run と承認済み exact base が必要で、保存済み plan を書き換えない。
+5. 選択は人が既存の `mimic decide` に正規の確認を渡して行う。人が確定した decision の `chosenAlternative` に候補の `artifactId@revision#lockDigest` がない場合、レポートは `selection-needs-exact-ref` とし、選択済みとはみなさない。改訂は同じ workspace の新しい Run で行い、設定に `previousRunId`、人が選んだ `baseRef`、`revisionRequest` を入れる。`prepare` は前 Run の提案と人間の確定記録、候補の exact ref を再照合し、選ばれた内容だけを新しい S10/S11 brief に渡す。連続する前 Run を数え、初期予算 2 回を超える改訂を拒否する。途中案は保存される。生成結果が意図どおりの改善かどうかは人が判断し、ハーネスは自動採用しない。保存済み plan は書き換えない。
 6. 両条件の manifest がそろったら `compare <baseline-config> <guided-config>` で宣言した課題・事実・出典・モデル・予算の一致を確認する。実行 checkpoint のモデル一致は各 review の `usage.model` を見る。実 budget、参照/批評コスト、選択・修正の手間、人間の回答時間と満足度は実測しない限り `UNVERIFIED` または `UNMEASURED` のままにする。
 
 設定例（`workspace` と出典ファイルは実環境に合わせて置く）:
@@ -50,6 +50,20 @@
 ```
 
 `content` は画面で守る必要がある数値・実績・文言を `fixed-fact` / `fixed-copy`、編集可能な表現を `editable-copy`、所有者への質問を `confirm` に分ける。画面に出さない内部情報を fixed content に混ぜない。`capture` は宣言した `previewUrls` の実画面本文を Chrome で読み、固定文言の欠落、指定した要素・操作、横はみ出しを記録する。`previewUrls` と `operations` は候補の `artifactId@revision#lockDigest` をキーにする。操作チェックは `{ "selector": "button", "resultSelector": "#result", "expectedText": "Done" }` と記し、クリック前後でその結果領域が変わった場合だけ PASS にする。指定がない項目は PASS にしない。画面はこの Run の成果物と別に作られた場合、その関係を証拠として明示する。
+
+改訂設定では初期設定と同じ `workspace`、`condition`、`model`、`budget`、`revisionBudget`、`brief`、出典ファイルを使い、次の項目を足す。`baseRef` は直前 Run のレビューが表示した exact ref をそのまま使う。例の digest はダミー値である。
+
+```json
+{
+  "previousRunId": "run_design_guided_001",
+  "baseRef": {
+    "artifactId": "art_selected_direction",
+    "revision": 1,
+    "lockDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "revisionRequest": "比較時に必須の状態が見えないので、選択した案の状態表示を改善する"
+}
+```
 
 ## 境界
 
