@@ -35,6 +35,8 @@ export interface CodexOptions {
 }
 /** Generation only; metadata probes keep their separate ten-second bound. */
 export const MAX_CODEX_GENERATION_TIMEOUT_MS = 600_000;
+/** Bounded frozen Skill context, including exact upstream artifacts and sources. */
+export const MAX_CODEX_PROMPT_BYTES = 96 * 1024;
 export interface CodexInspection {
   runtimeVersion: string;
   authentication: "chatgpt" | "api-key" | "missing" | "unknown";
@@ -159,7 +161,7 @@ async function creditRiskScope(
     !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(settings.model) ||
     !request.requestId.trim() ||
     !request.prompt ||
-    Buffer.byteLength(request.prompt) > 64 * 1024 ||
+    Buffer.byteLength(request.prompt) > MAX_CODEX_PROMPT_BYTES ||
     !path.isAbsolute(request.workspace)
   )
     throw new ExecutorFailure("unsupported");
@@ -946,7 +948,7 @@ export async function createCodexGenerationProfile(
     !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(settings.model) ||
     !request.requestId.trim() ||
     !request.prompt ||
-    Buffer.byteLength(request.prompt) > 64 * 1024 ||
+    Buffer.byteLength(request.prompt) > MAX_CODEX_PROMPT_BYTES ||
     !path.isAbsolute(options.executable) ||
     options.executable.includes("\0") ||
     !path.isAbsolute(request.workspace) ||
