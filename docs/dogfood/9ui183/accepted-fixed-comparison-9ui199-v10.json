@@ -1,0 +1,369 @@
+{
+  "cohort": "9ui199_minimal_20261010_v10",
+  "runId": "run_9ui199_minimal_20261010_v10",
+  "repositoryCommit": "364b3f20985e4e961fcb839b9df9651a444dfd2a",
+  "repositoryInputs": {
+    "commitMatches": true,
+    "templateMatches": true,
+    "implementationMatches": true,
+    "corpusMatches": {
+      "knowledge/seed/graph.json": true,
+      "knowledge/seed/spaces.json": true,
+      "knowledge/seed/sources.json": true,
+      "knowledge/seed/product-ui-playbook.md": true,
+      "knowledge/seed/purpose-information-playbook.md": true
+    }
+  },
+  "schemaVerification": "verified",
+  "compiledVerification": "verified",
+  "runState": "review-ready",
+  "binding": {
+    "planDigest": "fa6d638ff5102149f78a7c6aa8da4e06d02c3453d05eae8f36b71ae2942b2498",
+    "model": "gpt-6.1-sol",
+    "reasoningEffort": "medium",
+    "verifiedSessionCount": 15,
+    "reasoningEffortLogCount": 15,
+    "reasoningEffortVerified": true,
+    "dispatchSettingsVerified": true
+  },
+  "commonAcceptedRefs": [
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s04_run_browser",
+      "lockDigest": "sha256:da908e76dee330e1c08941507c13c08b329d5260b259ab6c52b8d0f6d2bcbe72",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s04_state_refresh",
+      "lockDigest": "sha256:c61d8264af1cfc9c3615e952495dea6aabbbefedac5655be3673ccb6740a0129",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s04_preview_navigation",
+      "lockDigest": "sha256:de97f8648dfc0a58487e1d035b71e1713e1d78f59438bae1088d752c7c7ab200",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s01_product_definition",
+      "lockDigest": "sha256:af3fb6d97ecab409c4463c2be2a015431b7b3d631f66aa642f968badb98a8a65",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s02_user_task_model",
+      "lockDigest": "sha256:aa6954299ec5875404794d3a7405b855b3b07b630451d8fa5badd06dcd23e53d",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s05_ui_contract",
+      "lockDigest": "sha256:e6c5461d6dac986c5106aa9ad638243075df6aa82fca67933f1888bab9186f22",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s07_comparison_domain",
+      "lockDigest": "sha256:b31b09ee2173a8bca59b32916c0cb676f5d75b8b95afce51f85d373a5c4b7c9c",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s07_inspection_domain",
+      "lockDigest": "sha256:15ce2c738e68e4d81056ec0dea48e3d9ad43b07e25308a1cef5a58ae28635e2c",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s07_preview_domain",
+      "lockDigest": "sha256:b8c6a43d84ba9487849bbe4a1a942b9a51db97241bee67a05486a80bee6d4d1d",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s07_review_journey",
+      "lockDigest": "sha256:c1e496c86e9f09d3e0ed5332dcf805eae8a78fba54bfce5309ef903dc5b9671f",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s07_boundary_decision",
+      "lockDigest": "sha256:4b3078a99728028c2460b50f2f93dc5954aabc3fcce7b5e41b17f78564d01e90",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s08_comparison_profile",
+      "lockDigest": "sha256:ca71117ec13814e30a9a434fcaf041fbefa3d926ef240b4503f5199049b44e34",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s08_inspection_profile",
+      "lockDigest": "sha256:ba43356a83a2d0b82c4c8a862211032d021813020559c2e2ffc0628c7df38a43",
+      "revision": 1
+    },
+    {
+      "artifactId": "art_run_9ui199_minimal_20261010_v10_s08_preview_profile",
+      "lockDigest": "sha256:8b997cf374f848281f2fbbcf946ed9e48dea1c7fe73f478ac1c8bb8143d77ee3",
+      "revision": 1
+    }
+  ],
+  "commonAttemptCount": 6,
+  "outcomes": {
+    "B0": {
+      "taskIds": ["s09_b0", "s10_b0", "s11_b0"],
+      "acceptedRefs": [
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s09_b0_reference_selection",
+          "lockDigest": "sha256:9cee3d58969f3de11b1ce6cb5e72dc1598afafe37f7c4a75d1c288b36ab6b8fe",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_b0_matrix",
+          "lockDigest": "sha256:7e049366b0f3da00b95a7104ffdf80beaa9a1e3325e3fcb3bec106cea17cf207",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_b0_question_route",
+          "lockDigest": "sha256:a6c4082cb805f451056fc39e531032f4bbe6511b048b9e9c04c5d29636a667e0",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_b0_evidence_index",
+          "lockDigest": "sha256:0e25fcdabd0230d0e8fe00486577fa5cf31eeb1a9b297007e40a936962cbc72d",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_b0_evaluation_matrix",
+          "lockDigest": "sha256:09fc6bba54fe8c3dc25c27dcfd4b6d93a93632f327d46b4b51ecc3a3a6f50332",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_b0_evaluation_question_route",
+          "lockDigest": "sha256:be6ec9ddcdcdb9a0dc05a43826fd282db7634fe136eaeb27d8e7f9b1b72c1199",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_b0_evaluation_evidence_index",
+          "lockDigest": "sha256:43b5005f14873f246c5f18e4f6a8202fd2caba65070392b0cf2f2b211bf80ab0",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_b0_direction_decision",
+          "lockDigest": "sha256:4b7a5194930ecf2426878754c55bfee0dbf7e48601fc0b31252a1db2f4d3596d",
+          "revision": 1
+        }
+      ],
+      "lastAcceptedEvent": "2026-10-10T05:50:06.014Z",
+      "firstReviewableAt": "2026-10-10T05:50:06.014Z",
+      "attemptCount": 3,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": true,
+      "dispatchSettingsVerified": true,
+      "generationCount": 3,
+      "elapsedGenerationMs": 403429,
+      "stops": [
+        {
+          "sessionId": "session_9ui199_v10_s09_b0_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s09_b0",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui199_v10_s10_b0_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s10_b0",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui199_v10_s11_b0_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s11_b0",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        }
+      ]
+    },
+    "C1": {
+      "taskIds": ["s09_c1", "s10_c1", "s11_c1"],
+      "acceptedRefs": [
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s09_c1_reference_selection",
+          "lockDigest": "sha256:2dec351a0c20762d2aebb257cb62b54669e25ed0d7e4edadf76e5f06bccd7d12",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_c1_matrix",
+          "lockDigest": "sha256:64e436c175959214bf9706276840bfb503597ee7e16cc9b8b85b5dabad2b9231",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_c1_guided",
+          "lockDigest": "sha256:c227e8b09f832d2bbb73bd1b91f3bfbcaa09cb5625d1068dbcc08ef46a40df90",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_c1_dossier",
+          "lockDigest": "sha256:08bc4766873734963a2d16ffe0a36cbdcac122d8907a3f4e2bd58676cbdba1a5",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c1_matrix_evaluation",
+          "lockDigest": "sha256:2511083f952335f9e28681079b080ed367393c4c95d6a315cedf070b799a19fd",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c1_guided_evaluation",
+          "lockDigest": "sha256:68a2ed7272dab15ac1e104f5bf340e607c7f529b3745eb80fea567a3fb74f660",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c1_dossier_evaluation",
+          "lockDigest": "sha256:48a458df08e3230c344acee4426b65fb3927c2d2058becec976a92aa94892d6b",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c1_direction_decision",
+          "lockDigest": "sha256:af63b73a44496de8db0c0c70874698fa79197ed3ca046864df7242cdf7a4d2fe",
+          "revision": 1
+        }
+      ],
+      "lastAcceptedEvent": "2026-10-10T05:56:59.802Z",
+      "firstReviewableAt": "2026-10-10T05:56:59.802Z",
+      "attemptCount": 3,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": true,
+      "dispatchSettingsVerified": true,
+      "generationCount": 3,
+      "elapsedGenerationMs": 377605,
+      "stops": [
+        {
+          "sessionId": "session_9ui199_v10_s09_c1_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s09_c1",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui199_v10_s10_c1_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s10_c1",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui199_v10_s11_c1_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s11_c1",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        }
+      ]
+    },
+    "C2": {
+      "taskIds": ["s09_c2", "s10_c2", "s11_c2"],
+      "acceptedRefs": [
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s09_c2_reference_selection",
+          "lockDigest": "sha256:3f0f1db66bf0d1aae481e9c8be66c581cfdf0123482933b79ae5bae7a9834015",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_c2_option_workspace",
+          "lockDigest": "sha256:658c7c0fde15439209582db5f47fbc7d5c2a8d0052707ec92a96e721c18d8bdd",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_c2_criterion_matrix",
+          "lockDigest": "sha256:6cbc1abe05597f045cce967a6fabb15be4f7e2aa80a02541009c27713a2ec53d",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s10_c2_question_sequence",
+          "lockDigest": "sha256:09d0ace00e3142e59c2395e4ebd174f0d682c685efb58daa6559bb456081328f",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c2_eval_option_workspace",
+          "lockDigest": "sha256:913a031ef8146645f4758352252781761d6bdc2e637108b0a45b84bcac2fd84f",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c2_eval_criterion_matrix",
+          "lockDigest": "sha256:004bff17b5c2e6512fd5f84ba04134079452b91bf1eaadf1a69086fc9d1ed7e9",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c2_eval_question_sequence",
+          "lockDigest": "sha256:895cab14fb4c34839f5b939f34a93abca1e587275abe4617795003795fb9efb5",
+          "revision": 1
+        },
+        {
+          "artifactId": "art_run_9ui199_minimal_20261010_v10_s11_c2_direction_decision",
+          "lockDigest": "sha256:c5281bd565cfd7ab9c8f85a43bbb6e740fe3f0b92105bdd4a46d8e6445587874",
+          "revision": 1
+        }
+      ],
+      "lastAcceptedEvent": "2026-10-10T06:04:36.935Z",
+      "firstReviewableAt": "2026-10-10T06:04:36.935Z",
+      "attemptCount": 3,
+      "mixedSessionIds": [],
+      "reasoningEffortVerified": true,
+      "dispatchSettingsVerified": true,
+      "generationCount": 3,
+      "elapsedGenerationMs": 446864,
+      "stops": [
+        {
+          "sessionId": "session_9ui199_v10_s09_c2_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s09_c2",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui199_v10_s10_c2_a",
+          "stop": "iteration-limit",
+          "tasks": [
+            {
+              "taskId": "s10_c2",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        },
+        {
+          "sessionId": "session_9ui199_v10_s11_c2_a",
+          "stop": "approval",
+          "tasks": [
+            {
+              "taskId": "s11_c2",
+              "phase": "accepted",
+              "rejectionReason": null
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "warning": "Elapsed generation and reasoning effort require one-to-one attempt logs. Cross-arm comparison also requires frozen, hashed dispatch configurations and submission schema; absent evidence leaves dispatch settings unverified. Costs for sessions crossing task groups are unavailable to avoid double counting. It is a single Run, so model state and ordering effects remain possible. No human adoption is implied."
+}
