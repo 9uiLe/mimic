@@ -572,6 +572,131 @@ test("explicit trial reviews expose only bounded static snapshots with honest pr
   );
 });
 
+test("a matching unapproved working preview opens from the selected review without persisting trial actions", async () => {
+  const { root } = await setup();
+  const folder = await mkdtemp(
+    path.join(os.tmpdir(), "mimic-working-preview-"),
+  );
+  roots.push(folder);
+  const reviewFile = path.join(folder, "review.html");
+  const workingFile = path.join(folder, "working.html");
+  const ref = "art_run_trial_s10_matrix";
+  const exact = {
+    artifactId: ref,
+    revision: 1,
+    lockDigest: `sha256:${"a".repeat(64)}`,
+  };
+  const embedded = (record: object) =>
+    JSON.stringify(record).replaceAll('"', "&quot;");
+  const review = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Mimic 候補レビュー</title></head><body><p>Run run_trial · guided · selected</p><p><a href="working-preview-run_trial.html">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p><p>改訂作業のために人が選んだ案: ${ref} · 最終採用/公開: 未承認</p><div class="grid"><article><p>${ref}@1</p><pre>${embedded({ ref: exact })}</pre></article></div><pre>${embedded({ humanSelectionId: "selection_trial" })}</pre></body></html>`;
+  const script = `document.querySelector("button").addEventListener("click", () => { document.querySelector("#result").textContent = "画面内の試用"; });`;
+  const hash = createHash("sha256").update(script).digest("base64");
+  const working = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>作業用プレビュー · 比較</title></head><body><main data-working-preview="unapproved"><p>下の選択・改訂操作は画面内の試用で、保存しません</p><p>Run run_trial · 親 Run: 初期 Run · 現在の作業用ベース: ${ref}@1 · 最終採用: 未承認</p><button>試す</button><p id="result">未選択</p><pre>${embedded({ selectedRef: exact, humanSelectionId: "selection_trial" })}</pre></main><script>${script}</script></body></html>`;
+  const workingPreviewDigest = `sha256:${createHash("sha256").update(working).digest("hex")}`;
+  await writeFile(reviewFile, review);
+  await writeFile(workingFile, working);
+  const before = await files(root);
+  const monitor = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    workingPreview: workingFile,
+    workingPreviewDigest,
+  });
+  monitors.push(monitor);
+  const current = await (
+    await fetch(monitor.url + "/trial-review/current")
+  ).text();
+  expect(current).toContain(
+    'href="/trial-review/working-preview" target="_blank" rel="noopener noreferrer"',
+  );
+  expect(current).not.toContain('href="working-preview-run_trial.html"');
+  const response = await fetch(monitor.url + "/trial-review/working-preview");
+  expect(response.status).toBe(200);
+  expect(response.headers.get("content-security-policy")).toContain(
+    `script-src 'sha256-${hash}'`,
+  );
+  expect(response.headers.get("content-security-policy")).toContain(
+    "sandbox allow-scripts",
+  );
+  expect(await response.text()).toBe(working);
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.goto(monitor.url + "/trial-review/current");
+    const [preview] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page.getByRole("link", { name: /作業用操作画面/ }).click(),
+    ]);
+    await preview.waitForLoadState();
+    expect(preview.url()).toBe(monitor.url + "/trial-review/working-preview");
+    await preview.getByRole("button", { name: "試す" }).click();
+    await browserExpect(preview.locator("#result")).toHaveText("画面内の試用");
+    await preview.reload();
+    await browserExpect(preview.locator("#result")).toHaveText("未選択");
+  } finally {
+    await browser.close();
+  }
+  expect(await files(root)).toEqual(before);
+
+  for (const bad of [
+    working.replace("Run run_trial ·", "Run run_other ·"),
+    working.replace(`${ref}@1`, "art_run_trial_s10_other@1"),
+    working.replace('画面内の試用";', '保存済み";'),
+    working.replace("sha256:aaa", "sha256:bbb"),
+  ]) {
+    await writeFile(workingFile, bad);
+    const invalid = await startMonitor({
+      root,
+      port: 0,
+      reviewCurrent: reviewFile,
+      workingPreview: workingFile,
+      workingPreviewDigest,
+    });
+    monitors.push(invalid);
+    expect(
+      (await fetch(invalid.url + "/trial-review/working-preview")).status,
+    ).toBe(404);
+    expect(
+      await (await fetch(invalid.url + "/trial-review/current")).text(),
+    ).not.toContain('href="/trial-review/working-preview"');
+    expect(
+      await (await fetch(invalid.url + "/trial-review/current")).text(),
+    ).not.toContain('href="working-preview-run_trial.html"');
+  }
+  await writeFile(workingFile, working);
+  await writeFile(
+    reviewFile,
+    review.replace("· selected</p>", "· revision-limit</p>"),
+  );
+  const atLimit = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    workingPreview: workingFile,
+    workingPreviewDigest,
+  });
+  monitors.push(atLimit);
+  expect(
+    (await fetch(atLimit.url + "/trial-review/working-preview")).status,
+  ).toBe(200);
+  await rm(workingFile);
+  await symlink(reviewFile, workingFile);
+  const linked = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    workingPreview: workingFile,
+    workingPreviewDigest,
+  });
+  monitors.push(linked);
+  expect(
+    (await fetch(linked.url + "/trial-review/working-preview")).status,
+  ).toBe(404);
+});
+
 test("forged/malformed checkpoints, private errors and metadata links fail closed", async () => {
   const { root } = await setup();
   const store = new FileSessionStore(root);

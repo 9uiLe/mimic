@@ -284,6 +284,101 @@ async function loadTrialReview(
   };
 }
 
+type WorkingPreview = { html: string; csp: string };
+function embeddedRecord(html: string): Record<string, unknown> {
+  const pre = html.match(/<pre>([\s\S]*?)<\/pre>/)?.[1];
+  if (!pre) throw new Error("Missing preview provenance");
+  return object(
+    JSON.parse(
+      pre
+        .replaceAll("&quot;", '"')
+        .replaceAll("&#39;", "'")
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">")
+        .replaceAll("&amp;", "&"),
+    ),
+  );
+}
+async function loadWorkingPreview(
+  selected: string | undefined,
+  expectedDigest: string | undefined,
+  review: TrialReviewSnapshot | undefined,
+): Promise<WorkingPreview | undefined> {
+  if (!selected || !review || !expectedDigest) return undefined;
+  const chosen = path.resolve(selected);
+  const folder = await realpath(path.dirname(chosen));
+  const html = await textFile(folder, path.basename(chosen), 2_000_000);
+  if (
+    !/^sha256:[a-f0-9]{64}$/.test(expectedDigest) ||
+    `sha256:${createHash("sha256").update(html).digest("hex")}` !==
+      expectedDigest
+  )
+    throw new Error("Working preview digest mismatch");
+  const current = review.html.match(
+    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · (?:selected|revision-limit)<\/p>/,
+  );
+  const selectedRef = review.html.match(
+    /改訂作業のために人が選んだ案: (art_[A-Za-z0-9_-]{1,255}) · 最終採用\/公開: 未承認/,
+  );
+  const working = html.match(
+    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · 親 Run: [^<]+ · 現在の作業用ベース: (art_[A-Za-z0-9_-]{1,255})@([1-9]\d*) · 最終採用: 未承認<\/p>/,
+  );
+  const script = html.match(/<script>([\s\S]*?)<\/script>/);
+  const scriptHash = script
+    ? createHash("sha256").update(script[1]!).digest("base64")
+    : "";
+  const cards = [...review.html.matchAll(/<article>([\s\S]*?)<\/article>/g)]
+    .map((match) => match[1]!)
+    .filter((card) =>
+      selectedRef ? card.includes(`<p>${selectedRef[1]}@`) : false,
+    );
+  const reviewProvenance = [
+    ...review.html.matchAll(/<pre>([\s\S]*?)<\/pre>/g),
+  ].at(-1);
+  const chosenCard = cards.length === 1 ? embeddedRecord(cards[0]!) : undefined;
+  const workingProvenance = embeddedRecord(html);
+  const reviewSelection = reviewProvenance
+    ? embeddedRecord(reviewProvenance[0])
+    : undefined;
+  const chosenRef = chosenCard ? ref(chosenCard.ref) : undefined;
+  const workingRef = ref(workingProvenance.selectedRef);
+  if (
+    !html.startsWith('<!doctype html><html lang="ja">') ||
+    !html.includes("<title>作業用プレビュー · ") ||
+    !html.includes('<main data-working-preview="unapproved">') ||
+    !html.includes("下の選択・改訂操作は画面内の試用で、保存しません") ||
+    !current ||
+    !selectedRef ||
+    !working ||
+    current[1] !== working[1] ||
+    selectedRef[1] !== working[2] ||
+    !chosenRef ||
+    chosenRef.artifactId !== workingRef.artifactId ||
+    chosenRef.revision !== workingRef.revision ||
+    chosenRef.lockDigest !== workingRef.lockDigest ||
+    chosenRef.artifactId !== selectedRef[1] ||
+    chosenRef.revision !== Number(working[3]) ||
+    chosenRef.artifactId !== working[2] ||
+    !reviewSelection ||
+    typeof reviewSelection.humanSelectionId !== "string" ||
+    reviewSelection.humanSelectionId.length === 0 ||
+    reviewSelection.humanSelectionId !== workingProvenance.humanSelectionId ||
+    !review.html.includes('<div class="grid">') ||
+    (html.match(/<script\b/gi)?.length ?? 0) !== 1 ||
+    !script ||
+    !html.includes(
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">`,
+    ) ||
+    /<(?:iframe|object|embed|form|base)\b/i.test(html) ||
+    /\b(?:href|src)="(?:https?:|\/\/|data:)/i.test(html)
+  )
+    throw new Error("Invalid working preview");
+  return {
+    html,
+    csp: `default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; sandbox allow-scripts; frame-ancestors 'none'`,
+  };
+}
+
 /** A fresh bounded snapshot each poll. Recorded facts are not authority proof. */
 export async function readMonitorState(root: string) {
   const raw = await textFile(root, ".mimic/workspace.json", 32 * 1024 * 1024);
@@ -470,6 +565,8 @@ export async function startMonitor(options: {
   reviewCurrent?: string;
   reviewStopped?: string;
   reviewReplay?: string;
+  workingPreview?: string;
+  workingPreviewDigest?: string;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
     !Number.isInteger(options.port) ||
@@ -490,6 +587,23 @@ export async function startMonitor(options: {
     loadTrialReview(options.reviewStopped, "stopped").catch(() => undefined),
     loadTrialReview(options.reviewReplay, "replay").catch(() => undefined),
   ]);
+  const workingPreview = await loadWorkingPreview(
+    options.workingPreview,
+    options.workingPreviewDigest,
+    reviewCurrent,
+  ).catch(() => undefined);
+  if (reviewCurrent) {
+    reviewCurrent.html = reviewCurrent.html.replace(
+      /<p><a href="working-preview-[A-Za-z0-9_-]+\.html">人が選んだ案の作業用操作プレビューを開く（未承認）<\/a><\/p>/g,
+      "",
+    );
+  }
+  if (workingPreview && reviewCurrent) {
+    reviewCurrent.html = reviewCurrent.html.replace(
+      '<div class="grid">',
+      '<p><a href="/trial-review/working-preview" target="_blank" rel="noopener noreferrer">選択済み案の未承認の作業用操作画面を別タブで試す →</a>（画面内の試用のみ・保存なし）</p><div class="grid">',
+    );
+  }
   const reviews: TrialReviews = {
     current: reviewCurrent
       ? reviewCurrent.stopped
@@ -597,6 +711,15 @@ export async function startMonitor(options: {
               : reviewReplay!.html,
         );
       } else if (
+        request.url === "/trial-review/working-preview" &&
+        workingPreview
+      ) {
+        response.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy": workingPreview.csp,
+        });
+        response.end(workingPreview.html);
+      } else if (
         /^\/trial-review\/(current|stopped|replay)\/capture\/[0-7]$/.test(
           request.url ?? "",
         )
@@ -672,6 +795,8 @@ export async function runMonitorCli(
           "--review-current",
           "--review-stopped",
           "--review-replay",
+          "--working-preview",
+          "--working-preview-digest",
         ].includes(flag) ||
         !value ||
         value.startsWith("--") ||
@@ -693,6 +818,8 @@ export async function runMonitorCli(
       reviewCurrent: values["--review-current"],
       reviewStopped: values["--review-stopped"],
       reviewReplay: values["--review-replay"],
+      workingPreview: values["--working-preview"],
+      workingPreviewDigest: values["--working-preview-digest"],
     });
     io.out(monitor.url);
     await new Promise<void>((resolve) => {
