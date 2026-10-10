@@ -1184,16 +1184,52 @@ export async function runCli(
           const proposal = work.result.proposal;
           if (
             proposal &&
-            (!Array.isArray(proposal.items) ||
+            (typeof proposal.packetId !== "string" ||
+              !proposal.packetId.trim() ||
+              typeof proposal.reason !== "string" ||
+              !proposal.reason.trim() ||
+              !Array.isArray(proposal.items) ||
+              proposal.items.length === 0 ||
+              new Set(proposal.items.map((item) => item?.id)).size !==
+                proposal.items.length ||
               proposal.items.some(
                 (item) =>
                   !item ||
                   typeof item !== "object" ||
+                  typeof item.id !== "string" ||
+                  !item.id.trim() ||
                   !item.ref ||
-                  typeof item.ref !== "object",
+                  typeof item.ref !== "object" ||
+                  typeof item.ref.artifactId !== "string" ||
+                  !Number.isSafeInteger(item.ref.revision) ||
+                  typeof item.ref.lockDigest !== "string" ||
+                  !Array.isArray(item.alternatives) ||
+                  item.alternatives.length === 0 ||
+                  item.alternatives.some(
+                    (choice: unknown) =>
+                      typeof choice !== "string" || !choice.trim(),
+                  ) ||
+                  typeof item.rationale !== "string" ||
+                  !item.rationale.trim() ||
+                  !Array.isArray(item.evidenceLimits) ||
+                  item.evidenceLimits.some(
+                    (limit: unknown) => typeof limit !== "string",
+                  ) ||
+                  !Array.isArray(item.dependents) ||
+                  item.dependents.some(
+                    (ref: unknown) =>
+                      !ref ||
+                      typeof ref !== "object" ||
+                      !("artifactId" in ref) ||
+                      !("revision" in ref) ||
+                      !("lockDigest" in ref) ||
+                      typeof ref.artifactId !== "string" ||
+                      !Number.isSafeInteger(ref.revision) ||
+                      typeof ref.lockDigest !== "string",
+                  ),
               ))
           )
-            throw candidateError("Invalid review proposal items");
+            throw candidateError("Invalid review proposal packet");
           const proposalRefs =
             proposal?.items.map((item) => canonicalJson(item.ref)) ?? [];
           if (

@@ -1128,6 +1128,15 @@ test("PROPOSE_ONLY proposal remains pending and identical static retry does not 
       },
     ],
   };
+  const provisional = structuredClone(candidate.artifacts[0]);
+  provisional.meta.id = "art_session_provisional_domain";
+  provisional.lifecycle.status = "provisional";
+  candidate.artifacts.unshift(provisional);
+  candidate.work.result.outputRefs.unshift({
+    artifactId: provisional.meta.id,
+    revision: provisional.meta.revision,
+    lockDigest: HOST_DERIVED_DIGEST,
+  });
   const saved = await h.ports.saveWork(h.frozen, JSON.stringify(candidate));
   const first = await h.ports.submit(h.frozen, saved);
   const before = await h.runtime.registry.snapshot();
@@ -1152,7 +1161,15 @@ test("a proposed output without its review proposal is rejected before marker", 
     await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
   ).toEqual([]);
 });
-test.each([{}, { items: [null] }, { items: [{}] }])(
+test.each([
+  {},
+  { items: [null] },
+  { items: [{}] },
+  {
+    summary: "Review all outputs",
+    items: [{ ref: { artifactId: "art_session_output", revision: 1 } }],
+  },
+])(
   "a malformed review proposal is a candidate error before marker (%j)",
   async (proposal) => {
     const h = await staticHarness("PROPOSE_ONLY");
@@ -1184,7 +1201,7 @@ test.each([{}, { items: [null] }, { items: [{}] }])(
       { out: () => {}, err: (value) => errors.push(value) },
     );
     expect(code).toBe(3);
-    expect(errors.join("\n")).toContain("Invalid review proposal items");
+    expect(errors.join("\n")).toContain("Invalid review proposal packet");
     expect(
       await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
     ).toEqual([]);
