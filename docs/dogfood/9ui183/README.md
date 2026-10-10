@@ -22,6 +22,14 @@ and model state may influence them. One cohort can demonstrate feasibility and
 specific differences; it cannot establish a causal winner. The historical
 9UI-178 Run remains a functional example, not a matched control.
 
+For newly prepared cohorts, S07 uses `PROPOSE_ONLY`: experience-domain and
+journey candidates remain provisional, while a durable boundary decision is a
+pending proposed artifact in an explicit review packet. This does not adopt a
+direction. The earlier fixed cohort had `AUTONOMOUS` S07 authority and a
+proposed decision output; preserve that failed Run and marker as history rather
+than changing its plan or saved work. Preparation rejects a template that
+restores the conflicting S07 authority.
+
 ## Arms and frozen inputs
 
 | Arm | S09 evidence                                                                                         | S11 emphasis                                                                   |

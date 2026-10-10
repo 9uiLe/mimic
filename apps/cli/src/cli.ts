@@ -1160,6 +1160,57 @@ export async function runCli(
               "Candidate dependency differs from exact input",
             );
         }
+        // These route/output contradictions are deterministic candidate errors.
+        // Check them before reserving the one immutable submission marker.
+        // An already accepted exact retry may no longer be routable; its marker
+        // and authoritative Core event are reconciled below instead.
+        if (routable) {
+          const proposed = (submission.artifacts as ArtifactSnapshot[])
+            .filter((artifact) => artifact.lifecycle.status === "proposed")
+            .map((artifact) =>
+              work.result.outputRefs.find(
+                (ref) =>
+                  ref.artifactId === artifact.meta.id &&
+                  ref.revision === artifact.meta.revision,
+              ),
+            );
+          if (
+            (proposed.length || work.result.proposal) &&
+            routable.authority !== "PROPOSE_ONLY"
+          )
+            throw candidateError(
+              "Proposed output requires PROPOSE_ONLY authority",
+            );
+          const proposal = work.result.proposal;
+          if (
+            proposal &&
+            (!Array.isArray(proposal.items) ||
+              proposal.items.some(
+                (item) =>
+                  !item ||
+                  typeof item !== "object" ||
+                  !item.ref ||
+                  typeof item.ref !== "object",
+              ))
+          )
+            throw candidateError("Invalid review proposal items");
+          const proposalRefs =
+            proposal?.items.map((item) => canonicalJson(item.ref)) ?? [];
+          if (
+            proposed.some(
+              (ref) => !ref || !proposalRefs.includes(canonicalJson(ref)),
+            ) ||
+            proposalRefs.some(
+              (ref) =>
+                !proposed.some(
+                  (output) => output && canonicalJson(output) === ref,
+                ),
+            )
+          )
+            throw candidateError(
+              "Proposed output requires matching review proposal",
+            );
+        }
         const markerFolder = path.join(await metadata(root), "submissions");
         await mkdir(markerFolder, { recursive: true });
         if (!inside(root, await realpath(markerFolder)))

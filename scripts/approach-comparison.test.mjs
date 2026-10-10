@@ -183,6 +183,14 @@ test("matched comparison freezes one common upstream and three isolated branches
     15,
   );
   const task = (id) => plan.find((entry) => entry.id === id);
+  assert.equal(task("s07").authority, "PROPOSE_ONLY");
+  assert.match(task("s07").humanBrief, /work\.result\.proposal/);
+  const unsafeS07 = JSON.parse(await readFile(template, "utf8"));
+  unsafeS07.find((entry) => entry.id === "s07").authority = "AUTONOMOUS";
+  assert.throws(
+    () => makePlan(unsafeS07, "test_compare", cfg),
+    /S07 durable boundary decision requires proposal-only authority/,
+  );
   for (const arm of ["b0", "c1", "c2"]) {
     assert.ok(task(`s09_${arm}`).dependsOn.includes("s08"));
     assert.ok(

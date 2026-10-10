@@ -91,6 +91,43 @@ interface TaskCheckpoint {
   work?: SavedWork;
   outputRefs?: readonly ExactArtifactRef[];
   diagnostics?: ExecutionDiagnostics;
+  /** Bounded static CLI result; never contains stderr, work or prompt text. */
+  staticFailure?: StaticSubmitFailure;
+}
+export interface StaticSubmitFailure {
+  exitCode: number;
+  candidate: boolean;
+  reason:
+    | "proposal-authority-mismatch"
+    | "proposal-binding-missing"
+    | "output-contract-rejected"
+    | "candidate-validation"
+    | "submission-conflict"
+    | "unclassified";
+  stderrSha256: string;
+}
+const staticFailureReasons = new Set<StaticSubmitFailure["reason"]>([
+  "proposal-authority-mismatch",
+  "proposal-binding-missing",
+  "output-contract-rejected",
+  "candidate-validation",
+  "submission-conflict",
+  "unclassified",
+]);
+function validateStaticFailure(value: unknown): value is StaticSubmitFailure {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const failure = value as Record<string, unknown>;
+  return (
+    Object.keys(failure).sort().join(",") ===
+      "candidate,exitCode,reason,stderrSha256" &&
+    Number.isSafeInteger(failure.exitCode) &&
+    Number(failure.exitCode) > 0 &&
+    Number(failure.exitCode) <= 255 &&
+    typeof failure.candidate === "boolean" &&
+    staticFailureReasons.has(failure.reason as StaticSubmitFailure["reason"]) &&
+    typeof failure.stderrSha256 === "string" &&
+    /^[a-f0-9]{64}$/.test(failure.stderrSha256)
+  );
 }
 export interface SessionCheckpoint {
   version: 1;
@@ -301,7 +338,9 @@ export class FileSessionStore {
             (task.phase !== "rejected" && task.rejectionReason !== undefined) ||
             (task.phase === "accepted" && !Array.isArray(task.outputRefs)) ||
             (task.diagnostics !== undefined &&
-              !sanitizeExecutionDiagnostics(task.diagnostics))
+              !sanitizeExecutionDiagnostics(task.diagnostics)) ||
+            (task.staticFailure !== undefined &&
+              !validateStaticFailure(task.staticFailure))
           )
             throw new Error("Invalid task checkpoint");
         }
@@ -323,6 +362,11 @@ export class FileSessionStore {
           const diagnostics = sanitizeExecutionDiagnostics(raw);
           if (raw !== undefined && !diagnostics)
             throw new Error("Invalid task diagnostics");
+          if (
+            task.staticFailure !== undefined &&
+            !validateStaticFailure(task.staticFailure)
+          )
+            throw new Error("Invalid static submission failure");
           return [id, { ...task, diagnostics }];
         }),
       ),
@@ -371,8 +415,20 @@ export class SessionQuestion extends Error {
 }
 /** A candidate failed before any immutable static submission reservation. */
 export class SessionCandidateRejected extends Error {
-  constructor(readonly reason: "preparation" | "static-validation") {
+  constructor(
+    readonly reason: "preparation" | "static-validation",
+    readonly staticFailure?: StaticSubmitFailure,
+  ) {
     super("Generated candidate rejected before static reservation");
+  }
+}
+export class SessionStaticSubmissionFailure extends Error {
+  readonly code: number;
+  readonly candidate: boolean;
+  constructor(readonly failure: StaticSubmitFailure) {
+    super("Static CLI submission failed; inspect bounded failure details");
+    this.code = failure.exitCode;
+    this.candidate = failure.candidate;
   }
 }
 export interface SessionLimits {
@@ -438,6 +494,7 @@ export class AgentSession {
         outputRefs: task.outputRefs,
         work: task.work,
         diagnostics: sanitizeExecutionDiagnostics(task.diagnostics),
+        staticFailure: task.staticFailure,
       })),
       next:
         state?.stop === "question"
@@ -593,8 +650,11 @@ export class AgentSession {
           if (error instanceof SessionCandidateRejected) {
             task.phase = "rejected";
             task.rejectionReason = error.reason;
+            if (error.staticFailure) task.staticFailure = error.staticFailure;
             return stop("candidate-rejected");
           }
+          if (error instanceof SessionStaticSubmissionFailure)
+            task.staticFailure = error.failure;
           return stop("unknown-outcome");
         }
       }
@@ -792,8 +852,13 @@ export class AgentSession {
           if (error instanceof SessionCandidateRejected) {
             state.tasks[task.binding.taskId]!.phase = "rejected";
             state.tasks[task.binding.taskId]!.rejectionReason = error.reason;
+            if (error.staticFailure)
+              state.tasks[task.binding.taskId]!.staticFailure =
+                error.staticFailure;
             return stop("candidate-rejected");
           }
+          if (error instanceof SessionStaticSubmissionFailure)
+            state.tasks[task.binding.taskId]!.staticFailure = error.failure;
           return stop("unknown-outcome");
         }
       }

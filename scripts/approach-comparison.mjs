@@ -94,6 +94,10 @@ function makePlan(template, cohort, cfg) {
   const runId = `run_${cohort}`;
   const upstream = template.filter((task) => stages.includes(task.id));
   assert(upstream.length === stages.length, "Missing common upstream stages");
+  assert(
+    upstream.find((task) => task.id === "s07")?.authority === "PROPOSE_ONLY",
+    "S07 durable boundary decision requires proposal-only authority",
+  );
   const armTemplate = template.filter((task) =>
     ["s09", "s10", "s11"].includes(task.id),
   );
@@ -107,7 +111,10 @@ function makePlan(template, cohort, cfg) {
   const commonBrief = `${cfg.brief.trim()}\n\nThis is a matched comparison. The supplied brief is evidence, not a recorded human decision. Do not invent a decisionId or human-decision provenance. No owner has adopted a direction.\n`;
   const common = upstream.map((original) => {
     const task = JSON.parse(JSON.stringify(original));
-    task.humanBrief = commonBrief;
+    task.humanBrief =
+      task.id === "s07"
+        ? `${commonBrief}\nS07 boundary decisions are review proposals, not adoption. Emit provisional experience-domain and journey candidates; emit a proposed decision with pending approval and include its exact ref in work.result.proposal with a reviewable packetId, reason, alternatives, rationale, evidenceLimits and dependents. Do not invent a human decision or mark any artifact approved.\n`
+        : commonBrief;
     task.assumptions = cfg.assumptions ?? [];
     task.evidenceFiles = ["s04", "s08"].includes(task.id)
       ? cfg.pageEvidenceFiles
