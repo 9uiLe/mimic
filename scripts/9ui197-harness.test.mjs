@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -15,8 +22,11 @@ import {
   makePlan,
   operationChanged,
   renderReviewHtml,
+  renderWorkingMatrixHtml,
   reviewTrial,
   validateBrief,
+  workingCaptureConfig,
+  writeWorkingOutput,
 } from "./9ui197-harness.mjs";
 
 const brief = {
@@ -212,6 +222,147 @@ test("fixed fact and copy check never passes an uncaptured screen", () => {
     state: "FAIL",
     missing: ["12 active Runs"],
   });
+});
+
+test("working matrix renders locked facts and interaction from an exact human choice without approval claims", () => {
+  const chosen = ref("art_matrix");
+  const report = {
+    runId: "run_trial",
+    selectedRef: chosen,
+    humanSelectionId: "selection_one",
+    priorSelectedRefs: [],
+    revisionCount: 0,
+    revisionBudget: 2,
+    proposedDecisions: [
+      { summary: "A helps scanning", suggestedChoice: "art_matrix" },
+    ],
+    unresolved: ["Which direction feels on brand?"],
+    candidates: [
+      {
+        ref: chosen,
+        summary: "案Aは比較表",
+        mechanisms: ["候補を列、共通判断項目を行", "詳細から戻る"],
+        rationale: ["Short material"],
+        verification: { state: "UNVERIFIED" },
+        evaluation: [
+          { state: "CONCERN", criterion: "長文", reason: "読みづらい" },
+        ],
+      },
+      {
+        ref: ref("art_pair"),
+        summary: "案Bは二案比較",
+        mechanisms: ["二面で比較"],
+        rationale: [],
+        verification: { state: "UNVERIFIED" },
+        evaluation: "UNVERIFIED",
+      },
+    ],
+  };
+  const html = renderWorkingMatrixHtml(report, brief, chosen);
+  assert.match(html, /data-working-preview="unapproved"/);
+  assert.match(html, /12 active Runs/);
+  assert.match(html, /Resume Run/);
+  assert.match(html, /案A · 作業用ベース/);
+  assert.match(html, /<table>/);
+  assert.match(html, /<details><summary>案Aの詳細を開く<\/summary>/);
+  assert.match(html, /比較に戻る/);
+  assert.match(html, /data-open-detail="0"/);
+  assert.match(html, /data-try-choice="案B"/);
+  assert.match(html, /改訂前の確認を試す/);
+  assert.match(html, /A helps scanning/);
+  assert.match(html, /改訂済み回数: 0 \/ 2/);
+  assert.match(html, /script-src 'sha256-/);
+  assert.match(html, /最終採用: 未承認/);
+  assert.match(html, /画面操作とブランド適合: 未検証/);
+  assert.match(
+    renderReviewHtml(report, {}, "working-preview-run_trial.html"),
+    /href="working-preview-run_trial.html"[^>]*>人が選んだ案の作業用操作プレビューを開く（未承認）/,
+  );
+  assert.doesNotMatch(
+    html,
+    /fetch\(|localStorage|productionReady|approval: approved/,
+  );
+  const capture = workingCaptureConfig(
+    report,
+    "/tmp/working-preview-run_trial.html",
+  );
+  const operations = capture.settings.operations[exactChoice("art_matrix")];
+  assert.equal(operations.length, 4);
+  assert.deepEqual(operations[1].viewport, { width: 390, height: 844 });
+  assert.equal(
+    operationChanged(
+      "画面内で試した候補: なし（保存なし）",
+      "画面内で試した候補: 案B（未保存。実際の選択記録は変更されません）",
+      operations[2].expectedText,
+    ),
+    true,
+  );
+  const exhausted = { ...report, revisionCount: 2 };
+  assert.match(
+    renderWorkingMatrixHtml(exhausted, brief, chosen),
+    /改訂上限に達したため試用できません/,
+  );
+  assert.equal(
+    workingCaptureConfig(exhausted, "/tmp/working-preview-run_trial.html")
+      .settings.operations[exactChoice("art_matrix")].length,
+    3,
+  );
+  const escaped = renderWorkingMatrixHtml(
+    {
+      ...report,
+      candidates: [
+        {
+          ...report.candidates[0],
+          summary: '<img src="x" onerror="alert(1)">',
+        },
+        report.candidates[1],
+      ],
+    },
+    brief,
+    chosen,
+  );
+  assert.match(escaped, /&lt;img src=&quot;x&quot;/);
+  assert.doesNotMatch(escaped, /<img/);
+  assert.throws(
+    () =>
+      renderWorkingMatrixHtml(
+        { ...report, humanSelectionId: null },
+        brief,
+        chosen,
+      ),
+    /verified human-selected/,
+  );
+  assert.throws(
+    () => renderWorkingMatrixHtml(report, brief, ref("art_pair")),
+    /verified human-selected/,
+  );
+  assert.throws(
+    () =>
+      renderWorkingMatrixHtml(
+        {
+          ...report,
+          candidates: [{ ...report.candidates[0], mechanisms: ["二面"] }],
+        },
+        brief,
+        chosen,
+      ),
+    /does not specify the candidate matrix/,
+  );
+});
+
+test("working output replaces a symlink without writing its target", async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), "mimic-working-output-"));
+  try {
+    const target = path.join(workspace, "outside.txt");
+    const link = path.join(workspace, "working-preview-run_trial.html");
+    await writeFile(target, "untouched");
+    await symlink(target, link);
+    await writeWorkingOutput(link, "new preview");
+    assert.equal(await readFile(target, "utf8"), "untouched");
+    assert.equal(await readFile(link, "utf8"), "new preview");
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 });
 
 test("capture binding changes with preview and screen checks", () => {
