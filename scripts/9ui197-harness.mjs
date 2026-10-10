@@ -237,16 +237,24 @@ export function makePlan(template, config) {
     );
     if (config.previousRunId && ["s10", "s11"].includes(task.id))
       task.humanBrief += `\nHuman-selected prior direction: ${choiceKey(config.baseRef)} from Run ${config.previousRunId}. Its accepted content is ${JSON.stringify(config.selectedBase ?? "UNVERIFIED")}. Address only this requested issue: ${config.revisionRequest}. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`;
-    if (config.previousRunId && task.id === "s10") {
-      task.intent = "revise";
-      task.targetArtifactId = config.baseRef.artifactId;
-      task.inputs.required.push({
-        name: "selected-direction",
+    if (task.id === "s10") {
+      const priorDirection = {
+        name: "prior-direction",
         kind: "artifact",
         artifactType: "design-direction",
         schemaVersion: "1.0.0",
-        refs: [config.baseRef],
-      });
+        ...(config.previousRunId ? { refs: [config.baseRef] } : {}),
+      };
+      if (!task.inputs.optional.some((item) => item.name === "prior-direction"))
+        task.inputs.optional.push(priorDirection);
+      else if (config.previousRunId)
+        task.inputs.optional.find(
+          (item) => item.name === "prior-direction",
+        ).refs = [config.baseRef];
+      if (config.previousRunId) {
+        task.intent = "revise";
+        task.targetArtifactId = config.baseRef.artifactId;
+      }
     }
     if (task.id === "s09") task.evidenceFiles = [config.referenceFile];
     else if (config.evidenceFiles[task.id])

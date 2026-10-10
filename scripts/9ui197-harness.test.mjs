@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { parse as parseYaml } from "yaml";
 import {
   approvedHistory,
   briefForTask,
@@ -139,9 +140,26 @@ test("revision plan binds the selected exact direction as an S10 revise input", 
   assert.equal(s10.intent, "revise");
   assert.equal(s10.targetArtifactId, "art_one");
   assert.deepEqual(
-    s10.inputs.required.find((item) => item.name === "selected-direction").refs,
+    s10.inputs.optional.find((item) => item.name === "prior-direction").refs,
     [ref("art_one")],
   );
+  const skill = parseYaml(
+    await readFile(
+      new URL(
+        "../skills/s10-design-direction-generator/manifest.yaml",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+  const declaration = (item) => ({
+    name: item.name,
+    kind: item.kind,
+    ...(item.artifactType ? { artifactType: item.artifactType } : {}),
+    ...(item.schemaVersion ? { schemaVersion: item.schemaVersion } : {}),
+  });
+  assert.deepEqual(s10.inputs.required.map(declaration), skill.inputs.required);
+  assert.deepEqual(s10.inputs.optional.map(declaration), skill.inputs.optional);
   assert.match(s10.humanBrief, /Selected direction/);
   const { preflightPlan } = await import("../apps/cli/dist/plan.js");
   assert.equal(
