@@ -9,6 +9,37 @@ const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateFile = path.join(repo, "docs/dogfood/9ui183/plan-template.json");
 const digest = (text) =>
   `sha256:${createHash("sha256").update(text).digest("hex")}`;
+const canonical = (value) =>
+  Array.isArray(value)
+    ? value.map(canonical)
+    : value && typeof value === "object"
+      ? Object.fromEntries(
+          Object.keys(value)
+            .sort()
+            .map((key) => [key, canonical(value[key])]),
+        )
+      : value;
+const sameContent = (left, right) =>
+  JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
+const stagedEvidenceDigests = (manifest) =>
+  manifest.evidenceFiles
+    ? Object.fromEntries(
+        Object.entries(manifest.evidenceFiles).map(([stage, files]) => [
+          stage,
+          files.map((file) => manifest.evidenceDigests[file]).sort(),
+        ]),
+      )
+    : Object.values(manifest.evidenceDigests ?? {}).sort();
+export const captureSettingsDigest = (config) =>
+  digest(
+    JSON.stringify(
+      canonical({
+        previewUrls: config.previewUrls ?? {},
+        operations: config.operations ?? {},
+        requiredSelectors: config.requiredSelectors ?? [],
+      }),
+    ),
+  );
 const nonempty = (value) => typeof value === "string" && !!value.trim();
 const assert = (ok, message) => {
   if (!ok) throw new Error(message);
@@ -198,11 +229,17 @@ export function checkLockedContent(brief, capturedText) {
   validateBrief(brief);
   if (capturedText === undefined) return { state: "UNVERIFIED", missing: [] };
   assert(typeof capturedText === "string", "Invalid screen capture");
+  const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const present = (text) => {
+    const start = /^[\p{L}\p{N}]/u.test(text) ? "(?<![\\p{L}\\p{N}])" : "";
+    const end = /[\p{L}\p{N}]$/u.test(text) ? "(?![\\p{L}\\p{N}])" : "";
+    return new RegExp(`${start}${escape(text)}${end}`, "u").test(capturedText);
+  };
   const missing = brief.content
     .filter(
       (item) =>
         ["fixed-fact", "fixed-copy"].includes(item.policy) &&
-        !capturedText.includes(item.text),
+        !present(item.text),
     )
     .map((item) => item.text);
   return { state: missing.length ? "FAIL" : "PASS", missing };
@@ -400,17 +437,18 @@ export function renderReviewHtml(report, previewUrls = {}) {
 }
 
 export function compareTrials(left, right) {
-  const same = (a, b) =>
-    digest(JSON.stringify([a])) === digest(JSON.stringify([b]));
   const fixed =
     [left.manifest.condition, right.manifest.condition].sort().join(",") ===
       "baseline,guided" &&
-    same(left.manifest.brief, right.manifest.brief) &&
+    sameContent(left.manifest.brief, right.manifest.brief) &&
     left.manifest.referenceDigest === right.manifest.referenceDigest &&
     left.manifest.templateDigest === right.manifest.templateDigest &&
-    same(left.manifest.evidenceDigests, right.manifest.evidenceDigests) &&
-    same(left.manifest.model, right.manifest.model) &&
-    same(left.manifest.budget, right.manifest.budget) &&
+    sameContent(
+      stagedEvidenceDigests(left.manifest),
+      stagedEvidenceDigests(right.manifest),
+    ) &&
+    sameContent(left.manifest.model, right.manifest.model) &&
+    sameContent(left.manifest.budget, right.manifest.budget) &&
     (left.manifest.revisionBudget ?? 2) ===
       (right.manifest.revisionBudget ?? 2);
   return {
@@ -590,13 +628,15 @@ export async function approvedHistory(workspace, manifest) {
     assert(
       prior.runId === child.previousRunId &&
         prior.condition === manifest.condition &&
-        JSON.stringify(prior.brief) === JSON.stringify(manifest.brief) &&
+        sameContent(prior.brief, manifest.brief) &&
         prior.model === manifest.model &&
-        JSON.stringify(prior.budget) === JSON.stringify(manifest.budget) &&
+        sameContent(prior.budget, manifest.budget) &&
         (prior.revisionBudget ?? 2) === (manifest.revisionBudget ?? 2) &&
         prior.referenceDigest === manifest.referenceDigest &&
-        JSON.stringify(prior.evidenceDigests) ===
-          JSON.stringify(manifest.evidenceDigests) &&
+        sameContent(
+          stagedEvidenceDigests(prior),
+          stagedEvidenceDigests(manifest),
+        ) &&
         prior.templateDigest === manifest.templateDigest,
       "Revision changes frozen trial inputs",
     );
@@ -797,6 +837,7 @@ async function main(args) {
           {
             runId: config.runId,
             artifactRefs: snapshot.artifacts.map(({ ref }) => ref),
+            settingsDigest: captureSettingsDigest(config),
             observations,
           },
           null,
@@ -813,6 +854,7 @@ async function main(args) {
       return;
     }
     let captures = {};
+    let captureState = "NOT_CAPTURED";
     try {
       const capture = JSON.parse(
         await readFile(
@@ -826,24 +868,30 @@ async function main(args) {
             JSON.stringify(snapshot.artifacts.map(({ ref }) => ref)),
         "Capture does not bind current artifacts",
       );
-      for (const [key, observation] of Object.entries(capture.observations)) {
-        assert(
-          exactRef(observation.ref) && key === choiceKey(observation.ref),
-          "Capture key is not an exact ref",
-        );
-        const expectedName = `capture-${config.runId}-${observation.ref.artifactId}-${observation.ref.revision}-${observation.ref.lockDigest.slice(7, 19)}.png`;
-        assert(
-          observation.screenshot === expectedName,
-          "Capture screenshot name changed",
-        );
-        const imagePath = path.join(workspace, expectedName);
-        assert(
-          (await realpath(imagePath)) === imagePath &&
-            digest(await readFile(imagePath)) === observation.screenshotDigest,
-          "Capture screenshot changed",
-        );
+      if (capture.settingsDigest !== captureSettingsDigest(config)) {
+        captureState = "STALE_SETTINGS";
+      } else {
+        for (const [key, observation] of Object.entries(capture.observations)) {
+          assert(
+            exactRef(observation.ref) && key === choiceKey(observation.ref),
+            "Capture key is not an exact ref",
+          );
+          const expectedName = `capture-${config.runId}-${observation.ref.artifactId}-${observation.ref.revision}-${observation.ref.lockDigest.slice(7, 19)}.png`;
+          assert(
+            observation.screenshot === expectedName,
+            "Capture screenshot name changed",
+          );
+          const imagePath = path.join(workspace, expectedName);
+          assert(
+            (await realpath(imagePath)) === imagePath &&
+              digest(await readFile(imagePath)) ===
+                observation.screenshotDigest,
+            "Capture screenshot changed",
+          );
+        }
+        captures = capture.observations;
+        captureState = "BOUND";
       }
-      captures = capture.observations;
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
@@ -853,6 +901,7 @@ async function main(args) {
       captures,
       history: history.refs,
     });
+    report.captureState = captureState;
     const html = renderReviewHtml(report, config.previewUrls);
     const reviewPath = path.join(workspace, `review-${config.runId}.html`);
     await writeFile(reviewPath, html, { mode: 0o600 });

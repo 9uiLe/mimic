@@ -7,6 +7,7 @@ import path from "node:path";
 import {
   approvedHistory,
   briefForTask,
+  captureSettingsDigest,
   checkLockedContent,
   compareTrials,
   makePlan,
@@ -123,6 +124,40 @@ test("fixed fact and copy check never passes an uncaptured screen", () => {
     state: "FAIL",
     missing: ["12 active Runs"],
   });
+  assert.deepEqual(checkLockedContent(brief, "112 active Runs · Resume Run"), {
+    state: "FAIL",
+    missing: ["12 active Runs"],
+  });
+});
+
+test("capture binding changes with preview and screen checks", () => {
+  const config = {
+    previewUrls: { [exactChoice("art_one")]: "https://example.test/one" },
+    requiredSelectors: ["#main"],
+    operations: {},
+  };
+  assert.equal(
+    captureSettingsDigest(config),
+    captureSettingsDigest({
+      requiredSelectors: ["#main"],
+      operations: {},
+      previewUrls: config.previewUrls,
+    }),
+  );
+  assert.notEqual(
+    captureSettingsDigest(config),
+    captureSettingsDigest({
+      ...config,
+      previewUrls: { [exactChoice("art_one")]: "https://example.test/two" },
+    }),
+  );
+  assert.notEqual(
+    captureSettingsDigest(config),
+    captureSettingsDigest({
+      ...config,
+      requiredSelectors: ["#main", "#status"],
+    }),
+  );
 });
 
 test("an operation only passes when its own result changes after the click", () => {
@@ -631,5 +666,36 @@ test("comparison requires identical declared task, sources, model and budget", (
       { manifest: { ...manifest, condition: "guided", revisionBudget: 2 } },
     ).observedOutcome,
     "NOT_COMPARABLE",
+  );
+  const left = {
+    ...manifest,
+    evidenceFiles: { s04: ["inputs/system-a.md"], s08: ["inputs/task-a.md"] },
+    evidenceDigests: {
+      "inputs/system-a.md": "sha256:system",
+      "inputs/task-a.md": "sha256:task",
+    },
+  };
+  const right = {
+    ...manifest,
+    condition: "guided",
+    brief: {
+      references: brief.references,
+      content: brief.content,
+      brandCharacter: brief.brandCharacter,
+      requiredInformation: brief.requiredInformation,
+      primaryAction: brief.primaryAction,
+      purpose: brief.purpose,
+      audience: brief.audience,
+    },
+    evidenceFiles: { s08: ["inputs/task-b.md"], s04: ["inputs/system-b.md"] },
+    evidenceDigests: {
+      "inputs/task-b.md": "sha256:task",
+      "inputs/system-b.md": "sha256:system",
+    },
+  };
+  assert.equal(
+    compareTrials({ manifest: left }, { manifest: right })
+      .matchedDeclaredInputs,
+    true,
   );
 });

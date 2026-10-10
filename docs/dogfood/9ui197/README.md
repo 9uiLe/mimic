@@ -49,7 +49,7 @@
 }
 ```
 
-`content` は画面で守る必要がある数値・実績・文言を `fixed-fact` / `fixed-copy`、編集可能な表現を `editable-copy`、所有者への質問を `confirm` に分ける。画面に出さない内部情報を fixed content に混ぜない。`capture` は宣言した `previewUrls` の実画面本文を Chrome で読み、固定文言の欠落、指定した要素・操作、横はみ出しを記録する。`previewUrls` と `operations` は候補の `artifactId@revision#lockDigest` をキーにする。操作チェックは `{ "selector": "button", "resultSelector": "#result", "expectedText": "Done" }` と記し、クリック前後でその結果領域が変わった場合だけ PASS にする。指定がない項目は PASS にしない。画面はこの Run の成果物と別に作られた場合、その関係を証拠として明示する。
+`content` は画面で守る必要がある数値・実績・文言を `fixed-fact` / `fixed-copy`、編集可能な表現を `editable-copy`、所有者への質問を `confirm` に分ける。画面に出さない内部情報を fixed content に混ぜない。`capture` は宣言した `previewUrls` の実画面本文を Chrome で読み、固定文言の欠落、指定した要素・操作、横はみ出しを記録する。`previewUrls` と `operations` は候補の `artifactId@revision#lockDigest` をキーにする。操作チェックは `{ "selector": "button", "resultSelector": "#result", "expectedText": "Done" }` と記し、クリック前後でその結果領域が変わった場合だけ PASS にする。指定がない項目は PASS にしない。プレビュー URL・必須要素・操作チェックを変更した場合、旧キャプチャは `STALE_SETTINGS` として無効になり、再撮影までは検証結果が `UNVERIFIED` になる。画面はこの Run の成果物と別に作られた場合、その関係を証拠として明示する。
 
 改訂設定では初期設定と同じ `workspace`、`condition`、`model`、`budget`、`revisionBudget`、`brief`、出典ファイルを使い、次の項目を足す。`baseRef` は直前 Run のレビューが表示した exact ref をそのまま使う。例の digest はダミー値である。
 
