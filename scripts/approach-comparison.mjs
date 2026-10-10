@@ -178,16 +178,62 @@ function flatCaseRows(sources, graph, assessments) {
   return assessments.map((assessment) => ({
     caseId: assessment.caseId,
     caseLabel: graph.nodes.find((node) => node.id === assessment.caseId)?.label,
-    evidence: sources.evidence
+    evidenceIds: sources.evidence
       .filter((row) => assessment.evidenceRefs.includes(row.id))
-      .map((row) => ({
-        kind: row.kind,
-        sourceUrl: row.sourceUrl,
-        author: row.author,
-        accessDate: row.accessDate,
-        claim: row.claim,
-      })),
+      .map((row) => row.id),
   }));
+}
+function assessedCorpus(sources, graph, traitIds, assessments) {
+  const caseIds = new Set(assessments.map(({ caseId }) => caseId));
+  const suffixes = new Set(
+    [...caseIds, ...traitIds].map((id) => id.slice(id.indexOf(":") + 1)),
+  );
+  const nodes = graph.nodes.filter((node) =>
+    suffixes.has(node.id.slice(node.id.indexOf(":") + 1)),
+  );
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = graph.edges.filter(
+    (edge) => nodeIds.has(edge.from) && nodeIds.has(edge.to),
+  );
+  const evidenceIds = new Set(
+    [...nodes, ...edges, ...assessments].flatMap(
+      (item) => item.evidenceRefs ?? [],
+    ),
+  );
+  return {
+    nodes,
+    edges: edges.map(({ from, to, rationale, evidenceRefs }) => ({
+      from,
+      to,
+      rationale,
+      evidenceRefs,
+    })),
+    sourceEvidence: sources.evidence
+      .filter((row) => evidenceIds.has(row.id))
+      .map(
+        ({
+          id,
+          kind,
+          sourceUrl,
+          sourceTitle,
+          author,
+          relevantSection,
+          accessDate,
+          claim,
+          verificationScope,
+        }) => ({
+          id,
+          kind,
+          sourceUrl,
+          sourceTitle,
+          ...(author ? { author } : {}),
+          relevantSection,
+          accessDate,
+          claim,
+          ...(verificationScope ? { verificationScope } : {}),
+        }),
+      ),
+  };
 }
 function referenceEvidence(
   arm,
@@ -201,12 +247,8 @@ function referenceEvidence(
   const header = `# ${arm} reference evidence\n\nAll source claims below are local paraphrases or hypotheses; follow the source URLs. Complete corpus SHA-256 inventory: ${inventory.digest}. Do not treat a case as a UI to copy.\n\n`;
   const flat = flatCaseRows(sources, graph, assessments);
   const rawCorpus =
-    "\n## Shared traversable corpus (unranked)\n\nThis is the same raw node, edge, and source set for both flat arms. It supplies the S09 path contract without C1's task-conditioned selection or roles.\n\n" +
-    JSON.stringify({
-      nodes: graph.nodes,
-      edges: graph.edges,
-      sourceEvidence: sources.evidence,
-    }) +
+    "\n## Shared traversable declared-scope corpus (unranked)\n\nThis is the same complete node, edge, and source subgraph for every predeclared trait and assessed case in both flat arms. The inventory digest identifies the full corpus. The subgraph supplies S09 paths without C1's task-conditioned selection or roles. Compare the later S08 profile to this declared scope; report any uncovered trait as a coverage gap, not a completed traversal or arm preference.\n\n" +
+    JSON.stringify(assessedCorpus(sources, graph, traitIds, assessments)) +
     "\n";
   if (arm === "B0")
     return (
@@ -387,6 +429,25 @@ async function prepare(cfg) {
     history: cfg.history ?? [],
     limit: cfg.limit ?? 6,
   });
+  const armEvidence = Object.fromEntries(
+    arms.map((arm) => [
+      arm,
+      referenceEvidence(
+        arm,
+        inventory,
+        retrieval,
+        sources,
+        graph,
+        cfg.traitIds,
+        cfg.assessments,
+      ),
+    ]),
+  );
+  for (const [arm, evidence] of Object.entries(armEvidence))
+    assert(
+      Buffer.byteLength(evidence) <= 40 * 1024,
+      `${arm} reference evidence exceeds the bounded comparison budget`,
+    );
   const targets = [
     `inputs/${cohort}-corpus-inventory.json`,
     ...arms.map((arm) => `inputs/${cohort}-${arm.toLowerCase()}-s09.md`),
@@ -414,18 +475,9 @@ async function prepare(cfg) {
   );
   const armRecords = {};
   for (const arm of arms) {
-    const evidence = referenceEvidence(
-      arm,
-      inventory,
-      retrieval,
-      sources,
-      graph,
-      cfg.traitIds,
-      cfg.assessments,
-    );
     const evidencePath = `inputs/${cohort}-${arm.toLowerCase()}-s09.md`;
     written.push(
-      await createFrozen(root, path.join(root, evidencePath), evidence),
+      await createFrozen(root, path.join(root, evidencePath), armEvidence[arm]),
     );
     if (arm === "C2") {
       const counterexamples = graph.nodes
