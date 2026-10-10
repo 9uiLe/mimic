@@ -30,6 +30,25 @@ const stagedEvidenceDigests = (manifest) =>
         ]),
       )
     : Object.values(manifest.evidenceDigests ?? {}).sort();
+async function treeDigest(root) {
+  assert((await realpath(root)) === root, "Package tree root changed");
+  const files = [];
+  async function visit(folder) {
+    for (const entry of await readdir(folder, { withFileTypes: true })) {
+      const file = path.join(folder, entry.name);
+      assert(!entry.isSymbolicLink(), "Package tree contains a link");
+      if (entry.isDirectory()) await visit(file);
+      else {
+        assert(entry.isFile(), "Package tree contains a non-file");
+        files.push([path.relative(root, file), digest(await readFile(file))]);
+      }
+    }
+  }
+  await visit(root);
+  return digest(
+    JSON.stringify(files.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))),
+  );
+}
 export const captureSettingsDigest = (config) =>
   digest(
     JSON.stringify(
@@ -218,6 +237,17 @@ export function makePlan(template, config) {
     );
     if (config.previousRunId && ["s10", "s11"].includes(task.id))
       task.humanBrief += `\nHuman-selected prior direction: ${choiceKey(config.baseRef)} from Run ${config.previousRunId}. Its accepted content is ${JSON.stringify(config.selectedBase ?? "UNVERIFIED")}. Address only this requested issue: ${config.revisionRequest}. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`;
+    if (config.previousRunId && task.id === "s10") {
+      task.intent = "revise";
+      task.targetArtifactId = config.baseRef.artifactId;
+      task.inputs.required.push({
+        name: "selected-direction",
+        kind: "artifact",
+        artifactType: "design-direction",
+        schemaVersion: "1.0.0",
+        refs: [config.baseRef],
+      });
+    }
     if (task.id === "s09") task.evidenceFiles = [config.referenceFile];
     else if (config.evidenceFiles[task.id])
       task.evidenceFiles = config.evidenceFiles[task.id];
@@ -287,7 +317,24 @@ export function reviewTrial({
   );
   const recordedDecision = approved.length === 1 ? approved[0] : undefined;
   const choice = recordedDecision?.output?.artifact?.content?.chosenAlternative;
-  const selected = candidates.find(({ ref }) => choiceKey(ref) === choice);
+  const invalidRevisionRefs = manifest.baseRef
+    ? candidates
+        .filter(
+          ({ ref, artifact }) =>
+            ref.artifactId !== manifest.baseRef.artifactId ||
+            ref.revision !== manifest.baseRef.revision + 1 ||
+            artifact.meta.supersedesRevision !== manifest.baseRef.revision ||
+            !artifact.dependencies?.some((item) =>
+              sameRef(item, manifest.baseRef),
+            ),
+        )
+        .map(({ ref }) => ref)
+    : [];
+  const selected = candidates.find(
+    ({ ref }) =>
+      choiceKey(ref) === choice &&
+      !invalidRevisionRefs.some((invalid) => sameRef(invalid, ref)),
+  );
   assert(
     Array.isArray(history) && history.every(exactRef),
     "Invalid approved revision history",
@@ -356,22 +403,24 @@ export function reviewTrial({
         ? "stopped"
         : !candidates.length
           ? "generating"
-          : unrelatedRevisions.length
-            ? "unselected-revision"
-            : sessions.length &&
-                sessions.every((session) => session.status === "stopped") &&
-                !pending.length &&
-                !recordedDecision
-              ? "partial-stopped"
-              : !recordedDecision && !pending.length
-                ? "evaluating"
-                : !recordedDecision
-                  ? "awaiting-human-selection"
-                  : !selected
-                    ? "selection-needs-exact-ref"
-                    : revisionCount >= limit
-                      ? "revision-limit"
-                      : "selected",
+          : invalidRevisionRefs.length
+            ? "invalid-revision-output"
+            : unrelatedRevisions.length
+              ? "unselected-revision"
+              : sessions.length &&
+                  sessions.every((session) => session.status === "stopped") &&
+                  !pending.length &&
+                  !recordedDecision
+                ? "partial-stopped"
+                : !recordedDecision && !pending.length
+                  ? "evaluating"
+                  : !recordedDecision
+                    ? "awaiting-human-selection"
+                    : !selected
+                      ? "selection-needs-exact-ref"
+                      : revisionCount >= limit
+                        ? "revision-limit"
+                        : "selected",
     candidates: byCandidate,
     proposedDecisions: pending.map(({ ref, artifact }) => ({
       ref,
@@ -381,6 +430,7 @@ export function reviewTrial({
     selectedRef: selected?.ref ?? null,
     humanDecisionId: recordedDecision?.id ?? null,
     unrelatedRevisionRefs: unrelatedRevisions.map(({ ref }) => ref),
+    invalidRevisionRefs,
     revisionCount,
     revisionBudget: limit,
     priorSelectedRefs: history,
@@ -449,6 +499,10 @@ export function compareTrials(left, right) {
     sameContent(left.manifest.brief, right.manifest.brief) &&
     left.manifest.referenceDigest === right.manifest.referenceDigest &&
     left.manifest.templateDigest === right.manifest.templateDigest &&
+    left.manifest.skillTreeDigest &&
+    left.manifest.skillTreeDigest === right.manifest.skillTreeDigest &&
+    left.manifest.schemaTreeDigest &&
+    left.manifest.schemaTreeDigest === right.manifest.schemaTreeDigest &&
     sameContent(
       stagedEvidenceDigests(left.manifest),
       stagedEvidenceDigests(right.manifest),
@@ -722,6 +776,8 @@ export async function approvedHistory(workspace, manifest) {
         sameContent(prior.budget, manifest.budget) &&
         (prior.revisionBudget ?? 2) === (manifest.revisionBudget ?? 2) &&
         prior.referenceDigest === manifest.referenceDigest &&
+        prior.skillTreeDigest === manifest.skillTreeDigest &&
+        prior.schemaTreeDigest === manifest.schemaTreeDigest &&
         sameContent(
           stagedEvidenceDigests(prior),
           stagedEvidenceDigests(manifest),
@@ -819,9 +875,18 @@ async function main(args) {
       config.previousRunId
         ? current.registry?.runs?.[config.previousRunId] &&
             !current.registry?.runs?.[config.runId]
-        : !Object.keys(current.registry?.runs ?? {}).length,
+        : !Object.keys(current.registry?.runs ?? {}).length &&
+            !Object.keys(current.registry?.canonical ?? {}).length,
       "Initial trial needs a fresh workspace; revision needs its prior Run",
     );
+    if (config.previousRunId)
+      assert(
+        sameRef(
+          current.registry?.canonical?.[config.baseRef.artifactId]?.ref,
+          config.baseRef,
+        ),
+        "Selected revision base is not current approved canonical state",
+      );
     const reference = path.resolve(workspace, config.referenceFile);
     assert(
       reference.startsWith(`${workspace}${path.sep}`),
@@ -844,6 +909,8 @@ async function main(args) {
       referenceDigest: digest(referenceBytes),
       evidenceDigests,
       templateDigest: digest(await readFile(templateFile)),
+      skillTreeDigest: await treeDigest(path.join(workspace, "skills")),
+      schemaTreeDigest: await treeDigest(path.join(workspace, "schemas")),
       revisionBudget: config.revisionBudget ?? 2,
     };
     const history = await approvedHistory(workspace, manifest);
@@ -912,6 +979,13 @@ async function main(args) {
         digest(await readFile(path.resolve(workspace, name))) === hash,
         "Evidence changed",
       );
+    assert(
+      (await treeDigest(path.join(workspace, "skills"))) ===
+        manifest.skillTreeDigest &&
+        (await treeDigest(path.join(workspace, "schemas"))) ===
+          manifest.schemaTreeDigest,
+      "Skill or schema package tree changed",
+    );
     const snapshot = await acceptedRun(workspace, config.runId);
     const history = await approvedHistory(workspace, manifest);
     if (command === "capture") {

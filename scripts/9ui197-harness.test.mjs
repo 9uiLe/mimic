@@ -56,6 +56,7 @@ const candidate = (id, revision = 1) => ({
     },
     lifecycle: { status: "provisional" },
     content: { summary: id, mechanisms: ["comparison"] },
+    dependencies: revision > 1 ? [ref(id, revision - 1)] : [],
   },
 });
 const proposedDecision = {
@@ -111,6 +112,45 @@ test("brief preserves fact policy across both arms and adds intervention only to
   assert.throws(
     () => validateBrief({ ...brief, references: [{ source: "case:example" }] }),
     /Reference needs/,
+  );
+});
+
+test("revision plan binds the selected exact direction as an S10 revise input", async () => {
+  const template = JSON.parse(
+    await readFile(
+      new URL("../docs/dogfood/9ui183/plan-template.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const plan = makePlan(template, {
+    runId: "run_revision_one",
+    previousRunId: "run_initial",
+    baseRef: ref("art_one"),
+    revisionRequest: "Clarify the primary action",
+    selectedBase: { summary: "Selected direction" },
+    condition: "guided",
+    model: "gpt-test",
+    budget: { maxGenerations: 2, timeoutMs: 120000 },
+    brief,
+    referenceFile: "inputs/reference.md",
+    evidenceFiles: { s04: ["inputs/system.md"], s08: ["inputs/task.md"] },
+  });
+  const s10 = plan.find((task) => task.id === "s10");
+  assert.equal(s10.intent, "revise");
+  assert.equal(s10.targetArtifactId, "art_one");
+  assert.deepEqual(
+    s10.inputs.required.find((item) => item.name === "selected-direction").refs,
+    [ref("art_one")],
+  );
+  assert.match(s10.humanBrief, /Selected direction/);
+  const { preflightPlan } = await import("../apps/cli/dist/plan.js");
+  assert.equal(
+    preflightPlan(
+      plan,
+      [{ level: "organization", ownerId: "org_local" }],
+      "org_local",
+    ).find((task) => task.id === "s10").intent,
+    "revise",
   );
 });
 
@@ -358,6 +398,25 @@ test("a revision of the prior human choice waits for the current choice", () => 
   );
   assert.equal(report.status, "awaiting-human-selection");
   assert.deepEqual(report.unrelatedRevisionRefs, []);
+  assert.equal(report.selectedRef, null);
+});
+
+test("an unrelated generated direction cannot count as a selected revision", () => {
+  const report = reviewTrial(
+    base({
+      manifest: {
+        runId: "run_revision_one",
+        condition: "guided",
+        brief,
+        revisionBudget: 2,
+        baseRef: ref("art_one"),
+      },
+      artifacts: [candidate("art_other"), proposedDecision],
+      history: [ref("art_one")],
+    }),
+  );
+  assert.equal(report.status, "invalid-revision-output");
+  assert.deepEqual(report.invalidRevisionRefs, [ref("art_other")]);
   assert.equal(report.selectedRef, null);
 });
 
@@ -677,6 +736,8 @@ test("comparison requires identical declared task, sources, model and budget", (
     brief,
     referenceDigest: "sha256:ref",
     templateDigest: "sha256:template",
+    skillTreeDigest: "sha256:skills",
+    schemaTreeDigest: "sha256:schemas",
     evidenceDigests: { "inputs/task.md": "sha256:task" },
     model: "model-1",
     budget: { maxGenerations: 2, timeoutMs: 120000 },
@@ -699,6 +760,19 @@ test("comparison requires identical declared task, sources, model and budget", (
     compareTrials(
       { manifest: { ...manifest, revisionBudget: 1 } },
       { manifest: { ...manifest, condition: "guided", revisionBudget: 2 } },
+    ).observedOutcome,
+    "NOT_COMPARABLE",
+  );
+  assert.equal(
+    compareTrials(
+      { manifest },
+      {
+        manifest: {
+          ...manifest,
+          condition: "guided",
+          skillTreeDigest: "sha256:changed",
+        },
+      },
     ).observedOutcome,
     "NOT_COMPARABLE",
   );
