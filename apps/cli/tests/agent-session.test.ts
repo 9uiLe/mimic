@@ -43,7 +43,13 @@ import {
   runAuthorizedSessionOnce,
   runAuthorizedSessionResume,
 } from "../src/agent/session-main.js";
-import { CodexExecutor, CodexJsonlDecoder } from "../src/agent/codex.js";
+import {
+  CodexExecutor,
+  CodexJsonlDecoder,
+  createCodexGenerationProfile,
+} from "../src/agent/codex.js";
+import { runHostAuthorizedSessionOnce } from "../src/agent/authorized-host.js";
+import { HostCreditAuthorizationStore } from "../src/agent/host-credit-authorization.js";
 import {
   createAuthorizedCodexReconciliationDispatch,
   createAuthorizedCodexSessionDispatch,
@@ -2384,7 +2390,7 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   const configPath = path.join(h.root, "authorized-session.json");
   const configuration = {
     workspace: h.root,
-    executable: process.execPath,
+    executable: "/untrusted-workspace-codex",
     runId: binding.runId,
     sessionId: "session_a",
     packages: { first: "skill" },
@@ -2394,6 +2400,7 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   };
   await writeFile(configPath, JSON.stringify(configuration));
   const generationBounds: number[] = [];
+  const selectedExecutables: string[] = [];
   const launch = vi
     .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
     .mockImplementation(async function (this: CodexExecutor, request) {
@@ -2402,6 +2409,10 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
       generationBounds.push(
         (this as unknown as { options: { timeoutMs: number } }).options
           .timeoutMs,
+      );
+      selectedExecutables.push(
+        (this as unknown as { options: { executable: string } }).options
+          .executable,
       );
       return fake(h.output).start(request);
     });
@@ -2426,7 +2437,13 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   err.length = 0;
   await writeFile(configPath, JSON.stringify(configuration));
   expect(
-    await runAuthorizedSessionOnce(configPath, "schema.json", decision, io),
+    await runAuthorizedSessionOnce(
+      configPath,
+      "schema.json",
+      decision,
+      io,
+      process.execPath,
+    ),
   ).toBe(0);
   expect(JSON.parse(out.at(-1)!).executionPolicy).toBe(
     "authorized-existing-credit-risk-once",
@@ -2434,6 +2451,7 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   expect((await h.store.read("session_a"))?.generationCount).toBe(1);
   expect(launch).toHaveBeenCalledOnce();
   expect(generationBounds).toEqual([600_000]);
+  expect(selectedExecutables).toEqual([process.execPath]);
   expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
   expect(err).toEqual([]);
   expect(
@@ -2447,6 +2465,112 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
     JSON.stringify({ ...configuration, creditRiskConfirmed: true }),
   );
   expect(await runSessionCli(["start", "--config", configPath], io)).toBe(2);
+  expect(launch).toHaveBeenCalledOnce();
+});
+
+test("host entry uses the installed output schema and an executable absent from workspace config", async () => {
+  const h = await staticHarness();
+  const privateRoot = await temporary();
+  const authorization = new HostCreditAuthorizationStore(
+    path.join(privateRoot, "credit"),
+  );
+  const configPath = path.join(h.root, "host-session.json");
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      workspace: h.root,
+      runId: binding.runId,
+      sessionId: "session_host",
+      packages: { first: "skill" },
+      model: binding.settings.model,
+      timeoutMs: 60_000,
+    }),
+  );
+  const grantId = await authorization.record(
+    {
+      workspace: h.root,
+      runId: binding.runId,
+      model: binding.settings.model,
+      executable: process.execPath,
+      packages: { first: "skill" },
+      maxCalls: 1,
+      expiresAt: Date.now() + 60_000,
+    },
+    {
+      requestDecision: async () => ({
+        decisionId: "9999-test-host-event",
+        actorId: "person@example.com",
+        approvedAt: Date.now(),
+      }),
+    },
+  );
+  const launch = vi
+    .spyOn(CodexExecutor.prototype, "startAuthorizedOnce")
+    .mockImplementation(async (request) => fake(h.output).start(request));
+  const out: string[] = [];
+  const err: string[] = [];
+  expect(
+    await runHostAuthorizedSessionOnce(
+      configPath,
+      process.execPath,
+      grantId,
+      authorization,
+      { out: (value) => out.push(value), err: (value) => err.push(value) },
+    ),
+  ).toBe(0);
+  expect(launch).toHaveBeenCalledOnce();
+  expect(err).toEqual([]);
+  const stagedNames = (
+    await readdir(path.join(h.root, ".mimic/agent-schema"))
+  ).filter((name) => name.startsWith("codex-submission-output-"));
+  expect(stagedNames).toHaveLength(1);
+  expect(stagedNames[0]).toMatch(
+    /^codex-submission-output-[a-f0-9]{64}\.schema\.json$/,
+  );
+  const schemaPath = path.join(h.root, ".mimic/agent-schema", stagedNames[0]!);
+  expect((await stat(schemaPath)).isFile()).toBe(true);
+  await expect(
+    createCodexGenerationProfile(
+      { executable: process.execPath, env: {}, workspace: h.root },
+      {
+        requestId: "schema-contract",
+        workspace: h.root,
+        prompt: "schema containment",
+        settings: binding.settings,
+      },
+      schemaPath,
+    ),
+  ).resolves.toBeDefined();
+  expect(
+    (await new FileSessionStore(h.root).read("session_host"))?.generationCount,
+  ).toBe(1);
+  await runAuthorizedSessionResume(
+    configPath,
+    "a".repeat(64),
+    { out: () => {}, err: (value) => err.push(value) },
+    process.execPath,
+  );
+  expect(err.join("\n")).not.toMatch(/Invalid configuration/);
+  const linkedWorkspace = path.join(privateRoot, "linked-workspace");
+  await symlink(h.root, linkedWorkspace);
+  await writeFile(
+    configPath,
+    JSON.stringify({
+      workspace: linkedWorkspace,
+      runId: binding.runId,
+      sessionId: "session_linked",
+      packages: { first: "skill" },
+      model: binding.settings.model,
+    }),
+  );
+  await expect(
+    runHostAuthorizedSessionOnce(
+      configPath,
+      process.execPath,
+      grantId,
+      authorization,
+    ),
+  ).rejects.toThrow(/canonical path/);
   expect(launch).toHaveBeenCalledOnce();
 });
 

@@ -128,11 +128,13 @@ export async function runAuthorizedSessionOnce(
     out: console.log,
     err: console.error,
   },
+  trustedExecutable?: string,
 ): Promise<number> {
   return runConfiguredSession(["start", "--config", configPath], io, {
     kind: "generate",
     decision,
     outputSchemaPath,
+    trustedExecutable,
   });
 }
 
@@ -145,6 +147,7 @@ export async function runAuthorizedSessionResume(
     out: console.log,
     err: console.error,
   },
+  trustedExecutable?: string,
 ): Promise<number> {
   if (!/^[a-f0-9]{64}$/.test(expectedWorkDigest)) {
     io.err("Invalid expected work digest");
@@ -153,6 +156,7 @@ export async function runAuthorizedSessionResume(
   return runConfiguredSession(["resume", "--config", configPath], io, {
     kind: "reconcile",
     expectedWorkDigest,
+    trustedExecutable,
   });
 }
 
@@ -164,8 +168,13 @@ async function runConfiguredSession(
         kind: "generate";
         decision: CodexCreditRiskDecisionPort;
         outputSchemaPath: string;
+        trustedExecutable?: string;
       }
-    | { kind: "reconcile"; expectedWorkDigest: string },
+    | {
+        kind: "reconcile";
+        expectedWorkDigest: string;
+        trustedExecutable?: string;
+      },
 ): Promise<number> {
   const [command, flag, configPath, ...remaining] = argv;
   if (
@@ -191,8 +200,11 @@ async function runConfiguredSession(
       const info = await handle.stat();
       if (!info.isFile() || info.size > 64 * 1024)
         throw new Error("Invalid configuration file");
+      const saved = JSON.parse(await handle.readFile("utf8")) as unknown;
       config = parseConfiguration(
-        JSON.parse(await handle.readFile("utf8")) as unknown,
+        authorized?.trustedExecutable
+          ? { ...(saved as object), executable: authorized.trustedExecutable }
+          : saved,
       );
     } finally {
       await handle.close();
