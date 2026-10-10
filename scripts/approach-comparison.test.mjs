@@ -116,6 +116,30 @@ test("matched comparison freezes one common upstream and three isolated branches
     /Evidence file too large/,
   );
   await rm(path.join(root, "inputs/oversize.html"));
+  const fullGraph = JSON.parse(
+    await readFile(path.join(repo, "knowledge/seed/graph.json"), "utf8"),
+  );
+  await assert.rejects(
+    prepare({
+      ...cfg,
+      cohortId: "test_over_budget",
+      assessments: fullGraph.nodes
+        .filter((node) => node.kind === "case")
+        .map((node) => ({
+          caseId: node.id,
+          role: "adjacent",
+          structuralFit: "medium",
+          contextDistance: "medium",
+          rationale: "Preflight the complete corpus budget.",
+          evidenceRefs: node.evidenceRefs,
+        })),
+    }),
+    /reference evidence exceeds the bounded comparison budget/,
+  );
+  await assert.rejects(
+    readFile(path.join(root, "inputs/test_over_budget-corpus-inventory.json")),
+    { code: "ENOENT" },
+  );
   const manifest = await prepare(cfg);
   assert.ok(Object.keys(manifest.compiledModules).length > 0);
   await rm(path.join(root, ".mimic/workspace.json"));
@@ -233,16 +257,64 @@ test("matched comparison freezes one common upstream and three isolated branches
     path.join(root, manifest.arms.C2.evidencePath),
     "utf8",
   );
-  assert.match(c2, /Shared traversable corpus/);
+  assert.match(c2, /Shared traversable declared-scope corpus/);
   assert.match(c2, /principle:smarthr-table/);
   const b0 = await readFile(
     path.join(root, manifest.arms.B0.evidencePath),
     "utf8",
   );
   assert.match(b0, /Flat case catalogue/);
-  assert.match(b0, /Shared traversable corpus/);
+  assert.match(b0, /Shared traversable declared-scope corpus/);
   assert.match(b0, /"edges"/);
-  assert.ok(Buffer.byteLength(b0) <= 1024 * 1024);
+  for (const evidence of [b0, c2]) {
+    assert.ok(Buffer.byteLength(evidence) <= 40 * 1024);
+    const subgraph = JSON.parse(evidence.trim().split("\n").at(-1));
+    const nodeIds = new Set(subgraph.nodes.map((node) => node.id));
+    const sourceIds = new Set(subgraph.sourceEvidence.map((row) => row.id));
+    assert.deepEqual(
+      subgraph.nodes
+        .filter((node) => node.kind === "case")
+        .map((node) => node.id)
+        .sort(),
+      ["case:google-expressive", "case:smarthr-table"],
+    );
+    assert.ok(
+      subgraph.edges.every(
+        (edge) =>
+          nodeIds.has(edge.from) && nodeIds.has(edge.to) && edge.rationale,
+      ),
+    );
+    assert.ok(
+      [...subgraph.nodes, ...subgraph.edges].every((item) =>
+        item.evidenceRefs.every((id) => sourceIds.has(id)),
+      ),
+    );
+    assert.ok(
+      subgraph.sourceEvidence.every((row) => row.sourceUrl && row.accessDate),
+    );
+  }
+  const extraSource = await prepare({
+    ...cfg,
+    cohortId: "test_assessment_source",
+    traitIds: [...cfg.traitIds, "trait:gov-journey"],
+    assessments: [
+      {
+        ...cfg.assessments[0],
+        evidenceRefs: [...cfg.assessments[0].evidenceRefs, "obs:gov-task-list"],
+      },
+      cfg.assessments[1],
+    ],
+  });
+  const extraEvidence = await readFile(
+    path.join(root, extraSource.arms.B0.evidencePath),
+    "utf8",
+  );
+  const extraGraph = JSON.parse(extraEvidence.trim().split("\n").at(-1));
+  assert.ok(extraGraph.nodes.some((node) => node.id === "trait:gov-journey"));
+  assert.ok(extraGraph.nodes.some((node) => node.id === "case:gov-journey"));
+  assert.ok(
+    extraGraph.sourceEvidence.some((row) => row.id === "obs:gov-task-list"),
+  );
   assert.doesNotMatch(b0, /Host graph retrieval/);
   const orphan = {
     action: "produce-provisional",
