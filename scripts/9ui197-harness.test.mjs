@@ -73,6 +73,13 @@ const proposedDecision = {
     },
   },
 };
+const workingSelection = (choice, reviewRef = proposedDecision.ref) => ({
+  id: "selection_one",
+  runId: "run_trial",
+  ref: choice,
+  reviewRef,
+  actor: { kind: "human", id: "person_one" },
+});
 const base = (changes = {}) => ({
   manifest: {
     runId: "run_trial",
@@ -133,6 +140,7 @@ test("revision plan binds the selected exact direction as an S10 revise input", 
   const plan = makePlan(template, {
     runId: "run_revision_one",
     previousRunId: "run_initial",
+    selectedSelectionId: "selection_choice",
     baseRef: ref("art_one"),
     revisionRequest: "Clarify the primary action",
     selectedBase: { summary: "Selected direction" },
@@ -146,6 +154,11 @@ test("revision plan binds the selected exact direction as an S10 revise input", 
   const s10 = plan.find((task) => task.id === "s10");
   assert.equal(s10.intent, "revise");
   assert.equal(s10.targetArtifactId, "art_one");
+  assert.deepEqual(s10.revisionBase, {
+    ref: ref("art_one"),
+    sourceRunId: "run_initial",
+    selectionId: "selection_choice",
+  });
   assert.deepEqual(
     s10.inputs.optional.find((item) => item.name === "prior-direction").refs,
     [ref("art_one")],
@@ -350,8 +363,40 @@ test("agent suggestion cannot become a human selection", () => {
       commits: [committed(proposal, decision.id)],
     }),
   );
-  assert.equal(afterCommit.status, "selected");
-  assert.deepEqual(afterCommit.selectedRef, ref("art_one"));
+  assert.equal(afterCommit.status, "awaiting-working-selection");
+  assert.equal(afterCommit.selectedRef, null);
+});
+
+test("explicit working-source commit selects only its exact S10 candidate", () => {
+  const choice = ref("art_one");
+  const report = reviewTrial(
+    base({
+      artifacts: [
+        candidate("art_one"),
+        candidate("art_other"),
+        proposedDecision,
+      ],
+      run: {
+        proposals: {},
+        revisionSelection: {
+          id: "selection_one",
+          runId: "run_trial",
+          ref: choice,
+          reviewRef: proposedDecision.ref,
+          actor: { kind: "human", id: "person_one" },
+        },
+      },
+    }),
+  );
+  assert.equal(report.status, "selected");
+  assert.deepEqual(report.selectedRef, choice);
+  assert.equal(report.humanSelectionId, "selection_one");
+  assert.equal(report.humanDecisionId, null);
+  assert.equal(
+    reviewTrial(base({ artifacts: [candidate("art_one"), proposedDecision] }))
+      .status,
+    "awaiting-human-selection",
+  );
 });
 
 test("human decision without exact candidate ref is not treated as selection", () => {
@@ -379,7 +424,7 @@ test("human decision without exact candidate ref is not treated as selection", (
       ],
     }),
   );
-  assert.equal(report.status, "selection-needs-exact-ref");
+  assert.equal(report.status, "awaiting-working-selection");
   assert.equal(report.selectedRef, null);
 });
 
@@ -444,6 +489,7 @@ test("superseding commit selects the newer S11 decision", () => {
           [oldProposal.id]: oldProposal,
           [newProposal.id]: newProposal,
         },
+        revisionSelection: workingSelection(ref("art_one"), newProposal.ref),
       },
       decisions: [
         decision(oldProposal, "decision_old"),
@@ -477,7 +523,10 @@ test("revisions stop at the budget and retain the earlier candidate", () => {
   };
   const report = reviewTrial(
     base({
-      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      run: {
+        proposals: { [proposal.id]: { ...proposal, status: "merged" } },
+        revisionSelection: workingSelection(ref("art_one", 3)),
+      },
       decisions: [decision],
       commits: [committed(proposal, decision.id)],
       artifacts: [
@@ -590,7 +639,10 @@ test("approved prior Run selections consume the revision budget", () => {
   const report = reviewTrial(
     base({
       artifacts: [candidate("art_new"), proposedDecision],
-      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      run: {
+        proposals: { [proposal.id]: { ...proposal, status: "merged" } },
+        revisionSelection: workingSelection(ref("art_new")),
+      },
       commits: [committed(proposal, "human_decision")],
       decisions: [
         {
@@ -626,7 +678,10 @@ test("one revised Run is counted once when it publishes revision metadata", () =
   const report = reviewTrial(
     base({
       artifacts: [candidate("art_one", 2), proposedDecision],
-      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      run: {
+        proposals: { [proposal.id]: { ...proposal, status: "merged" } },
+        revisionSelection: workingSelection(ref("art_one", 2)),
+      },
       commits: [committed(proposal, "human_decision")],
       decisions: [
         {
@@ -696,6 +751,7 @@ test("a revision verifies the prior Run's committed human choice and exact base"
       registry: {
         runs: {
           [priorRunId]: {
+            scope: "org_local",
             artifacts: accepted.artifacts.map(({ ref }) => ref),
             proposals: { [proposal.id]: proposal },
           },
@@ -726,6 +782,37 @@ test("a revision verifies the prior Run's committed human choice and exact base"
         ]),
       ),
     };
+    const selection = {
+      id: "selection_1",
+      runId: priorRunId,
+      ref: chosen.ref,
+      reviewRef: proposalArtifact.ref,
+      actor: { kind: "human", id: "person_1" },
+      at: "2026-10-10T04:10:00Z",
+      reason: "Use this direction as working revision source",
+    };
+    const { canonicalJson } =
+      await import("../packages/core/dist/artifact-canonical.js");
+    const { LocalRevisionSelectionAuthority } =
+      await import("../apps/cli/dist/local-revision-selection.js");
+    saved.registry.runs[priorRunId].revisionSelection =
+      await new LocalRevisionSelectionAuthority(workspace).prepare(
+        selection,
+        {
+          version: 1,
+          action: "select-revision-base",
+          hostId: "fixture-host",
+          humanActorId: selection.actor.id,
+          confirmedAt: selection.at,
+          runId: priorRunId,
+          scopeOwnerId: "org_local",
+          requestId: selection.id,
+          requestDigest: `sha256:${createHash("sha256").update(canonicalJson(selection)).digest("hex")}`,
+          candidate: chosen.ref,
+          review: proposalArtifact.ref,
+        },
+        saved.registry,
+      );
     await writeFile(
       path.join(workspace, `trial-${priorRunId}.json`),
       JSON.stringify(prior),
@@ -749,6 +836,7 @@ test("a revision verifies the prior Run's committed human choice and exact base"
     const history = await approvedHistory(workspace, child);
     assert.deepEqual(history.refs, [chosen.ref]);
     assert.deepEqual(history.baseContent, chosen.artifact.content);
+    assert.equal(history.baseSelectionId, "selection_1");
     const other = accepted.artifacts.find(
       ({ artifact, ref }) =>
         artifact.meta.type === "design-direction" &&
@@ -807,6 +895,7 @@ test("an S07 human decision does not hide the later S11 selection", () => {
           [s07Proposal.id]: s07Proposal,
           [s11Proposal.id]: { ...s11Proposal, status: "merged" },
         },
+        revisionSelection: workingSelection(ref("art_one")),
       },
       commits: [committed(s11Proposal, "decision_s11")],
       artifacts: [
@@ -850,7 +939,7 @@ test("the review consumes the previously accepted real S10/S11 artifacts without
   );
   const html = renderReviewHtml(report);
   assert.match(html, /A comparison workspace treats design review/);
-  assert.match(html, /人間の選択: 待機中/);
+  assert.match(html, /改訂作業のために人が選んだ案: 待機中/);
   assert.doesNotMatch(html, /<script/);
 });
 

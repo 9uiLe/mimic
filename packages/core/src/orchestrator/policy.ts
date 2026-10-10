@@ -321,6 +321,15 @@ export class GovernedRegistryAuthority implements RegistryAuthority {
   verify(record: DecisionRecord, proposal: Proposal): Promise<boolean> {
     return this.delegate.verify(record, proposal);
   }
+  verifyRevisionSelection(
+    ...args: Parameters<
+      NonNullable<RegistryAuthority["verifyRevisionSelection"]>
+    >
+  ): Promise<boolean> {
+    return (
+      this.delegate.verifyRevisionSelection?.(...args) ?? Promise.resolve(false)
+    );
+  }
   verifyResolutionDecision(
     ...args: Parameters<
       NonNullable<RegistryAuthority["verifyResolutionDecision"]>

@@ -249,6 +249,12 @@ export function makePlan(template, config) {
     if (config.previousRunId && ["s10", "s11"].includes(task.id))
       task.humanBrief += `\nHuman-selected prior direction: ${choiceKey(config.baseRef)} from Run ${config.previousRunId}. Its accepted content is ${JSON.stringify(config.selectedBase ?? "UNVERIFIED")}. Address only this requested issue: ${config.revisionRequest}. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`;
     if (task.id === "s10") {
+      if (config.previousRunId && config.selectedSelectionId)
+        task.revisionBase = {
+          ref: config.baseRef,
+          sourceRunId: config.previousRunId,
+          selectionId: config.selectedSelectionId,
+        };
       const priorDirection = {
         name: "prior-direction",
         kind: "artifact",
@@ -383,7 +389,17 @@ export function reviewTrial({
     ({ ref }) => s11Proposal(ref)?.status === "rejected",
   );
   const recordedDecision = approved.length === 1 ? approved[0] : undefined;
-  const choice = recordedDecision?.output?.artifact?.content?.chosenAlternative;
+  const committedSelection =
+    run.revisionSelection?.actor?.kind === "human" &&
+    run.revisionSelection?.runId === manifest.runId &&
+    s11Decisions.some(({ ref }) =>
+      sameRef(ref, run.revisionSelection.reviewRef),
+    )
+      ? run.revisionSelection
+      : undefined;
+  const choice = committedSelection
+    ? choiceKey(committedSelection.ref)
+    : undefined;
   const invalidRevisionRefs = manifest.baseRef
     ? candidates
         .filter(
@@ -477,21 +493,23 @@ export function reviewTrial({
               : sessions.length &&
                   sessions.every((session) => session.status === "stopped") &&
                   !pending.length &&
-                  !recordedDecision
+                  !committedSelection
                 ? "partial-stopped"
-                : !recordedDecision && awaitingCommit
+                : !committedSelection && awaitingCommit
                   ? "awaiting-human-commit"
-                  : !recordedDecision && rejected && !pending.length
-                    ? "proposal-rejected"
-                    : !recordedDecision && !pending.length
-                      ? "evaluating"
-                      : !recordedDecision
-                        ? "awaiting-human-selection"
-                        : !selected
-                          ? "selection-needs-exact-ref"
-                          : revisionCount >= limit
-                            ? "revision-limit"
-                            : "selected",
+                  : !committedSelection && recordedDecision
+                    ? "awaiting-working-selection"
+                    : !committedSelection && rejected && !pending.length
+                      ? "proposal-rejected"
+                      : !committedSelection && !pending.length
+                        ? "evaluating"
+                        : !committedSelection
+                          ? "awaiting-human-selection"
+                          : !selected
+                            ? "selection-needs-exact-ref"
+                            : revisionCount >= limit
+                              ? "revision-limit"
+                              : "selected",
     candidates: byCandidate,
     proposedDecisions: pending.map(({ ref, artifact }) => ({
       ref,
@@ -500,6 +518,7 @@ export function reviewTrial({
     })),
     selectedRef: selected?.ref ?? null,
     humanDecisionId: recordedDecision?.id ?? null,
+    humanSelectionId: committedSelection?.id ?? null,
     unrelatedRevisionRefs: unrelatedRevisions.map(({ ref }) => ref),
     invalidRevisionRefs,
     revisionCount,
@@ -558,7 +577,7 @@ export function renderReviewHtml(report, previewUrls = {}) {
           `<p>${htmlEscape(item.summary)} — 提案: ${htmlEscape(item.suggestedChoice ?? "未特定")}</p>`,
       )
       .join("") || "<p>推奨提案: 未取得</p>";
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p><section><h2>提案と未確定事項</h2>${recommendation}<p>人間の選択: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p><section><h2>提案と未確定事項</h2>${recommendation}<p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
 }
 
 export function compareTrials(left, right) {
@@ -729,6 +748,34 @@ async function acceptedRun(workspace, runId) {
   const saved = JSON.parse(before);
   const run = saved.registry.runs[runId];
   assert(run, "Run not found");
+  if (run.revisionSelection) {
+    const { LocalRevisionSelectionAuthority } =
+      await import("../apps/cli/dist/local-revision-selection.js");
+    assert(
+      await new LocalRevisionSelectionAuthority(workspace).verify(
+        run.revisionSelection,
+        saved.registry,
+      ),
+      "Unverified human revision selection",
+    );
+    const selection = run.revisionSelection;
+    assert(
+      run.artifacts.some((ref) => sameRef(ref, selection.ref)) &&
+        run.artifacts.some((ref) => sameRef(ref, selection.reviewRef)) &&
+        !saved.registry.freshness?.[selection.ref.artifactId] &&
+        !saved.registry.freshness?.[selection.reviewRef.artifactId] &&
+        !Object.values(saved.registry.runs).some((other) =>
+          other.artifacts.some(
+            (ref) =>
+              (ref.artifactId === selection.ref.artifactId &&
+                ref.revision > selection.ref.revision) ||
+              (ref.artifactId === selection.reviewRef.artifactId &&
+                ref.revision > selection.reviewRef.revision),
+          ),
+        ),
+      "Human revision selection is stale",
+    );
+  }
   const { artifactDigest } =
     await import("../packages/core/dist/artifact-canonical.js");
   const artifacts = run.artifacts.map((ref) => {
@@ -830,6 +877,7 @@ export async function approvedHistory(workspace, manifest) {
   const seen = new Set([manifest.runId]);
   let child = manifest;
   let baseContent;
+  let baseSelectionId;
   while (child.previousRunId) {
     assert(!seen.has(child.previousRunId), "Revision Run cycle");
     seen.add(child.previousRunId);
@@ -878,10 +926,11 @@ export async function approvedHistory(workspace, manifest) {
     const snapshot = await acceptedRun(workspace, prior.runId);
     const report = reviewTrial({ manifest: prior, ...snapshot });
     assert(
-      report.humanDecisionId && sameRef(child.baseRef, report.selectedRef),
+      report.humanSelectionId && sameRef(child.baseRef, report.selectedRef),
       "Revision base lacks matching human-approved exact choice",
     );
     if (baseContent === undefined) {
+      baseSelectionId = report.humanSelectionId;
       baseContent = snapshot.artifacts.find(({ ref }) =>
         sameRef(ref, report.selectedRef),
       )?.artifact.content;
@@ -893,7 +942,7 @@ export async function approvedHistory(workspace, manifest) {
     history.unshift(report.selectedRef);
     child = prior;
   }
-  return { refs: history, baseContent };
+  return { refs: history, baseContent, baseSelectionId };
 }
 
 async function main(args) {
@@ -954,14 +1003,6 @@ async function main(args) {
             !Object.keys(current.registry?.canonical ?? {}).length,
       "Initial trial needs a fresh workspace; revision needs its prior Run",
     );
-    if (config.previousRunId)
-      assert(
-        sameRef(
-          current.registry?.canonical?.[config.baseRef.artifactId]?.ref,
-          config.baseRef,
-        ),
-        "Selected revision base is not current approved canonical state",
-      );
     const reference = path.resolve(workspace, config.referenceFile);
     assert(
       reference.startsWith(`${workspace}${path.sep}`),
@@ -993,6 +1034,7 @@ async function main(args) {
       plan = makePlan(template, {
         ...config,
         selectedBase: history.baseContent,
+        selectedSelectionId: history.baseSelectionId,
       });
     const planText = JSON.stringify(plan, null, 2) + "\n";
     await writeFile(

@@ -10,6 +10,7 @@ import {
   FileRegistryStorage,
   RunRegistry,
   type DecisionRecord,
+  type RevisionBaseSelection,
   type RegistryState,
 } from "./registry.js";
 import type { AtomicRegistryStorage } from "../workspace-transaction.js";
@@ -161,6 +162,9 @@ function setup() {
       async allowCommit() {
         return true;
       },
+      async verifyRevisionSelection() {
+        return true; // Synthetic host assertion in this fixture only.
+      },
       async verifyResolution(_id, refs) {
         return refs.includes("evidence:verified");
       },
@@ -172,6 +176,217 @@ function setup() {
   );
   return { storage, artifacts, registry };
 }
+test("only the fresh exact S10 choice from a committed human S11 decision can start a revision Run", async () => {
+  const { storage, artifacts, registry } = setup();
+  const direction = {
+    artifactId: "art_direction",
+    revision: 1,
+    lockDigest: digest("d"),
+  };
+  const decisionProposal = {
+    artifactId: "art_choice",
+    revision: 1,
+    lockDigest: digest("e"),
+  };
+  const decisionOutput = {
+    artifactId: "art_choice",
+    revision: 2,
+    lockDigest: digest("f"),
+  };
+  const selection = {
+    ref: direction,
+    sourceRunId: "run_source",
+    decisionId: "decision_choice",
+  };
+  artifacts.set("art_direction@1", {
+    artifact: {
+      ...artifact(direction),
+      meta: { ...artifact(direction).meta, type: "design-direction" },
+      lifecycle: { status: "provisional", freshness: "valid" },
+      origin: {
+        actorKind: "skill",
+        actorId: "mimic.s10.design-direction-generator",
+        runId: "run_source",
+      },
+    },
+    digest: direction.lockDigest,
+  });
+  const chosen = `${direction.artifactId}@${direction.revision}#${direction.lockDigest}`;
+  const approvedChoice: ArtifactSnapshot = {
+    ...artifact(decisionOutput, "approved"),
+    meta: { ...artifact(decisionOutput).meta, type: "decision" },
+    origin: {
+      actorKind: "skill",
+      actorId: "mimic.s11.direction-evaluator",
+      runId: "run_source",
+    },
+    content: { chosenAlternative: chosen },
+    approval: {
+      status: "approved",
+      decisionId: selection.decisionId,
+      actorId: actor.id,
+      at,
+    },
+  };
+  artifacts.set("art_choice@2", {
+    artifact: approvedChoice,
+    digest: decisionOutput.lockDigest,
+  });
+  storage.state.runs.run_source = {
+    id: "run_source",
+    scope: "product",
+    entryMode: "hybrid",
+    base: [],
+    reused: [],
+    artifacts: [direction, decisionProposal],
+    blockers: {},
+    safeActions: [],
+    proposals: {
+      proposal_choice: {
+        id: "proposal_choice",
+        ref: decisionProposal,
+        packetId: "packet_choice",
+        alternatives: ["choose", "wait"],
+        rationale: "review",
+        evidenceLimits: [],
+        dependents: [],
+        status: "merged",
+        readiness: "ready",
+      },
+    },
+  };
+  storage.state.packets.packet_choice = {
+    id: "packet_choice",
+    runId: "run_source",
+    proposalIds: ["proposal_choice"],
+    createdAt: at,
+    reason: "review",
+  };
+  storage.state.decisions.decision_choice = {
+    id: "decision_choice",
+    packetId: "packet_choice",
+    proposalId: "proposal_choice",
+    outcome: "approved",
+    actor,
+    at,
+    rationale: "choose this direction",
+    output: { ref: decisionOutput, artifact: approvedChoice },
+  };
+  storage.state.canonical.art_choice = {
+    ref: decisionOutput,
+    decisionId: selection.decisionId,
+  };
+  const start = (id: string, revisionBase: RevisionBaseSelection = selection) =>
+    registry.start({
+      id,
+      scope: "product",
+      entryMode: "hybrid",
+      base: [decisionOutput, direction],
+      reused: [
+        { ref: decisionOutput, reason: "approved decision" },
+        { ref: direction, reason: "selected revision source" },
+      ],
+      revisionBase,
+      safeActions: ["revise"],
+      actor: agent,
+      at,
+      reason: "revise selected direction",
+    });
+  await expect(start("run_before_commit")).rejects.toThrow(
+    /committed human choice/,
+  );
+  storage.state.commits.commit_choice = {
+    request: {
+      id: "commit_choice",
+      packetId: "packet_choice",
+      actor,
+      at,
+      reason: "select revision base",
+      approvals: [
+        { proposalId: "proposal_choice", decisionId: "decision_choice" },
+      ],
+    },
+    outputs: [decisionOutput],
+  };
+  await expect(
+    start("run_wrong_ref", {
+      ...selection,
+      ref: { ...direction, lockDigest: digest("a") },
+    }),
+  ).rejects.toThrow();
+  await expect(
+    start("run_wrong_decision", { ...selection, decisionId: "missing" }),
+  ).rejects.toThrow(/committed human choice/);
+  await expect(start("run_selected")).resolves.toMatchObject({
+    revisionBase: selection,
+  });
+  const reviewRef = {
+    artifactId: "art_s11_review",
+    revision: 1,
+    lockDigest: digest("9"),
+  };
+  storage.records.set("art_s11_review@1", {
+    artifact: {
+      ...artifact(reviewRef),
+      meta: { ...artifact(reviewRef).meta, type: "decision" },
+      lifecycle: { status: "provisional", freshness: "valid" },
+      origin: {
+        actorKind: "skill",
+        actorId: "mimic.s11.direction-evaluator",
+        runId: "run_source",
+      },
+      content: { summary: "Compare directions", outcome: "proposed" },
+      dependencies: [{ ...direction, onChange: "validate" }],
+    },
+    digest: reviewRef.lockDigest,
+  });
+  storage.state.runs.run_source = {
+    ...storage.state.runs.run_source,
+    artifacts: [...storage.state.runs.run_source.artifacts, reviewRef],
+  };
+  const working = {
+    ref: direction,
+    sourceRunId: "run_source",
+    selectionId: "selection_one",
+  };
+  await expect(start("run_before_selection", working)).rejects.toThrow(
+    /committed human choice/,
+  );
+  const request = {
+    id: working.selectionId,
+    runId: working.sourceRunId,
+    ref: direction,
+    reviewRef,
+    actor,
+    at,
+    reason: "Use this direction only for the next revision",
+  };
+  await expect(
+    registry.selectRevisionBase({ ...request, ref: b1 }),
+  ).rejects.toThrow(/reviewed by S11/);
+  await registry.selectRevisionBase(request);
+  await expect(start("run_working_selection", working)).resolves.toMatchObject({
+    revisionBase: working,
+  });
+  expect(storage.state.canonical.art_direction).toBeUndefined();
+  await expect(
+    registry.selectRevisionBase({
+      ...request,
+      id: "selection_changed",
+      ref: b1,
+    }),
+  ).rejects.toThrow();
+  storage.state.runs.run_source = {
+    ...storage.state.runs.run_source,
+    artifacts: [
+      ...storage.state.runs.run_source.artifacts,
+      { ...direction, revision: 2 },
+    ],
+  };
+  await expect(registry.assertRevisionBase(selection)).rejects.toThrow(
+    /no longer/,
+  );
+});
 async function started(registry: RunRegistry) {
   await registry.seedCanonical([base]);
   await registry.start({

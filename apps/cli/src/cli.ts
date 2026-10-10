@@ -17,6 +17,10 @@ import {
   LocalConfirmationError,
   type LocalConfirmation,
 } from "./local-confirmation-authority.js";
+import {
+  LocalRevisionSelectionAuthority,
+  type LocalRevisionSelectionConfirmation,
+} from "./local-revision-selection.js";
 import { runSkillCli } from "./skill/index.js";
 import { CliPreviewError, createPreview, type PreviewPlan } from "./preview.js";
 import {
@@ -66,6 +70,7 @@ import {
   type SkillResult,
   type SkillWork,
   type RegistryState,
+  type RevisionSelectionRequest,
   type UpstreamRevisionRequest,
   PackageCompilerError,
   PackageRegistryError,
@@ -109,6 +114,7 @@ const commands = new Set([
   "revision-requests",
   "decisions",
   "decide",
+  "select-revision-base",
   "preview",
   "validate",
   "release",
@@ -140,7 +146,7 @@ function parse(argv: readonly string[]) {
   if (!command || !commands.has(command))
     throw new CliError(
       EXIT.USAGE,
-      "Usage: mimic <init|status|inspect|run|next|submit|revision-requests|decisions|decide|preview|validate|release> [options]",
+      "Usage: mimic <init|status|inspect|run|next|submit|revision-requests|decisions|decide|select-revision-base|preview|validate|release> [options]",
     );
   const options: Record<string, string> = {};
   const positionals: string[] = [];
@@ -653,6 +659,7 @@ async function load(root: string, host: CliHost) {
     path.join(schemasRoot, "artifacts"),
   );
   const localAuthority = new LocalConfirmationAuthority(workspace, root);
+  const localRevisionSelection = new LocalRevisionSelectionAuthority(root);
   let receiptAuthority: ReceiptAuthority | undefined;
   const signedAuthority = async (): Promise<ReceiptAuthority | undefined> => {
     if (receiptAuthority) return receiptAuthority;
@@ -662,6 +669,9 @@ async function load(root: string, host: CliHost) {
     return receiptAuthority;
   };
   const authority: RegistryAuthority = host.authority ?? {
+    verifyRevisionSelection(request, state) {
+      return localRevisionSelection.verify(request, state);
+    },
     async verify(record, proposal) {
       const marks =
         record.externalRefs?.filter(
@@ -712,6 +722,7 @@ async function load(root: string, host: CliHost) {
     schemasRoot,
     runtime,
     localAuthority,
+    localRevisionSelection,
     signedAuthority,
   };
 }
@@ -814,8 +825,42 @@ export async function runCli(
       schemasRoot,
       runtime,
       localAuthority,
+      localRevisionSelection,
       signedAuthority,
     } = await load(root, host);
+    if (command === "select-revision-base") {
+      if (positionals.length || options.commit || options.receipt)
+        throw new CliError(
+          EXIT.USAGE,
+          "Selection takes --file and --confirmation only",
+        );
+      const request = (await readJson(
+        root,
+        required(options.file, "--file"),
+      )) as RevisionSelectionRequest;
+      const supplied = host.authority
+        ? request
+        : await localRevisionSelection.prepare(
+            request,
+            (await readJson(
+              root,
+              required(options.confirmation, "--confirmation"),
+            )) as LocalRevisionSelectionConfirmation,
+            await runtime.registry.snapshot(),
+          );
+      await runtime.registry.selectRevisionBase(supplied);
+      emit(
+        io,
+        {
+          selectionId: supplied.id,
+          status: "working-revision-base-committed",
+          candidate: supplied.ref,
+          finalDesignApproved: false,
+        },
+        json,
+      );
+      return EXIT.OK;
+    }
     if (command === "inspect") {
       if (positionals.length > 1)
         throw new CliError(EXIT.USAGE, "Usage: mimic inspect [run-id]");

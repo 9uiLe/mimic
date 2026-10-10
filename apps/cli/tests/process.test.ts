@@ -155,6 +155,212 @@ test("built executable uses compact stdout and file-backed detail across process
   ).toBe("GENERATE");
 });
 
+test("human-confirmed S10 working selection routes one exact revision without canonical adoption", async () => {
+  const dir = root();
+  expect(invoke("init", "--root", dir, "--json").status).toBe(0);
+  const workspace = new FileWorkspaceStorage(
+    path.join(dir, ".mimic/workspace.json"),
+  );
+  const { loadSchemaDirectory, createOrchestratorRuntime } =
+    await import("@mimic/core");
+  const schemas = await loadSchemaDirectory(
+    path.join(repo, "schemas/artifacts"),
+  );
+  const runtime = createOrchestratorRuntime(
+    workspace,
+    schemas,
+    [{ level: "organization", ownerId: "org_local" }],
+    {
+      async verify() {
+        return false;
+      },
+      async allowCommit() {
+        return false;
+      },
+    },
+  );
+  const sourceId = "run_working_source";
+  const candidateExample = JSON.parse(
+    readFileSync(
+      path.join(
+        repo,
+        "skills/s10-design-direction-generator/examples/directions.json",
+      ),
+      "utf8",
+    ),
+  ).candidate as ArtifactSnapshot;
+  const candidate: ArtifactSnapshot = {
+    ...candidateExample,
+    scope: { level: "organization", ownerId: "org_local" },
+    origin: { ...candidateExample.origin, runId: sourceId },
+  };
+  const candidateRef = {
+    artifactId: candidate.meta.id,
+    revision: candidate.meta.revision,
+    lockDigest: artifactDigest(candidate),
+  };
+  const reviewExample = JSON.parse(
+    readFileSync(
+      path.join(repo, "skills/s11-direction-evaluator/examples/decision.json"),
+      "utf8",
+    ),
+  ) as ArtifactSnapshot;
+  const review: ArtifactSnapshot = {
+    ...reviewExample,
+    scope: { level: "organization", ownerId: "org_local" },
+    origin: { ...reviewExample.origin, runId: sourceId },
+    dependencies: [{ ...candidateRef, onChange: "validate" }],
+  };
+  const reviewRef = {
+    artifactId: review.meta.id,
+    revision: review.meta.revision,
+    lockDigest: artifactDigest(review),
+  };
+  const at = new Date().toISOString();
+  await runtime.registry.start({
+    id: sourceId,
+    scope: "org_local",
+    entryMode: "hybrid",
+    base: [],
+    reused: [],
+    safeActions: ["s10", "s11"],
+    actor: { kind: "agent", id: "test-host" },
+    at,
+    reason: "test fixture source",
+  });
+  await runtime.artifacts.create(candidate);
+  await runtime.registry.produce({
+    runId: sourceId,
+    ref: candidateRef,
+    inputs: [],
+    actor: { kind: "skill", id: "mimic.s10.design-direction-generator" },
+    at,
+    reason: "test fixture candidate",
+  });
+  await runtime.artifacts.create(review);
+  await runtime.registry.produce({
+    runId: sourceId,
+    ref: reviewRef,
+    inputs: [candidateRef],
+    actor: { kind: "skill", id: "mimic.s11.direction-evaluator" },
+    at,
+    reason: "test fixture review",
+  });
+  const request = {
+    id: "selection_one",
+    runId: sourceId,
+    ref: candidateRef,
+    reviewRef,
+    actor: { kind: "human", id: "person_one" },
+    at,
+    reason: "Use only for the next revision",
+  };
+  const confirmation = {
+    version: 1,
+    action: "select-revision-base",
+    hostId: "test-host",
+    humanActorId: "person_one",
+    confirmedAt: at,
+    runId: sourceId,
+    scopeOwnerId: "org_local",
+    requestId: request.id,
+    requestDigest: hash(request),
+    candidate: candidateRef,
+    review: reviewRef,
+  };
+  writeFileSync(path.join(dir, "selection.json"), JSON.stringify(request));
+  writeFileSync(
+    path.join(dir, "confirmation.json"),
+    JSON.stringify(confirmation),
+  );
+  const plan = [
+    {
+      id: "s10",
+      skillId: "mimic.s10.design-direction-generator",
+      outputType: "design-direction",
+      scopeOwnerId: "org_local",
+      targetArtifactId: candidateRef.artifactId,
+      revisionBase: {
+        ref: candidateRef,
+        sourceRunId: sourceId,
+        selectionId: request.id,
+      },
+      inputs: {
+        required: [],
+        optional: [
+          {
+            name: "prior-direction",
+            kind: "artifact",
+            artifactType: "design-direction",
+            refs: [candidateRef],
+          },
+        ],
+        alternatives: [],
+      },
+      intent: "revise",
+      authority: "AUTONOMOUS",
+    },
+  ];
+  writeFileSync(path.join(dir, "revision-tasks.json"), JSON.stringify(plan));
+  expect(
+    invoke(
+      "run",
+      "--root",
+      dir,
+      "--id",
+      "run_before_choice",
+      "--tasks",
+      "revision-tasks.json",
+      "--json",
+    ).status,
+  ).not.toBe(0);
+  expect(
+    invoke(
+      "select-revision-base",
+      "--root",
+      dir,
+      "--file",
+      "selection.json",
+      "--json",
+    ).status,
+  ).not.toBe(0);
+  const selection = invoke(
+    "select-revision-base",
+    "--root",
+    dir,
+    "--file",
+    "selection.json",
+    "--confirmation",
+    "confirmation.json",
+    "--json",
+  );
+  expect(selection.status, selection.stderr).toBe(0);
+  expect(JSON.parse(selection.stdout)).toMatchObject({
+    selectionId: request.id,
+    finalDesignApproved: false,
+  });
+  const revision = invoke(
+    "run",
+    "--root",
+    dir,
+    "--id",
+    "run_after_choice",
+    "--tasks",
+    "revision-tasks.json",
+    "--json",
+  );
+  expect(revision.status, revision.stderr).toBe(0);
+  const state = JSON.parse(
+    readFileSync(path.join(dir, ".mimic/workspace.json"), "utf8"),
+  );
+  expect(state.registry.canonical).toEqual({});
+  expect(state.registry.runs.run_after_choice.revisionBase).toEqual(
+    plan[0]!.revisionBase,
+  );
+  const next = invoke("next", "run_after_choice", "--root", dir, "--json");
+  expect(next.status, next.stderr).toBe(0);
+});
+
 test("built executable classifies malformed preview and release objects as invalid input", () => {
   const dir = root();
   expect(invoke("init", "--root", dir, "--json").status).toBe(0);
