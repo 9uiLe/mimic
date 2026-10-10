@@ -220,6 +220,16 @@ test("matched comparison freezes one common upstream and three isolated branches
     /S07 durable boundary decision requires proposal-only authority/,
   );
   for (const arm of ["b0", "c1", "c2"]) {
+    for (const stage of ["s09", "s10", "s11"]) {
+      const comparisonTask = task(`${stage}_${arm}`);
+      assert.deepEqual(
+        comparisonTask.inputs.optional.filter(
+          (need) => need.kind === "human-brief",
+        ),
+        [{ name: "comparison-brief", kind: "human-brief" }],
+      );
+      assert.match(comparisonTask.humanBrief, /Compare three structures/);
+    }
     assert.ok(task(`s09_${arm}`).dependsOn.includes("s08"));
     assert.ok(
       task(`s10_${arm}`).inputs.required.some(
