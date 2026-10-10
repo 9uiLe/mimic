@@ -294,6 +294,7 @@ export function reviewTrial({
   run,
   artifacts,
   decisions,
+  commits = [],
   sessions = [],
   captures = {},
   history = [],
@@ -306,22 +307,69 @@ export function reviewTrial({
   const evaluations = artifacts.filter(
     ({ artifact }) => artifact.meta.type === "evaluation",
   );
-  const pending = artifacts.filter(
+  const s11Decisions = artifacts.filter(
     ({ artifact }) =>
       artifact.meta.type === "decision" &&
       artifact.content.outcome === "proposed" &&
       artifact.origin?.actorId === "mimic.s11.direction-evaluator",
   );
+  const proposals = Object.values(run.proposals ?? {});
+  const s11Proposal = (ref) =>
+    proposals.find((proposal) => sameRef(proposal.ref, ref));
+  const pending = s11Decisions.filter(({ ref }) => {
+    const proposal = s11Proposal(ref);
+    return (
+      (!proposals.length || proposal?.status === "pending") &&
+      (!proposal ||
+        !decisions.some(
+          (decision) =>
+            decision.actor?.kind === "human" &&
+            decision.proposalId === proposal.id &&
+            decision.packetId === proposal.packetId &&
+            ["approved", "rejected", "superseded"].includes(decision.outcome),
+        ))
+    );
+  });
+  const relevantApproval = (decision) =>
+    decision.actor?.kind === "human" &&
+    decision.outcome === "approved" &&
+    proposals.some(
+      (proposal) =>
+        proposal.id === decision.proposalId &&
+        proposal.packetId === decision.packetId &&
+        s11Decisions.some(({ ref }) => sameRef(proposal.ref, ref)),
+    );
+  const awaitingCommit = decisions.some(
+    (decision) =>
+      relevantApproval(decision) &&
+      !commits.some((record) =>
+        record.request?.approvals?.some(
+          (item) =>
+            item.decisionId === decision.id &&
+            item.proposalId === decision.proposalId,
+        ),
+      ),
+  );
   const approved = decisions.filter(
     (decision) =>
-      decision.actor?.kind === "human" &&
-      decision.outcome === "approved" &&
-      Object.values(run.proposals ?? {}).some(
+      relevantApproval(decision) &&
+      proposals.some(
         (proposal) =>
-          proposal.id === decision.proposalId &&
-          proposal.packetId === decision.packetId &&
-          pending.some(({ ref }) => sameRef(proposal.ref, ref)),
+          proposal.id === decision.proposalId && proposal.status === "merged",
+      ) &&
+      commits.some(
+        (record) =>
+          record.request?.actor?.kind === "human" &&
+          record.request.packetId === decision.packetId &&
+          record.request.approvals?.some(
+            (item) =>
+              item.decisionId === decision.id &&
+              item.proposalId === decision.proposalId,
+          ),
       ),
+  );
+  const rejected = s11Decisions.some(
+    ({ ref }) => s11Proposal(ref)?.status === "rejected",
   );
   const recordedDecision = approved.length === 1 ? approved[0] : undefined;
   const choice = recordedDecision?.output?.artifact?.content?.chosenAlternative;
@@ -420,15 +468,19 @@ export function reviewTrial({
                   !pending.length &&
                   !recordedDecision
                 ? "partial-stopped"
-                : !recordedDecision && !pending.length
-                  ? "evaluating"
-                  : !recordedDecision
-                    ? "awaiting-human-selection"
-                    : !selected
-                      ? "selection-needs-exact-ref"
-                      : revisionCount >= limit
-                        ? "revision-limit"
-                        : "selected",
+                : !recordedDecision && awaitingCommit
+                  ? "awaiting-human-commit"
+                  : !recordedDecision && rejected && !pending.length
+                    ? "proposal-rejected"
+                    : !recordedDecision && !pending.length
+                      ? "evaluating"
+                      : !recordedDecision
+                        ? "awaiting-human-selection"
+                        : !selected
+                          ? "selection-needs-exact-ref"
+                          : revisionCount >= limit
+                            ? "revision-limit"
+                            : "selected",
     candidates: byCandidate,
     proposedDecisions: pending.map(({ ref, artifact }) => ({
       ref,
@@ -682,6 +734,10 @@ async function acceptedRun(workspace, runId) {
   const decisions = Object.values(saved.registry.decisions).filter(
     (decision) => saved.registry.packets[decision.packetId]?.runId === runId,
   );
+  const commits = Object.values(saved.registry.commits ?? {}).filter(
+    (record) =>
+      saved.registry.packets[record.request?.packetId]?.runId === runId,
+  );
   const sessions = [];
   let sessionNames = [];
   try {
@@ -754,7 +810,7 @@ async function acceptedRun(workspace, runId) {
     before === (await readFile(file, "utf8")),
     "Workspace changed during review",
   );
-  return { run, artifacts, decisions, sessions };
+  return { run, artifacts, decisions, commits, sessions };
 }
 
 /** Re-read each prior Run's actual human decision; a config ref alone is never proof. */

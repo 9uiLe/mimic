@@ -86,6 +86,13 @@ const base = (changes = {}) => ({
   sessions: [],
   ...changes,
 });
+const committed = (proposal, decisionId) => ({
+  request: {
+    actor: { kind: "human" },
+    packetId: proposal.packetId,
+    approvals: [{ proposalId: proposal.id, decisionId }],
+  },
+});
 
 test("brief preserves fact policy across both arms and adds intervention only to guided arm", () => {
   assert.equal(validateBrief(brief), brief);
@@ -300,6 +307,7 @@ test("agent suggestion cannot become a human selection", () => {
     id: "proposal_1",
     packetId: "packet_1",
     ref: ref("art_proposal"),
+    status: "pending",
   };
   const decision = {
     id: "decision_1",
@@ -327,8 +335,18 @@ test("agent suggestion cannot become a human selection", () => {
       decisions: [{ ...decision, actor: { kind: "human" } }],
     }),
   );
-  assert.equal(human.status, "selected");
-  assert.deepEqual(human.selectedRef, ref("art_one"));
+  assert.equal(human.status, "awaiting-human-commit");
+  assert.equal(human.selectedRef, null);
+  const afterCommit = reviewTrial(
+    base({
+      artifacts: [candidate("art_one"), proposedDecision],
+      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      decisions: [{ ...decision, actor: { kind: "human" } }],
+      commits: [committed(proposal, decision.id)],
+    }),
+  );
+  assert.equal(afterCommit.status, "selected");
+  assert.deepEqual(afterCommit.selectedRef, ref("art_one"));
 });
 
 test("human decision without exact candidate ref is not treated as selection", () => {
@@ -340,7 +358,8 @@ test("human decision without exact candidate ref is not treated as selection", (
   const report = reviewTrial(
     base({
       artifacts: [candidate("art_one"), proposedDecision],
-      run: { proposals: { [proposal.id]: proposal } },
+      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      commits: [committed(proposal, "decision_1")],
       decisions: [
         {
           id: "decision_1",
@@ -357,6 +376,82 @@ test("human decision without exact candidate ref is not treated as selection", (
   );
   assert.equal(report.status, "selection-needs-exact-ref");
   assert.equal(report.selectedRef, null);
+});
+
+test("rejected S11 proposal is not shown as pending human choice", () => {
+  const proposal = {
+    id: "proposal_1",
+    packetId: "packet_1",
+    ref: proposedDecision.ref,
+    status: "rejected",
+  };
+  const report = reviewTrial(
+    base({
+      artifacts: [candidate("art_one"), proposedDecision],
+      run: { proposals: { [proposal.id]: proposal } },
+      decisions: [
+        {
+          id: "decision_rejected",
+          actor: { kind: "human" },
+          outcome: "rejected",
+          proposalId: proposal.id,
+          packetId: proposal.packetId,
+        },
+      ],
+    }),
+  );
+  assert.equal(report.status, "proposal-rejected");
+  assert.deepEqual(report.proposedDecisions, []);
+});
+
+test("superseding commit selects the newer S11 decision", () => {
+  const oldProposal = {
+    id: "proposal_old",
+    packetId: "packet_old",
+    ref: proposedDecision.ref,
+    status: "superseded",
+  };
+  const newProposal = {
+    id: "proposal_new",
+    packetId: "packet_new",
+    ref: ref("art_proposal", 2),
+    status: "merged",
+  };
+  const decision = (proposal, id) => ({
+    id,
+    actor: { kind: "human" },
+    outcome: "approved",
+    proposalId: proposal.id,
+    packetId: proposal.packetId,
+    output: {
+      artifact: { content: { chosenAlternative: exactChoice("art_one") } },
+    },
+  });
+  const report = reviewTrial(
+    base({
+      artifacts: [
+        candidate("art_one"),
+        proposedDecision,
+        { ref: newProposal.ref, artifact: proposedDecision.artifact },
+      ],
+      run: {
+        proposals: {
+          [oldProposal.id]: oldProposal,
+          [newProposal.id]: newProposal,
+        },
+      },
+      decisions: [
+        decision(oldProposal, "decision_old"),
+        {
+          ...decision(newProposal, "decision_new"),
+          supersedesDecisionId: "decision_old",
+        },
+      ],
+      commits: [committed(newProposal, "decision_new")],
+    }),
+  );
+  assert.equal(report.status, "selected");
+  assert.equal(report.humanDecisionId, "decision_new");
 });
 
 test("revisions stop at the budget and retain the earlier candidate", () => {
@@ -377,8 +472,9 @@ test("revisions stop at the budget and retain the earlier candidate", () => {
   };
   const report = reviewTrial(
     base({
-      run: { proposals: { [proposal.id]: proposal } },
+      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
       decisions: [decision],
+      commits: [committed(proposal, decision.id)],
       artifacts: [
         candidate("art_one"),
         candidate("art_one", 2),
@@ -489,7 +585,8 @@ test("approved prior Run selections consume the revision budget", () => {
   const report = reviewTrial(
     base({
       artifacts: [candidate("art_new"), proposedDecision],
-      run: { proposals: { [proposal.id]: proposal } },
+      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      commits: [committed(proposal, "human_decision")],
       decisions: [
         {
           id: "human_decision",
@@ -524,7 +621,8 @@ test("one revised Run is counted once when it publishes revision metadata", () =
   const report = reviewTrial(
     base({
       artifacts: [candidate("art_one", 2), proposedDecision],
-      run: { proposals: { [proposal.id]: proposal } },
+      run: { proposals: { [proposal.id]: { ...proposal, status: "merged" } } },
+      commits: [committed(proposal, "human_decision")],
       decisions: [
         {
           id: "human_decision",
@@ -587,6 +685,7 @@ test("a revision verifies the prior Run's committed human choice and exact base"
       id: "proposal_s11",
       packetId: "packet_s11",
       ref: proposalArtifact.ref,
+      status: "merged",
     };
     const saved = {
       registry: {
@@ -613,6 +712,7 @@ test("a revision verifies the prior Run's committed human choice and exact base"
             },
           },
         },
+        commits: { commit_1: committed(proposal, "decision_1") },
       },
       snapshots: Object.fromEntries(
         accepted.artifacts.map(({ ref, artifact }) => [
@@ -700,9 +800,10 @@ test("an S07 human decision does not hide the later S11 selection", () => {
       run: {
         proposals: {
           [s07Proposal.id]: s07Proposal,
-          [s11Proposal.id]: s11Proposal,
+          [s11Proposal.id]: { ...s11Proposal, status: "merged" },
         },
       },
+      commits: [committed(s11Proposal, "decision_s11")],
       artifacts: [
         candidate("art_one"),
         proposedDecision,
