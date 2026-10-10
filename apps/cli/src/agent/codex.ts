@@ -33,6 +33,8 @@ export interface CodexOptions {
   /** Bounded generation effort; does not change tool or account permissions. */
   reasoningEffort?: "low" | "medium";
 }
+/** Generation only; metadata probes keep their separate ten-second bound. */
+export const MAX_CODEX_GENERATION_TIMEOUT_MS = 600_000;
 export interface CodexInspection {
   runtimeVersion: string;
   authentication: "chatgpt" | "api-key" | "missing" | "unknown";
@@ -971,7 +973,7 @@ export async function createCodexGenerationProfile(
   if (
     !Number.isSafeInteger(timeoutMs) ||
     timeoutMs < 1 ||
-    timeoutMs > 120_000 ||
+    timeoutMs > MAX_CODEX_GENERATION_TIMEOUT_MS ||
     (options.reasoningEffort !== undefined &&
       !["low", "medium"].includes(options.reasoningEffort)) ||
     outputSchemaPath.includes("\0")

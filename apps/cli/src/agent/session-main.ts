@@ -3,7 +3,11 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CodexExecutor, type CodexCreditRiskDecisionPort } from "./codex.js";
+import {
+  CodexExecutor,
+  MAX_CODEX_GENERATION_TIMEOUT_MS,
+  type CodexCreditRiskDecisionPort,
+} from "./codex.js";
 import {
   createAuthorizedCodexReconciliationDispatch,
   createAuthorizedCodexSessionDispatch,
@@ -88,7 +92,7 @@ function parseConfiguration(value: unknown): SessionConfiguration {
     throw new Error("Invalid reasoning effort");
   for (const [key, maximum] of [
     ["maxGenerations", 20],
-    ["timeoutMs", 120000],
+    ["timeoutMs", MAX_CODEX_GENERATION_TIMEOUT_MS],
     ["maxOutputBytes", 4 * 1024 * 1024],
   ] as const) {
     if (

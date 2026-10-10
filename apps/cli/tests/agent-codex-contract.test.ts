@@ -68,7 +68,7 @@ const request = (workspace: string) => ({
 });
 test("longer generation deadline retains bounded metadata probes", async () => {
   const options = await fakeCodex();
-  options.timeoutMs = 45_000;
+  options.timeoutMs = 600_000;
   const execute = vi.spyOn(processModule, "executeOfficialProcess");
   expect((await inspectCodex(options)).authentication).toBe("chatgpt");
   expect(execute.mock.calls).toHaveLength(2);
@@ -81,7 +81,7 @@ test("longer generation deadline retains bounded metadata probes", async () => {
     request(options.workspace),
     "output-schema.json",
   );
-  expect(profile.process.timeoutMs).toBe(45_000);
+  expect(profile.process.timeoutMs).toBe(600_000);
 });
 async function calls(options: CodexOptions) {
   return (await readFile(path.join(options.workspace, "calls.jsonl"), "utf8"))
@@ -1091,7 +1091,7 @@ test("profile rejects arbitrary argv, model flags, long budgets, external schema
   );
   for (const mutation of [
     { ...options, args: ["--oss"] },
-    { ...options, timeoutMs: 120_001 },
+    { ...options, timeoutMs: 600_001 },
     { ...options, reasoningEffort: "none" },
     { ...options, env: { HOME: "relative" } },
     { ...options, workspace: outside.workspace },
