@@ -137,7 +137,11 @@ function makePlan(template, cohort, cfg) {
             ? { refsFromTask: `${need.refsFromTask}_${suffix}` }
             : {}),
         }));
-      task.humanBrief = `${commonBrief}\nComparison arm ${arm} in ${runId}. Use the host supplied artifactIdPrefix and exact refs for this task. The evidence timing differs by arm; do not assume this proves superiority.\n`;
+      task.humanBrief = `${commonBrief}\nComparison arm ${arm} in ${runId}. Use the host supplied artifactIdPrefix and exact refs for this task. The evidence timing differs by arm; do not assume this proves superiority.\n${
+        original.id === "s11"
+          ? "\nS11 review packet: Emit one provisional evaluation per exact design-direction input and one proposed decision with pending approval. Put every evaluation and the decision output ref in work.result.outputRefs. Set work.result.proposal to {packetId,reason,items:[{id,ref,alternatives,rationale,evidenceLimits,dependents}]}. The item ref must equal only the proposed decision output ref; evaluation refs are not proposal items. Use unique Run-specific packet/item IDs, a nonempty reason and rationale, at least one alternative, and arrays for evidenceLimits and dependents. For every new output and proposal item ref, use the host-derived lockDigest placeholder; the static host resolves it to the exact digest. Do not record human adoption or approval.\n"
+          : ""
+      }`;
       task.assumptions = cfg.assumptions ?? [];
       task.evidenceFiles =
         original.id === "s09"
