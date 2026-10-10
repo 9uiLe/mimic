@@ -113,7 +113,7 @@ function makePlan(template, cohort, cfg) {
     const task = JSON.parse(JSON.stringify(original));
     task.humanBrief =
       task.id === "s07"
-        ? `${commonBrief}\nS07 boundary decisions are review proposals, not adoption. Emit provisional experience-domain and journey candidates; emit a proposed decision with pending approval and include its exact ref in work.result.proposal with a reviewable packetId, reason, alternatives, rationale, evidenceLimits and dependents. Do not invent a human decision or mark any artifact approved.\n`
+        ? `${commonBrief}\nS07 boundary decisions are review proposals, not adoption. Emit provisional experience-domain and journey candidates; emit one proposed decision with pending approval. For a first proposal, set work.result.proposal to {packetId,reason,items:[{id,ref,alternatives,rationale,evidenceLimits,dependents}]}; items must contain only the exact proposed decision output ref, never provisional domain or journey refs. A renewed rejection also needs the latest priorRejectionId and a new revision; a canonical replacement also needs expectedCanonical. Keep all emitted artifacts in work.result.outputRefs. Use real Run-specific packet/item IDs, at least one alternative, nonempty rationale, arrays for evidenceLimits and dependents, and the host-derived digest placeholder for the new decision ref. Do not invent a human decision or mark any artifact approved.\n`
         : commonBrief;
     task.assumptions = cfg.assumptions ?? [];
     task.evidenceFiles = ["s04", "s08"].includes(task.id)

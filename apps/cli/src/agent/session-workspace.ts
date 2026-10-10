@@ -349,6 +349,12 @@ export async function createWorkspaceSessionPorts(
             examples: conciseDesign ? [] : skill.examples,
           },
           context: promptContext,
+          ...(invocation.skillId === "mimic.s07.experience-architecture"
+            ? {
+                taskRequirement:
+                  'For PROPOSE_ONLY S07, keep experience-domain and journey outputs provisional and make only the boundary decision proposed, all with pending approval. work.result.proposal must have packetId:string, reason:string, and items containing only the exact proposed decision ref. Each item needs id:string, ref, alternatives:string[] with at least one choice, rationale:string, evidenceLimits:string[], and dependents:ExactArtifactRef[]. A renewed rejected decision also needs priorRejectionId naming the latest rejection and a new revision; a replacement of an existing canonical decision also needs expectedCanonical. Do not put provisional domain or journey refs in proposal.items. Use "host-derived" for the new decision ref digest; Mimic derives it before saving. This is a pending review packet, never human adoption.',
+              }
+            : {}),
           ...(invocation.skillId === "mimic.s11.direction-evaluator"
             ? {
                 taskRequirement:

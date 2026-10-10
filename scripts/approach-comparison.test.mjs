@@ -185,6 +185,10 @@ test("matched comparison freezes one common upstream and three isolated branches
   const task = (id) => plan.find((entry) => entry.id === id);
   assert.equal(task("s07").authority, "PROPOSE_ONLY");
   assert.match(task("s07").humanBrief, /work\.result\.proposal/);
+  assert.match(
+    task("s07").humanBrief,
+    /only the exact proposed decision output ref/,
+  );
   const unsafeS07 = JSON.parse(await readFile(template, "utf8"));
   unsafeS07.find((entry) => entry.id === "s07").authority = "AUTONOMOUS";
   assert.throws(
