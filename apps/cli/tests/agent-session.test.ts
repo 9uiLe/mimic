@@ -1174,6 +1174,41 @@ test("a proposed output without its review proposal is rejected before marker", 
     await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
   ).toEqual([]);
 });
+test("a review packet cannot omit another proposed output", async () => {
+  const h = await staticHarness("PROPOSE_ONLY");
+  const candidate = JSON.parse(h.output);
+  candidate.artifacts[0].lifecycle.status = "proposed";
+  candidate.work.result.outputRefs[0].lockDigest = HOST_DERIVED_DIGEST;
+  candidate.work.result.proposal = {
+    packetId: "packet_session_output",
+    reason: "Human review is pending",
+    items: [
+      {
+        id: "proposal_session_output",
+        ref: { ...candidate.work.result.outputRefs[0] },
+        alternatives: ["Keep the current option"],
+        rationale: "Review the proposed output",
+        evidenceLimits: [],
+        dependents: [],
+      },
+    ],
+  };
+  const unbound = structuredClone(candidate.artifacts[0]);
+  unbound.meta.id = "art_session_unbound_evaluation";
+  candidate.artifacts.push(unbound);
+  candidate.work.result.outputRefs.push({
+    artifactId: unbound.meta.id,
+    revision: unbound.meta.revision,
+    lockDigest: HOST_DERIVED_DIGEST,
+  });
+  const saved = await h.ports.saveWork(h.frozen, JSON.stringify(candidate));
+  await expect(h.ports.submit(h.frozen, saved)).rejects.toMatchObject({
+    staticFailure: { reason: "proposal-binding-missing", candidate: true },
+  });
+  expect(
+    await readdir(path.join(h.root, ".mimic/submissions")).catch(() => []),
+  ).toEqual([]);
+});
 test.each([
   {},
   { items: [null] },
