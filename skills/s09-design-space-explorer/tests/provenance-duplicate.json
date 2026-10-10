@@ -1,0 +1,25 @@
+{
+  "source": "Reduced from the static-validation rejection of session_9ui197_guided_s09_host_1; original generated work is preserved separately",
+  "provenance": [
+    {
+      "path": "/content/summary",
+      "kind": "derived",
+      "inputRefs": ["art_s08_problem_profile", "art_s05_product_ui_contract"]
+    },
+    {
+      "path": "/content/summary",
+      "kind": "unknown",
+      "rationale": "Knowledge graph retrieval was not available"
+    },
+    {
+      "path": "/content/references/0",
+      "kind": "derived",
+      "inputRefs": ["art_s08_problem_profile"]
+    },
+    {
+      "path": "/content/references/0",
+      "kind": "hypothesis",
+      "rationale": "The mechanism's transfer is untested"
+    }
+  ]
+}

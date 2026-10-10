@@ -1074,6 +1074,13 @@ test("real static validation rejects invalid model work before submission reserv
     "freeform explanation",
   );
 });
+test("generation prompt requires unique provenance pointers", async () => {
+  const h = await staticHarness();
+  const runnable = (await h.ports.next()).runnable[0];
+  expect(runnable.prompt).toContain(
+    "Each exact provenance.path may occur only once per artifact",
+  );
+});
 test("proposed output is rejected before marker under AUTONOMOUS authority with a bounded actual CLI reason", async () => {
   const h = await staticHarness();
   const candidate = JSON.parse(h.output);
