@@ -1488,8 +1488,9 @@ export class CodexJsonlDecoder {
       });
       // Never expose reasoning as operational logs, nor dispatch tool items.
       if (item.type === "agent_message" && event.type === "item.completed") {
-        if (this.finalText !== undefined)
-          throw new ExecutorFailure("unknown-outcome");
+        // The official CLI may complete more than one distinct message in a
+        // turn. Only the final completed message at turn.completed is a work
+        // candidate; earlier messages remain bounded, uncommitted output.
         this.finalText = item.text;
         return [{ type: "output", text: item.text }];
       }
