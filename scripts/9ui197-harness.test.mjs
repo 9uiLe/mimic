@@ -150,6 +150,11 @@ test("revision plan binds the selected exact direction as an S10 revise input", 
     s10.inputs.optional.find((item) => item.name === "prior-direction").refs,
     [ref("art_one")],
   );
+  assert.match(s10.humanBrief, /Revise only the human-selected direction once/);
+  assert.doesNotMatch(
+    s10.humanBrief,
+    /initial candidate budget|three distinct structural candidates/,
+  );
   const skill = parseYaml(
     await readFile(
       new URL(

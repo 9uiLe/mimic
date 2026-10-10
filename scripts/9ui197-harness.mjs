@@ -125,7 +125,7 @@ export function validateBrief(brief) {
   return brief;
 }
 
-export function briefForTask(brief, guided, stage) {
+export function briefForTask(brief, guided, stage, revision = false) {
   validateBrief(brief);
   const common = [
     `Audience: ${brief.audience}`,
@@ -138,9 +138,14 @@ export function briefForTask(brief, guided, stage) {
     ),
     ...brief.content.map((item) => `${item.policy}: ${item.text}`),
     "Fixed facts and fixed copy are source material, not text to improve. Confirm entries are unresolved; do not invent an answer.",
-    ...(stage === "s10"
+    ...(stage === "s10" && !revision
       ? [
           "The trial's initial candidate budget is three for either condition; emit fewer if further options would be redundant.",
+        ]
+      : []),
+    ...(stage === "s10" && revision
+      ? [
+          "Revise only the human-selected direction once; do not create alternative directions.",
         ]
       : []),
   ];
@@ -153,9 +158,14 @@ export function briefForTask(brief, guided, stage) {
       (item) =>
         `Reference ${item.source}: use because ${item.reason}; apply when ${item.appliesWhen}; do not borrow ${item.doNotBorrow}.`,
     ),
-    ...(stage === "s10"
+    ...(stage === "s10" && !revision
       ? [
           "Start with three distinct structural candidates when they are defensible; this is an initial budget, not a quota. Compare information priority, primary action and comparison unit. Keep a conventional structure if it fits. State each option's conditions, benefits and costs. Do not claim human selection.",
+        ]
+      : []),
+    ...(stage === "s10" && revision
+      ? [
+          "Improve the selected direction against the stated issue. Preserve its useful structure and explain the change and its cost; do not generate new options or claim another human selection.",
         ]
       : []),
     ...(stage === "s11"
@@ -234,6 +244,7 @@ export function makePlan(template, config) {
       config.brief,
       config.condition === "guided",
       task.id,
+      !!config.previousRunId,
     );
     if (config.previousRunId && ["s10", "s11"].includes(task.id))
       task.humanBrief += `\nHuman-selected prior direction: ${choiceKey(config.baseRef)} from Run ${config.previousRunId}. Its accepted content is ${JSON.stringify(config.selectedBase ?? "UNVERIFIED")}. Address only this requested issue: ${config.revisionRequest}. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`;
