@@ -646,6 +646,7 @@ test("a matching unapproved working preview opens from the selected review witho
     working.replace(`${ref}@1`, "art_run_trial_s10_other@1"),
     working.replace('画面内の試用";', '保存済み";'),
     working.replace("sha256:aaa", "sha256:bbb"),
+    working.replace("</body>", "<SCRIPT>alert(1)</SCRIPT></body>"),
   ]) {
     await writeFile(workingFile, bad);
     const invalid = await startMonitor({

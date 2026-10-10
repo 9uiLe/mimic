@@ -323,7 +323,7 @@ async function loadWorkingPreview(
   const working = html.match(
     /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · 親 Run: [^<]+ · 現在の作業用ベース: (art_[A-Za-z0-9_-]{1,255})@([1-9]\d*) · 最終採用: 未承認<\/p>/,
   );
-  const script = html.match(/<script>([\s\S]*?)<\/script>/);
+  const script = html.match(/<script>([\s\S]*?)<\/script>/i);
   const scriptHash = script
     ? createHash("sha256").update(script[1]!).digest("base64")
     : "";
