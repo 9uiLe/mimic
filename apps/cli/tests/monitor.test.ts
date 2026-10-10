@@ -592,7 +592,7 @@ test("a matching unapproved working preview opens from the selected review witho
   const review = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Mimic 候補レビュー</title></head><body><p>Run run_trial · guided · selected</p><p><a href="working-preview-run_trial.html">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p><p>改訂作業のために人が選んだ案: ${ref} · 最終採用/公開: 未承認</p><div class="grid"><article><p>${ref}@1</p><pre>${embedded({ ref: exact, verification })}</pre></article></div><pre>${embedded({ humanSelectionId: "selection_trial" })}</pre></body></html>`;
   const script = `document.querySelector("button").addEventListener("click", () => { document.querySelector("#result").textContent = "画面内の試用"; });`;
   const hash = createHash("sha256").update(script).digest("base64");
-  const working = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>作業用プレビュー · 比較</title></head><body><main data-working-preview="unapproved"><p>下の選択・改訂操作は画面内の試用で、保存しません</p><p>Run run_trial · 親 Run: 初期 Run · 現在の作業用ベース: ${ref}@1 · 最終採用: 未承認</p><button>試す</button><p id="result">未選択</p><pre>${embedded({ selectedRef: exact, humanSelectionId: "selection_trial", candidates: [{ ref: exact, verification }] })}</pre></main><script>${script}</script></body></html>`;
+  const working = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>作業用プレビュー · 比較</title></head><body><main data-working-preview="unapproved"><p>下の選択・改訂操作は画面内の試用で、保存しません</p><p>Run run_trial · 親 Run: 初期 Run · 現在の作業用ベース: ${ref}@1 · 最終採用: 未承認</p><a href="#comparison">候補を比較</a><div id="comparison">比較</div><button>試す</button><p id="result">未選択</p><pre>${embedded({ selectedRef: exact, humanSelectionId: "selection_trial", candidates: [{ ref: exact, verification }] })}</pre></main><script>${script}</script></body></html>`;
   const workingPreviewDigest = `sha256:${createHash("sha256").update(working).digest("hex")}`;
   await writeFile(reviewFile, review);
   await writeFile(workingFile, working);
@@ -618,8 +618,22 @@ test("a matching unapproved working preview opens from the selected review witho
     `script-src 'sha256-${hash}'`,
   );
   expect(response.headers.get("content-security-policy")).toContain(
-    "sandbox allow-scripts",
+    "sandbox allow-scripts; frame-ancestors 'none'",
   );
+  expect(
+    await status(monitor.url + "/trial-review/working-preview", {
+      "Sec-Fetch-Site": "cross-site",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Dest": "empty",
+    }),
+  ).toBe(403);
+  expect(
+    await status(monitor.url + "/trial-review/current", {
+      "Sec-Fetch-Site": "cross-site",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Dest": "document",
+    }),
+  ).toBe(403);
   expect(await response.text()).toBe(working);
   const browser = await chromium.launch({
     executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
@@ -633,9 +647,14 @@ test("a matching unapproved working preview opens from the selected review witho
     ]);
     await preview.waitForLoadState();
     expect(preview.url()).toBe(monitor.url + "/trial-review/working-preview");
+    await preview.getByRole("link", { name: "候補を比較" }).click();
+    expect(preview.url()).toBe(
+      monitor.url + "/trial-review/working-preview#comparison",
+    );
     await preview.getByRole("button", { name: "試す" }).click();
     await browserExpect(preview.locator("#result")).toHaveText("画面内の試用");
-    await preview.reload();
+    const reloaded = await preview.reload();
+    expect(reloaded?.status()).toBe(200);
     await browserExpect(preview.locator("#result")).toHaveText("未選択");
   } finally {
     await browser.close();

@@ -650,6 +650,13 @@ export async function startMonitor(options: {
       });
       response.end(JSON.stringify({ error }));
     };
+    const opaquePreviewNavigation =
+      request.url === "/trial-review/working-preview" &&
+      !!workingPreview &&
+      request.headers.origin === undefined &&
+      request.headers["sec-fetch-site"] === "cross-site" &&
+      request.headers["sec-fetch-mode"] === "navigate" &&
+      request.headers["sec-fetch-dest"] === "document";
     if (
       request.headers.host !== origin.slice(7) ||
       request.rawHeaders.filter(
@@ -660,7 +667,8 @@ export async function startMonitor(options: {
       (request.headers["sec-fetch-site"] !== undefined &&
         !["same-origin", "none"].includes(
           String(request.headers["sec-fetch-site"]),
-        ))
+        ) &&
+        !opaquePreviewNavigation)
     )
       return reject(403, "forbidden");
     if (request.method !== "GET") return reject(405, "method-not-allowed");
