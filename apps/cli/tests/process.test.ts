@@ -26,6 +26,7 @@ import {
   setupSystemFirst,
   syntheticHuman,
 } from "../../../fixtures/dogfood/system-first/setup.js";
+import { artifactIdentityInstruction } from "../src/agent/session-workspace.js";
 
 const repo = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -166,11 +167,17 @@ test("human-confirmed S10 working selection routes one exact revision without ca
   const schemas = await loadSchemaDirectory(
     path.join(repo, "schemas/artifacts"),
   );
+  const { LocalRevisionSelectionAuthority } =
+    await import("../src/local-revision-selection.js");
+  const selectionAuthority = new LocalRevisionSelectionAuthority(dir);
   const runtime = createOrchestratorRuntime(
     workspace,
     schemas,
     [{ level: "organization", ownerId: "org_local" }],
     {
+      verifyRevisionSelection(request, state) {
+        return selectionAuthority.verify(request, state);
+      },
       async verify() {
         return false;
       },
@@ -292,6 +299,7 @@ test("human-confirmed S10 working selection routes one exact revision without ca
             name: "prior-direction",
             kind: "artifact",
             artifactType: "design-direction",
+            schemaVersion: "1.0.0",
             refs: [candidateRef],
           },
         ],
@@ -359,6 +367,49 @@ test("human-confirmed S10 working selection routes one exact revision without ca
   );
   const next = invoke("next", "run_after_choice", "--root", dir, "--json");
   expect(next.status, next.stderr).toBe(0);
+  const nextPlan = JSON.parse(
+    readFileSync(path.join(dir, JSON.parse(next.stdout).path), "utf8"),
+  );
+  expect(nextPlan.actions[0].invocation.inputBindings).toEqual([
+    { name: "prior-direction", refs: [candidateRef] },
+  ]);
+  expect(artifactIdentityInstruction(nextPlan.actions[0].invocation)).toContain(
+    `meta.id exactly to ${candidateRef.artifactId}, meta.revision to 2`,
+  );
+  const revised: ArtifactSnapshot = {
+    ...candidate,
+    meta: {
+      ...candidate.meta,
+      revision: 2,
+      supersedesRevision: 1,
+    },
+    origin: { ...candidate.origin, runId: "run_after_choice" },
+    content: {
+      ...(candidate.content as Record<string, unknown>),
+      summary: "Revised selected action",
+    },
+  };
+  const revisedRef = {
+    artifactId: revised.meta.id,
+    revision: revised.meta.revision,
+    lockDigest: artifactDigest(revised),
+  };
+  await runtime.artifacts.create(revised);
+  await runtime.orchestrator.accept(
+    nextPlan.actions[0].invocation,
+    {
+      runId: "run_after_choice",
+      taskId: "s10",
+      skillId: "mimic.s10.design-direction-generator",
+      inputRefs: [candidateRef],
+      outputRefs: [revisedRef],
+    },
+    { kind: "skill", id: "mimic.s10.design-direction-generator" },
+    new Date().toISOString(),
+  );
+  expect(
+    invoke("next", "run_after_choice", "--root", dir, "--json").status,
+  ).toBe(0);
 });
 
 test("built executable classifies malformed preview and release objects as invalid input", () => {

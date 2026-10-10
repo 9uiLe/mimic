@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   canonicalJson,
+  FileWorkspaceStorage,
   type RegistryState,
   type RevisionSelectionRequest,
 } from "@mimic/core";
@@ -12,6 +13,7 @@ import {
   LocalRevisionSelectionAuthority,
   type LocalRevisionSelectionConfirmation,
 } from "../src/local-revision-selection.js";
+import { LocalConfirmationAuthority } from "../src/local-confirmation-authority.js";
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -59,6 +61,12 @@ test("working-base confirmation binds the human, exact candidate, S11 review, an
   const marked = await authority.prepare(request, confirmation, state);
   expect(
     await new LocalRevisionSelectionAuthority(root).verify(marked, state),
+  ).toBe(true);
+  expect(
+    await new LocalConfirmationAuthority(
+      new FileWorkspaceStorage(path.join(root, ".mimic/workspace.json")),
+      root,
+    ).verifyRevisionSelection(marked, state),
   ).toBe(true);
   expect(
     await authority.verify({ ...marked, ref: ref("art_other") }, state),

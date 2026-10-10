@@ -407,9 +407,7 @@ export function reviewTrial({
             ref.artifactId !== manifest.baseRef.artifactId ||
             ref.revision !== manifest.baseRef.revision + 1 ||
             artifact.meta.supersedesRevision !== manifest.baseRef.revision ||
-            !artifact.dependencies?.some((item) =>
-              sameRef(item, manifest.baseRef),
-            ),
+            !sameRef(run.revisionBase?.ref, manifest.baseRef),
         )
         .map(({ ref }) => ref)
     : [];
@@ -742,12 +740,27 @@ export async function capturePreviews(config, artifacts, workspace) {
   return observations;
 }
 
-async function acceptedRun(workspace, runId) {
+export async function acceptedRun(workspace, runId, descendantRunIds) {
   const file = path.join(workspace, ".mimic/workspace.json");
   const before = await readFile(file, "utf8");
   const saved = JSON.parse(before);
   const run = saved.registry.runs[runId];
   assert(run, "Run not found");
+  descendantRunIds ??= Object.keys(saved.registry.runs);
+  if (run.revisionBase?.selectionId) {
+    const source = saved.registry.runs[run.revisionBase.sourceRunId];
+    const { LocalRevisionSelectionAuthority } =
+      await import("../apps/cli/dist/local-revision-selection.js");
+    assert(
+      source?.revisionSelection?.id === run.revisionBase.selectionId &&
+        sameRef(source.revisionSelection.ref, run.revisionBase.ref) &&
+        (await new LocalRevisionSelectionAuthority(workspace).verify(
+          source.revisionSelection,
+          saved.registry,
+        )),
+      "Revision Run lacks a verified exact human source",
+    );
+  }
   if (run.revisionSelection) {
     const { LocalRevisionSelectionAuthority } =
       await import("../apps/cli/dist/local-revision-selection.js");
@@ -759,18 +772,78 @@ async function acceptedRun(workspace, runId) {
       "Unverified human revision selection",
     );
     const selection = run.revisionSelection;
+    const newerDirections = Object.values(saved.registry.runs)
+      .flatMap((owner) =>
+        owner.artifacts
+          .filter(
+            (ref) =>
+              ref.artifactId === selection.ref.artifactId &&
+              ref.revision > selection.ref.revision,
+          )
+          .map((ref) => ({ owner, ref })),
+      )
+      .sort((a, b) => a.ref.revision - b.ref.revision);
+    let predecessor = selection.ref;
+    let predecessorRun = run;
+    let predecessorRunId = runId;
+    for (const { owner, ref } of newerDirections) {
+      const confirmation = predecessorRun.revisionSelection;
+      const snapshot = JSON.parse(
+        saved.snapshots[`${ref.artifactId}@${ref.revision}`] ?? "null",
+      );
+      const { artifactDigest } =
+        await import("../packages/core/dist/artifact-canonical.js");
+      assert(
+        descendantRunIds.includes(owner.id) &&
+          ref.revision === predecessor.revision + 1 &&
+          confirmation?.actor.kind === "human" &&
+          (await new LocalRevisionSelectionAuthority(workspace).verify(
+            confirmation,
+            saved.registry,
+          )) &&
+          owner.revisionBase?.sourceRunId === predecessorRunId &&
+          owner.revisionBase?.selectionId === confirmation.id &&
+          sameRef(owner.revisionBase?.ref, predecessor) &&
+          snapshot?.artifact &&
+          artifactDigest(snapshot.artifact) === ref.lockDigest &&
+          snapshot.artifact.meta.type === "design-direction" &&
+          snapshot.artifact.meta.supersedesRevision === predecessor.revision &&
+          snapshot.artifact.origin?.actorId ===
+            "mimic.s10.design-direction-generator" &&
+          snapshot.artifact.origin?.runId === owner.id &&
+          saved.registry.events.some(
+            (event) =>
+              event.runId === owner.id &&
+              event.action === "produce-provisional" &&
+              event.actor.kind === "skill" &&
+              event.actor.id === "mimic.s10.design-direction-generator" &&
+              event.inputs.some((input) => sameRef(input, predecessor)) &&
+              event.outputs.some((output) => sameRef(output, ref)),
+          ),
+        "Historical revision lacks an exact confirmed successor chain",
+      );
+      predecessor = ref;
+      predecessorRun = owner;
+      predecessorRunId = owner.id;
+    }
     assert(
       run.artifacts.some((ref) => sameRef(ref, selection.ref)) &&
         run.artifacts.some((ref) => sameRef(ref, selection.reviewRef)) &&
         !saved.registry.freshness?.[selection.ref.artifactId] &&
         !saved.registry.freshness?.[selection.reviewRef.artifactId] &&
         !Object.values(saved.registry.runs).some((other) =>
+          Object.values(other.proposals ?? {}).some(
+            (proposal) =>
+              (sameRef(proposal.ref, selection.ref) ||
+                sameRef(proposal.ref, selection.reviewRef)) &&
+              ["rejected", "superseded", "discarded"].includes(proposal.status),
+          ),
+        ) &&
+        !Object.values(saved.registry.runs).some((other) =>
           other.artifacts.some(
             (ref) =>
-              (ref.artifactId === selection.ref.artifactId &&
-                ref.revision > selection.ref.revision) ||
-              (ref.artifactId === selection.reviewRef.artifactId &&
-                ref.revision > selection.reviewRef.revision),
+              ref.artifactId === selection.reviewRef.artifactId &&
+              ref.revision > selection.reviewRef.revision,
           ),
         ),
       "Human revision selection is stale",
@@ -878,6 +951,7 @@ export async function approvedHistory(workspace, manifest) {
   let child = manifest;
   let baseContent;
   let baseSelectionId;
+  const descendantRunIds = [manifest.runId];
   while (child.previousRunId) {
     assert(!seen.has(child.previousRunId), "Revision Run cycle");
     seen.add(child.previousRunId);
@@ -923,7 +997,11 @@ export async function approvedHistory(workspace, manifest) {
       JSON.stringify(JSON.parse(priorPlan)) === JSON.stringify(priorRunPlan),
       "Prior Run did not use prepared plan",
     );
-    const snapshot = await acceptedRun(workspace, prior.runId);
+    const snapshot = await acceptedRun(
+      workspace,
+      prior.runId,
+      descendantRunIds,
+    );
     const report = reviewTrial({ manifest: prior, ...snapshot });
     assert(
       report.humanSelectionId && sameRef(child.baseRef, report.selectedRef),
@@ -940,6 +1018,7 @@ export async function approvedHistory(workspace, manifest) {
       );
     }
     history.unshift(report.selectedRef);
+    descendantRunIds.push(prior.runId);
     child = prior;
   }
   return { refs: history, baseContent, baseSelectionId };
@@ -1053,7 +1132,7 @@ async function main(args) {
         runId: config.runId,
         condition: config.condition,
         plan: `tasks-${config.runId}.json`,
-        next: "Execute with the existing mimic run and authorized subscription session dispatcher. Human selection uses mimic decide.",
+        next: "Execute with mimic run and the authorized subscription session dispatcher. After reviewing S11, record the human working choice with mimic select-revision-base --file <selection.json> --confirmation <confirmation.json>.",
       }),
     );
   } else {

@@ -249,6 +249,8 @@ export class Orchestrator {
             (need) =>
               need.kind === "artifact" &&
               need.name === "prior-direction" &&
+              need.artifactType === "design-direction" &&
+              need.schemaVersion === "1.0.0" &&
               need.refs?.length === 1 &&
               equal(need.refs[0], revisionBase.ref),
           ),
@@ -766,6 +768,23 @@ export class Orchestrator {
         if (chosen) consume(need, chosen);
         else gaps.push(`Optional ${label(need)} unavailable`);
       }
+      if (
+        selectedRevision &&
+        !inputBindings.some(
+          (binding) =>
+            binding.name === "prior-direction" &&
+            binding.refs.length === 1 &&
+            equal(binding.refs[0], selectedRevision),
+        )
+      ) {
+        actions.push({
+          taskId: task.id,
+          action: "BLOCK",
+          reason: "Selected exact prior direction is unavailable",
+          blockKind: "durable",
+        });
+        continue;
+      }
       const invocation: SkillInvocation = {
         runId,
         taskId: task.id,
@@ -939,6 +958,21 @@ export class Orchestrator {
     const { run } = await this.registry.run(invocation.runId);
     if (run.revisionBase)
       await this.registry.assertRevisionBase(run.revisionBase);
+    if (
+      run.revisionBase &&
+      invocation.skillId === "mimic.s10.design-direction-generator" &&
+      invocation.targetArtifactId === run.revisionBase.ref.artifactId
+    )
+      assert(
+        result.inputRefs.some((ref) => equal(ref, run.revisionBase!.ref)) &&
+          invocation.inputBindings?.some(
+            (binding) =>
+              binding.name === "prior-direction" &&
+              binding.refs.length === 1 &&
+              equal(binding.refs[0], run.revisionBase!.ref),
+          ),
+        "Selected exact revision source must be consumed by S10",
+      );
     assert(
       !run.closed && run.safeActions.includes(invocation.taskId),
       "Task is not active",

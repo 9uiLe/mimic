@@ -368,7 +368,38 @@ test("only the fresh exact S10 choice from a committed human S11 decision can st
   await expect(start("run_working_selection", working)).resolves.toMatchObject({
     revisionBase: working,
   });
+  await expect(start("run_competing_selection", working)).rejects.toThrow(
+    /successor Run/,
+  );
   expect(storage.state.canonical.art_direction).toBeUndefined();
+  const revised = { ...direction, revision: 2, lockDigest: digest("8") };
+  const revisedArtifact: ArtifactSnapshot = {
+    ...artifact(revised, "proposed"),
+    meta: {
+      ...artifact(revised).meta,
+      type: "design-direction",
+      supersedesRevision: direction.revision,
+    },
+    lifecycle: { status: "provisional", freshness: "valid" },
+    origin: {
+      actorKind: "skill",
+      actorId: "mimic.s10.design-direction-generator",
+      runId: "run_working_selection",
+    },
+  };
+  storage.records.set("art_direction@2", {
+    artifact: revisedArtifact,
+    digest: revised.lockDigest,
+  });
+  await registry.produce({
+    runId: "run_working_selection",
+    ref: revised,
+    inputs: [direction],
+    actor: { kind: "skill", id: "mimic.s10.design-direction-generator" },
+    at,
+    reason: "S10 revised selected direction",
+  });
+  await expect(registry.assertRevisionBase(working)).resolves.toBeUndefined();
   await expect(
     registry.selectRevisionBase({
       ...request,

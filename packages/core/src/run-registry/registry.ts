@@ -92,7 +92,7 @@ export interface Run {
   readonly entryMode: "system-first" | "experience-first" | "hybrid";
   readonly base: readonly ExactArtifactRef[];
   readonly reused: readonly { ref: ExactArtifactRef; reason: string }[];
-  /** A committed human S11 choice usable only as an S10 revision source. */
+  /** A verified human working choice usable only as an S10 revision source. */
   readonly revisionBase?: RevisionBaseSelection;
   /** Explicit human working-source commit; separate from canonical adoption. */
   readonly revisionSelection?: RevisionSelectionRequest;
@@ -189,6 +189,30 @@ function validRef(ref: ExactArtifactRef): boolean {
 function exactChoice(ref: ExactArtifactRef): string {
   return `${ref.artifactId}@${ref.revision}#${ref.lockDigest}`;
 }
+function selectedSuccessor(
+  state: RegistryState,
+  selection: RevisionBaseSelection,
+  owner: Run,
+  ref: ExactArtifactRef,
+): boolean {
+  return !!(
+    selection.selectionId &&
+    owner.revisionBase?.selectionId === selection.selectionId &&
+    owner.revisionBase.sourceRunId === selection.sourceRunId &&
+    same(owner.revisionBase.ref, selection.ref) &&
+    ref.artifactId === selection.ref.artifactId &&
+    ref.revision === selection.ref.revision + 1 &&
+    state.events.some(
+      (item) =>
+        item.runId === owner.id &&
+        item.action === "produce-provisional" &&
+        item.actor.kind === "skill" &&
+        item.actor.id === "mimic.s10.design-direction-generator" &&
+        item.inputs.some((input) => same(input, selection.ref)) &&
+        item.outputs.some((output) => same(output, ref)),
+    )
+  );
+}
 /** A selected revision source is not canonical approval or permission to publish. */
 function committedRevisionBase(
   state: RegistryState,
@@ -212,7 +236,8 @@ function committedRevisionBase(
         run.artifacts.some(
           (ref) =>
             (ref.artifactId === selection.ref.artifactId &&
-              ref.revision > selection.ref.revision) ||
+              ref.revision > selection.ref.revision &&
+              !selectedSuccessor(state, selection, run, ref)) ||
             (ref.artifactId === request.reviewRef.artifactId &&
               ref.revision > request.reviewRef.revision),
         ),
@@ -620,6 +645,20 @@ export class RunRegistry {
           "Selected revision base is not a current committed human choice",
           "CONFLICT",
         );
+      const revisionBase = x.revisionBase;
+      if (revisionBase?.selectionId)
+        requireThat(
+          !Object.values(state.runs).some((other) => {
+            const existing = other.revisionBase;
+            return !!(
+              existing?.selectionId === revisionBase.selectionId &&
+              existing.sourceRunId === revisionBase.sourceRunId &&
+              same(existing.ref, revisionBase.ref)
+            );
+          }),
+          "Selected revision already has a successor Run",
+          "CONFLICT",
+        );
       if (x.revisionBase?.selectionId)
         requireThat(
           !!this.authority.verifyRevisionSelection &&
@@ -738,6 +777,21 @@ export class RunRegistry {
             }),
           ),
           "Dependency is absent from exact inputs",
+          "CONFLICT",
+        );
+      if (
+        run.revisionBase?.selectionId &&
+        x.ref.artifactId === run.revisionBase.ref.artifactId
+      )
+        requireThat(
+          x.actor.kind === "skill" &&
+            x.actor.id === "mimic.s10.design-direction-generator" &&
+            artifact.meta.type === "design-direction" &&
+            x.ref.revision === run.revisionBase.ref.revision + 1 &&
+            artifact.meta.supersedesRevision ===
+              run.revisionBase.ref.revision &&
+            x.inputs.some((ref) => same(ref, run.revisionBase!.ref)),
+          "Selected revision must supersede and consume its exact source",
           "CONFLICT",
         );
       state.runs[x.runId] = { ...run, artifacts: [...run.artifacts, x.ref] };

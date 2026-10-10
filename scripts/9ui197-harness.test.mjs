@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
+  acceptedRun,
   approvedHistory,
   briefForTask,
   captureSettingsDigest,
@@ -57,7 +58,7 @@ const candidate = (id, revision = 1) => ({
     },
     lifecycle: { status: "provisional" },
     content: { summary: id, mechanisms: ["comparison"] },
-    dependencies: revision > 1 ? [ref(id, revision - 1)] : [],
+    dependencies: [],
   },
 });
 const proposedDecision = {
@@ -560,6 +561,14 @@ test("a revision of the prior human choice waits for the current choice", () => 
         revisionBudget: 2,
         baseRef: ref("art_one"),
       },
+      run: {
+        proposals: {},
+        revisionBase: {
+          ref: ref("art_one"),
+          sourceRunId: "run_initial",
+          selectionId: "selection_initial",
+        },
+      },
       artifacts: [candidate("art_one", 2), proposedDecision],
       history: [ref("art_one")],
     }),
@@ -578,6 +587,14 @@ test("an unrelated generated direction cannot count as a selected revision", () 
         brief,
         revisionBudget: 2,
         baseRef: ref("art_one"),
+      },
+      run: {
+        proposals: {},
+        revisionBase: {
+          ref: ref("art_one"),
+          sourceRunId: "run_initial",
+          selectionId: "selection_initial",
+        },
       },
       artifacts: [candidate("art_other"), proposedDecision],
       history: [ref("art_one")],
@@ -837,6 +854,88 @@ test("a revision verifies the prior Run's committed human choice and exact base"
     assert.deepEqual(history.refs, [chosen.ref]);
     assert.deepEqual(history.baseContent, chosen.artifact.content);
     assert.equal(history.baseSelectionId, "selection_1");
+    saved.registry.runs[priorRunId].proposals[proposal.id].status =
+      "superseded";
+    await writeFile(
+      path.join(workspace, ".mimic/workspace.json"),
+      JSON.stringify(saved),
+    );
+    await assert.rejects(
+      approvedHistory(workspace, child),
+      /Human revision selection is stale/,
+    );
+    saved.registry.runs[priorRunId].proposals[proposal.id].status = "merged";
+    const { artifactDigest } =
+      await import("../packages/core/dist/artifact-canonical.js");
+    const revisedArtifact = {
+      ...chosen.artifact,
+      meta: {
+        ...chosen.artifact.meta,
+        revision: chosen.ref.revision + 1,
+        supersedesRevision: chosen.ref.revision,
+      },
+      origin: {
+        actorKind: "skill",
+        actorId: "mimic.s10.design-direction-generator",
+        runId: child.runId,
+      },
+      dependencies: chosen.artifact.dependencies,
+    };
+    const revisedRef = {
+      artifactId: chosen.ref.artifactId,
+      revision: chosen.ref.revision + 1,
+      lockDigest: artifactDigest(revisedArtifact),
+    };
+    saved.registry.runs[child.runId] = {
+      id: child.runId,
+      scope: "org_local",
+      revisionBase: {
+        ref: chosen.ref,
+        sourceRunId: priorRunId,
+        selectionId: selection.id,
+      },
+      artifacts: [revisedRef],
+      proposals: {},
+    };
+    saved.registry.events = [
+      {
+        runId: child.runId,
+        action: "produce-provisional",
+        actor: { kind: "skill", id: "mimic.s10.design-direction-generator" },
+        inputs: [chosen.ref],
+        outputs: [revisedRef],
+      },
+    ];
+    saved.snapshots[`${revisedRef.artifactId}@${revisedRef.revision}`] =
+      JSON.stringify({ artifact: revisedArtifact });
+    await writeFile(
+      path.join(workspace, ".mimic/workspace.json"),
+      JSON.stringify(saved),
+    );
+    assert.deepEqual((await approvedHistory(workspace, child)).refs, [
+      chosen.ref,
+    ]);
+    assert.deepEqual(
+      (await acceptedRun(workspace, priorRunId)).run.revisionSelection.ref,
+      chosen.ref,
+    );
+    saved.registry.runs.run_unrelated = {
+      id: "run_unrelated",
+      artifacts: [{ ...revisedRef, revision: revisedRef.revision + 1 }],
+    };
+    await writeFile(
+      path.join(workspace, ".mimic/workspace.json"),
+      JSON.stringify(saved),
+    );
+    await assert.rejects(
+      approvedHistory(workspace, child),
+      /Historical revision lacks an exact confirmed successor chain/,
+    );
+    delete saved.registry.runs.run_unrelated;
+    await writeFile(
+      path.join(workspace, ".mimic/workspace.json"),
+      JSON.stringify(saved),
+    );
     const other = accepted.artifacts.find(
       ({ artifact, ref }) =>
         artifact.meta.type === "design-direction" &&
