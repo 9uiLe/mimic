@@ -2373,7 +2373,7 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
     packages: { first: "skill" },
     model: binding.settings.model,
     maxGenerations: 20,
-    timeoutMs: 45_000,
+    timeoutMs: 600_000,
   };
   await writeFile(configPath, JSON.stringify(configuration));
   const generationBounds: number[] = [];
@@ -2400,6 +2400,14 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
     out: (value: string) => out.push(value),
     err: (value: string) => err.push(value),
   };
+  await writeFile(
+    configPath,
+    JSON.stringify({ ...configuration, timeoutMs: 600_001 }),
+  );
+  expect(await runSessionCli(["inspect", "--config", configPath], io)).toBe(2);
+  expect(launch).not.toHaveBeenCalled();
+  err.length = 0;
+  await writeFile(configPath, JSON.stringify(configuration));
   expect(
     await runAuthorizedSessionOnce(configPath, "schema.json", decision, io),
   ).toBe(0);
@@ -2408,7 +2416,7 @@ test("production trusted one-call entry uses static Core and exposes no JSON or 
   );
   expect((await h.store.read("session_a"))?.generationCount).toBe(1);
   expect(launch).toHaveBeenCalledOnce();
-  expect(generationBounds).toEqual([45_000]);
+  expect(generationBounds).toEqual([600_000]);
   expect(decision.consumeUserDecision).toHaveBeenCalledOnce();
   expect(err).toEqual([]);
   expect(
