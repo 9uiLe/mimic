@@ -1,4 +1,5 @@
 import { createServer, type Server } from "node:http";
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { lstat, open, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
@@ -12,6 +13,7 @@ import { FileSessionStore, sessionDigest } from "./agent/session.js";
 import { sanitizeExecutionDiagnostics } from "./agent/executor.js";
 import { monitorPage, monitorScript, previewPage } from "./monitor-ui.js";
 import { designReviewPage, designReviewScript } from "./design-review-ui.js";
+import type { TrialReviews } from "./trial-review-ui.js";
 import type { CliIO } from "./cli.js";
 
 const idPattern = /^[A-Za-z][A-Za-z0-9_-]{0,79}$/;
@@ -126,11 +128,11 @@ async function directory(root: string, relative: string): Promise<string> {
   return current;
 }
 /** Fixed files only; bound bytes and validate the open inode and canonical path. */
-async function textFile(
+async function boundedFile(
   root: string,
   relative: string,
   limit: number,
-): Promise<string> {
+): Promise<Buffer> {
   const parent = path.dirname(relative);
   const folder =
     parent === "."
@@ -161,12 +163,15 @@ async function textFile(
       after.mtimeMs !== info.mtimeMs
     )
       throw new Error("File changed");
-    return new TextDecoder("utf-8", { fatal: true }).decode(
-      Buffer.concat(chunks),
-    );
+    return Buffer.concat(chunks);
   } finally {
     await handle.close();
   }
+}
+async function textFile(root: string, relative: string, limit: number) {
+  return new TextDecoder("utf-8", { fatal: true }).decode(
+    await boundedFile(root, relative, limit),
+  );
 }
 type Preview = { html: string; css: string; js: string };
 async function loadPreview(selected?: string): Promise<Preview | undefined> {
@@ -197,6 +202,81 @@ async function loadPreview(selected?: string): Promise<Preview | undefined> {
   )
     throw new Error("Invalid preview");
   return { html, css, js };
+}
+
+type TrialReviewSnapshot = { html: string; captures: Buffer[] };
+async function loadTrialReview(
+  selected: string | undefined,
+  kind: "current" | "stopped" | "replay",
+): Promise<TrialReviewSnapshot | undefined> {
+  if (!selected) return undefined;
+  const chosen = path.resolve(selected);
+  const folder = await realpath(path.dirname(chosen));
+  const html = await textFile(folder, path.basename(chosen), 2_000_000);
+  const state = html.match(
+    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · ([^<]+) · ([^<]+)<\/p>/,
+  );
+  const runId = state?.[1];
+  const condition = state?.[2];
+  const status = state?.[3];
+  const stopped = status === "stopped" || status === "partial-stopped";
+  if (
+    !html.startsWith('<!doctype html><html lang="ja">') ||
+    !html.includes("<title>Mimic 候補レビュー</title>") ||
+    !html.includes('<meta http-equiv="Content-Security-Policy"') ||
+    /<script\b/i.test(html) ||
+    !runId ||
+    !condition ||
+    !status ||
+    (kind === "current" && (stopped || condition === "historical-replay")) ||
+    (kind === "stopped" && (!stopped || condition === "historical-replay")) ||
+    (kind === "replay" && condition !== "historical-replay")
+  )
+    throw new Error("Invalid trial review");
+  const matches = [
+    ...html.matchAll(/<a href="([^"]+)">実画面の撮影を開く<\/a>/g),
+  ];
+  if (matches.length > 8) throw new Error("Too many captures");
+  const captureRecord = matches.length
+    ? object(
+        JSON.parse(await textFile(folder, `capture-${runId}.json`, 2_000_000)),
+      )
+    : undefined;
+  if (captureRecord && captureRecord.runId !== runId)
+    throw new Error("Invalid capture record");
+  const observations = captureRecord
+    ? Object.values(object(captureRecord.observations)).map(object)
+    : [];
+  const captures = await Promise.all(
+    matches.map(async ([, name]) => {
+      if (
+        !/^capture-[A-Za-z0-9_-]+\.png$/.test(name) ||
+        !name.startsWith(`capture-${runId}-`)
+      )
+        throw new Error("Invalid capture name");
+      const pixels = await boundedFile(folder, name, 5_000_000);
+      if (!pixels.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")))
+        throw new Error("Invalid capture image");
+      const digest = `sha256:${createHash("sha256").update(pixels).digest("hex")}`;
+      if (
+        !observations.some(
+          (entry) =>
+            entry.screenshot === name && entry.screenshotDigest === digest,
+        )
+      )
+        throw new Error("Capture digest mismatch");
+      return pixels;
+    }),
+  );
+  let index = 0;
+  return {
+    html: html.replace(
+      /<a href="[^"]+">実画面の撮影を開く<\/a>/g,
+      () =>
+        `<a href="/trial-review/${kind}/capture/${index++}">実画面の撮影を開く</a>`,
+    ),
+    captures,
+  };
 }
 
 /** A fresh bounded snapshot each poll. Recorded facts are not authority proof. */
@@ -382,6 +462,9 @@ export async function startMonitor(options: {
   root: string;
   port: number;
   preview?: string;
+  reviewCurrent?: string;
+  reviewStopped?: string;
+  reviewReplay?: string;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
     !Number.isInteger(options.port) ||
@@ -397,6 +480,28 @@ export async function startMonitor(options: {
   } catch {
     /* Show unavailable, with no paths/messages. */
   }
+  const [reviewCurrent, reviewStopped, reviewReplay] = await Promise.all([
+    loadTrialReview(options.reviewCurrent, "current").catch(() => undefined),
+    loadTrialReview(options.reviewStopped, "stopped").catch(() => undefined),
+    loadTrialReview(options.reviewReplay, "replay").catch(() => undefined),
+  ]);
+  const reviews: TrialReviews = {
+    current: reviewCurrent
+      ? "available"
+      : options.reviewCurrent
+        ? "unavailable"
+        : "not-selected",
+    stopped: reviewStopped
+      ? "available"
+      : options.reviewStopped
+        ? "unavailable"
+        : "not-selected",
+    replay: reviewReplay
+      ? "available"
+      : options.reviewReplay
+        ? "unavailable"
+        : "not-selected",
+  };
   let origin = "";
   const server = createServer(async (request, response) => {
     response.setHeader("Cache-Control", "no-store");
@@ -458,15 +563,53 @@ export async function startMonitor(options: {
       ) {
         const page =
           request.url === "/"
-            ? monitorPage()
+            ? monitorPage(reviews)
             : request.url === "/design-review"
-              ? designReviewPage()
+              ? designReviewPage(reviews)
               : previewPage(preview!);
         response.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
           "Content-Security-Policy": page.csp,
         });
         response.end(page.html);
+      } else if (
+        (request.url === "/trial-review/current" && reviewCurrent) ||
+        (request.url === "/trial-review/stopped" && reviewStopped) ||
+        (request.url === "/trial-review/replay" && reviewReplay)
+      ) {
+        response.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy":
+            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+        });
+        response.end(
+          request.url === "/trial-review/current"
+            ? reviewCurrent!.html
+            : request.url === "/trial-review/stopped"
+              ? reviewStopped!.html
+              : reviewReplay!.html,
+        );
+      } else if (
+        /^\/trial-review\/(current|stopped|replay)\/capture\/[0-7]$/.test(
+          request.url ?? "",
+        )
+      ) {
+        const [, , kind, , index] = request.url!.split("/");
+        const snapshot =
+          kind === "current"
+            ? reviewCurrent
+            : kind === "stopped"
+              ? reviewStopped
+              : reviewReplay;
+        const pixels = snapshot?.captures[Number(index)];
+        if (!pixels) return reject(404, "not-found");
+        response.writeHead(200, {
+          "Content-Type": "image/png",
+          "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy":
+            "default-src 'none'; frame-ancestors 'none'",
+        });
+        response.end(pixels);
       } else if (request.url === "/monitor.js") {
         response.writeHead(200, {
           "Content-Type": "text/javascript; charset=utf-8",
@@ -515,7 +658,14 @@ export async function runMonitorCli(
       const value = argv[i + 1];
       if (
         !flag ||
-        !["--root", "--port", "--preview"].includes(flag) ||
+        ![
+          "--root",
+          "--port",
+          "--preview",
+          "--review-current",
+          "--review-stopped",
+          "--review-replay",
+        ].includes(flag) ||
         !value ||
         value.startsWith("--") ||
         values[flag] !== undefined
@@ -533,6 +683,9 @@ export async function runMonitorCli(
       root: values["--root"],
       port: Number(values["--port"]),
       preview: values["--preview"],
+      reviewCurrent: values["--review-current"],
+      reviewStopped: values["--review-stopped"],
+      reviewReplay: values["--review-replay"],
     });
     io.out(monitor.url);
     await new Promise<void>((resolve) => {
