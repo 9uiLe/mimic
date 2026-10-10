@@ -229,6 +229,15 @@ test("matched comparison freezes one common upstream and three isolated branches
         [{ name: "comparison-brief", kind: "human-brief" }],
       );
       assert.match(comparisonTask.humanBrief, /Compare three structures/);
+      if (stage === "s11") {
+        assert.match(comparisonTask.humanBrief, /work\.result\.proposal/);
+        assert.match(comparisonTask.humanBrief, /packetId,reason,items/);
+        assert.match(comparisonTask.humanBrief, /host-derived lockDigest/);
+        assert.match(
+          comparisonTask.humanBrief,
+          /evaluation refs are not proposal items/,
+        );
+      }
     }
     assert.ok(task(`s09_${arm}`).dependsOn.includes("s08"));
     assert.ok(
