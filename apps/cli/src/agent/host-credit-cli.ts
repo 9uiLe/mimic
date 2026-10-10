@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { open, readFile, realpath } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -8,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { runHostAuthorizedSessionOnce } from "./authorized-host.js";
 import {
   HostCreditAuthorizationStore,
+  type DelegatedCreditEvidence,
   type RunCreditScope,
 } from "./host-credit-authorization.js";
 
@@ -100,10 +102,75 @@ async function authorize(
   return 0;
 }
 
+async function delegatedAuthorize(
+  configPath: string,
+  evidencePath: string,
+  executable: string,
+): Promise<number> {
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    workspace: string;
+    runId: string;
+    model: string;
+    packages: Record<string, string>;
+  };
+  const workspace = await realpath(config.workspace);
+  const evidenceFile = await realpath(evidencePath);
+  if (
+    path.resolve(evidencePath) === workspace ||
+    path.resolve(evidencePath).startsWith(`${workspace}${path.sep}`) ||
+    evidenceFile === workspace ||
+    evidenceFile.startsWith(`${workspace}${path.sep}`)
+  )
+    throw Error("Delegation evidence must be outside the model workspace");
+  const handle = await open(
+    evidencePath,
+    constants.O_RDONLY | constants.O_NOFOLLOW,
+  );
+  let evidence: DelegatedCreditEvidence;
+  try {
+    const info = await handle.stat();
+    if (
+      !info.isFile() ||
+      info.size > 131_072 ||
+      (info.mode & 0o077) !== 0 ||
+      (process.getuid && info.uid !== process.getuid())
+    )
+      throw Error("Delegation evidence must be a private host-user file");
+    evidence = JSON.parse(
+      await handle.readFile({ encoding: "utf8" }),
+    ) as DelegatedCreditEvidence;
+  } finally {
+    await handle.close();
+  }
+  const scope: RunCreditScope = {
+    workspace,
+    runId: config.runId,
+    model: config.model,
+    executable,
+    packages: config.packages,
+    maxCalls: evidence.attestedScope.maxCalls,
+    expiresAt:
+      evidence.approvedAt + evidence.attestedScope.durationMinutes * 60_000,
+  };
+  const grantId = await privateStore().recordDelegated(scope, evidence);
+  process.stdout.write(
+    `${JSON.stringify({
+      grantId,
+      runId: scope.runId,
+      kind: "delegated",
+      approverId: evidence.approverId,
+      delegateId: evidence.delegateId,
+    })}\n`,
+  );
+  return 0;
+}
+
 async function main(argv: string[]): Promise<number> {
   try {
     if (argv[0] === "authorize" && argv.length === 5)
       return await authorize(argv[1]!, argv[2]!, argv[3]!, argv[4]!);
+    if (argv[0] === "delegated-authorize" && argv.length === 4)
+      return await delegatedAuthorize(argv[1]!, argv[2]!, argv[3]!);
     if (argv[0] === "run" && argv.length === 3) {
       const config = JSON.parse(await readFile(argv[1]!, "utf8")) as {
         workspace: string;
@@ -121,7 +188,7 @@ async function main(argv: string[]): Promise<number> {
       );
     }
     throw Error(
-      "Usage: host-credit-cli authorize <config> <max-calls> <minutes> <official-codex-path> | run <config> <grant-id>",
+      "Usage: host-credit-cli authorize <config> <max-calls> <minutes> <official-codex-path> | delegated-authorize <config> <private-evidence-json> <official-codex-path> | run <config> <grant-id>",
     );
   } catch (error) {
     process.stderr.write(

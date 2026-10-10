@@ -43,6 +43,34 @@ export interface HumanCreditDecisionSource {
   ): Promise<HumanCreditDecision | null>;
 }
 
+/** The recording operator transcribes a real user delegation. This is an
+ * accountable local assertion, not cryptographic proof of the conversation. */
+export interface DelegatedCreditEvidence {
+  readonly sourceThreadId: string;
+  readonly requestMessageId: string;
+  readonly requestText: string;
+  readonly delegationMessageId: string;
+  readonly delegationText: string;
+  readonly contextMessageId: string;
+  readonly approvalMessageId: string;
+  readonly contextText: string;
+  readonly approvalText: string;
+  readonly approverId: string;
+  readonly delegateId: string;
+  readonly recordedBy: string;
+  readonly approvedAt: number;
+  readonly approvalTimePrecision: "minute" | "millisecond";
+  readonly attestedScope: {
+    readonly workspace: string;
+    readonly runId: string;
+    readonly model: string;
+    readonly executable: string;
+    readonly maxCalls: number;
+    readonly durationMinutes: number;
+    readonly inputsSha256: string;
+  };
+}
+
 interface StoredGrant {
   workspace: string;
   run_id: string;
@@ -63,6 +91,8 @@ const validOpaqueId = (value: string) =>
     const code = character.codePointAt(0)!;
     return code >= 32 && code !== 127;
   });
+const validEvidenceText = (value: string) =>
+  typeof value === "string" && value.trim().length > 0 && value.length <= 4096;
 const validModel = (value: string) =>
   /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value);
 const digest = (value: string) =>
@@ -183,6 +213,13 @@ export class HostCreditAuthorizationStore {
           decision_id TEXT NOT NULL UNIQUE, consumed_at INTEGER NOT NULL,
           PRIMARY KEY (grant_id, request_id)
         );
+        CREATE TABLE IF NOT EXISTS delegated_grants (
+          grant_id TEXT PRIMARY KEY REFERENCES grants(id) ON DELETE CASCADE,
+          source_thread_id TEXT NOT NULL, context_message_id TEXT NOT NULL,
+          approval_message_id TEXT NOT NULL, approver_id TEXT NOT NULL,
+          delegate_id TEXT NOT NULL, recorded_by TEXT NOT NULL,
+          evidence_json TEXT NOT NULL, recorded_at INTEGER NOT NULL
+        );
       `);
       return database;
     } catch (error) {
@@ -207,6 +244,118 @@ export class HostCreditAuthorizationStore {
     scope: RunCreditScope,
     source: HumanCreditDecisionSource,
   ): Promise<string> {
+    const frozen = await this.freeze(scope);
+    // The callback must be a real host-owned confirmation flow, never model work.
+    const requestedAt = Date.now();
+    const decision = await source.requestDecision(frozen);
+    const decidedAt = Date.now();
+    if (
+      !decision ||
+      !validOpaqueId(decision.decisionId) ||
+      !validOpaqueId(decision.actorId) ||
+      !Number.isSafeInteger(decision.approvedAt) ||
+      decision.approvedAt > decidedAt ||
+      decision.approvedAt < requestedAt
+    )
+      throw Error("No fresh human authorization was provided by the host");
+    if (frozen.expiresAt <= decidedAt)
+      throw Error("Run authorization expired during confirmation");
+    return this.persist(frozen, decision);
+  }
+
+  async recordDelegated(
+    scope: RunCreditScope,
+    source: DelegatedCreditEvidence,
+  ): Promise<string> {
+    if (!source?.attestedScope)
+      throw Error("Delegation evidence does not bind this Run scope");
+    const evidence: DelegatedCreditEvidence = Object.freeze({
+      sourceThreadId: source.sourceThreadId,
+      requestMessageId: source.requestMessageId,
+      requestText: source.requestText,
+      delegationMessageId: source.delegationMessageId,
+      delegationText: source.delegationText,
+      contextMessageId: source.contextMessageId,
+      contextText: source.contextText,
+      approvalMessageId: source.approvalMessageId,
+      approvalText: source.approvalText,
+      approverId: source.approverId,
+      delegateId: source.delegateId,
+      recordedBy: source.recordedBy,
+      approvedAt: source.approvedAt,
+      approvalTimePrecision: source.approvalTimePrecision,
+      attestedScope: Object.freeze({
+        workspace: source.attestedScope.workspace,
+        runId: source.attestedScope.runId,
+        model: source.attestedScope.model,
+        executable: source.attestedScope.executable,
+        maxCalls: source.attestedScope.maxCalls,
+        durationMinutes: source.attestedScope.durationMinutes,
+        inputsSha256: source.attestedScope.inputsSha256,
+      }),
+    });
+    const frozen = await this.freeze(scope);
+    const now = Date.now();
+    const attested = evidence.attestedScope;
+    if (
+      ![
+        evidence.sourceThreadId,
+        evidence.requestMessageId,
+        evidence.delegationMessageId,
+        evidence.contextMessageId,
+        evidence.approvalMessageId,
+        evidence.approverId,
+        evidence.delegateId,
+        evidence.recordedBy,
+      ].every(validOpaqueId) ||
+      !validEvidenceText(evidence.requestText) ||
+      !validEvidenceText(evidence.delegationText) ||
+      !validEvidenceText(evidence.contextText) ||
+      !validEvidenceText(evidence.approvalText) ||
+      evidence.approvalText.trim() !== "OK" ||
+      new Set([
+        evidence.requestMessageId,
+        evidence.delegationMessageId,
+        evidence.contextMessageId,
+        evidence.approvalMessageId,
+      ]).size !== 4 ||
+      evidence.approverId === evidence.delegateId ||
+      evidence.recordedBy !== evidence.delegateId ||
+      !Number.isSafeInteger(evidence.approvedAt) ||
+      !["minute", "millisecond"].includes(evidence.approvalTimePrecision) ||
+      (evidence.approvalTimePrecision === "minute" &&
+        evidence.approvedAt % 60_000 !== 0) ||
+      evidence.approvedAt > now ||
+      evidence.approvedAt < now - day ||
+      attested.workspace !== frozen.workspace ||
+      attested.runId !== frozen.runId ||
+      attested.model !== frozen.model ||
+      attested.executable !== frozen.executable ||
+      attested.maxCalls !== frozen.maxCalls ||
+      attested.inputsSha256 !== frozen.inputsSha256 ||
+      !Number.isSafeInteger(attested.durationMinutes) ||
+      attested.durationMinutes < 1 ||
+      attested.durationMinutes > 1440 ||
+      frozen.expiresAt !==
+        evidence.approvedAt + attested.durationMinutes * 60_000
+    )
+      throw Error("Delegation evidence does not bind this Run scope");
+    // This ID is stable across attempts and independent of the operator's text.
+    const decisionId = `delegated_${digest(
+      JSON.stringify([evidence.sourceThreadId, evidence.approvalMessageId]),
+    )}`;
+    return this.persist(
+      frozen,
+      {
+        decisionId,
+        actorId: evidence.approverId,
+        approvedAt: evidence.approvedAt,
+      },
+      evidence,
+    );
+  }
+
+  private async freeze(scope: RunCreditScope): Promise<FrozenRunCreditScope> {
     const workspace = await realpath(scope.workspace);
     const now = Date.now();
     if (
@@ -235,29 +384,24 @@ export class HostCreditAuthorizationStore {
       scope.runId,
       packages,
     );
-    const frozen = Object.freeze({
+    return Object.freeze({
       ...scope,
       workspace,
       executable,
       packages,
       inputsSha256,
     });
-    // The callback must be a real host-owned confirmation flow, never model work.
-    const requestedAt = Date.now();
-    const decision = await source.requestDecision(frozen);
+  }
+
+  private async persist(
+    frozen: FrozenRunCreditScope,
+    decision: HumanCreditDecision,
+    delegated?: DelegatedCreditEvidence,
+  ): Promise<string> {
     const decidedAt = Date.now();
-    if (
-      !decision ||
-      !validOpaqueId(decision.decisionId) ||
-      !validOpaqueId(decision.actorId) ||
-      !Number.isSafeInteger(decision.approvedAt) ||
-      decision.approvedAt > decidedAt ||
-      decision.approvedAt < requestedAt
-    )
-      throw Error("No fresh human authorization was provided by the host");
     if (frozen.expiresAt <= decidedAt)
-      throw Error("Run authorization expired during confirmation");
-    const database = await this.database(workspace);
+      throw Error("Run authorization expired before recording");
+    const database = await this.database(frozen.workspace);
     try {
       return this.transaction(database, () => {
         if (frozen.expiresAt <= Date.now())
@@ -286,17 +430,38 @@ export class HostCreditAuthorizationStore {
           )
           .run(
             id,
-            workspace,
+            frozen.workspace,
             frozen.runId,
             frozen.model,
-            executable,
+            frozen.executable,
             frozen.maxCalls,
             frozen.expiresAt,
-            inputsSha256,
+            frozen.inputsSha256,
             decision.decisionId,
             decision.actorId,
             decision.approvedAt,
           );
+        if (delegated)
+          database
+            .prepare(
+              `
+            INSERT INTO delegated_grants
+            (grant_id, source_thread_id, context_message_id, approval_message_id,
+             approver_id, delegate_id, recorded_by, evidence_json, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+            )
+            .run(
+              id,
+              delegated.sourceThreadId,
+              delegated.contextMessageId,
+              delegated.approvalMessageId,
+              delegated.approverId,
+              delegated.delegateId,
+              delegated.recordedBy,
+              JSON.stringify(delegated),
+              decidedAt,
+            );
         return id;
       });
     } finally {

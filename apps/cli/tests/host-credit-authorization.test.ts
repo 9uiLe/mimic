@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { DatabaseSync } from "node:sqlite";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -8,6 +9,7 @@ import {
   HostCreditAuthorizationStore,
   frozenRunInputsSha256,
   type HumanCreditDecisionSource,
+  type DelegatedCreditEvidence,
 } from "../src/agent/host-credit-authorization.js";
 
 const folders: string[] = [];
@@ -433,4 +435,159 @@ test("host storage is private and outside the model workspace", async () => {
       h.source,
     ),
   ).rejects.toThrow(/cannot be inside/);
+});
+
+function delegatedEvidence(
+  h: Awaited<ReturnType<typeof setup>>,
+): DelegatedCreditEvidence {
+  return {
+    sourceThreadId: "thread_197",
+    requestMessageId: "assistant_scoped_request",
+    requestText: "Allow up to 9 calls for 24 hours for the guided Run.",
+    delegationMessageId: "user_delegated_execution",
+    delegationText: "Run it for me.",
+    contextMessageId: "assistant_delegation_question",
+    approvalMessageId: "user_approved_delegation",
+    contextText:
+      "Use the 197 guided Run with at most 9 calls for 24 hours; dot records the delegation.",
+    approvalText: "OK",
+    approverId: "person@example.com",
+    delegateId: "dot",
+    recordedBy: "dot",
+    approvedAt: h.scope.expiresAt - 60_000,
+    approvalTimePrecision: "millisecond",
+    attestedScope: {
+      workspace: h.workspace,
+      runId: h.scope.runId,
+      model: h.scope.model,
+      executable: h.scope.executable,
+      maxCalls: h.scope.maxCalls,
+      durationMinutes: 1,
+      inputsSha256: h.inputsSha256,
+    },
+  };
+}
+
+test("delegation records approver, executor, evidence and scope without rewriting direct approval", async () => {
+  const h = await setup();
+  const evidence = delegatedEvidence(h);
+  const grantId = await h.store.recordDelegated(h.scope, evidence);
+  const database = new DatabaseSync(
+    path.join(h.root, "private", "grants.sqlite"),
+    { readOnly: true },
+  );
+  try {
+    const recorded = database
+      .prepare(
+        `
+      SELECT g.actor_id, g.approved_at, g.max_calls, g.inputs_sha256,
+             d.approver_id, d.delegate_id, d.recorded_by, d.evidence_json
+      FROM grants g JOIN delegated_grants d ON d.grant_id = g.id WHERE g.id = ?
+    `,
+      )
+      .get(grantId) as Record<string, unknown>;
+    expect(recorded).toMatchObject({
+      actor_id: evidence.approverId,
+      approved_at: evidence.approvedAt,
+      approver_id: evidence.approverId,
+      delegate_id: "dot",
+      recorded_by: "dot",
+      max_calls: 1,
+      inputs_sha256: h.inputsSha256,
+    });
+    expect(JSON.parse(recorded.evidence_json as string)).toEqual(evidence);
+    expect(
+      database
+        .prepare("SELECT 1 FROM delegated_grants WHERE grant_id = ?")
+        .get(h.grantId),
+    ).toBeUndefined();
+  } finally {
+    database.close();
+  }
+  await expect(h.store.recordDelegated(h.scope, evidence)).rejects.toThrow(
+    /already been recorded/,
+  );
+});
+
+test("recording persists the validated evidence even if its caller mutates the source", async () => {
+  const h = await setup();
+  const evidence = delegatedEvidence(h);
+  const expected = structuredClone(evidence);
+  const pending = h.store.recordDelegated(h.scope, evidence);
+  const mutable = evidence as {
+    approverId: string;
+    attestedScope: { runId: string };
+  };
+  mutable.approverId = "different-person";
+  mutable.attestedScope.runId = "different_run";
+  const grantId = await pending;
+  const database = new DatabaseSync(
+    path.join(h.root, "private", "grants.sqlite"),
+    {
+      readOnly: true,
+    },
+  );
+  try {
+    const row = database
+      .prepare(
+        `
+      SELECT g.actor_id, d.evidence_json FROM grants g
+      JOIN delegated_grants d ON d.grant_id = g.id WHERE g.id = ?
+    `,
+      )
+      .get(grantId) as { actor_id: string; evidence_json: string };
+    expect(row.actor_id).toBe(expected.approverId);
+    expect(JSON.parse(row.evidence_json)).toEqual(expected);
+  } finally {
+    database.close();
+  }
+});
+
+test("unsupported, expired, or altered delegation cannot authorize a Run", async () => {
+  const h = await setup();
+  const evidence = delegatedEvidence(h);
+  await expect(
+    h.store.recordDelegated(h.scope, undefined as never),
+  ).rejects.toThrow(/Delegation evidence/);
+  const invalid: DelegatedCreditEvidence[] = [
+    { ...evidence, approvalText: "" },
+    { ...evidence, approvalText: "No" },
+    { ...evidence, approvalMessageId: evidence.delegationMessageId },
+    {
+      ...evidence,
+      delegateId: evidence.approverId,
+      recordedBy: evidence.approverId,
+    },
+    { ...evidence, recordedBy: "another-agent" },
+    {
+      ...evidence,
+      attestedScope: { ...evidence.attestedScope, runId: "another_run" },
+    },
+    {
+      ...evidence,
+      attestedScope: { ...evidence.attestedScope, model: "another-model" },
+    },
+    { ...evidence, attestedScope: { ...evidence.attestedScope, maxCalls: 20 } },
+    {
+      ...evidence,
+      attestedScope: {
+        ...evidence.attestedScope,
+        inputsSha256: "a".repeat(64),
+      },
+    },
+    {
+      ...evidence,
+      attestedScope: { ...evidence.attestedScope, executable: "/other/codex" },
+    },
+    { ...evidence, approvedAt: Date.now() - 2 * 24 * 60 * 60_000 },
+    { ...evidence, approvedAt: Date.now() + 60_000 },
+    { ...evidence, approvalTimePrecision: "minute" },
+  ];
+  for (const item of invalid)
+    await expect(h.store.recordDelegated(h.scope, item)).rejects.toThrow(
+      /Delegation evidence/,
+    );
+  await expect(h.store.recordDelegated(h.scope, evidence)).resolves.toMatch(
+    /^grant_/,
+  );
 });
