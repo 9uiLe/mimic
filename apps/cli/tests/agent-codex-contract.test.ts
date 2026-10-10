@@ -1117,7 +1117,7 @@ test("profile rejects arbitrary argv, model flags, long budgets, external schema
       ),
     ).rejects.toMatchObject({ reason: "unsupported" });
   for (const invalid of [
-    { ...request(options.workspace), prompt: "x".repeat(64 * 1024 + 1) },
+    { ...request(options.workspace), prompt: "x".repeat(96 * 1024 + 1) },
     {
       ...request(options.workspace),
       settings: {
@@ -1130,6 +1130,14 @@ test("profile rejects arbitrary argv, model flags, long budgets, external schema
     await expect(
       createCodexGenerationProfile(options, invalid, schemaPath),
     ).rejects.toMatchObject({ reason: "unsupported" });
+  const withinBudget = "x".repeat(80 * 1024);
+  await expect(
+    createCodexGenerationProfile(
+      options,
+      { ...request(options.workspace), prompt: withinBudget },
+      schemaPath,
+    ),
+  ).resolves.toMatchObject({ process: { input: withinBudget } });
 });
 
 test("explicit fake official subprocess validates profile controls, literal input and emits structured candidate JSONL", async () => {

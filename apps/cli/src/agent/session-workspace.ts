@@ -17,6 +17,7 @@ import {
 import { LocalConfirmationAuthority } from "../local-confirmation-authority.js";
 import { atomicCreateJson } from "../atomic-file.js";
 import { createStaticSessionPorts } from "./session-cli.js";
+import { MAX_CODEX_PROMPT_BYTES } from "./codex.js";
 import {
   sessionDigest,
   SessionBindingChanged,
@@ -379,7 +380,7 @@ export async function createWorkspaceSessionPorts(
           envelopeGuide,
         };
         let prompt = canonicalJson(promptData);
-        if (Buffer.byteLength(prompt) > 64 * 1024) {
+        if (Buffer.byteLength(prompt) > MAX_CODEX_PROMPT_BYTES) {
           const { envelopeGuide: omittedGuide, ...bounded } = promptData;
           void omittedGuide;
           prompt = canonicalJson({
@@ -396,7 +397,7 @@ export async function createWorkspaceSessionPorts(
             skill: { ...bounded.skill, examples: [] },
           });
         }
-        if (Buffer.byteLength(prompt) > 64 * 1024)
+        if (Buffer.byteLength(prompt) > MAX_CODEX_PROMPT_BYTES)
           throw new Error("Frozen Skill prompt exceeds Codex input limit");
         runnable.push({ binding: taskBinding, prompt });
       }
