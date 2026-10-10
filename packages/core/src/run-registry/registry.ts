@@ -92,6 +92,10 @@ export interface Run {
   readonly entryMode: "system-first" | "experience-first" | "hybrid";
   readonly base: readonly ExactArtifactRef[];
   readonly reused: readonly { ref: ExactArtifactRef; reason: string }[];
+  /** A verified human working choice usable only as an S10 revision source. */
+  readonly revisionBase?: RevisionBaseSelection;
+  /** Explicit human working-source commit; separate from canonical adoption. */
+  readonly revisionSelection?: RevisionSelectionRequest;
   readonly artifacts: readonly ExactArtifactRef[];
   readonly proposals: Record<string, Proposal>;
   readonly blockers: Record<string, string>;
@@ -101,6 +105,24 @@ export interface Run {
     reason: string;
     fates: Record<string, Proposal["status"]>;
   };
+}
+export type RevisionBaseSelection = {
+  readonly ref: ExactArtifactRef;
+  readonly sourceRunId: string;
+} & (
+  | { readonly decisionId: string; readonly selectionId?: never }
+  | { readonly selectionId: string; readonly decisionId?: never }
+);
+export interface RevisionSelectionRequest {
+  readonly id: string;
+  readonly runId: string;
+  readonly ref: ExactArtifactRef;
+  readonly reviewRef: ExactArtifactRef;
+  readonly actor: Actor;
+  readonly at: string;
+  readonly reason: string;
+  readonly supersedesSelectionId?: string;
+  readonly externalRefs?: readonly string[];
 }
 export interface CommitRequest {
   readonly id: string;
@@ -162,6 +184,123 @@ function validRef(ref: ExactArtifactRef): boolean {
     Number.isSafeInteger(ref.revision) &&
     ref.revision > 0 &&
     /^sha256:[0-9a-f]{64}$/.test(ref.lockDigest)
+  );
+}
+function exactChoice(ref: ExactArtifactRef): string {
+  return `${ref.artifactId}@${ref.revision}#${ref.lockDigest}`;
+}
+function selectedSuccessor(
+  state: RegistryState,
+  selection: RevisionBaseSelection,
+  owner: Run,
+  ref: ExactArtifactRef,
+): boolean {
+  return !!(
+    selection.selectionId &&
+    owner.revisionBase?.selectionId === selection.selectionId &&
+    owner.revisionBase.sourceRunId === selection.sourceRunId &&
+    same(owner.revisionBase.ref, selection.ref) &&
+    ref.artifactId === selection.ref.artifactId &&
+    ref.revision === selection.ref.revision + 1 &&
+    state.events.some(
+      (item) =>
+        item.runId === owner.id &&
+        item.action === "produce-provisional" &&
+        item.actor.kind === "skill" &&
+        item.actor.id === "mimic.s10.design-direction-generator" &&
+        item.inputs.some((input) => same(input, selection.ref)) &&
+        item.outputs.some((output) => same(output, ref)),
+    )
+  );
+}
+/** A selected revision source is not canonical approval or permission to publish. */
+function committedRevisionBase(
+  state: RegistryState,
+  selection: RevisionBaseSelection,
+): boolean {
+  if (!validRef(selection?.ref)) return false;
+  const source = state.runs[selection.sourceRunId];
+  if (selection.selectionId) {
+    const request = source?.revisionSelection;
+    return !!(
+      source &&
+      request?.id === selection.selectionId &&
+      request.runId === source.id &&
+      request.actor.kind === "human" &&
+      same(request.ref, selection.ref) &&
+      source.artifacts.some((ref) => same(ref, selection.ref)) &&
+      source.artifacts.some((ref) => same(ref, request.reviewRef)) &&
+      !state.freshness[selection.ref.artifactId] &&
+      !state.freshness[request.reviewRef.artifactId] &&
+      !Object.values(state.runs).some((run) =>
+        run.artifacts.some(
+          (ref) =>
+            (ref.artifactId === selection.ref.artifactId &&
+              ref.revision > selection.ref.revision &&
+              !selectedSuccessor(state, selection, run, ref)) ||
+            (ref.artifactId === request.reviewRef.artifactId &&
+              ref.revision > request.reviewRef.revision),
+        ),
+      ) &&
+      !Object.values(state.runs).some((run) =>
+        Object.values(run.proposals).some(
+          (candidate) =>
+            (same(candidate.ref, selection.ref) ||
+              same(candidate.ref, request.reviewRef)) &&
+            ["rejected", "superseded", "discarded"].includes(candidate.status),
+        ),
+      ) &&
+      (!state.canonical[selection.ref.artifactId] ||
+        same(state.canonical[selection.ref.artifactId]?.ref, selection.ref))
+    );
+  }
+  const decision = state.decisions[selection.decisionId!];
+  const packet = decision && state.packets[decision.packetId];
+  const proposal = source && decision && source.proposals[decision.proposalId];
+  const output = decision?.output;
+  return !!(
+    source &&
+    decision?.actor.kind === "human" &&
+    decision.outcome === "approved" &&
+    packet?.runId === source.id &&
+    proposal?.status === "merged" &&
+    output?.artifact.meta.type === "decision" &&
+    (output.artifact.origin as Record<string, unknown> | undefined)?.actorId ===
+      "mimic.s11.direction-evaluator" &&
+    (output.artifact.content as Record<string, unknown> | null)
+      ?.chosenAlternative === exactChoice(selection.ref) &&
+    source.artifacts.some((ref) => same(ref, selection.ref)) &&
+    same(state.canonical[output.ref.artifactId]?.ref, output.ref) &&
+    state.canonical[output.ref.artifactId]?.decisionId === decision.id &&
+    !state.freshness[selection.ref.artifactId] &&
+    !Object.values(state.runs).some((run) =>
+      run.artifacts.some(
+        (ref) =>
+          ref.artifactId === selection.ref.artifactId &&
+          ref.revision > selection.ref.revision,
+      ),
+    ) &&
+    !Object.values(state.runs).some((run) =>
+      Object.values(run.proposals).some(
+        (candidate) =>
+          same(candidate.ref, selection.ref) &&
+          ["rejected", "superseded", "discarded"].includes(candidate.status),
+      ),
+    ) &&
+    (!state.canonical[selection.ref.artifactId] ||
+      same(state.canonical[selection.ref.artifactId]?.ref, selection.ref)) &&
+    Object.values(state.commits).some(
+      ({ request, outputs }) =>
+        request.actor.kind === "human" &&
+        request.actor.id === decision.actor.id &&
+        request.packetId === decision.packetId &&
+        request.approvals.some(
+          (item) =>
+            item.decisionId === decision.id &&
+            item.proposalId === decision.proposalId,
+        ) &&
+        outputs.some((ref) => same(ref, output.ref)),
+    )
   );
 }
 function same(a: unknown, b: unknown): boolean {
@@ -235,6 +374,10 @@ function closeCompleted(
 }
 export interface RegistryAuthority {
   verify(record: DecisionRecord, proposal: Proposal): Promise<boolean>;
+  verifyRevisionSelection?(
+    request: RevisionSelectionRequest,
+    current: Readonly<RegistryState>,
+  ): Promise<boolean>;
   verifyResolutionDecision?(
     decision: DecisionRecord,
     proposal: Proposal,
@@ -276,6 +419,36 @@ export class RunRegistry {
     requireThat(run, `Unknown Run ${id}`, "UNAVAILABLE");
     return { run: jsonCopy(run), state: deriveRunState(run) };
   }
+  async assertRevisionBase(selection: RevisionBaseSelection): Promise<void> {
+    const state = await this.storage.read();
+    requireThat(
+      committedRevisionBase(state, selection),
+      "Selected revision base is no longer the current committed human choice",
+      "CONFLICT",
+    );
+    if (selection.selectionId)
+      requireThat(
+        !!this.authority.verifyRevisionSelection &&
+          (await this.authority.verifyRevisionSelection(
+            state.runs[selection.sourceRunId]!.revisionSelection!,
+            jsonCopy(state),
+          )),
+        "Selected revision base confirmation is unverified",
+        "UNVERIFIED",
+      );
+    const artifact = await this.checked(selection.ref);
+    requireThat(
+      artifact.meta.type === "design-direction" &&
+        artifact.lifecycle.status === "provisional" &&
+        artifact.lifecycle.freshness === "valid" &&
+        (artifact.origin as Record<string, unknown> | undefined)?.actorId ===
+          "mimic.s10.design-direction-generator" &&
+        (artifact.origin as Record<string, unknown> | undefined)?.runId ===
+          selection.sourceRunId,
+      "Selected revision base is not a fresh exact S10 direction",
+      "UNVERIFIED",
+    );
+  }
   private async checked(ref: ExactArtifactRef): Promise<ArtifactSnapshot> {
     requireThat(validRef(ref), "Invalid exact artifact reference");
     const result = await this.artifacts.read(ref.artifactId, ref.revision);
@@ -285,6 +458,113 @@ export class RunRegistry {
       "UNVERIFIED",
     );
     return result.artifact;
+  }
+  /** Commit one reviewed working direction without granting canonical approval. */
+  async selectRevisionBase(input: RevisionSelectionRequest): Promise<void> {
+    const x = jsonCopy(input);
+    requireThat(
+      x.id?.trim() &&
+        x.runId?.trim() &&
+        x.actor?.kind === "human" &&
+        x.actor.id?.trim() &&
+        x.reason?.trim() &&
+        Number.isFinite(Date.parse(x.at)) &&
+        validRef(x.ref) &&
+        validRef(x.reviewRef),
+      "Working revision selection needs human identity and exact refs",
+    );
+    const candidate = await this.checked(x.ref);
+    const review = await this.checked(x.reviewRef);
+    requireThat(
+      candidate.meta.type === "design-direction" &&
+        candidate.lifecycle.status === "provisional" &&
+        candidate.lifecycle.freshness === "valid" &&
+        (candidate.origin as Record<string, unknown> | undefined)?.actorId ===
+          "mimic.s10.design-direction-generator" &&
+        (candidate.origin as Record<string, unknown> | undefined)?.runId ===
+          x.runId &&
+        review.meta.type === "decision" &&
+        ["provisional", "proposed"].includes(review.lifecycle.status) &&
+        review.lifecycle.freshness === "valid" &&
+        (review.origin as Record<string, unknown> | undefined)?.actorId ===
+          "mimic.s11.direction-evaluator" &&
+        (review.origin as Record<string, unknown> | undefined)?.runId ===
+          x.runId &&
+        (review.content as Record<string, unknown> | null)?.outcome ===
+          "proposed" &&
+        review.dependencies.some((dep) =>
+          same(x.ref, {
+            artifactId: dep.artifactId,
+            revision: dep.revision,
+            lockDigest: dep.lockDigest,
+          }),
+        ),
+      "Selection must cite a fresh S10 direction reviewed by S11",
+      "UNVERIFIED",
+    );
+    await this.storage.transact(async (state) => {
+      const run = state.runs[x.runId];
+      requireThat(
+        run &&
+          run.artifacts.some((ref) => same(ref, x.ref)) &&
+          run.artifacts.some((ref) => same(ref, x.reviewRef)) &&
+          !state.freshness[x.ref.artifactId] &&
+          !state.freshness[x.reviewRef.artifactId] &&
+          !Object.values(state.runs).some((other) =>
+            other.artifacts.some(
+              (ref) =>
+                (ref.artifactId === x.ref.artifactId &&
+                  ref.revision > x.ref.revision) ||
+                (ref.artifactId === x.reviewRef.artifactId &&
+                  ref.revision > x.reviewRef.revision),
+            ),
+          ) &&
+          !Object.values(state.runs).some((other) =>
+            Object.values(other.proposals).some(
+              (proposal) =>
+                (same(proposal.ref, x.ref) ||
+                  same(proposal.ref, x.reviewRef)) &&
+                ["rejected", "superseded", "discarded"].includes(
+                  proposal.status,
+                ),
+            ),
+          ),
+        "Working direction is not a current exact Run candidate",
+        "CONFLICT",
+      );
+      const previous = run.revisionSelection;
+      requireThat(
+        !!this.authority.verifyRevisionSelection &&
+          (await this.authority.verifyRevisionSelection(x, jsonCopy(state))),
+        "Working direction selection authority unverified",
+        "UNVERIFIED",
+      );
+      if (previous?.id === x.id) {
+        requireThat(same(previous, x), "Selection ID conflict", "CONFLICT");
+        return;
+      }
+      requireThat(
+        !Object.values(state.runs).some(
+          (other) => other.revisionSelection?.id === x.id,
+        ) &&
+          (previous?.id === x.supersedesSelectionId ||
+            (!previous && !x.supersedesSelectionId)),
+        "Selection supersession or ID mismatch",
+        "CONFLICT",
+      );
+      state.runs[x.runId] = { ...run, revisionSelection: x };
+      event(
+        state,
+        x.runId,
+        "select-revision-base",
+        x.actor,
+        x.at,
+        x.reason,
+        [x.reviewRef],
+        [x.ref],
+        { selection: x },
+      );
+    });
   }
   async seedCanonical(refsInput: readonly ExactArtifactRef[]): Promise<void> {
     const refs = jsonCopy(refsInput);
@@ -313,6 +593,7 @@ export class RunRegistry {
     entryMode: Run["entryMode"];
     base: readonly ExactArtifactRef[];
     reused: Run["reused"];
+    revisionBase?: RevisionBaseSelection;
     safeActions: readonly string[];
     actor: Actor;
     at: string;
@@ -330,6 +611,25 @@ export class RunRegistry {
       "Duplicate base reference",
     );
     for (const ref of x.base) await this.checked(ref);
+    if (x.revisionBase) {
+      requireThat(
+        x.base.some((ref) => same(ref, x.revisionBase?.ref)) &&
+          x.actor.kind === "agent",
+        "Revision base requires an exact Run input",
+      );
+      const artifact = await this.checked(x.revisionBase.ref);
+      requireThat(
+        artifact.meta.type === "design-direction" &&
+          artifact.lifecycle.status === "provisional" &&
+          artifact.lifecycle.freshness === "valid" &&
+          (artifact.origin as Record<string, unknown> | undefined)?.actorId ===
+            "mimic.s10.design-direction-generator" &&
+          (artifact.origin as Record<string, unknown> | undefined)?.runId ===
+            x.revisionBase.sourceRunId,
+        "Revision base must be the exact fresh S10 direction",
+        "UNVERIFIED",
+      );
+    }
     for (const reuse of x.reused) {
       requireThat(
         x.base.some((r) => same(r, reuse.ref)) && reuse.reason.trim(),
@@ -338,7 +638,39 @@ export class RunRegistry {
     }
     return this.storage.transact(async (state) => {
       requireThat(!state.runs[x.id], "Run ID already exists", "CONFLICT");
+      if (x.revisionBase)
+        requireThat(
+          committedRevisionBase(state, x.revisionBase) &&
+            state.runs[x.revisionBase.sourceRunId]?.scope === x.scope,
+          "Selected revision base is not a current committed human choice",
+          "CONFLICT",
+        );
+      const revisionBase = x.revisionBase;
+      if (revisionBase?.selectionId)
+        requireThat(
+          !Object.values(state.runs).some((other) => {
+            const existing = other.revisionBase;
+            return !!(
+              existing?.selectionId === revisionBase.selectionId &&
+              existing.sourceRunId === revisionBase.sourceRunId &&
+              same(existing.ref, revisionBase.ref)
+            );
+          }),
+          "Selected revision already has a successor Run",
+          "CONFLICT",
+        );
+      if (x.revisionBase?.selectionId)
+        requireThat(
+          !!this.authority.verifyRevisionSelection &&
+            (await this.authority.verifyRevisionSelection(
+              state.runs[x.revisionBase.sourceRunId]!.revisionSelection!,
+              jsonCopy(state),
+            )),
+          "Selected revision base confirmation is unverified",
+          "UNVERIFIED",
+        );
       for (const ref of x.base) {
+        if (x.revisionBase && same(ref, x.revisionBase.ref)) continue;
         const selection = state.canonical[ref.artifactId];
         requireThat(
           same(selection?.ref, ref),
@@ -366,6 +698,7 @@ export class RunRegistry {
         entryMode: x.entryMode,
         base: x.base,
         reused: x.reused,
+        ...(x.revisionBase ? { revisionBase: x.revisionBase } : {}),
         artifacts: [],
         proposals: {},
         blockers: {},
@@ -395,6 +728,22 @@ export class RunRegistry {
     for (const ref of x.inputs) await this.checked(ref);
     await this.storage.transact(async (state) => {
       const run = state.runs[x.runId];
+      if (run?.revisionBase)
+        requireThat(
+          committedRevisionBase(state, run.revisionBase),
+          "Selected revision base is no longer current",
+          "CONFLICT",
+        );
+      if (run?.revisionBase?.selectionId)
+        requireThat(
+          !!this.authority.verifyRevisionSelection &&
+            (await this.authority.verifyRevisionSelection(
+              state.runs[run.revisionBase.sourceRunId]!.revisionSelection!,
+              jsonCopy(state),
+            )),
+          "Selected revision base confirmation is unverified",
+          "UNVERIFIED",
+        );
       requireThat(
         run &&
           !run.closed &&
@@ -428,6 +777,21 @@ export class RunRegistry {
             }),
           ),
           "Dependency is absent from exact inputs",
+          "CONFLICT",
+        );
+      if (
+        run.revisionBase?.selectionId &&
+        x.ref.artifactId === run.revisionBase.ref.artifactId
+      )
+        requireThat(
+          x.actor.kind === "skill" &&
+            x.actor.id === "mimic.s10.design-direction-generator" &&
+            artifact.meta.type === "design-direction" &&
+            x.ref.revision === run.revisionBase.ref.revision + 1 &&
+            artifact.meta.supersedesRevision ===
+              run.revisionBase.ref.revision &&
+            x.inputs.some((ref) => same(ref, run.revisionBase!.ref)),
+          "Selected revision must supersede and consume its exact source",
           "CONFLICT",
         );
       state.runs[x.runId] = { ...run, artifacts: [...run.artifacts, x.ref] };

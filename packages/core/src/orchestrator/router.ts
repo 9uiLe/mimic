@@ -16,6 +16,7 @@ import {
   type CommitRequest,
   type Proposal,
   type RegistryAuthority,
+  type RevisionBaseSelection,
   type Run,
   type RunState,
 } from "../run-registry/registry.js";
@@ -58,6 +59,8 @@ export interface RoutedTask {
   readonly additionalOutputTypes?: readonly string[];
   readonly scopeOwnerId: string;
   readonly targetArtifactId?: string;
+  /** Exact provisional S10 source chosen by a committed human S11 decision. */
+  readonly revisionBase?: RevisionBaseSelection;
   readonly proposalIds?: readonly string[];
   readonly dependsOn?: readonly string[];
   readonly inputs: InputGroups;
@@ -229,6 +232,30 @@ export class Orchestrator {
     const state = await this.registry.snapshot();
     const base: ExactArtifactRef[] = [];
     const reused: Run["reused"][number][] = [];
+    const revisionTasks = input.tasks.filter((task) => task.revisionBase);
+    assert(
+      revisionTasks.length <= 1,
+      "Only one selected revision base is allowed",
+    );
+    const revisionTask = revisionTasks[0];
+    const revisionBase = revisionTask?.revisionBase;
+    if (revisionBase)
+      assert(
+        revisionTask.intent === "revise" &&
+          revisionTask.skillId === "mimic.s10.design-direction-generator" &&
+          revisionTask.outputType === "design-direction" &&
+          revisionTask.targetArtifactId === revisionBase.ref.artifactId &&
+          revisionTask.inputs.optional.some(
+            (need) =>
+              need.kind === "artifact" &&
+              need.name === "prior-direction" &&
+              need.artifactType === "design-direction" &&
+              need.schemaVersion === "1.0.0" &&
+              need.refs?.length === 1 &&
+              equal(need.refs[0], revisionBase.ref),
+          ),
+        "Selected revision base is only valid for the exact S10 revise input",
+      );
     for (const selection of Object.values(state.canonical)) {
       const artifact = await this.verified(selection.ref);
       if (!chain.includes(artifact.scope.ownerId)) continue;
@@ -247,12 +274,25 @@ export class Orchestrator {
     }
     base.sort((a, b) => a.artifactId.localeCompare(b.artifactId));
     reused.sort((a, b) => a.ref.artifactId.localeCompare(b.ref.artifactId));
+    if (revisionBase) {
+      assert(
+        !base.some((ref) => ref.artifactId === revisionBase.ref.artifactId),
+        "Selected revision base conflicts with canonical state",
+      );
+      base.push(revisionBase.ref);
+      reused.push({
+        ref: revisionBase.ref,
+        reason:
+          "Human-committed S10 revision source; not final design approval",
+      });
+    }
     const started = await this.registry.start({
       id: input.id,
       scope: input.scopeOwnerId,
       entryMode: input.entryMode,
       base,
       reused,
+      ...(revisionBase ? { revisionBase } : {}),
       safeActions: input.tasks.map((task) => task.id),
       actor: input.actor,
       at: input.at,
@@ -312,6 +352,18 @@ export class Orchestrator {
     const state = await this.registry.snapshot();
     const run = state.runs[runId];
     assert(run, "Unknown Run");
+    if (run.revisionBase)
+      await this.registry.assertRevisionBase(run.revisionBase);
+    assert(
+      !run.revisionBase ||
+        tasks.some(
+          (task) =>
+            task.skillId === "mimic.s10.design-direction-generator" &&
+            task.intent === "revise" &&
+            equal(task.revisionBase, run.revisionBase),
+        ),
+      "Run's selected revision base is absent from its S10 plan",
+    );
     const chain = this.scopeChain(run.scope);
     const byId = new Map(tasks.map((task) => [task.id, task]));
     assert(byId.size === tasks.length, "Duplicate task ID");
@@ -466,8 +518,15 @@ export class Orchestrator {
         });
         continue;
       }
+      const selectedRevision =
+        task.intent === "revise" &&
+        task.revisionBase &&
+        run.revisionBase &&
+        equal(task.revisionBase, run.revisionBase)
+          ? run.revisionBase.ref
+          : undefined;
       const current = task.targetArtifactId
-        ? state.canonical[task.targetArtifactId]?.ref
+        ? (selectedRevision ?? state.canonical[task.targetArtifactId]?.ref)
         : undefined;
       if (current && !run.base.some((item) => equal(item, current))) {
         actions.push({
@@ -484,14 +543,18 @@ export class Orchestrator {
         );
         if (
           !selected ||
-          selected.lifecycle.status !== "approved" ||
+          (selected.lifecycle.status !== "approved" &&
+            !(
+              selectedRevision && selected.lifecycle.status === "provisional"
+            )) ||
           selected.lifecycle.freshness !== "valid" ||
           state.freshness[current.artifactId]
         ) {
           actions.push({
             taskId: task.id,
             action: "BLOCK",
-            reason: "Current exact target is not fresh and approved",
+            reason:
+              "Current exact target is not fresh or selected for revision",
           });
           continue;
         }
@@ -705,6 +768,23 @@ export class Orchestrator {
         if (chosen) consume(need, chosen);
         else gaps.push(`Optional ${label(need)} unavailable`);
       }
+      if (
+        selectedRevision &&
+        !inputBindings.some(
+          (binding) =>
+            binding.name === "prior-direction" &&
+            binding.refs.length === 1 &&
+            equal(binding.refs[0], selectedRevision),
+        )
+      ) {
+        actions.push({
+          taskId: task.id,
+          action: "BLOCK",
+          reason: "Selected exact prior direction is unavailable",
+          blockKind: "durable",
+        });
+        continue;
+      }
       const invocation: SkillInvocation = {
         runId,
         taskId: task.id,
@@ -876,6 +956,23 @@ export class Orchestrator {
       "Duplicate Skill output reference",
     );
     const { run } = await this.registry.run(invocation.runId);
+    if (run.revisionBase)
+      await this.registry.assertRevisionBase(run.revisionBase);
+    if (
+      run.revisionBase &&
+      invocation.skillId === "mimic.s10.design-direction-generator" &&
+      invocation.targetArtifactId === run.revisionBase.ref.artifactId
+    )
+      assert(
+        result.inputRefs.some((ref) => equal(ref, run.revisionBase!.ref)) &&
+          invocation.inputBindings?.some(
+            (binding) =>
+              binding.name === "prior-direction" &&
+              binding.refs.length === 1 &&
+              equal(binding.refs[0], run.revisionBase!.ref),
+          ),
+        "Selected exact revision source must be consumed by S10",
+      );
     assert(
       !run.closed && run.safeActions.includes(invocation.taskId),
       "Task is not active",

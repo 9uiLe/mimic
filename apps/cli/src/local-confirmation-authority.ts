@@ -12,8 +12,10 @@ import {
   type DecisionPacket,
   type RegistryAuthority,
   type RegistryState,
+  type RevisionSelectionRequest,
 } from "@mimic/core";
 import { atomicCreateJson } from "./atomic-file.js";
+import { LocalRevisionSelectionAuthority } from "./local-revision-selection.js";
 
 export const LOCAL_MARKER = "mimic-local-confirmation:";
 export const SIGNED_MARKER = "mimic-receipt:";
@@ -171,6 +173,15 @@ function validConfirmation(c: LocalConfirmation): boolean {
 }
 
 export class LocalConfirmationAuthority implements RegistryAuthority {
+  verifyRevisionSelection(
+    request: RevisionSelectionRequest,
+    state: Readonly<RegistryState>,
+  ): Promise<boolean> {
+    return new LocalRevisionSelectionAuthority(this.root).verify(
+      request,
+      state as RegistryState,
+    );
+  }
   private preparedCommit?: {
     request: CommitRequest;
     confirmation: LocalConfirmation;

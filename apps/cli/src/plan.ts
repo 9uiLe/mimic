@@ -140,6 +140,7 @@ export function preflightPlan(
         "additionalOutputTypes",
         "scopeOwnerId",
         "targetArtifactId",
+        "revisionBase",
         "proposalIds",
         "dependsOn",
         "inputs",
@@ -175,6 +176,27 @@ export function preflightPlan(
         (typeof entry.targetArtifactId === "string" &&
           /^art_[A-Za-z0-9_-]+$/.test(entry.targetArtifactId)),
       "Invalid target artifact ID",
+    );
+    check(
+      entry.revisionBase === undefined ||
+        (record(entry.revisionBase) &&
+          only(entry.revisionBase, [
+            "ref",
+            "sourceRunId",
+            "decisionId",
+            "selectionId",
+          ]) &&
+          ref(entry.revisionBase.ref) &&
+          nonempty(entry.revisionBase.sourceRunId) &&
+          ((nonempty(entry.revisionBase.decisionId) &&
+            entry.revisionBase.selectionId === undefined) ||
+            (nonempty(entry.revisionBase.selectionId) &&
+              entry.revisionBase.decisionId === undefined)) &&
+          entry.intent === "revise" &&
+          entry.skillId === "mimic.s10.design-direction-generator" &&
+          entry.targetArtifactId ===
+            (entry.revisionBase.ref as { artifactId: string }).artifactId),
+      "Invalid selected revision base",
     );
     check(
       entry.proposalIds === undefined || strings(entry.proposalIds),
