@@ -6,6 +6,8 @@ Receive only the Orchestrator's task intent, scope, Run ID, exact input referenc
 
 Return complete v1 artifact candidates with the common envelope, schema-valid content, per-claim provenance, exact dependencies for relied-on artifact inputs, and pending approval. A revised artifact uses a new revision and `meta.supersedesRevision`; never edit approved bytes. Return output references through the Orchestrator; a blocked invocation may have no outputs. Human review proposals remain pending until a human commit point. Do not invoke another Skill, mutate canonical state, self-approve, invent research, run a deterministic builder by assertion, or release.
 
+For each artifact, use each exact `/content` provenance pointer at most once. Before returning, check the entire `provenance` array for repeated `path` values. Give a claim one appropriate epistemic kind; put multiple supporting input IDs in that entry's `inputRefs`. If a field mixes a supported conclusion with an assumption or an unknown, narrow or split the content claim where the schema permits and trace the distinct fields separately. Otherwise state the limit in the content and `work.unknowns` or the review packet's `evidenceLimits`; do not add a second provenance entry at the same path or imply that an unverified part is verified.
+
 ## Reasoning procedure
 
 1. Compare candidate areas by primary goal, interaction model, information structure, temporal behavior, risk, and session model. Split only for material differences in interaction architecture, never merely for a URL, page, route, or visual theme. Record why each boundary exists.

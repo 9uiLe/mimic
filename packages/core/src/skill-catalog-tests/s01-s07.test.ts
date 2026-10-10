@@ -10,6 +10,7 @@ import {
   type SkillInvocation,
 } from "../orchestrator/router.js";
 import { loadSchemaDirectory } from "../schema-registry.js";
+import { assessProvenance } from "../runtime-engines/provenance.js";
 import {
   loadSkillPackage,
   runSkillPackage,
@@ -74,6 +75,37 @@ afterEach(async () => {
   await Promise.all(
     temporary.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
   );
+});
+
+test("S07 duplicate provenance from a generated candidate is rejected", async () => {
+  const skill = await loadSkillPackage(
+    path.join(repository, "skills/s07-experience-architecture"),
+    schemasRoot,
+  );
+  expect(skill.instructions).toContain(
+    "each exact `/content` provenance pointer at most once",
+  );
+  const candidate = JSON.parse(
+    skill.examples["examples/candidate.json"]!,
+  ) as ArtifactSnapshot;
+  const reproduction = JSON.parse(
+    skill.tests["tests/provenance-duplicate.json"]!,
+  ) as { provenance: ArtifactSnapshot["provenance"] };
+  const rejectedCandidate = {
+    ...candidate,
+    provenance: reproduction.provenance,
+  };
+  expect(
+    (await loadSchemaDirectory(path.join(schemasRoot, "artifacts"))).validate(
+      rejectedCandidate,
+    ).valid,
+  ).toBe(true);
+  await expect(assessProvenance(rejectedCandidate)).rejects.toThrow(
+    "Duplicate provenance pointer: /content/summary",
+  );
+  expect(
+    (await assessProvenance(candidate)).map((item) => item.status),
+  ).toEqual(["DECLARED"]);
 });
 const ref = (artifact: ArtifactSnapshot) => ({
   artifactId: artifact.meta.id,
