@@ -13,6 +13,10 @@
 
    操作を Chrome で確かめるには `node scripts/with-patched-chrome.mjs node scripts/9ui197-harness.mjs capture-working-preview <その設定コピー>` を使う。ハーネスが生成した**そのローカルファイルだけ**を開き、固定文言、必須領域、仮選択と改訂確認、横はみ出しを確認して `working-capture-<runId>.json` と撮影を残す。通常の `capture` の URL 制約や検査結果は変更しない。コマンドが停止した場合や撮影していない場合に PASS と表示しない。
 
+   9UI-216 の実画面比較には、同じ選択済み exact ref を含む設定コピーで `node scripts/9ui197-harness.mjs real-screens <その設定コピー>` を実行する。保存済み S10 の A 一覧表・B 二案対照・C 判断項目順次と共通の S11 評価から、`real-screens-<runId>.html` 一枚に3つの操作画面を描く。初期表示は3画面の一覧で、各案を大きく開ける。比較枠の差し替え、項目の前後移動、候補詳細、仮選択と改訂前確認は画面内だけで動き、Run の選択・採用・公開を記録しない。画面意匠は Codex が保存済み構造を元に実装した試作で、Mimic S10 が生成した完成 UI ではない。追加モデル実行は不要。
+
+   `node scripts/with-patched-chrome.mjs node scripts/9ui197-harness.mjs capture-real-screens <その設定コピー>` は Chrome desktop/390px で3画面の操作と固定表示を確認し、`real-screens-capture-<runId>.json` と一覧・各案の PNG を保存する。localhost 担当が共有するときは、生成 HTML を read-only の独立 URL（例: `GET /design-review/real-screens`）へ割り当て、既存の approved `/preview` 経路とは分ける。HTML は自己完結しており追加 asset は不要。サービス管理タスクが URL とレスポンスの CSP を調整するまで、このハーネスはサーバーを変更・再起動しない。
+
 5. 選択は人が S11 のレビューと S10 候補の exact ref を確認し、`mimic select-revision-base --file <selection.json> --confirmation <confirmation.json>` に明示確認を渡して commit する。AI の S11 提案は選択に数えない。`selection.json` は `id`、`runId`、`ref`、`reviewRef`、human `actor`、`at`、`reason` を含む。`confirmation.json` は CLI 文書の exact digest/候補/レビューを結ぶ既存のローカル確認方式に従う。別候補へ変更する場合は前 selection ID を `supersedesSelectionId` に指定して再確認する。人の確認がない場合は選択待ちのままで、改訂用の選択は最終デザイン採用・公開ではない。改訂は同じ workspace の新しい Run で行い、設定に `previousRunId`、人が選んだ `baseRef`、`revisionRequest` を入れる。`prepare` は前 Run の選択確認と候補の exact ref を再照合し、選ばれた exact ref を S10 の `revise` 入力と対象 artifact に固定する。選ばれた内容だけを新しい S10/S11 brief に渡し、出力が同じ artifact の次 revision で、前 ref を実行入力として消費することを確認する。ArtifactStore は同じ artifact ID への自己依存を認めないため、前 revision との関係は `supersedesRevision` と Run の入力・生成イベントで照合する。連続する前 Run を数え、初期予算 2 回を超える改訂を拒否する。途中案は保存される。生成結果が意図どおりの改善かどうかは人が判断し、ハーネスは自動採用しない。保存済み plan は書き換えない。
 
    Core は候補の生成元、S11 レビューとの exact 依存、保存した利用者確認、候補の失効・改変・別候補への置換を再確認する。これらが一致しなければ改訂 Run は始まらない。ハーネスは人の回答や確認を作らない。
