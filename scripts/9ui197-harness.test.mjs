@@ -28,6 +28,7 @@ import {
   workingCaptureConfig,
   writeWorkingOutput,
 } from "./9ui197-harness.mjs";
+import { renderRealScreensHtml } from "./9ui197-real-screens.mjs";
 
 const brief = {
   audience: "Run reviewer",
@@ -363,6 +364,116 @@ test("working output replaces a symlink without writing its target", async () =>
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }
+});
+
+test("three real screens use one saved packet without recording a new choice", () => {
+  const selected = ref("art_matrix");
+  const criteria = [
+    "共通判断項目の可視性",
+    "AI の推奨理由と未確定事項の分離・到達性",
+    "対象・関係・現在の選択と復帰の連続性",
+    "明示選択と改訂前の再確認",
+    "情報量・不要情報と次の操作",
+  ];
+  const report = {
+    runId: "run_trial",
+    selectedRef: selected,
+    humanSelectionId: "actual-human-selection",
+    revisionCount: 0,
+    revisionBudget: 2,
+    previousRunId: "run_parent",
+    priorSelectedRefs: [ref("art_prior")],
+    unresolved: ["ブランドの適合は未確認"],
+    proposedDecisions: [{ summary: "A を推奨する提案" }],
+    candidates: [
+      ["A", selected, "候補を列、共通判断項目を行"],
+      ["B", ref("art_pair"), "二つの比較枠"],
+      ["C", ref("art_journey"), "項目単位で確認"],
+    ].map(([name, candidateRef, mechanism]) => ({
+      ref: candidateRef,
+      summary: `案${name}は別の構造。条件と代償を確認する。`,
+      mechanisms: [mechanism],
+      rationale: [],
+      verification: { state: "UNVERIFIED" },
+      evaluation: criteria.map((criterion, index) => ({
+        criterion,
+        reason: `保存済みの理由${name}${index}`,
+        state: "CONCERN",
+      })),
+    })),
+  };
+  const realBrief = {
+    content: [
+      { policy: "fixed-fact", text: "改訂は最大2回" },
+      { policy: "fixed-copy", text: "候補を比較" },
+    ],
+  };
+  const html = renderRealScreensHtml(report, realBrief, selected);
+  assert.match(html, /data-real-screens="unapproved"/);
+  assert.equal((html.match(/class="screen-option"/g) ?? []).length, 3);
+  assert.match(html, /class="a-table"/);
+  assert.match(html, /data-b-select="right"/);
+  assert.match(html, /data-c-step="7"/);
+  assert.match(html, /保存済みの理由A0/);
+  assert.match(html, /保存済みの理由B0/);
+  assert.match(html, /保存済みの理由C0/);
+  assert.match(html, /改訂は最大2回/);
+  assert.match(html, /候補を比較/);
+  assert.match(html, /Codex が画面を設計・実装/);
+  assert.match(html, /最終採用・公開は未承認/);
+  assert.match(html, /親 Run: run_parent/);
+  assert.match(html, /art_prior@1/);
+  assert.match(html, /改訂済み回数: 0 \/ 2/);
+  assert.equal((html.match(/class="screen-surface" inert/g) ?? []).length, 3);
+  const atLimit = renderRealScreensHtml(
+    { ...report, revisionCount: 2 },
+    realBrief,
+    selected,
+  );
+  assert.equal((atLimit.match(/data-revision disabled/g) ?? []).length, 3);
+  assert.equal((atLimit.match(/data-revision-limit/g) ?? []).length, 3);
+  assert.doesNotMatch(html, /fetch\(|localStorage|\/preview"/);
+  assert.throws(
+    () =>
+      renderRealScreensHtml(
+        { ...report, humanSelectionId: null },
+        realBrief,
+        selected,
+      ),
+    /verified exact human working choice/,
+  );
+  assert.throws(
+    () => renderRealScreensHtml(report, realBrief, ref("art_pair")),
+    /verified exact human working choice/,
+  );
+  assert.throws(
+    () =>
+      renderRealScreensHtml(
+        { ...report, candidates: report.candidates.slice(0, 2) },
+        realBrief,
+        selected,
+      ),
+    /selected saved A direction and B\/C comparisons/,
+  );
+  const unsafe = {
+    ...report,
+    candidates: report.candidates.map((candidate, index) =>
+      index === 1
+        ? {
+            ...candidate,
+            evaluation: candidate.evaluation.map((item, position) =>
+              position === 0
+                ? { ...item, reason: '<img src=x onerror="alert(1)">' }
+                : item,
+            ),
+          }
+        : candidate,
+    ),
+  };
+  assert.match(
+    renderRealScreensHtml(unsafe, realBrief, selected),
+    /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/,
+  );
 });
 
 test("capture binding changes with preview and screen checks", () => {

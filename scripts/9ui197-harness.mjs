@@ -11,6 +11,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { renderRealScreensHtml } from "./9ui197-real-screens.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateFile = path.join(repo, "docs/dogfood/9ui183/plan-template.json");
@@ -980,6 +981,188 @@ export async function capturePreviews(
   return observations;
 }
 
+/** Inspect the three local UI sketches at the two supported Chrome sizes. */
+export async function captureRealScreens(
+  previewPath,
+  workspace,
+  report,
+  brief,
+) {
+  const { chromium, expect } = await import("@playwright/test");
+  assert(
+    path.dirname(previewPath) === workspace &&
+      path.basename(previewPath) === `real-screens-${report.runId}.html` &&
+      (await realpath(previewPath)) === previewPath,
+    "Real-screen capture needs its generated local document",
+  );
+  assert(
+    nonempty(process.env.MIMIC_CHROME_EXECUTABLE),
+    "Run capture through scripts/with-patched-chrome.mjs",
+  );
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
+  const sizes = [
+    { name: "desktop", width: 1440, height: 900 },
+    { name: "mobile", width: 390, height: 844 },
+  ];
+  const results = [];
+  try {
+    for (const size of sizes) {
+      const page = await browser.newPage({
+        viewport: { width: size.width, height: size.height },
+      });
+      try {
+        await page.goto(pathToFileURL(previewPath).href, {
+          waitUntil: "domcontentloaded",
+        });
+        await page.locator('[data-real-screens="unapproved"]').waitFor();
+        const lockedContent = checkLockedContent(
+          brief,
+          await page.locator("body").innerText(),
+        );
+        const cardCount = await page.locator("[data-option]").count();
+        await expect(
+          page.locator("[data-option] .screen-surface[inert]"),
+        ).toHaveCount(3);
+        const overflow = await page.evaluate(() =>
+          globalThis.document.documentElement.scrollWidth >
+          globalThis.innerWidth
+            ? "FAIL"
+            : "PASS",
+        );
+        const screenshots = [];
+        const saveScreenshot = async (suffix) => {
+          const file = `real-screens-${report.runId}-${size.name}-${suffix}.png`;
+          await writeWorkingOutput(
+            path.join(workspace, file),
+            await page.screenshot({ fullPage: true }),
+          );
+          screenshots.push(file);
+        };
+        await saveScreenshot("index");
+        const operations = [];
+        for (const id of ["a", "b", "c"]) {
+          const option = page.locator(`[data-option="${id}"]`);
+          try {
+            await option.locator("[data-expand]").click();
+            await expect(option).toHaveClass(/expanded/);
+            await expect(option.locator(".screen-surface")).not.toHaveAttribute(
+              "inert",
+              "",
+            );
+            await expect(
+              page.locator("[data-option]:not(.expanded)[inert]"),
+            ).toHaveCount(2);
+            await saveScreenshot(id);
+            if (id === "a") {
+              await option
+                .locator(
+                  size.name === "mobile"
+                    ? '.a-mobile [data-a-detail="0"]'
+                    : '.a-table-wrap [data-a-detail="0"]',
+                )
+                .click();
+              await expect(
+                option.locator("[data-a-detail-view]"),
+              ).toBeVisible();
+              await option.locator("[data-a-back]").click();
+              await expect(option.locator("[data-a-main]")).toBeVisible();
+            } else if (id === "b") {
+              await option.locator('[data-b-select="right"]').selectOption("2");
+              await expect(
+                option.locator('[data-b-panel="right"]'),
+              ).toContainText("候補C");
+              await option
+                .locator('[data-b-panel="right"] [data-b-detail]')
+                .click();
+              await expect(
+                option.locator("[data-b-detail-view]"),
+              ).toBeVisible();
+              await option.locator("[data-b-back]").click();
+              await expect(option.locator("[data-b-main]")).toBeVisible();
+            } else {
+              const stageCount = await option.locator("[data-c-step]").count();
+              await option.locator("[data-c-next]").click();
+              await expect(option.locator("[data-step-count]")).toHaveText(
+                `2 / ${stageCount}`,
+              );
+              await option.locator('[data-c-go="0"]').click();
+              await option
+                .locator('[data-c-step="0"] [data-c-detail="0"]')
+                .click();
+              await expect(
+                option.locator("[data-c-detail-view]"),
+              ).toBeVisible();
+              await option.locator("[data-c-back]").click();
+              await option.locator(`[data-c-go="${stageCount - 1}"]`).click();
+              await expect(
+                option.locator(`[data-c-step="${stageCount - 1}"]`),
+              ).toBeVisible();
+            }
+            await option.locator('[data-try-choice="B"]').click();
+            await expect(option.locator("[data-trial-status]")).toContainText(
+              "候補B（保存なし）",
+            );
+            if (report.revisionCount < report.revisionBudget) {
+              await option.locator("[data-revision]").click();
+              await expect(
+                option.locator("[data-revision-confirmation]"),
+              ).toBeVisible();
+            } else {
+              await expect(option.locator("[data-revision]")).toBeDisabled();
+              await expect(
+                option.locator("[data-revision-limit]"),
+              ).toContainText("改訂上限");
+            }
+            operations.push({ option: id, state: "PASS" });
+          } catch (error) {
+            operations.push({
+              option: id,
+              state: "FAIL",
+              reason: String(error.message).slice(0, 240),
+            });
+          } finally {
+            if (
+              await option.evaluate((node) =>
+                node.classList.contains("expanded"),
+              )
+            )
+              await option.locator("[data-expand]").click();
+          }
+        }
+        results.push({
+          viewport: size,
+          cardCount,
+          lockedContent,
+          overflow,
+          operations,
+          screenshots,
+          state:
+            cardCount === 3 &&
+            lockedContent.state === "PASS" &&
+            overflow === "PASS" &&
+            operations.every((item) => item.state === "PASS")
+              ? "PASS"
+              : "FAIL",
+        });
+      } finally {
+        await page.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  return {
+    runId: report.runId,
+    selectedRef: report.selectedRef,
+    approval: "unapproved-codex-ui-sketch",
+    source: "saved-mimic-s10-s11-structure",
+    state: results.every((item) => item.state === "PASS") ? "PASS" : "FAIL",
+    results,
+  };
+}
+
 export async function acceptedRun(workspace, runId, descendantRunIds) {
   const file = path.join(workspace, ".mimic/workspace.json");
   const before = await readFile(file, "utf8");
@@ -1274,8 +1457,10 @@ async function main(args) {
       "compare",
       "working-preview",
       "capture-working-preview",
+      "real-screens",
+      "capture-real-screens",
     ].includes(command) && configPath,
-    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview> <config.json> [other-config.json]",
+    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|capture-real-screens> <config.json> [other-config.json]",
   );
   const config = JSON.parse(await readFile(configPath, "utf8"));
   if (command === "compare") {
@@ -1431,6 +1616,45 @@ async function main(args) {
     );
     const snapshot = await acceptedRun(workspace, config.runId);
     const history = await approvedHistory(workspace, manifest);
+    if (["real-screens", "capture-real-screens"].includes(command)) {
+      const report = reviewTrial({
+        manifest,
+        ...snapshot,
+        history: history.refs,
+      });
+      const html = renderRealScreensHtml(
+        report,
+        manifest.brief,
+        config.workingPreviewRef,
+      );
+      const previewPath = path.join(
+        workspace,
+        `real-screens-${config.runId}.html`,
+      );
+      await writeWorkingOutput(previewPath, html);
+      if (command === "capture-real-screens") {
+        const result = await captureRealScreens(
+          previewPath,
+          workspace,
+          report,
+          manifest.brief,
+        );
+        await writeWorkingOutput(
+          path.join(workspace, `real-screens-capture-${config.runId}.json`),
+          JSON.stringify(result, null, 2) + "\n",
+        );
+        console.log(JSON.stringify({ previewPath, ...result }));
+      } else {
+        console.log(
+          JSON.stringify({
+            previewPath,
+            selectedRef: report.selectedRef,
+            approval: "unapproved-codex-ui-sketch",
+          }),
+        );
+      }
+      return;
+    }
     if (["working-preview", "capture-working-preview"].includes(command)) {
       const report = reviewTrial({
         manifest,
