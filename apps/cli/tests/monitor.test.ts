@@ -730,6 +730,174 @@ test("a matching unapproved working preview opens from the selected review witho
   ).toBe(404);
 });
 
+test("three saved direction screens open first from the monitor and current review without writes", async () => {
+  const { root } = await setup();
+  const folder = await mkdtemp(path.join(os.tmpdir(), "mimic-real-screens-"));
+  roots.push(folder);
+  const reviewFile = path.join(folder, "review.html");
+  const screensFile = path.join(folder, "real-screens.html");
+  const refs = ["matrix", "pair_workspace", "criteria_journey"].map(
+    (name, index) => ({
+      artifactId: `art_run_trial_s10_${name}`,
+      revision: 1,
+      lockDigest: `sha256:${String(index + 1).repeat(64)}`,
+    }),
+  );
+  const candidates = refs.map((candidate) => ({
+    ref: candidate,
+    verification: { state: "UNVERIFIED" },
+  }));
+  const embedded = (value: object) =>
+    JSON.stringify(value).replaceAll('"', "&quot;");
+  const review = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'"><title>Mimic 候補レビュー</title></head><body><main><h1>設計候補を比較する</h1><p>Run run_trial · guided · selected</p><p>改訂作業のために人が選んだ案: ${refs[0]!.artifactId} · 最終採用/公開: 未承認</p><div class="grid">${candidates.map((candidate) => `<article><p>${candidate.ref.artifactId}@1</p><pre>${embedded(candidate)}</pre></article>`).join("")}</div></main></body></html>`;
+  const script = `for(const button of document.querySelectorAll("[data-expand]")){button.addEventListener("click",()=>{document.querySelector("#trial").textContent=button.closest("[data-option]").dataset.option})}`;
+  const scriptHash = createHash("sha256").update(script).digest("base64");
+  const screens = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>3つの実画面を比較 · Mimic</title></head><body><main class="index" data-real-screens="unapproved"><h1>3つの画面を、同じ内容で試す</h1><p>Run run_trial · 親 Run: 初期 Run · 改訂元: ${refs[0]!.artifactId}@1</p><p>最終採用・公開は未承認</p>${["a", "b", "c"].map((name) => `<article class="screen-option" data-option="${name}"><h2>画面案${name.toUpperCase()}</h2><button data-expand>大きく開いて操作</button><pre>${embedded(candidates)}</pre></article>`).join("")}<p id="trial">なし</p></main><script>${script}</script></body></html>`;
+  const realScreensDigest = `sha256:${createHash("sha256").update(screens).digest("hex")}`;
+  await writeFile(reviewFile, review);
+  await writeFile(screensFile, screens);
+  const before = await files(root);
+  const monitor = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    realScreens: screensFile,
+    realScreensDigest,
+  });
+  monitors.push(monitor);
+  const home = await (await fetch(monitor.url)).text();
+  expect(home.indexOf('href="/design-review/real-screens"')).toBeLessThan(
+    home.indexOf('class="decision-packet"'),
+  );
+  const current = await (
+    await fetch(monitor.url + "/trial-review/current")
+  ).text();
+  expect(current.indexOf('href="/design-review/real-screens"')).toBeLessThan(
+    current.indexOf("改訂作業のために人が選んだ案:"),
+  );
+  const route = await fetch(monitor.url + "/design-review/real-screens");
+  expect(route.status).toBe(200);
+  expect(await route.text()).toBe(screens);
+  expect(route.headers.get("content-security-policy")).toContain(
+    `script-src 'sha256-${scriptHash}'`,
+  );
+  expect(route.headers.get("content-security-policy")).toContain(
+    "sandbox allow-scripts; frame-ancestors 'none'",
+  );
+  expect(
+    await status(monitor.url + "/design-review/real-screens", {
+      "Sec-Fetch-Site": "cross-site",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Dest": "empty",
+    }),
+  ).toBe(403);
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
+  try {
+    const page = await browser.newPage();
+    await page.goto(monitor.url);
+    const [screensPage] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page.getByRole("link", { name: /3案の実画面を比較する/ }).click(),
+    ]);
+    await screensPage.waitForLoadState();
+    expect(screensPage.url()).toBe(monitor.url + "/design-review/real-screens");
+    for (const name of ["a", "b", "c"]) {
+      await screensPage
+        .locator(`[data-option="${name}"] [data-expand]`)
+        .click();
+      await browserExpect(screensPage.locator("#trial")).toHaveText(name);
+    }
+    const reloaded = await screensPage.reload();
+    expect(reloaded?.status()).toBe(200);
+    await browserExpect(screensPage.locator("#trial")).toHaveText("なし");
+  } finally {
+    await browser.close();
+  }
+  expect(await files(root)).toEqual(before);
+
+  const cards = [...review.matchAll(/<article>[\s\S]*?<\/article>/g)].map(
+    (match) => match[0],
+  );
+  await writeFile(
+    reviewFile,
+    review.replace(cards.join(""), cards.reverse().join("")),
+  );
+  const reordered = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    realScreens: screensFile,
+    realScreensDigest,
+  });
+  monitors.push(reordered);
+  expect(
+    (await fetch(reordered.url + "/design-review/real-screens")).status,
+  ).toBe(200);
+  await writeFile(reviewFile, review);
+
+  const footer = `<pre>${embedded(candidates)}</pre>`;
+  const secondFooter = screens.indexOf(footer, screens.indexOf(footer) + 1);
+  expect(secondFooter).toBeGreaterThan(0);
+  const altered =
+    screens.slice(0, secondFooter) +
+    screens
+      .slice(secondFooter)
+      .replace(
+        footer,
+        `<pre>${embedded(candidates.map((candidate, index) => (index === 1 ? { ...candidate, verification: { state: "PASS" } } : candidate)))}</pre>`,
+      );
+  await writeFile(screensFile, altered);
+  const alteredFooter = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    realScreens: screensFile,
+    realScreensDigest: `sha256:${createHash("sha256").update(altered).digest("hex")}`,
+  });
+  monitors.push(alteredFooter);
+  expect(
+    (await fetch(alteredFooter.url + "/design-review/real-screens")).status,
+  ).toBe(404);
+  await writeFile(screensFile, screens);
+
+  for (const invalidHtml of [
+    screens.replace("Run run_trial ·", "Run run_other ·"),
+    screens.replace("UNVERIFIED", "PASS"),
+    screens.replace("最終採用・公開は未承認", "最終採用・公開は承認済み"),
+  ]) {
+    await writeFile(screensFile, invalidHtml);
+    const invalid = await startMonitor({
+      root,
+      port: 0,
+      reviewCurrent: reviewFile,
+      realScreens: screensFile,
+      realScreensDigest,
+    });
+    monitors.push(invalid);
+    expect(
+      (await fetch(invalid.url + "/design-review/real-screens")).status,
+    ).toBe(404);
+    expect(await (await fetch(invalid.url)).text()).not.toContain(
+      'href="/design-review/real-screens"',
+    );
+  }
+  await rm(screensFile);
+  await symlink(reviewFile, screensFile);
+  const linked = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    realScreens: screensFile,
+    realScreensDigest,
+  });
+  monitors.push(linked);
+  expect((await fetch(linked.url + "/design-review/real-screens")).status).toBe(
+    404,
+  );
+});
+
 test("forged/malformed checkpoints, private errors and metadata links fail closed", async () => {
   const { root } = await setup();
   const store = new FileSessionStore(root);

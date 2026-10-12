@@ -285,19 +285,20 @@ async function loadTrialReview(
 }
 
 type WorkingPreview = { html: string; csp: string };
-function embeddedRecord(html: string): Record<string, unknown> {
+function embeddedValue(html: string): unknown {
   const pre = html.match(/<pre>([\s\S]*?)<\/pre>/)?.[1];
   if (!pre) throw new Error("Missing preview provenance");
-  return object(
-    JSON.parse(
-      pre
-        .replaceAll("&quot;", '"')
-        .replaceAll("&#39;", "'")
-        .replaceAll("&lt;", "<")
-        .replaceAll("&gt;", ">")
-        .replaceAll("&amp;", "&"),
-    ),
+  return JSON.parse(
+    pre
+      .replaceAll("&quot;", '"')
+      .replaceAll("&#39;", "'")
+      .replaceAll("&lt;", "<")
+      .replaceAll("&gt;", ">")
+      .replaceAll("&amp;", "&"),
   );
+}
+function embeddedRecord(html: string): Record<string, unknown> {
+  return object(embeddedValue(html));
 }
 async function loadWorkingPreview(
   selected: string | undefined,
@@ -387,6 +388,101 @@ async function loadWorkingPreview(
     /\b(?:href|src)="(?:https?:|\/\/|data:)/i.test(html)
   )
     throw new Error("Invalid working preview");
+  return {
+    html,
+    csp: `default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; sandbox allow-scripts; frame-ancestors 'none'`,
+  };
+}
+
+async function loadRealScreens(
+  selected: string | undefined,
+  expectedDigest: string | undefined,
+  review: TrialReviewSnapshot | undefined,
+): Promise<WorkingPreview | undefined> {
+  if (!selected || !expectedDigest || !review || review.stopped)
+    return undefined;
+  const chosen = path.resolve(selected);
+  const folder = await realpath(path.dirname(chosen));
+  const html = await textFile(folder, path.basename(chosen), 2_000_000);
+  if (
+    !/^sha256:[a-f0-9]{64}$/.test(expectedDigest) ||
+    `sha256:${createHash("sha256").update(html).digest("hex")}` !==
+      expectedDigest
+  )
+    throw new Error("Real screens digest mismatch");
+  const current = review.html.match(
+    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · (?:selected|revision-limit)<\/p>/,
+  );
+  const selectedRef = review.html.match(
+    /改訂作業のために人が選んだ案: (art_[A-Za-z0-9_-]{1,255}) · 最終採用\/公開: 未承認/,
+  );
+  const screen = html.match(
+    /Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · 親 Run: [^<]+ · 改訂元: (art_[A-Za-z0-9_-]{1,255})@([1-9]\d*)/,
+  );
+  const script = html.match(/<script>([\s\S]*?)<\/script>/i);
+  const scriptHash = script
+    ? createHash("sha256").update(script[1]!).digest("base64")
+    : "";
+  const reviewCandidates = [
+    ...review.html.matchAll(/<article>([\s\S]*?)<\/article>/g),
+  ].map((match) => {
+    const record = embeddedRecord(match[1]!);
+    return { ref: ref(record.ref), verification: record.verification };
+  });
+  const screenProvenances = [...html.matchAll(/<pre>([\s\S]*?)<\/pre>/g)].map(
+    (match) => {
+      const source = embeddedValue(match[0]);
+      return Array.isArray(source)
+        ? source.map((value) => {
+            const record = object(value);
+            return { ref: ref(record.ref), verification: record.verification };
+          })
+        : [];
+    },
+  );
+  const byArtifact = (candidates: typeof reviewCandidates) =>
+    candidates.sort((a, b) => a.ref.artifactId.localeCompare(b.ref.artifactId));
+  const expectedCandidates = JSON.stringify(byArtifact(reviewCandidates));
+  if (
+    !html.startsWith('<!doctype html><html lang="ja">') ||
+    !html.includes("<title>3つの実画面を比較 · Mimic</title>") ||
+    !html.includes('<main class="index" data-real-screens="unapproved">') ||
+    !html.includes("最終採用・公開は未承認") ||
+    !review.html.includes("</h1>") ||
+    !current ||
+    !selectedRef ||
+    !screen ||
+    current[1] !== screen[1] ||
+    selectedRef[1] !== screen[2] ||
+    reviewCandidates.length !== 3 ||
+    screenProvenances.length !== 3 ||
+    screenProvenances.some(
+      (candidates) =>
+        candidates.length !== 3 ||
+        JSON.stringify(byArtifact(candidates)) !== expectedCandidates,
+    ) ||
+    !reviewCandidates.some(
+      (candidate) =>
+        candidate.ref.artifactId === selectedRef[1] &&
+        candidate.ref.revision === Number(screen[3]),
+    ) ||
+    ["a", "b", "c"].some(
+      (option) =>
+        !html.includes(
+          `<article class="screen-option" data-option="${option}">`,
+        ),
+    ) ||
+    (html.match(/<article class="screen-option" data-option="[abc]">/g)
+      ?.length ?? 0) !== 3 ||
+    (html.match(/<script\b/gi)?.length ?? 0) !== 1 ||
+    !script ||
+    !html.includes(
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">`,
+    ) ||
+    /<(?:iframe|object|embed|form|base)\b/i.test(html) ||
+    /\b(?:href|src)\s*=/i.test(html)
+  )
+    throw new Error("Invalid real screens");
   return {
     html,
     csp: `default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; sandbox allow-scripts; frame-ancestors 'none'`,
@@ -581,6 +677,8 @@ export async function startMonitor(options: {
   reviewReplay?: string;
   workingPreview?: string;
   workingPreviewDigest?: string;
+  realScreens?: string;
+  realScreensDigest?: string;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
     !Number.isInteger(options.port) ||
@@ -606,6 +704,11 @@ export async function startMonitor(options: {
     options.workingPreviewDigest,
     reviewCurrent,
   ).catch(() => undefined);
+  const realScreens = await loadRealScreens(
+    options.realScreens,
+    options.realScreensDigest,
+    reviewCurrent,
+  ).catch(() => undefined);
   if (reviewCurrent) {
     reviewCurrent.html = reviewCurrent.html.replace(
       /<p><a href="working-preview-[A-Za-z0-9_-]+\.html">人が選んだ案の作業用操作プレビューを開く（未承認）<\/a><\/p>/g,
@@ -616,6 +719,12 @@ export async function startMonitor(options: {
     reviewCurrent.html = reviewCurrent.html.replace(
       '<div class="grid">',
       '<p><a href="/trial-review/working-preview" target="_blank" rel="noopener noreferrer">選択済み案の未承認の作業用操作画面を別タブで試す →</a>（画面内の試用のみ・保存なし）</p><div class="grid">',
+    );
+  }
+  if (realScreens && reviewCurrent) {
+    reviewCurrent.html = reviewCurrent.html.replace(
+      "</h1>",
+      '</h1><section aria-label="3案の実画面"><h2>3案の実画面を先に比較する</h2><p>Aは人が選んだ改訂用の作業ベース、BとCは未選択の比較候補です。最終採用・公開は未承認です。</p><p><a href="/design-review/real-screens" target="_blank" rel="noopener noreferrer"><strong>3案の実画面を比較する →</strong></a>（画面内の操作は保存されません）</p></section>',
     );
   }
   const reviews: TrialReviews = {
@@ -651,8 +760,8 @@ export async function startMonitor(options: {
       response.end(JSON.stringify({ error }));
     };
     const opaquePreviewNavigation =
-      request.url === "/trial-review/working-preview" &&
-      !!workingPreview &&
+      ((request.url === "/trial-review/working-preview" && !!workingPreview) ||
+        (request.url === "/design-review/real-screens" && !!realScreens)) &&
       request.headers.origin === undefined &&
       request.headers["sec-fetch-site"] === "cross-site" &&
       request.headers["sec-fetch-mode"] === "navigate" &&
@@ -706,7 +815,7 @@ export async function startMonitor(options: {
       ) {
         const page =
           request.url === "/"
-            ? monitorPage(reviews)
+            ? monitorPage(reviews, !!realScreens)
             : request.url === "/design-review"
               ? designReviewPage(reviews)
               : previewPage(preview!);
@@ -741,6 +850,12 @@ export async function startMonitor(options: {
           "Content-Security-Policy": workingPreview.csp,
         });
         response.end(workingPreview.html);
+      } else if (request.url === "/design-review/real-screens" && realScreens) {
+        response.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy": realScreens.csp,
+        });
+        response.end(realScreens.html);
       } else if (
         /^\/trial-review\/(current|stopped|replay)\/capture\/[0-7]$/.test(
           request.url ?? "",
@@ -819,6 +934,8 @@ export async function runMonitorCli(
           "--review-replay",
           "--working-preview",
           "--working-preview-digest",
+          "--real-screens",
+          "--real-screens-digest",
         ].includes(flag) ||
         !value ||
         value.startsWith("--") ||
@@ -842,6 +959,8 @@ export async function runMonitorCli(
       reviewReplay: values["--review-replay"],
       workingPreview: values["--working-preview"],
       workingPreviewDigest: values["--working-preview-digest"],
+      realScreens: values["--real-screens"],
+      realScreensDigest: values["--real-screens-digest"],
     });
     io.out(monitor.url);
     await new Promise<void>((resolve) => {
