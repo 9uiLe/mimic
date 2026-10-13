@@ -572,6 +572,32 @@ test("explicit trial reviews expose only bounded static snapshots with honest pr
   );
 });
 
+test("an explicit revision UI link leaves the monitor itself read-only", async () => {
+  const { root } = await setup();
+  const reviewFile = path.join(root, "review-run_trial.html");
+  await writeFile(
+    reviewFile,
+    '<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'"><title>Mimic 候補レビュー</title></head><body><h1>比較</h1><p>Run run_trial · guided · selected</p><section><h2>次の操作</h2></section></body></html>',
+  );
+  const monitor = await startMonitor({
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    revisionPrepPort: 4318,
+  });
+  monitors.push(monitor);
+  const current = await (
+    await fetch(monitor.url + "/trial-review/current")
+  ).text();
+  expect(current).toContain('href="http://127.0.0.1:4318/run/run_trial"');
+  expect(
+    (await fetch(monitor.url + "/prepare", { method: "POST" })).status,
+  ).toBe(405);
+  await expect(
+    startMonitor({ root, port: 0, revisionPrepPort: 0 }),
+  ).rejects.toThrow("Invalid revision preparation port");
+});
+
 test("a matching unapproved working preview opens from the selected review without persisting trial actions", async () => {
   const { root } = await setup();
   const folder = await mkdtemp(

@@ -592,7 +592,7 @@ const htmlEscape = (value) =>
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
-function renderCandidateMatrix(report) {
+export function renderCandidateMatrix(report) {
   const candidates = report.candidates;
   if (!candidates.length)
     return '<section id="comparison"><h2>候補を比較</h2><p>比較できる候補はまだありません。停止理由と保存状態を確認してください。</p></section>';
@@ -1563,7 +1563,31 @@ export async function approvedHistory(workspace, manifest) {
   return { refs: history, baseContent, baseSelectionId };
 }
 
-async function main(args) {
+/** Read the authoritative working selection without writing a review snapshot. */
+export async function inspectRevisionBase(configPath) {
+  const config = JSON.parse(await readFile(configPath, "utf8"));
+  assert(path.isAbsolute(config.workspace), "Workspace must be absolute");
+  const workspace = await realpath(config.workspace);
+  assert(
+    (await realpath(configPath)).startsWith(`${workspace}${path.sep}`),
+    "Config must be inside workspace",
+  );
+  const manifest = JSON.parse(
+    await readFile(path.join(workspace, `trial-${config.runId}.json`), "utf8"),
+  );
+  const snapshot = await acceptedRun(workspace, config.runId);
+  const history = await approvedHistory(workspace, manifest);
+  return {
+    workspace,
+    report: reviewTrial({ manifest, ...snapshot, history: history.refs }),
+  };
+}
+
+export async function prepareNextFromInput(configPath, request, expected) {
+  return main(["prepare-next", configPath], { request, expected });
+}
+
+async function main(args, options = {}) {
   const [command, configPath] = args;
   assert(
     [
@@ -1732,24 +1756,34 @@ async function main(args) {
     const snapshot = await acceptedRun(workspace, config.runId);
     const history = await approvedHistory(workspace, manifest);
     if (command === "prepare-next") {
-      const requestPath = args[2];
-      assert(requestPath, "Missing next Run revision request file");
-      const requestFile = await realpath(requestPath);
-      assert(
-        requestFile.startsWith(`${workspace}${path.sep}`),
-        "Revision request must be inside workspace",
-      );
-      const request = JSON.parse(await readFile(requestFile, "utf8"));
-      const next = revisionConfigFor(
+      let request = options.request;
+      if (!request) {
+        const requestPath = args[2];
+        assert(requestPath, "Missing next Run revision request file");
+        const requestFile = await realpath(requestPath);
+        assert(
+          requestFile.startsWith(`${workspace}${path.sep}`),
+          "Revision request must be inside workspace",
+        );
+        request = JSON.parse(await readFile(requestFile, "utf8"));
+      }
+      const report = reviewTrial({
         manifest,
-        reviewTrial({ manifest, ...snapshot, history: history.refs }),
-        request,
-        workspace,
-      );
+        ...snapshot,
+        history: history.refs,
+      });
+      if (options.expected)
+        assert(
+          report.runId === options.expected.runId &&
+            report.humanSelectionId === options.expected.humanSelectionId &&
+            sameRef(report.selectedRef, options.expected.selectedRef),
+          "Selected base changed; reload before preparing a revision",
+        );
+      const next = revisionConfigFor(manifest, report, request, workspace);
       const nextPath = path.join(workspace, `trial-config-${next.runId}.json`);
       await writePreparedFile(nextPath, JSON.stringify(next, null, 2) + "\n");
       await main(["prepare", nextPath]);
-      return;
+      return { runId: next.runId, selectedRef: report.selectedRef };
     }
     if (["real-screens", "capture-real-screens"].includes(command)) {
       const report = reviewTrial({

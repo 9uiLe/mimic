@@ -679,6 +679,7 @@ export async function startMonitor(options: {
   workingPreviewDigest?: string;
   realScreens?: string;
   realScreensDigest?: string;
+  revisionPrepPort?: number;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
     !Number.isInteger(options.port) ||
@@ -686,6 +687,13 @@ export async function startMonitor(options: {
     options.port > 65535
   )
     throw new Error("Invalid port");
+  if (
+    options.revisionPrepPort !== undefined &&
+    (!Number.isInteger(options.revisionPrepPort) ||
+      options.revisionPrepPort < 1 ||
+      options.revisionPrepPort > 65535)
+  )
+    throw new Error("Invalid revision preparation port");
   const root = await realpath(path.resolve(options.root));
   if (!(await lstat(root)).isDirectory()) throw new Error("Invalid workspace");
   let preview: Preview | undefined;
@@ -714,6 +722,16 @@ export async function startMonitor(options: {
       /<p><a href="working-preview-[A-Za-z0-9_-]+\.html">人が選んだ案の作業用操作プレビューを開く（未承認）<\/a><\/p>/g,
       "",
     );
+  }
+  if (reviewCurrent && options.revisionPrepPort) {
+    const selected = reviewCurrent.html.match(
+      /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · selected<\/p>/,
+    );
+    if (selected)
+      reviewCurrent.html = reviewCurrent.html.replace(
+        "<section><h2>次の操作</h2>",
+        `<section><h2>次の操作</h2><p><a href="http://127.0.0.1:${options.revisionPrepPort}/run/${selected[1]}" target="_blank" rel="noopener noreferrer">修正課題を入力して次 Run の計画を保存する →</a>（別途明示起動した改稿準備画面。このリンクでは生成を開始しません）</p>`,
+      );
   }
   if (workingPreview && reviewCurrent) {
     const marker = reviewCurrent.html.includes("<section><h2>次の操作</h2>")
@@ -947,6 +965,7 @@ export async function runMonitorCli(
           "--working-preview-digest",
           "--real-screens",
           "--real-screens-digest",
+          "--revision-prep-port",
         ].includes(flag) ||
         !value ||
         value.startsWith("--") ||
@@ -972,6 +991,9 @@ export async function runMonitorCli(
       workingPreviewDigest: values["--working-preview-digest"],
       realScreens: values["--real-screens"],
       realScreensDigest: values["--real-screens-digest"],
+      revisionPrepPort: values["--revision-prep-port"]
+        ? Number(values["--revision-prep-port"])
+        : undefined,
     });
     io.out(monitor.url);
     await new Promise<void>((resolve) => {
