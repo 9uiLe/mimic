@@ -9,6 +9,8 @@
 3. `node scripts/9ui197-harness.mjs prepare <workspace>/trial-config.json` で既存 S04–S11 plan template から不変の plan と manifest を書く。`mimic run --id <runId> --tasks tasks-<runId>.json` と公式サブスクリプションの認可済み session dispatcher で実行する。出力の手修正や保存 marker の編集は行わない。S07 は既存の `PROPOSE_ONLY` 経路を使う。
 4. 受理済み候補を得たら `node scripts/9ui197-harness.mjs review <config>` で exact artifact、停止、未確定事項を確認する。`review-<runId>.html` は比較・推奨と保留を先に見せ、詳細を折りたたむ。`previewUrls` がある場合だけ候補の操作画面へリンクする。画面検査は `node scripts/with-patched-chrome.mjs node scripts/9ui197-harness.mjs capture <config>` を別途実行するまで `UNVERIFIED` である。
 
+   通常の `review` は候補数と S11 の共通評価項目から A 型の一覧表を作り、空・停止中・選択待ち・改訂上限を区別する。モニターで current review を指定した場合、一覧表へのリンクを保存済み3案の実画面試作より先に表示する。詳細と検査ログは下部で開く。選択済み Run では実際の exact ref と残回数を表示し、改訂準備の入力形式を案内する。画面自体は選択や改訂を保存しない。
+
    A の共通項目マトリクスを人が**改訂用の作業ベース**として選択した後は、設定の別コピーに `workingPreviewRef` として選んだ exact ref を加え、`node scripts/9ui197-harness.mjs working-preview <その設定コピー>` を実行できる。保存済み Run、plan、選択確認、候補 digest を再照合し、選択案の構造がマトリクスである場合だけ `working-preview-<runId>.html` を出す。これは既存候補から決定論的に描画するローカルの**未承認試作**で、S10 が完成画面を生成したという主張ではない。表から各候補の詳細へ進み比較へ戻り、候補の仮選択と改訂前確認を画面内で試せる。試用は保存・改訂開始を行わず、実際の選択記録を変えない。S11 の推奨提案、Run と改訂履歴、固定情報、未確定事項も区別して示す。`mimic preview` の approved scenario・素材・token の検証や最終採用処理には接続しない。
 
    操作を Chrome で確かめるには `node scripts/with-patched-chrome.mjs node scripts/9ui197-harness.mjs capture-working-preview <その設定コピー>` を使う。ハーネスが生成した**そのローカルファイルだけ**を開き、固定文言、必須領域、仮選択と改訂確認、横はみ出しを確認して `working-capture-<runId>.json` と撮影を残す。通常の `capture` の URL 制約や検査結果は変更しない。コマンドが停止した場合や撮影していない場合に PASS と表示しない。
@@ -18,6 +20,8 @@
    `node scripts/with-patched-chrome.mjs node scripts/9ui197-harness.mjs capture-real-screens <その設定コピー>` は Chrome desktop/390px で3画面の操作と固定表示を確認し、`real-screens-capture-<runId>.json` と一覧・各案の PNG を保存する。localhost 担当が共有するときは、生成 HTML を read-only の独立 URL（例: `GET /design-review/real-screens`）へ割り当て、既存の approved `/preview` 経路とは分ける。HTML は自己完結しており追加 asset は不要。サービス管理タスクが URL とレスポンスの CSP を調整するまで、このハーネスはサーバーを変更・再起動しない。
 
 5. 選択は人が S11 のレビューと S10 候補の exact ref を確認し、`mimic select-revision-base --file <selection.json> --confirmation <confirmation.json>` に明示確認を渡して commit する。AI の S11 提案は選択に数えない。`selection.json` は `id`、`runId`、`ref`、`reviewRef`、human `actor`、`at`、`reason` を含む。`confirmation.json` は CLI 文書の exact digest/候補/レビューを結ぶ既存のローカル確認方式に従う。別候補へ変更する場合は前 selection ID を `supersedesSelectionId` に指定して再確認する。人の確認がない場合は選択待ちのままで、改訂用の選択は最終デザイン採用・公開ではない。改訂は同じ workspace の新しい Run で行い、設定に `previousRunId`、人が選んだ `baseRef`、`revisionRequest` を入れる。`prepare` は前 Run の選択確認と候補の exact ref を再照合し、選ばれた exact ref を S10 の `revise` 入力と対象 artifact に固定する。選ばれた内容だけを新しい S10/S11 brief に渡し、出力が同じ artifact の次 revision で、前 ref を実行入力として消費することを確認する。ArtifactStore は同じ artifact ID への自己依存を認めないため、前 revision との関係は `supersedesRevision` と Run の入力・生成イベントで照合する。連続する前 Run を数え、初期予算 2 回を超える改訂を拒否する。途中案は保存される。生成結果が意図どおりの改善かどうかは人が判断し、ハーネスは自動採用しない。保存済み plan は書き換えない。
+
+   選択済み Run から次の改訂を準備するには、同じ workspace に `{"runId":"新しいRunID","revisionRequest":"改善する画面箇所と理由"}` の JSON を自分で保存し、`node scripts/9ui197-harness.mjs prepare-next <現在のconfig.json> <改訂課題.json>` を実行する。このコマンドは保存済み Run と正規の人間選択を再確認し、上限内なら旧モデル・予算・brief・出典を引き継いだ新しい config と既存 `prepare` の plan を作る。途中失敗しても同じ内容なら準備ファイルを再利用して再試行でき、既存内容が異なる場合は停止する。旧候補のプレビュー/検査設定は引き継がない。生成を開始せず、新しい利用許可も作らない。次 Run の実行には別途有効な公式サブスクリプションの認可経路が必要で、期限切れ grant は使わない。
 
    Core は候補の生成元、S11 レビューとの exact 依存、保存した利用者確認、候補の失効・改変・別候補への置換を再確認する。これらが一致しなければ改訂 Run は始まらない。ハーネスは人の回答や確認を作らない。
 

@@ -5,6 +5,7 @@ import {
   mkdtemp,
   mkdir,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -23,10 +24,12 @@ import {
   operationChanged,
   renderReviewHtml,
   renderWorkingMatrixHtml,
+  revisionConfigFor,
   reviewTrial,
   validateBrief,
   workingCaptureConfig,
   writeWorkingOutput,
+  writePreparedFile,
 } from "./9ui197-harness.mjs";
 import { renderRealScreensHtml } from "./9ui197-real-screens.mjs";
 
@@ -348,6 +351,180 @@ test("working matrix renders locked facts and interaction from an exact human ch
         chosen,
       ),
     /does not specify the candidate matrix/,
+  );
+});
+
+test("normal review uses the A matrix for varying saved candidates and states", () => {
+  const selected = ref("art_selected");
+  const report = {
+    runId: "run_general",
+    condition: "guided",
+    status: "selected",
+    selectedRef: selected,
+    humanSelectionId: "selection_one",
+    revisionCount: 0,
+    revisionBudget: 2,
+    proposedDecisions: [],
+    unresolved: [],
+    stops: [],
+    usage: {},
+    candidates: [
+      {
+        ref: selected,
+        summary: "比較を一画面に置く",
+        mechanisms: ["一覧表"],
+        rationale: ["走査が速い"],
+        verification: {
+          state: "PASS",
+          requiredElements: [{ state: "PASS" }],
+          primaryOperations: "UNVERIFIED",
+          overflow: "FAIL",
+        },
+        evaluation: [
+          { criterion: "操作の発見", state: "PASS", reason: "並びが明確" },
+        ],
+      },
+      {
+        ref: ref("art_other"),
+        summary: '<img src=x onerror="alert(1)">',
+        mechanisms: ["段階表示"],
+        rationale: [],
+        verification: { state: "FAIL" },
+        evaluation: "UNVERIFIED",
+      },
+    ],
+  };
+  const html = renderReviewHtml(report);
+  assert.match(html, /<table>/);
+  assert.equal((html.match(/<th scope="col"><strong>/g) ?? []).length, 2);
+  assert.match(html, /操作の発見/);
+  assert.match(html, /PASS: 並びが明確/);
+  assert.match(html, /<td>UNVERIFIED<\/td>/);
+  assert.match(html, /<th scope="row">固定事実・コピー<\/th><td>PASS<\/td>/);
+  assert.match(html, /<th scope="row">主操作<\/th><td>UNVERIFIED<\/td>/);
+  assert.match(html, /<th scope="row">表示の横はみ出し<\/th><td>FAIL<\/td>/);
+  assert.match(html, /改訂用ベース/);
+  assert.match(html, /prepare-next/);
+  assert.match(html, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
+  assert.doesNotMatch(html, /<img/);
+  assert.match(
+    renderReviewHtml({ ...report, selectedRef: null, humanSelectionId: null }),
+    /select-revision-base/,
+  );
+  assert.doesNotMatch(
+    renderReviewHtml({ ...report, selectedRef: null, humanSelectionId: null }),
+    /prepare-next/,
+  );
+  assert.match(
+    renderReviewHtml({ ...report, revisionCount: 2, status: "revision-limit" }),
+    /改訂上限です/,
+  );
+  assert.match(
+    renderReviewHtml({ ...report, candidates: [], status: "stopped" }),
+    /比較できる候補はまだありません/,
+  );
+});
+
+test("prepared files resume only when their exact bytes still match", async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), "mimic-prepared-"));
+  try {
+    const target = path.join(
+      await realpath(workspace),
+      "trial-config-run_next.json",
+    );
+    await writePreparedFile(target, '{"runId":"run_next"}\n');
+    await writePreparedFile(target, '{"runId":"run_next"}\n');
+    assert.equal(await readFile(target, "utf8"), '{"runId":"run_next"}\n');
+    await assert.rejects(
+      writePreparedFile(target, '{"runId":"changed"}\n'),
+      /Existing prepared file differs/,
+    );
+    const symlinkTarget = path.join(workspace, "link.json");
+    await symlink(target, symlinkTarget);
+    await assert.rejects(
+      writePreparedFile(symlinkTarget, '{"runId":"run_next"}\n'),
+      /Existing prepared file differs/,
+    );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("next revision config binds the recorded exact choice and explicit issue", () => {
+  const selected = ref("art_selected");
+  const manifest = {
+    workspace: "/workspace",
+    runId: "run_general",
+    condition: "guided",
+    model: "account-model",
+    budget: { maxGenerations: 2, timeoutMs: 120000 },
+    referenceFile: "inputs/references.md",
+    evidenceFiles: { s04: ["inputs/system.md"], s08: ["inputs/task.md"] },
+    brief,
+    revisionBudget: 2,
+    previewUrls: { old: "https://example.test" },
+  };
+  const report = {
+    runId: manifest.runId,
+    status: "selected",
+    humanSelectionId: "selection_one",
+    selectedRef: selected,
+    revisionCount: 0,
+    revisionBudget: 2,
+  };
+  const config = revisionConfigFor(
+    manifest,
+    report,
+    {
+      runId: "run_next",
+      revisionRequest: "  必須状態を比較表で見えるようにする  ",
+    },
+    "/actual-workspace",
+  );
+  assert.equal(config.workspace, "/actual-workspace");
+  assert.equal(config.previousRunId, manifest.runId);
+  assert.deepEqual(config.baseRef, selected);
+  assert.equal(config.revisionRequest, "必須状態を比較表で見えるようにする");
+  assert.equal(config.previewUrls, undefined);
+  assert.throws(
+    () =>
+      revisionConfigFor(
+        manifest,
+        { ...report, humanSelectionId: null },
+        { runId: "run_next", revisionRequest: "改善" },
+        "/actual-workspace",
+      ),
+    /exact confirmed choice/,
+  );
+  assert.throws(
+    () =>
+      revisionConfigFor(
+        manifest,
+        { ...report, revisionCount: 2 },
+        { runId: "run_next", revisionRequest: "改善" },
+        "/actual-workspace",
+      ),
+    /revision budget/,
+  );
+  assert.throws(
+    () =>
+      revisionConfigFor(
+        manifest,
+        report,
+        { runId: "../bad", revisionRequest: "改善" },
+        "/actual-workspace",
+      ),
+    /new ID/,
+  );
+  assert.throws(
+    () =>
+      revisionConfigFor(
+        manifest,
+        report,
+        { runId: "run_next", revisionRequest: " " },
+        "/actual-workspace",
+      ),
+    /explicit revision issue/,
   );
 });
 
