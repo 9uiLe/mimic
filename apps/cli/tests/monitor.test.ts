@@ -766,6 +766,10 @@ test("three saved direction screens open first from the monitor and current revi
   });
   monitors.push(monitor);
   const home = await (await fetch(monitor.url)).text();
+  expect(home.indexOf('href="/trial-review/current"')).toBeLessThan(
+    home.indexOf('href="/design-review/real-screens"'),
+  );
+  expect(home).toContain("A 型の候補比較を開く");
   expect(home.indexOf('href="/design-review/real-screens"')).toBeLessThan(
     home.indexOf('class="decision-packet"'),
   );

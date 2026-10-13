@@ -716,15 +716,26 @@ export async function startMonitor(options: {
     );
   }
   if (workingPreview && reviewCurrent) {
+    const marker = reviewCurrent.html.includes("<section><h2>次の操作</h2>")
+      ? "<section><h2>次の操作</h2>"
+      : '<div class="grid">';
     reviewCurrent.html = reviewCurrent.html.replace(
-      '<div class="grid">',
-      '<p><a href="/trial-review/working-preview" target="_blank" rel="noopener noreferrer">選択済み案の未承認の作業用操作画面を別タブで試す →</a>（画面内の試用のみ・保存なし）</p><div class="grid">',
+      marker,
+      '<p><a href="/trial-review/working-preview" target="_blank" rel="noopener noreferrer">選択済み案の未承認の作業用操作画面を別タブで試す →</a>（画面内の試用のみ・保存なし）</p>' +
+        marker,
     );
   }
   if (realScreens && reviewCurrent) {
+    const marker = reviewCurrent.html.includes(
+      '<section id="candidate-details">',
+    )
+      ? '<section id="candidate-details">'
+      : "</h1>";
+    const entry =
+      '<section aria-label="3案の実画面"><h2>保存済み3案の実画面も見る</h2><p>Aは人が選んだ改訂用の作業ベース、BとCは未選択の比較候補です。最終採用・公開は未承認です。</p><p><a href="/design-review/real-screens" target="_blank" rel="noopener noreferrer"><strong>3案の実画面を比較する →</strong></a>（画面内の操作は保存されません）</p></section>';
     reviewCurrent.html = reviewCurrent.html.replace(
-      "</h1>",
-      '</h1><section aria-label="3案の実画面"><h2>3案の実画面を先に比較する</h2><p>Aは人が選んだ改訂用の作業ベース、BとCは未選択の比較候補です。最終採用・公開は未承認です。</p><p><a href="/design-review/real-screens" target="_blank" rel="noopener noreferrer"><strong>3案の実画面を比較する →</strong></a>（画面内の操作は保存されません）</p></section>',
+      marker,
+      marker === "</h1>" ? marker + entry : entry + marker,
     );
   }
   const reviews: TrialReviews = {

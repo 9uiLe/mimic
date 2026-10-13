@@ -6,6 +6,7 @@ import {
   readdir,
   realpath,
   rename,
+  lstat,
   unlink,
   writeFile,
 } from "node:fs/promises";
@@ -29,6 +30,20 @@ export async function writeWorkingOutput(target, content) {
     await unlink(temporary).catch((error) => {
       if (error.code !== "ENOENT") throw error;
     });
+  }
+}
+export async function writePreparedFile(target, content) {
+  try {
+    await writeFile(target, content, { flag: "wx", mode: 0o600 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    const info = await lstat(target);
+    assert(
+      info.isFile() &&
+        (await realpath(target)) === target &&
+        (await readFile(target, "utf8")) === content,
+      "Existing prepared file differs from the requested Run",
+    );
   }
 }
 const canonical = (value) =>
@@ -577,9 +592,97 @@ const htmlEscape = (value) =>
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+function renderCandidateMatrix(report) {
+  const candidates = report.candidates;
+  if (!candidates.length)
+    return '<section id="comparison"><h2>候補を比較</h2><p>比較できる候補はまだありません。停止理由と保存状態を確認してください。</p></section>';
+  const criteria = [
+    ...new Set(
+      candidates.flatMap((candidate) =>
+        Array.isArray(candidate.evaluation)
+          ? candidate.evaluation
+              .filter((item) => item && typeof item.criterion === "string")
+              .map((item) => item.criterion)
+          : [],
+      ),
+    ),
+  ];
+  const label = (candidate, index) =>
+    candidate.summary.match(/^案[A-Z]/u)?.[0] ?? `候補${index + 1}`;
+  const short = (value) => {
+    const first = String(value ?? "未提供").split(/[。\n]/u)[0];
+    return first.length > 110 ? `${first.slice(0, 110)}…` : first;
+  };
+  const row = (name, content) =>
+    `<tr><th scope="row">${htmlEscape(name)}</th>${candidates.map((candidate) => `<td>${htmlEscape(content(candidate))}</td>`).join("")}</tr>`;
+  const headers = candidates
+    .map(
+      (candidate, index) =>
+        `<th scope="col"><strong>${htmlEscape(label(candidate, index))}</strong>${sameRef(candidate.ref, report.selectedRef) ? "<small> · 改訂用ベース</small>" : ""}<br><a href="#candidate-${index}">詳細を見る</a></th>`,
+    )
+    .join("");
+  const evaluations = criteria
+    .map((criterion) =>
+      row(criterion, (candidate) => {
+        const item = Array.isArray(candidate.evaluation)
+          ? candidate.evaluation.find((value) => value?.criterion === criterion)
+          : undefined;
+        return item ? `${item.state}: ${short(item.reason)}` : "UNVERIFIED";
+      }),
+    )
+    .join("");
+  const checkItems = (items) =>
+    !Array.isArray(items) || !items.length
+      ? "UNVERIFIED"
+      : items.some((item) => item?.state === "FAIL")
+        ? "FAIL"
+        : items.every((item) => item?.state === "PASS")
+          ? "PASS"
+          : "UNVERIFIED";
+  return `<section id="comparison"><h2>候補を比較</h2><p>共通項目を行、保存済み候補を列に配置。セルは要点のみ。横へスクロールでき、全文は下の詳細で確認できます。</p><div class="matrix-scroll"><table><thead><tr><th scope="col">判断項目</th>${headers}</tr></thead><tbody>${row("概要", (candidate) => short(candidate.summary))}${row("主操作と構造", (candidate) => short(candidate.mechanisms?.[0]))}${evaluations}${row("固定事実・コピー", (candidate) => candidate.verification?.state ?? "UNVERIFIED")}${row("必須要素", (candidate) => checkItems(candidate.verification?.requiredElements))}${row("主操作", (candidate) => checkItems(candidate.verification?.primaryOperations))}${row("表示の横はみ出し", (candidate) => candidate.verification?.overflow ?? "UNVERIFIED")}</tbody></table></div></section>`;
+}
+
+/** Prepare only a new Run config; existing Core selection authority remains the gate. */
+export function revisionConfigFor(manifest, report, request, workspace) {
+  assert(
+    path.isAbsolute(workspace) &&
+      report.runId === manifest.runId &&
+      nonempty(report.humanSelectionId) &&
+      exactRef(report.selectedRef) &&
+      report.status === "selected" &&
+      Number.isSafeInteger(report.revisionCount) &&
+      Number.isSafeInteger(report.revisionBudget) &&
+      report.revisionCount < report.revisionBudget,
+    "Current Run needs an exact confirmed choice with revision budget",
+  );
+  assert(
+    request &&
+      Object.keys(request).sort().join(",") === "revisionRequest,runId" &&
+      nonempty(request.runId) &&
+      /^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(request.runId) &&
+      request.runId !== manifest.runId &&
+      nonempty(request.revisionRequest) &&
+      request.revisionRequest.trim().length <= 2000,
+    "Next Run needs a new ID and an explicit revision issue",
+  );
+  return {
+    workspace,
+    runId: request.runId,
+    condition: manifest.condition,
+    model: manifest.model,
+    budget: manifest.budget,
+    referenceFile: manifest.referenceFile,
+    evidenceFiles: manifest.evidenceFiles,
+    brief: manifest.brief,
+    revisionBudget: manifest.revisionBudget,
+    previousRunId: manifest.runId,
+    baseRef: report.selectedRef,
+    revisionRequest: request.revisionRequest.trim(),
+  };
+}
 export function renderReviewHtml(report, previewUrls = {}, workingPreviewHref) {
   const cards = report.candidates
-    .map((candidate) => {
+    .map((candidate, index) => {
       const url = previewUrls[choiceKey(candidate.ref)];
       const allowed = previewUrl(url);
       const link = allowed
@@ -588,7 +691,8 @@ export function renderReviewHtml(report, previewUrls = {}, workingPreviewHref) {
       const image = candidate.verification.screenshot
         ? `<p><a href="${htmlEscape(candidate.verification.screenshot)}">実画面の撮影を開く</a></p>`
         : "";
-      return `<article><h3>${htmlEscape(candidate.summary)}</h3><p>${htmlEscape(candidate.ref.artifactId)}@${candidate.ref.revision}</p><p>${link}</p>${image}<p>事実・固定コピー: <strong>${candidate.verification.state}</strong></p><p>構造: ${htmlEscape(candidate.mechanisms.join("; "))}</p><p>向く条件・利点・失うもの: ${htmlEscape(candidate.rationale.join("; ") || "UNVERIFIED")}</p><details><summary>評価と検査記録</summary><pre>${htmlEscape(JSON.stringify({ verification: candidate.verification, evaluation: candidate.evaluation, ref: candidate.ref }, null, 2))}</pre></details></article>`;
+      const heading = candidate.summary.split(/[。\n]/u)[0];
+      return `<article><span id="candidate-${index}"></span><h3>${htmlEscape(heading)}</h3><p>${htmlEscape(candidate.ref.artifactId)}@${candidate.ref.revision}</p><p>事実・固定コピー: <strong>${candidate.verification.state}</strong></p><details><summary>説明・出典・検査記録を開く</summary><p>${htmlEscape(candidate.summary)}</p><p>${link}</p>${image}<p>構造: ${htmlEscape(candidate.mechanisms.join("; "))}</p><p>向く条件・利点・失うもの: ${htmlEscape(candidate.rationale.join("; ") || "UNVERIFIED")}</p><pre>${htmlEscape(JSON.stringify({ verification: candidate.verification, evaluation: candidate.evaluation, ref: candidate.ref }, null, 2))}</pre></details></article>`;
     })
     .join("\n");
   const recommendation =
@@ -598,7 +702,19 @@ export function renderReviewHtml(report, previewUrls = {}, workingPreviewHref) {
           `<p>${htmlEscape(item.summary)} — 提案: ${htmlEscape(item.suggestedChoice ?? "未特定")}</p>`,
       )
       .join("") || "<p>推奨提案: 未取得</p>";
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1200px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:10px;padding:18px;margin:16px 0}article{min-width:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p>${workingPreviewHref ? `<p><a href="${htmlEscape(workingPreviewHref)}">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p>` : ""}<section><h2>提案と未確定事項</h2>${recommendation}<p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p><p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div><details><summary>出典・停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
+  const canRevise =
+    report.humanSelectionId &&
+    exactRef(report.selectedRef) &&
+    report.status === "selected" &&
+    report.revisionCount < report.revisionBudget;
+  const next = canRevise
+    ? `<details id="next-step"><summary>選択済み案から改訂を準備する</summary><p>作業用ベース: ${htmlEscape(report.selectedRef.artifactId)}@${report.selectedRef.revision} · 改訂済み ${report.revisionCount} / ${report.revisionBudget}。最終採用ではありません。</p><p>この Run の設定ファイルと、利用者が書いた改訂課題の JSON を同じ workspace に保存して実行します。既存の選択確認と exact ref を再照合してから次 Run の plan を作ります。生成は別途認可済みの実行経路が必要です。</p><pre>{"runId":"run_next","revisionRequest":"改善したい画面箇所と理由を書く"}</pre><code>node scripts/9ui197-harness.mjs prepare-next &lt;現在の設定.json&gt; &lt;改訂課題.json&gt;</code></details>`
+    : report.revisionCount >= report.revisionBudget
+      ? "<p>改訂上限です。途中案を含めて人が判断してください。</p>"
+      : report.candidates.length
+        ? "<p>改訂用の選択は未記録です。候補と S11 評価を確認し、既存の <code>mimic select-revision-base --file &lt;選択.json&gt; --confirmation &lt;確認.json&gt;</code> で exact 候補を明示してください。この画面は選択を記録しません。</p>"
+        : "<p>候補の受理を待つか、停止理由を確認してください。</p>";
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1280px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:8px;padding:18px;margin:16px 0}article{min-width:0}.matrix-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:700px;table-layout:fixed}th,td{border:1px solid #d9e4da;padding:12px;text-align:left;vertical-align:top;overflow-wrap:anywhere;font-size:13px;line-height:1.55}thead th{background:#e5eee8}tbody th{background:#f0f5ef;width:165px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}summary{cursor:pointer;font-weight:700}a:focus-visible,summary:focus-visible{outline:3px solid #075c4b;outline-offset:2px}@media(max-width:700px){main{padding:16px}th,td{min-width:200px}tbody th{min-width:120px}}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p>${renderCandidateMatrix(report)}<section><h2>次の操作</h2><p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p>${next}</section>${workingPreviewHref ? `<p><a href="${htmlEscape(workingPreviewHref)}">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p>` : ""}<section><h2>AIの提案と未確定事項</h2>${recommendation}<p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><section id="candidate-details"><h2>候補の詳細と出典</h2><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div></section><details><summary>停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
 }
 
 /** A local, unapproved interaction sketch of the human-selected matrix direction. */
@@ -1459,8 +1575,9 @@ async function main(args) {
       "capture-working-preview",
       "real-screens",
       "capture-real-screens",
+      "prepare-next",
     ].includes(command) && configPath,
-    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|capture-real-screens> <config.json> [other-config.json]",
+    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|capture-real-screens|prepare-next> <config.json> [request.json]",
   );
   const config = JSON.parse(await readFile(configPath, "utf8"));
   if (command === "compare") {
@@ -1548,16 +1665,14 @@ async function main(args) {
         selectedSelectionId: history.baseSelectionId,
       });
     const planText = JSON.stringify(plan, null, 2) + "\n";
-    await writeFile(
+    await writePreparedFile(
       path.join(workspace, `tasks-${config.runId}.json`),
       planText,
-      { flag: "wx", mode: 0o600 },
     );
-    await writeFile(
+    await writePreparedFile(
       path.join(workspace, `trial-${config.runId}.json`),
       JSON.stringify({ ...manifest, planDigest: digest(planText) }, null, 2) +
         "\n",
-      { flag: "wx", mode: 0o600 },
     );
     console.log(
       JSON.stringify({
@@ -1616,6 +1731,26 @@ async function main(args) {
     );
     const snapshot = await acceptedRun(workspace, config.runId);
     const history = await approvedHistory(workspace, manifest);
+    if (command === "prepare-next") {
+      const requestPath = args[2];
+      assert(requestPath, "Missing next Run revision request file");
+      const requestFile = await realpath(requestPath);
+      assert(
+        requestFile.startsWith(`${workspace}${path.sep}`),
+        "Revision request must be inside workspace",
+      );
+      const request = JSON.parse(await readFile(requestFile, "utf8"));
+      const next = revisionConfigFor(
+        manifest,
+        reviewTrial({ manifest, ...snapshot, history: history.refs }),
+        request,
+        workspace,
+      );
+      const nextPath = path.join(workspace, `trial-config-${next.runId}.json`);
+      await writePreparedFile(nextPath, JSON.stringify(next, null, 2) + "\n");
+      await main(["prepare", nextPath]);
+      return;
+    }
     if (["real-screens", "capture-real-screens"].includes(command)) {
       const report = reviewTrial({
         manifest,
