@@ -23,6 +23,8 @@
 
    選択済み Run から次の改訂を準備するには、同じ workspace に `{"runId":"新しいRunID","revisionRequest":"改善する画面箇所と理由"}` の JSON を自分で保存し、`node scripts/9ui197-harness.mjs prepare-next <現在のconfig.json> <改訂課題.json>` を実行する。このコマンドは保存済み Run と正規の人間選択を再確認し、上限内なら旧モデル・予算・brief・出典を引き継いだ新しい config と既存 `prepare` の plan を作る。途中失敗しても同じ内容なら準備ファイルを再利用して再試行でき、既存内容が異なる場合は停止する。旧候補のプレビュー/検査設定は引き継がない。生成を開始せず、新しい利用許可も作らない。次 Run の実行には別途有効な公式サブスクリプションの認可経路が必要で、期限切れ grant は使わない。
 
+   Chrome で課題を入力して準備する場合は、別端末で `node scripts/9ui220-revision-ui.mjs <現在のconfig.json> 4318` を**明示起動**し、表示された URL を開く。人間選択のある現在 Run の A 型比較と課題欄が同じ画面にあり、明示ボタンを押すと既存 `prepare-next` と同じ検証で次 Run の config/tasks/manifest を保存する。再読み込み後も保存済み計画を確認でき、この画面では AI 生成を開始していないと表示する。現時点の実行状態は Run 本体で確認する。同じ課題の再送は二重準備せず、違う課題や途中で変わった exact ref は拒否する。既存 monitor に入口リンクを出すには、monitor 起動時に `--revision-prep-port 4318` を追加する。この引数はリンクだけであり、monitor 自体は書き込まない。改稿準備 UI を停止するとリンク先は利用できなくなる。最終採用・モデル実行・許可登録は別操作のままである。
+
    Core は候補の生成元、S11 レビューとの exact 依存、保存した利用者確認、候補の失効・改変・別候補への置換を再確認する。これらが一致しなければ改訂 Run は始まらない。ハーネスは人の回答や確認を作らない。
 
 6. 両条件の初期 Run の manifest がそろったら `compare <baseline-config> <guided-config>` で宣言した課題・事実・出典・モデル・予算の一致を確認する。改訂 Run は選択済み案と修正依頼が追加入力になるので、この初期条件比較には含めない。実行 checkpoint は既存の保存検証と plan binding を通ったものだけ使用し、モデル一致は各 review の `usage.model` を見る。実 budget、参照/批評コスト、選択・修正の手間、人間の回答時間と満足度は実測しない限り `UNVERIFIED` または `UNMEASURED` のままにする。
