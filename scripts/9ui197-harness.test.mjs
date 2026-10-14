@@ -1086,6 +1086,41 @@ test("evaluation findings belong to the exact candidate revision", () => {
   assert.equal(report.candidates[1].evaluation, "UNVERIFIED");
 });
 
+test("evaluation with a lock digest attaches only to the matching revision", () => {
+  const report = reviewTrial(
+    base({
+      artifacts: [
+        candidate("art_one"),
+        candidate("art_one", 2),
+        {
+          ref: ref("art_eval"),
+          artifact: {
+            meta: { type: "evaluation" },
+            content: {
+              target: exactChoice("art_one", 2),
+              findings: ["Exact revision 2 finding"],
+            },
+          },
+        },
+        {
+          ref: ref("art_wrong"),
+          artifact: {
+            meta: { type: "evaluation" },
+            content: {
+              target: `art_one@1#sha256:${"f".repeat(64)}`,
+              findings: ["Wrong lock must not attach"],
+            },
+          },
+        },
+      ],
+    }),
+  );
+  assert.equal(report.candidates[0].evaluation, "UNVERIFIED");
+  assert.deepEqual(report.candidates[1].evaluation, [
+    "Exact revision 2 finding",
+  ]);
+});
+
 test("approved prior Run selections consume the revision budget", () => {
   const proposal = {
     id: "proposal_1",

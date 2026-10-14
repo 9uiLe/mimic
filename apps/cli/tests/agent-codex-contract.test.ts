@@ -489,6 +489,10 @@ test("rejected shape saturates counts, redacts names/values and retains first re
     hasType: true,
     hasText: false,
     hasMessage: true,
+    itemIdState: "nonempty-string",
+    textState: "missing",
+    priorItemState: "none",
+    turnStarted: false,
     eventUnknownKeys: 1,
     itemUnknownKeys: 255,
   });
@@ -497,6 +501,45 @@ test("rejected shape saturates counts, redacts names/values and retains first re
   ).toThrow();
   expect(decoder.diagnostics().rejectedShape).toEqual(shape);
   expect(JSON.stringify(decoder.diagnostics())).not.toMatch(/private|secret/);
+});
+
+test("rejected shape distinguishes unsafe text and repeated item without retaining output", () => {
+  const invalidText = new CodexJsonlDecoder("private-request");
+  const start = protocol().split("\n").slice(0, 2).join("\n") + "\n";
+  invalidText.push(Buffer.from(start));
+  expect(() =>
+    invalidText.push(
+      Buffer.from(
+        JSON.stringify({
+          type: "item.completed",
+          item: { id: "secret-id", type: "agent_message", text: ["secret"] },
+        }) + "\n",
+      ),
+    ),
+  ).toThrow("unknown-outcome");
+  expect(invalidText.diagnostics().rejectedShape).toMatchObject({
+    textState: "other",
+    priorItemState: "none",
+    turnStarted: true,
+  });
+
+  const repeated = new CodexJsonlDecoder("private-request");
+  repeated.push(Buffer.from(start));
+  const completed =
+    JSON.stringify({
+      type: "item.completed",
+      item: { id: "secret-id", type: "agent_message", text: "secret" },
+    }) + "\n";
+  repeated.push(Buffer.from(completed));
+  expect(() => repeated.push(Buffer.from(completed))).toThrow(
+    "unknown-outcome",
+  );
+  expect(repeated.diagnostics().rejectedShape).toMatchObject({
+    textState: "string",
+    priorItemState: "agent_message-completed",
+    turnStarted: true,
+  });
+  expect(JSON.stringify(repeated.diagnostics())).not.toContain("secret");
 });
 
 test("read-only official version/login probes redact raw streams and never infer model entitlement", async () => {

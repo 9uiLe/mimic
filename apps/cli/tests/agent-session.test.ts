@@ -498,6 +498,9 @@ test.each([
   "flag",
   "extra-key",
   "getter",
+  "coerced-id-state",
+  "coerced-text-state",
+  "coerced-prior-state",
 ])(
   "rejected-shape diagnostic rejects malicious %s metadata before persistence",
   async (kind) => {
@@ -525,6 +528,21 @@ test.each([
         get: () => "private-secret",
         enumerable: true,
       });
+    if (kind === "coerced-id-state")
+      shape.itemIdState = {
+        toString: () => "missing",
+        secret: "private-secret",
+      };
+    if (kind === "coerced-text-state")
+      shape.textState = {
+        toString: () => "string",
+        secret: "private-secret",
+      };
+    if (kind === "coerced-prior-state")
+      shape.priorItemState = {
+        toString: () => "none",
+        secret: "private-secret",
+      };
     diagnostic.decoder!.rejectedShape = shape as unknown as NonNullable<
       ExecutionDiagnostics["decoder"]
     >["rejectedShape"];

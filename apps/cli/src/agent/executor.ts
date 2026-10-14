@@ -111,6 +111,16 @@ export interface RejectedProtocolShape {
   hasType: boolean;
   hasText: boolean;
   hasMessage: boolean;
+  itemIdState?: "missing" | "empty" | "nonempty-string" | "other";
+  textState?: "missing" | "string" | "other";
+  priorItemState?:
+    | "none"
+    | "reasoning-open"
+    | "reasoning-completed"
+    | "agent_message-open"
+    | "agent_message-completed"
+    | "error-completed";
+  turnStarted?: boolean;
   eventUnknownKeys: number;
   itemUnknownKeys: number;
 }
@@ -325,6 +335,10 @@ export function sanitizeExecutionDiagnostics(
           "eventType",
           "itemType",
           ...flags,
+          "itemIdState",
+          "textState",
+          "priorItemState",
+          "turnStarted",
           "eventUnknownKeys",
           "itemUnknownKeys",
         ]);
@@ -346,6 +360,26 @@ export function sanitizeExecutionDiagnostics(
             shape.itemType,
           ) ||
           flags.some((key) => typeof shape[key] !== "boolean") ||
+          (shape.itemIdState !== undefined &&
+            (typeof shape.itemIdState !== "string" ||
+              !["missing", "empty", "nonempty-string", "other"].includes(
+                shape.itemIdState,
+              ))) ||
+          (shape.textState !== undefined &&
+            (typeof shape.textState !== "string" ||
+              !["missing", "string", "other"].includes(shape.textState))) ||
+          (shape.priorItemState !== undefined &&
+            (typeof shape.priorItemState !== "string" ||
+              ![
+                "none",
+                "reasoning-open",
+                "reasoning-completed",
+                "agent_message-open",
+                "agent_message-completed",
+                "error-completed",
+              ].includes(shape.priorItemState))) ||
+          (shape.turnStarted !== undefined &&
+            typeof shape.turnStarted !== "boolean") ||
           [shape.eventUnknownKeys, shape.itemUnknownKeys].some(
             (value) =>
               !Number.isSafeInteger(value) ||
@@ -362,6 +396,27 @@ export function sanitizeExecutionDiagnostics(
           hasType: shape.hasType as boolean,
           hasText: shape.hasText as boolean,
           hasMessage: shape.hasMessage as boolean,
+          ...(shape.itemIdState === undefined
+            ? {}
+            : {
+                itemIdState:
+                  shape.itemIdState as RejectedProtocolShape["itemIdState"],
+              }),
+          ...(shape.textState === undefined
+            ? {}
+            : {
+                textState:
+                  shape.textState as RejectedProtocolShape["textState"],
+              }),
+          ...(shape.priorItemState === undefined
+            ? {}
+            : {
+                priorItemState:
+                  shape.priorItemState as RejectedProtocolShape["priorItemState"],
+              }),
+          ...(shape.turnStarted === undefined
+            ? {}
+            : { turnStarted: shape.turnStarted as boolean }),
           eventUnknownKeys: shape.eventUnknownKeys as number,
           itemUnknownKeys: shape.itemUnknownKeys as number,
         };
