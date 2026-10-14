@@ -4,6 +4,8 @@
 
 ## 使い方
 
+新しい目的から始める場合は、先に `pnpm --filter @mimic/core build && pnpm --filter @mimic/cli build` を実行し、`node scripts/9ui225-start-design.mjs <新規workspace>` を利用者の端末で起動する。利用者・目的・主操作・必須情報・ブランド特徴・変更できない事実を短く入力する。参照の出典と使う理由まで既に整理されている場合は、同じ項目を `brief` に持つ JSON ファイルを第2引数に渡せる（追加項目は `model` と確認済みの `systemContext`、任意の `budget`）。この入口は既存 Skills/Schemas と evidence、guided config/plan を新規 workspace に配置し、Core Run を保存する。同じ入力と workspace なら途中から再開でき、異なる入力や既存の別 workspace は変更しない。**生成・モデル利用許可・人間の案選択は行わない。** 返された config と Run ID を使い、有効な別の公式サブスクリプション許可の下で既存 dispatcher を実行してから、以下の `review`、exact 選択、改稿へ進む。モデルの利用資格はこの準備コマンドでは確認できない。
+
 1. 比較条件ごとに空の Mimic workspace を用意し、通常の `mimic init` を実行する。既存手順どおり `skills/` と `schemas/` を配置し、システム・タスク・参照の出典ファイルを `inputs/` に置く。Chrome/Chromium のみを画面検査に使う。
 2. 各 workspace に `trial-config.json` を保存する。二つの設定では `condition` と `runId`、`workspace` 以外の課題・事実・モデル・予算・証拠ファイルの内容を同じにする。`skills/` と `schemas/` の内容も同じであることをハッシュで確認する。guided 条件だけが brief の適用理由、構造案、批評指示を受ける。追加参照の処理と批評の費用は後で分けて測る。
 3. `node scripts/9ui197-harness.mjs prepare <workspace>/trial-config.json` で既存 S04–S11 plan template から不変の plan と manifest を書く。`mimic run --id <runId> --tasks tasks-<runId>.json` と公式サブスクリプションの認可済み session dispatcher で実行する。出力の手修正や保存 marker の編集は行わない。S07 は既存の `PROPOSE_ONLY` 経路を使う。
