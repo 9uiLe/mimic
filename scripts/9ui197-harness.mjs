@@ -12,7 +12,10 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { renderRealScreensHtml } from "./9ui197-real-screens.mjs";
+import {
+  renderRealScreensHtml,
+  renderRevisionScreenHtml,
+} from "./9ui197-real-screens.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templateFile = path.join(repo, "docs/dogfood/9ui183/plan-template.json");
@@ -1600,9 +1603,10 @@ async function main(args, options = {}) {
       "capture-working-preview",
       "real-screens",
       "capture-real-screens",
+      "revision-screen",
       "prepare-next",
     ].includes(command) && configPath,
-    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|capture-real-screens|prepare-next> <config.json> [request.json]",
+    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|capture-real-screens|revision-screen|prepare-next> <config.json> [request.json]",
   );
   const config = JSON.parse(await readFile(configPath, "utf8"));
   if (command === "compare") {
@@ -1756,6 +1760,44 @@ async function main(args, options = {}) {
     );
     const snapshot = await acceptedRun(workspace, config.runId);
     const history = await approvedHistory(workspace, manifest);
+    if (command === "revision-screen") {
+      assert(manifest.previousRunId, "Revision screen needs a previous Run");
+      const prior = JSON.parse(
+        await readFile(
+          path.join(workspace, `trial-${manifest.previousRunId}.json`),
+          "utf8",
+        ),
+      );
+      const priorSnapshot = await acceptedRun(workspace, prior.runId, [
+        config.runId,
+      ]);
+      const base = reviewTrial({ manifest: prior, ...priorSnapshot });
+      const revision = reviewTrial({
+        manifest,
+        ...snapshot,
+        history: history.refs,
+      });
+      assert(
+        sameRef(base.selectedRef, manifest.baseRef) &&
+          base.humanSelectionId === history.baseSelectionId,
+        "Revision screen base differs from the recorded human selection",
+      );
+      const html = renderRevisionScreenHtml(base, revision, manifest.brief);
+      const previewPath = path.join(
+        workspace,
+        `revision-screen-${config.runId}.html`,
+      );
+      await writeWorkingOutput(previewPath, html);
+      console.log(
+        JSON.stringify({
+          previewPath,
+          baseRef: base.selectedRef,
+          revisionRef: revision.candidates[0].ref,
+          approval: "unapproved-codex-ui-sketch",
+        }),
+      );
+      return;
+    }
     if (command === "prepare-next") {
       let request = options.request;
       if (!request) {

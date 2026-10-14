@@ -12,6 +12,12 @@ const sameRef = (left, right) =>
   left?.revision === right?.revision &&
   left?.lockDigest === right?.lockDigest;
 
+const exactRef = (ref) =>
+  /^art_[A-Za-z0-9_-]+$/.test(ref?.artifactId ?? "") &&
+  Number.isSafeInteger(ref?.revision) &&
+  ref.revision > 0 &&
+  /^sha256:[a-f0-9]{64}$/.test(ref?.lockDigest ?? "");
+
 const lead = (text) => `${String(text ?? "未提供").split("。")[0]}。`;
 
 const script = `const options = [...document.querySelectorAll('[data-option]')];
@@ -292,4 +298,148 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
   ].join("");
   const hash = createHash("sha256").update(script).digest("base64");
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>3つの実画面を比較 · Mimic</title><style>${style}</style></head><body><main class="index" data-real-screens="unapproved"><header class="index-head"><div><span class="eyebrow">MIMIC / DESIGN REVIEW</span><h1>3つの画面を、同じ内容で試す</h1><p>Aは人が改訂元に選んだ構造案です。BとCは未選択の比較候補。どの画面も最終採用・公開は未承認です。</p></div><aside class="source-note">Mimic S10/S11 の保存済み構造と評価を使い、Codex が画面を設計・実装しました。Mimic が完成UIを生成したものではありません。</aside></header><div class="screens">${screens}</div></main><script>${script}</script></body></html>`;
+}
+
+/** An unselected A revision shown as an operable Codex sketch using saved Mimic directions. */
+export function renderRevisionScreenHtml(base, revision, brief) {
+  const baseRef = base?.selectedRef;
+  const baseA = base?.candidates?.find((item) => sameRef(item.ref, baseRef));
+  const revised = revision?.candidates?.[0];
+  const nextRef = revised?.ref;
+  if (
+    !base?.humanSelectionId ||
+    !exactRef(baseRef) ||
+    !exactRef(nextRef) ||
+    !baseA?.mechanisms?.some((item) =>
+      item.includes("候補を列、共通判断項目を行"),
+    ) ||
+    revision?.previousRunId !== base.runId ||
+    revision.status !== "awaiting-human-selection" ||
+    revision.invalidRevisionRefs?.length ||
+    revision.unrelatedRevisionRefs?.length ||
+    !revision.priorSelectedRefs?.some((ref) => sameRef(ref, baseRef)) ||
+    revision.selectedRef ||
+    revision.humanSelectionId ||
+    revision.candidates?.length !== 1 ||
+    nextRef?.artifactId !== baseRef?.artifactId ||
+    nextRef?.revision !== baseRef.revision + 1 ||
+    !Array.isArray(revised.evaluation) ||
+    !revised.evaluation.length ||
+    !revised.mechanisms?.some((item) =>
+      item.includes("候補を列、共通判断項目を行"),
+    ) ||
+    !brief?.content?.some(
+      (item) => item.policy === "fixed-fact" && item.text === "改訂は最大2回",
+    ) ||
+    !brief.content.some(
+      (item) => item.policy === "fixed-copy" && item.text === "候補を比較",
+    )
+  )
+    throw Error(
+      "Revision screen needs the selected exact A base and one unselected exact revision",
+    );
+  const baseCandidates = ["二つの比較枠", "項目単位で確認"].map((marker) =>
+    base.candidates.filter((item) =>
+      item.mechanisms?.some((text) => text.includes(marker)),
+    ),
+  );
+  if (
+    base.candidates.length !== 3 ||
+    baseCandidates.some(
+      ([item, duplicate]) =>
+        !item ||
+        duplicate ||
+        !exactRef(item.ref) ||
+        !Array.isArray(item.evaluation) ||
+        sameRef(item.ref, baseRef),
+    ) ||
+    sameRef(baseCandidates[0][0].ref, baseCandidates[1][0].ref)
+  )
+    throw Error("Revision screen needs the saved B/C comparison context");
+  const candidates = [revised, ...baseCandidates.map(([item]) => item)].map(
+    (item, index) => ({
+      ...item,
+      name: ["A", "B", "C"][index],
+      index,
+    }),
+  );
+  const rows = [
+    ["主操作と構造", (item) => item.mechanisms[item.name === "A" ? 1 : 0]],
+    ["向く条件・利点・失うもの", (item) => item.summary],
+    [
+      "詳細と比較への復帰",
+      (item) => item.mechanisms[item.name === "A" ? 2 : 1],
+    ],
+    ["選択と改訂", (item) => item.mechanisms[item.name === "A" ? 4 : 2]],
+    [
+      "評価上の懸念",
+      (item) =>
+        item.evaluation.find((finding) => finding.state === "CONCERN")
+          ?.reason ?? "未提供",
+    ],
+    [
+      "未確定事項",
+      (item) =>
+        item.evaluation.find((finding) => finding.state === "UNVERIFIED")
+          ?.reason ?? "未確認",
+    ],
+  ];
+  const short = (text) => escape(lead(text));
+  const cellText = (name, item, read) =>
+    name === "向く条件・利点・失うもの"
+      ? escape(read(item))
+      : short(read(item));
+  const heading = (item) =>
+    `候補${item.name}${item.name === "A" ? " · 改稿候補（未選択）" : " · 比較用（未選択）"}`;
+  const table = `<table><thead><tr><th scope="col">共通項目</th>${candidates.map((item) => `<th scope="col">${escape(heading(item))}</th>`).join("")}</tr></thead><tbody>${rows.map(([name, read]) => `<tr><th scope="row">${escape(name)}</th>${candidates.map((item) => `<td>${cellText(name, item, read)}<button type="button" data-detail="${item.index}">詳細を見る</button></td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  const mobile = rows
+    .map(
+      ([name, read]) =>
+        `<section class="row-card"><h3>${escape(name)}</h3>${candidates.map((item) => `<div><strong>${escape(heading(item))}</strong><p>${cellText(name, item, read)}</p><button type="button" data-detail="${item.index}">詳細を見る</button></div>`).join("")}</section>`,
+    )
+    .join("");
+  const detail = candidates
+    .map(
+      (item) =>
+        `<section id="detail-${item.index}" class="detail" hidden><button type="button" data-back>比較に戻る</button><p class="context">Run ${escape(item.name === "A" ? revision.runId : base.runId)} · ${escape(heading(item))}</p><h2>${escape(heading(item))}</h2><p>${escape(item.summary)}</p><ul>${item.mechanisms.map((part) => `<li>${escape(part)}</li>`).join("")}</ul><p>${escape(item.rationale?.join(" / ") ?? "未提供")}</p><details><summary>S11評価と出典</summary><pre>${escape(JSON.stringify({ ref: item.ref, evaluation: item.evaluation, verification: item.verification }, null, 2))}</pre></details></section>`,
+    )
+    .join("");
+  const recommendation =
+    Array.isArray(revision.proposedDecisions) &&
+    revision.proposedDecisions.length
+      ? revision.proposedDecisions
+          .map(
+            (item) =>
+              `<p>${escape(item.summary)} · ${escape(item.suggestedChoice)}</p>`,
+          )
+          .join("")
+      : "<p>AIの推奨提案: 未取得</p>";
+  const js = `let trialChoice = null;
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('button'); if (!button) return;
+    if (button.hasAttribute('data-detail')) {
+      document.querySelector('#comparison').hidden = true;
+      document.querySelectorAll('.detail').forEach((panel) => { panel.hidden = true; });
+      const panel = document.querySelector('#detail-' + button.dataset.detail);
+      if (panel) { panel.hidden = false; panel.scrollIntoView(); }
+    } else if (button.hasAttribute('data-back')) {
+      button.closest('.detail').hidden = true;
+      document.querySelector('#comparison').hidden = false;
+      document.querySelector('#comparison').scrollIntoView();
+    } else if (button.hasAttribute('data-try-choice')) {
+      trialChoice = button.dataset.tryChoice;
+      document.querySelector('#trial-status').textContent = '画面内で仮に選んだ案: 候補' + button.dataset.tryChoice + '（保存なし。現在の作業用ベースはA@${baseRef.revision}）';
+      document.querySelector('#selection-guidance').hidden = true;
+    } else if (button.id === 'try-revision') {
+      if (!trialChoice) {
+        document.querySelector('#selection-guidance').hidden = false;
+      } else {
+        document.querySelector('#trial-revision-target').textContent = '画面内で仮に選んだ候補' + trialChoice + '。保存された作業用ベースはA@${baseRef.revision}のままです。';
+        document.querySelector('#revision-check').hidden = false;
+      }
+    }
+  });`;
+  const hash = createHash("sha256").update(js).digest("base64");
+  const css = `*{box-sizing:border-box}body{margin:0;background:#eef2ee;color:#18352e;font:16px/1.5 system-ui,sans-serif}main{max-width:1280px;margin:auto;padding:24px}h1{font-size:clamp(28px,4vw,44px);margin:0 0 8px}h2{margin:0 0 14px}.intro,.panel,.detail,.row-card{background:white;border:1px solid #cbdcd0;padding:20px;margin:16px 0}.intro{border-top:5px solid #287567}.eyebrow,.context{font-size:13px;color:#50685e}.context{margin:6px 0}.action{font-weight:700;color:#0b604d}.notice{background:#fff5de;border-left:4px solid #b57816;padding:12px;margin:16px 0}.desktop{overflow-x:auto}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:1px solid #d1ddd4;padding:14px;text-align:left;vertical-align:top;overflow-wrap:anywhere}thead th{background:#e3efe6}tbody th{width:17%;background:#f3f7f3}td{font-size:14px}button{display:block;margin:12px 0 0;border:1px solid #176454;background:white;color:#176454;padding:9px 12px;font:inherit;cursor:pointer}button:hover{background:#e4f1e9}button:focus-visible,summary:focus-visible{outline:3px solid #bb791b;outline-offset:2px}.mobile{display:none}.row-card>div{border-top:1px solid #d1ddd4;padding:12px 0}.row-card p{margin:6px 0}.detail{max-width:880px}.detail li{margin:12px 0;overflow-wrap:anywhere}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}[hidden]{display:none!important}@media(max-width:700px){main{padding:14px}.desktop{display:none}.mobile{display:block}}`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>候補を比較 · A改稿プレビュー</title><style>${css}</style></head><body><main data-revision-screen="unapproved"><header class="intro"><p class="eyebrow">MIMIC / A REVISION PREVIEW</p><h1>候補を比較</h1><p>違いを比較して改訂元を確認する</p><p class="context">対象Run ${escape(revision.runId)} · 現在の利用者の選択: 作業用A@${baseRef.revision} · 改稿A@${nextRef.revision}: 未選択</p><p class="action">次の操作: 共通項目で候補を読み、必要なら改稿Aを仮選択して改善対象を確認する</p><p>改訂は最大2回 · 選んだ案を改善する</p></header><p class="notice">保存済みS10の構造案をCodexのレンダラーが操作画面にした未承認の試作です。改稿Aは人が採用していません。操作は画面内の試用でRunの選択記録を変更しません。</p><section id="comparison" class="panel"><h2>共通項目で比較</h2><p>候補Aの改稿と、元のRunに保存されたB/Cの方向を同じ項目で照合します。B/Cは親Runの比較資料で、この改稿Runでは選択できません。</p><div class="desktop">${table}</div><div class="mobile">${mobile}</div><h2>AIの推奨提案</h2>${recommendation}<p>AIの提案は人の選択ではありません。</p><h2>改稿候補を試す</h2><button type="button" data-try-choice="A">改稿候補Aを画面内で仮選択</button><p id="trial-status" role="status">画面内の仮選択: なし（保存なし）</p><button id="try-revision" type="button">改善対象を確認する（試用）</button><p id="selection-guidance" class="notice" hidden>まず改稿候補Aを画面内で仮選択してください。Runの選択記録は変更されません。</p><div id="revision-check" class="notice" hidden><strong>改善対象確認（試用・保存なし）</strong><p id="trial-revision-target"></p><p>対象Run ${escape(revision.runId)} · 改稿A@${nextRef.revision}は未選択</p><p>改訂は最大2回。実際の開始と残回数は未検証です。</p></div></section>${detail}<section class="panel"><h2>関係と未確定事項</h2><p>親Run ${escape(base.runId)} → 改稿Run ${escape(revision.runId)}。現在の選択は元のA@${baseRef.revision}のままです。</p><p>ブランド適合、選択の手間、利用者の満足度は未測定。390pxの利用者操作は人による確認前です。</p><details><summary>履歴・出典の詳細</summary><pre>${escape(JSON.stringify({ baseSelection: baseRef, revision: nextRef, evaluation: revised.evaluation }, null, 2))}</pre></details></section></main><script>${js}</script></body></html>`;
 }

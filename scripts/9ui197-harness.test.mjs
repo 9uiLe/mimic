@@ -31,7 +31,10 @@ import {
   writeWorkingOutput,
   writePreparedFile,
 } from "./9ui197-harness.mjs";
-import { renderRealScreensHtml } from "./9ui197-real-screens.mjs";
+import {
+  renderRealScreensHtml,
+  renderRevisionScreenHtml,
+} from "./9ui197-real-screens.mjs";
 
 const brief = {
   audience: "Run reviewer",
@@ -650,6 +653,157 @@ test("three real screens use one saved packet without recording a new choice", (
   assert.match(
     renderRealScreensHtml(unsafe, realBrief, selected),
     /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/,
+  );
+});
+
+test("an exact unselected revision renders an operable preview without changing the human base", () => {
+  const baseRef = ref("art_matrix");
+  const revisedRef = {
+    ...ref("art_matrix", 2),
+    lockDigest: `sha256:${"b".repeat(64)}`,
+  };
+  const base = {
+    runId: "run_base",
+    selectedRef: baseRef,
+    humanSelectionId: "human-choice",
+    candidates: ["A", "B", "C"].map((name) => ({
+      ref: name === "A" ? baseRef : ref(`art_${name}`),
+      summary: `保存済み${name}方向。条件と代償を確認する。`,
+      mechanisms: [
+        {
+          A: "候補を列、共通判断項目を行",
+          B: "二つの比較枠",
+          C: "項目単位で確認",
+        }[name],
+        "詳細。",
+        "明示選択。",
+      ],
+      evaluation: [{ state: "CONCERN", reason: "元の懸念。" }],
+    })),
+  };
+  const revision = {
+    runId: "run_revision",
+    status: "awaiting-human-selection",
+    previousRunId: base.runId,
+    priorSelectedRefs: [baseRef],
+    selectedRef: null,
+    humanSelectionId: null,
+    candidates: [
+      {
+        ref: revisedRef,
+        summary:
+          "選択済み案Aの単一改訂案。短い材料を照合する条件に向く。詳細の追加操作が必要。",
+        mechanisms: [
+          "冒頭は主操作と目的。",
+          "候補を列、共通判断項目を行。",
+          "履歴は詳細へ。",
+          "390pxは項目ごと。",
+          "人が明示選択する。",
+          "改善対象を確認する。",
+        ],
+        evaluation: [{ state: "UNVERIFIED", reason: "利用者の判断は未検証。" }],
+      },
+    ],
+  };
+  const fixedBrief = {
+    content: [
+      { policy: "fixed-fact", text: "改訂は最大2回" },
+      { policy: "fixed-copy", text: "候補を比較" },
+    ],
+  };
+  const html = renderRevisionScreenHtml(base, revision, fixedBrief);
+  assert.match(html, /data-revision-screen="unapproved"/);
+  assert.match(html, /作業用A@1/);
+  assert.match(html, /改稿A@2: 未選択/);
+  assert.match(html, /短い材料を照合する条件に向く。詳細の追加操作が必要。/);
+  assert.match(html, /data-detail="0"/);
+  assert.match(html, /data-back/);
+  assert.match(html, /data-try-choice="A"/);
+  assert.doesNotMatch(html, /data-try-choice="[BC]"/);
+  assert.match(html, /B\/Cは親Runの比較資料で、この改稿Runでは選択できません/);
+  assert.match(html, /id="try-revision"/);
+  assert.match(html, /候補を比較/);
+  assert.match(html, /改訂は最大2回/);
+  assert.match(html, /Codexのレンダラー/);
+  assert.match(html, /390pxの利用者操作は人による確認前/);
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        { ...base, humanSelectionId: null },
+        revision,
+        fixedBrief,
+      ),
+    /selected exact A base/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        base,
+        { ...revision, selectedRef: revisedRef },
+        fixedBrief,
+      ),
+    /unselected exact revision/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        base,
+        { ...revision, invalidRevisionRefs: [revisedRef] },
+        fixedBrief,
+      ),
+    /unselected exact revision/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        {
+          ...base,
+          candidates: base.candidates.map((item, index) =>
+            index === 2 ? { ...item, mechanisms: ["二つの比較枠"] } : item,
+          ),
+        },
+        revision,
+        fixedBrief,
+      ),
+    /saved B\/C comparison context/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        { ...base, selectedRef: { ...baseRef, revision: "1" } },
+        {
+          ...revision,
+          candidates: [
+            {
+              ...revision.candidates[0],
+              ref: { ...revisedRef, revision: "11" },
+            },
+          ],
+        },
+        fixedBrief,
+      ),
+    /selected exact A base/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        base,
+        { ...revision, priorSelectedRefs: [ref("art_other")] },
+        fixedBrief,
+      ),
+    /selected exact A base/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        base,
+        {
+          ...revision,
+          candidates: [{ ...revision.candidates[0], evaluation: "UNVERIFIED" }],
+        },
+        fixedBrief,
+      ),
+    /unselected exact revision/,
   );
 });
 
