@@ -1345,6 +1345,8 @@ export class CodexJsonlDecoder {
       event.item && typeof event.item === "object" && !Array.isArray(event.item)
         ? (event.item as Record<string, unknown>)
         : undefined;
+    const prior =
+      typeof item?.id === "string" ? this.items.get(item.id) : undefined;
     const eventTypes = [
       "thread.started",
       "turn.started",
@@ -1376,6 +1378,24 @@ export class CodexJsonlDecoder {
       hasType: !!item && Object.hasOwn(item, "type"),
       hasText: !!item && Object.hasOwn(item, "text"),
       hasMessage: !!item && Object.hasOwn(item, "message"),
+      itemIdState:
+        !item || !Object.hasOwn(item, "id")
+          ? "missing"
+          : typeof item.id !== "string"
+            ? "other"
+            : item.id
+              ? "nonempty-string"
+              : "empty",
+      textState:
+        !item || !Object.hasOwn(item, "text")
+          ? "missing"
+          : typeof item.text === "string"
+            ? "string"
+            : "other",
+      priorItemState: !prior
+        ? "none"
+        : (`${prior.type}-${prior.completed ? "completed" : "open"}` as RejectedProtocolShape["priorItemState"]),
+      turnStarted: this.turn,
       eventUnknownKeys: unknownKeys(event, [
         "type",
         "item",

@@ -503,6 +503,7 @@ export function reviewTrial({
       evaluation:
         evaluations.find(
           ({ artifact: item }) =>
+            item.content.target === choiceKey(ref) ||
             item.content.target === `${ref.artifactId}@${ref.revision}`,
         )?.artifact.content.findings ?? "UNVERIFIED",
     };
