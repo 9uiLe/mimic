@@ -217,6 +217,13 @@ async function review(configPath) {
   ]);
 }
 
+async function candidateScreens(configPath) {
+  return command(path.join(repo, "scripts/9ui197-harness.mjs"), [
+    "candidate-screens",
+    configPath,
+  ]);
+}
+
 async function runHost(sessionFile, grantId) {
   return command(path.join(repo, "apps/cli/dist/agent/host-credit-cli.js"), [
     "run",
@@ -396,8 +403,8 @@ export async function progressDesign(
       const runnable = next.actions.filter(
         (action) => action.action === "GENERATE",
       );
-      if (!runnable.length)
-        return {
+      if (!runnable.length) {
+        const result = {
           runId: config.runId,
           state:
             next.state === "review-ready" &&
@@ -422,6 +429,28 @@ export async function progressDesign(
           calls,
           humanSelectionId: report.humanSelectionId,
         };
+        if (result.state === "review-ready" && !result.humanSelectionId) {
+          try {
+            const preview = await (
+              operations.candidateScreens ?? candidateScreens
+            )(configPath);
+            assert(
+              preview.previewPath?.startsWith(`${workspace}${path.sep}`),
+              "Candidate screens path differs from Run",
+            );
+            const linked = await (operations.review ?? review)(configPath);
+            assert(
+              linked.runId === config.runId,
+              "Linked review differs from Run",
+            );
+            result.reviewPath = linked.reviewPath;
+            result.candidateScreensPath = preview.previewPath;
+          } catch (error) {
+            result.candidateScreensUnavailable = error.message;
+          }
+        }
+        return result;
+      }
       if (
         calls >= maxCalls ||
         report.usage.generationReservations >= config.budget.maxGenerations

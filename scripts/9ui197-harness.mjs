@@ -14,6 +14,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   renderRealScreensHtml,
+  renderUnselectedScreensHtml,
   renderRevisionScreenHtml,
 } from "./9ui197-real-screens.mjs";
 
@@ -684,7 +685,12 @@ export function revisionConfigFor(manifest, report, request, workspace) {
     revisionRequest: request.revisionRequest.trim(),
   };
 }
-export function renderReviewHtml(report, previewUrls = {}, workingPreviewHref) {
+export function renderReviewHtml(
+  report,
+  previewUrls = {},
+  workingPreviewHref,
+  candidateScreensHref,
+) {
   const cards = report.candidates
     .map((candidate, index) => {
       const url = previewUrls[choiceKey(candidate.ref)];
@@ -718,7 +724,7 @@ export function renderReviewHtml(report, previewUrls = {}, workingPreviewHref) {
       : report.candidates.length
         ? "<p>改訂用の選択は未記録です。候補と S11 評価を確認し、既存の <code>mimic select-revision-base --file &lt;選択.json&gt; --confirmation &lt;確認.json&gt;</code> で exact 候補を明示してください。この画面は選択を記録しません。</p>"
         : "<p>候補の受理を待つか、停止理由を確認してください。</p>";
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1280px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:8px;padding:18px;margin:16px 0}article{min-width:0}.matrix-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:700px;table-layout:fixed}th,td{border:1px solid #d9e4da;padding:12px;text-align:left;vertical-align:top;overflow-wrap:anywhere;font-size:13px;line-height:1.55}thead th{background:#e5eee8}tbody th{background:#f0f5ef;width:165px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}summary{cursor:pointer;font-weight:700}a:focus-visible,summary:focus-visible{outline:3px solid #075c4b;outline-offset:2px}@media(max-width:700px){main{padding:16px}th,td{min-width:200px}tbody th{min-width:120px}}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p>${renderCandidateMatrix(report)}<section><h2>次の操作</h2><p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p>${next}</section>${workingPreviewHref ? `<p><a href="${htmlEscape(workingPreviewHref)}">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p>` : ""}<section><h2>AIの提案と未確定事項</h2>${recommendation}<p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><section id="candidate-details"><h2>候補の詳細と出典</h2><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div></section><details><summary>停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Mimic 候補レビュー</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1280px;margin:auto;padding:24px;overflow-wrap:anywhere}h1{line-height:1.2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}article,section{background:#fff;border:1px solid #d9e4da;border-radius:8px;padding:18px;margin:16px 0}article{min-width:0}.matrix-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:700px;table-layout:fixed}th,td{border:1px solid #d9e4da;padding:12px;text-align:left;vertical-align:top;overflow-wrap:anywhere;font-size:13px;line-height:1.55}thead th{background:#e5eee8}tbody th{background:#f0f5ef;width:165px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}a{color:#075c4b}small{color:#4d655a}details{margin-top:14px}summary{cursor:pointer;font-weight:700}a:focus-visible,summary:focus-visible{outline:3px solid #075c4b;outline-offset:2px}@media(max-width:700px){main{padding:16px}th,td{min-width:200px}tbody th{min-width:120px}}</style></head><body><main><h1>設計候補を比較する</h1><p>Run ${htmlEscape(report.runId)} · ${htmlEscape(report.condition)} · ${htmlEscape(report.status)}</p><p>AIの提案は人間の選択ではありません。未実行の検査は UNVERIFIED です。</p>${renderCandidateMatrix(report)}<section><h2>次の操作</h2><p>改訂作業のために人が選んだ案: ${htmlEscape(report.selectedRef?.artifactId ?? "待機中")} · 最終採用/公開: 未承認 · 回答時間/満足度: 未測定</p>${next}</section>${workingPreviewHref ? `<p><a href="${htmlEscape(workingPreviewHref)}">人が選んだ案の作業用操作プレビューを開く（未承認）</a></p>` : ""}${candidateScreensHref ? `<p><a href="${htmlEscape(candidateScreensHref)}">選択前の3案を操作して比較する（Codex の試作・未承認）</a></p>` : ""}<section><h2>AIの提案と未確定事項</h2>${recommendation}<p>${htmlEscape(report.unresolved.join("; ") || "要確認事項なし")}</p></section><section id="candidate-details"><h2>候補の詳細と出典</h2><div class="grid">${cards || "<p>候補はまだありません。</p>"}</div></section><details><summary>停止・費用の記録</summary><pre>${htmlEscape(JSON.stringify({ stops: report.stops, usage: report.usage, proposedDecisions: report.proposedDecisions, humanDecisionId: report.humanDecisionId, humanSelectionId: report.humanSelectionId }, null, 2))}</pre></details><small>表示は保存済みの exact artifact と実検査記録に基づきます。調査 9UI-191 は効果を実証していません。</small></main></body></html>`;
 }
 
 /** A local, unapproved interaction sketch of the human-selected matrix direction. */
@@ -1602,11 +1608,12 @@ async function main(args, options = {}) {
       "working-preview",
       "capture-working-preview",
       "real-screens",
+      "candidate-screens",
       "capture-real-screens",
       "revision-screen",
       "prepare-next",
     ].includes(command) && configPath,
-    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|capture-real-screens|revision-screen|prepare-next> <config.json> [request.json]",
+    "Usage: node scripts/9ui197-harness.mjs <prepare|capture|review|compare|working-preview|capture-working-preview|real-screens|candidate-screens|capture-real-screens|revision-screen|prepare-next> <config.json> [request.json]",
   );
   const config = JSON.parse(await readFile(configPath, "utf8"));
   if (command === "compare") {
@@ -1867,6 +1874,27 @@ async function main(args, options = {}) {
       }
       return;
     }
+    if (command === "candidate-screens") {
+      const report = reviewTrial({
+        manifest,
+        ...snapshot,
+        history: history.refs,
+      });
+      const html = renderUnselectedScreensHtml(report, manifest.brief);
+      const previewPath = path.join(
+        workspace,
+        `candidate-screens-${config.runId}.html`,
+      );
+      await writeWorkingOutput(previewPath, html);
+      console.log(
+        JSON.stringify({
+          previewPath,
+          candidateRefs: report.candidates.map((candidate) => candidate.ref),
+          approval: "unapproved-codex-ui-sketch",
+        }),
+      );
+      return;
+    }
     if (["working-preview", "capture-working-preview"].includes(command)) {
       const report = reviewTrial({
         manifest,
@@ -2012,6 +2040,29 @@ async function main(args, options = {}) {
     });
     report.captureState = captureState;
     let workingPreviewHref;
+    let candidateScreensHref;
+    if (
+      ["awaiting-human-selection", "awaiting-working-selection"].includes(
+        report.status,
+      )
+    ) {
+      const name = `candidate-screens-${config.runId}.html`;
+      let saved;
+      try {
+        saved = await readFile(path.join(workspace, name), "utf8");
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      if (saved !== undefined) {
+        try {
+          if (saved === renderUnselectedScreensHtml(report, manifest.brief))
+            candidateScreensHref = name;
+        } catch {
+          // A prior sketch may exist after a saved Run stops matching its scope.
+          // Keep the S10/S11 review available, but do not link that sketch.
+        }
+      }
+    }
     if (
       exactRef(config.workingPreviewRef) &&
       exactRef(report.selectedRef) &&
@@ -2038,6 +2089,7 @@ async function main(args, options = {}) {
       report,
       config.previewUrls,
       workingPreviewHref,
+      candidateScreensHref,
     );
     const reviewPath = path.join(workspace, `review-${config.runId}.html`);
     await writeFile(reviewPath, html, { mode: 0o600 });

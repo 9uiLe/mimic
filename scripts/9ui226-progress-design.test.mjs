@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -80,7 +87,8 @@ test("scope reads the actual saved Run and never starts generation", async (t) =
 });
 
 test("each accepted official session advances once and renders the selection-waiting review", async (t) => {
-  const { config, runId } = await fixture(t);
+  const { config, runId, workspace } = await fixture(t);
+  const canonicalWorkspace = await realpath(workspace);
   let stage = "s04";
   const called = [];
   const result = await progressDesign(config, "grant_test", 2, {
@@ -93,6 +101,12 @@ test("each accepted official session advances once and renders the selection-wai
         stage === "done" ? "awaiting-human-selection" : "generating",
         stage === "done" ? 3 : 0,
       ),
+    candidateScreens: async () => ({
+      previewPath: path.join(
+        canonicalWorkspace,
+        `candidate-screens-${runId}.html`,
+      ),
+    }),
     runHost: async (sessionFile, grantId) => {
       const session = JSON.parse(await readFile(sessionFile, "utf8"));
       const owner = JSON.parse(
@@ -115,6 +129,10 @@ test("each accepted official session advances once and renders the selection-wai
   assert.equal(result.calls, 2);
   assert.equal(result.candidates, 3);
   assert.equal(result.humanSelectionId, null);
+  assert.equal(
+    result.candidateScreensPath,
+    path.join(canonicalWorkspace, `candidate-screens-${runId}.html`),
+  );
   assert.equal(called.length, 2);
   assert.notEqual(called[0].session.sessionId, called[1].session.sessionId);
   assert.ok(called.every(({ grantId }) => grantId === "grant_test"));
