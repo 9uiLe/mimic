@@ -18,6 +18,36 @@ const exactRef = (ref) =>
   ref.revision > 0 &&
   /^sha256:[a-f0-9]{64}$/.test(ref?.lockDigest ?? "");
 
+// One known dogfood brief has an HTML sketch for the Mimic comparison product.
+// Keep the whole contract explicit until other product briefs have renderers.
+const comparisonBrief = {
+  audience: "Mimic で画面設計を進める利用者",
+  purpose: "目的を入力して実デザイン案を比較し、改善する案を選べるようにする",
+  primaryAction: "候補を比較し、改善に使う案を明示的に選ぶ",
+  requiredInformation: [
+    "候補ごとの主操作と構造上の違い",
+    "向く条件、利点、失うもの",
+    "未検証事項と次の操作",
+  ],
+  brandCharacter: "ブランドの具体的特徴と配色は未確定。確認まで創作しない",
+  content: [
+    { policy: "fixed-fact", text: "改訂の初期予算は最大2回" },
+    { policy: "fixed-copy", text: "候補を比較" },
+    { policy: "confirm", text: "どの案の違いがブランドに合うか" },
+  ],
+};
+const matchesComparisonBrief = (brief) =>
+  brief?.audience === comparisonBrief.audience &&
+  brief.purpose === comparisonBrief.purpose &&
+  brief.primaryAction === comparisonBrief.primaryAction &&
+  brief.brandCharacter === comparisonBrief.brandCharacter &&
+  JSON.stringify(brief.requiredInformation) ===
+    JSON.stringify(comparisonBrief.requiredInformation) &&
+  JSON.stringify(brief.content) === JSON.stringify(comparisonBrief.content) &&
+  Array.isArray(brief.references) &&
+  brief.references.length === 0 &&
+  (!brief.brandColors || brief.brandColors.length === 0);
+
 const lead = (text) => `${String(text ?? "未提供").split("。")[0]}。`;
 
 const script = `const options = [...document.querySelectorAll('[data-option]')];
@@ -110,15 +140,23 @@ function runContext(report, selectedRef) {
   const history = (report.priorSelectedRefs ?? [])
     .map((ref) => `${escape(ref.artifactId)}@${escape(ref.revision)}`)
     .join(" → ");
-  return `<p class="context">Run ${escape(report.runId)} · 親 Run: ${escape(report.previousRunId ?? "初期 Run")} · 改訂元: ${escape(selectedRef.artifactId)}@${escape(selectedRef.revision)}</p><p class="context">前の作業用選択: ${history || "記録なし"} · 改訂済み回数: ${escape(report.revisionCount ?? "未確認")} / ${escape(report.revisionBudget ?? "未確認")}</p>`;
+  return `<p class="context">Run ${escape(report.runId)} · 親 Run: ${escape(report.previousRunId ?? "初期 Run")} · ${selectedRef ? `改訂元: ${escape(selectedRef.artifactId)}@${escape(selectedRef.revision)}` : "改訂元: 未選択"}</p><p class="context">前の作業用選択: ${history || "記録なし"} · 改訂済み回数: ${escape(report.revisionCount ?? "未確認")} / ${escape(report.revisionBudget ?? "未確認")}</p>`;
 }
 
-function trial(candidates, report) {
+function trial(candidates, report, brief) {
+  const selected = candidates.find((candidate) => candidate.selected);
   const canRevise =
+    selected &&
     Number.isSafeInteger(report.revisionCount) &&
     Number.isSafeInteger(report.revisionBudget) &&
     report.revisionCount < report.revisionBudget;
-  return `<section class="trial"><strong>作業用選択を画面内で試す</strong><p class="subtle">保存済みの作業用ベースは候補A。ここでの操作はRunや人の選択記録を変更しません。</p><p class="fixed">改訂は最大2回</p><div class="trial-actions">${candidates.map((candidate) => `<button class="action secondary" type="button" data-try-choice="${candidate.name}">候補${candidate.name}を仮選択</button>`).join("")}</div><p class="trial-status" data-trial-status>画面内で試した候補: なし（保存なし）</p><button class="link-button" type="button" data-revision${canRevise ? "" : " disabled"}>選んだ案を改善する前に確認</button>${canRevise ? "" : "<p data-revision-limit>改訂上限のため試用できません。人の判断へ戻します。</p>"}<div class="revision-confirmation" data-revision-confirmation hidden><strong>改訂前の確認・試用</strong>${runContext(report, candidates[0].ref)}<p>これは確認画面の試作で、改訂は開始されません。</p></div></section>`;
+  const fixed = brief.content.find(
+    (item) => item.policy === "fixed-fact",
+  )?.text;
+  const unavailable = selected
+    ? "改訂上限のため試用できません。人の判断へ戻します。"
+    : "人が作業用の案を選ぶまで改訂確認は試用できません。";
+  return `<section class="trial"><strong>作業用選択を画面内で試す</strong><p class="subtle">${selected ? `保存済みの作業用ベースは候補${selected.name}。` : "保存済みの作業用ベースはありません。"}ここでの操作はRunや人の選択記録を変更しません。</p><p class="fixed">${escape(fixed)}</p><div class="trial-actions">${candidates.map((candidate) => `<button class="action secondary" type="button" data-try-choice="${candidate.name}">候補${candidate.name}を仮選択</button>`).join("")}</div><p class="trial-status" data-trial-status>画面内で試した候補: なし（保存なし）</p><button class="link-button" type="button" data-revision${canRevise ? "" : " disabled"}>選んだ案を改善する前に確認</button>${canRevise ? "" : `<p data-revision-limit>${unavailable}</p>`}<div class="revision-confirmation" data-revision-confirmation hidden><strong>改訂前の確認・試用</strong>${runContext(report, selected?.ref)}<p>これは確認画面の試作で、改訂は開始されません。</p></div></section>`;
 }
 
 function materials(report) {
@@ -133,7 +171,7 @@ function materials(report) {
 }
 
 function chrome(candidate, brief, title) {
-  return `<header class="product-top"><div><span class="eyebrow">MIMIC / RUN ${escape(candidate.runId)}</span><h3>${escape(title)}</h3><p>同じ保存済み候補を、異なる比較方法で確認します。最終採用とブランド適合は未承認・未検証です。</p></div><div class="run-pill">現在の作業用ベース: 候補A<br><span class="fixed">${escape(brief.content.find((item) => item.policy === "fixed-fact")?.text)}</span></div></header>`;
+  return `<header class="product-top"><div><span class="eyebrow">MIMIC / RUN ${escape(candidate.runId)}</span><h3>${escape(title)}</h3><p>同じ保存済み候補を、異なる比較方法で確認します。最終採用とブランド適合は未承認・未検証です。</p></div><div class="run-pill">現在の作業用ベース: ${candidate.selected ? `候補${candidate.name}` : "未選択"}<br><span class="fixed">${escape(brief.content.find((item) => item.policy === "fixed-fact")?.text)}</span></div></header>`;
 }
 
 function commonFooter(candidates) {
@@ -150,7 +188,7 @@ function commonFooter(candidates) {
 }
 
 function screen(id, name, subtitle, status, body) {
-  return `<article class="screen-option" data-option="${id}"><header class="option-head"><div><span class="status-chip ${id === "a" ? "" : "pending"}">${escape(status)}</span><h2>画面案${name} · ${escape(subtitle)}</h2><small>保存済みS10構造をCodexが画面化 · 最終採用は未承認</small></div><button class="expand" type="button" data-expand>大きく開いて操作</button></header><div class="screen-surface" inert>${body}</div></article>`;
+  return `<article class="screen-option" data-option="${id}"><header class="option-head"><div><span class="status-chip ${status === "作業用ベース" ? "" : "pending"}">${escape(status)}</span><h2>画面案${name} · ${escape(subtitle)}</h2><small>保存済みS10構造をCodexが画面化 · 最終採用は未承認</small></div><button class="expand" type="button" data-expand>大きく開いて操作</button></header><div class="screen-surface" inert>${body}</div></article>`;
 }
 
 function matrixScreen(candidates, fields, report, brief) {
@@ -158,7 +196,7 @@ function matrixScreen(candidates, fields, report, brief) {
     `<tr><th scope="row">${escape(field)}</th>${candidates.map((candidate) => `<td>${escape(candidate.fields[field])}</td>`).join("")}</tr>`;
   const table = `<div class="a-table-wrap"><table class="a-table"><thead><tr><th scope="col">判断項目</th>${candidates.map((candidate) => `<th scope="col"><span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}${candidate.selected ? " · 作業用ベース" : " · 未選択"}</span><span class="head-name">${escape(lead(candidate.summary))}</span><button class="link-button" type="button" data-a-detail="${candidate.index}">詳細を見る</button></th>`).join("")}</tr></thead><tbody>${fields.map(row).join("")}</tbody></table></div>`;
   const mobile = `<div class="a-mobile">${candidates.map((candidate) => `<section class="panel"><span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}</span><h4>${escape(lead(candidate.summary))}</h4><dl>${fields.map((field) => `<dt>${escape(field)}</dt><dd>${escape(candidate.fields[field])}</dd>`).join("")}</dl><button class="link-button" type="button" data-a-detail="${candidate.index}">詳細を見る</button></section>`).join("")}</div>`;
-  return `<div class="product">${chrome(candidates[0], brief, "全候補を一度に見渡す")}<div data-a-main><div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">全候補を列、同じ判断項目を行に配置</p>${runContext(report, candidates[0].ref)}</div><span class="context">3候補 × ${fields.length}項目</span></div>${table}${mobile}${materials(report)}${trial(candidates, report)}</div><div class="detail-view" data-a-detail-view hidden><button class="link-button" type="button" data-a-back>比較表に戻る</button>${candidates.map((candidate) => `<section data-a-detail-content="${candidate.index}" hidden>${detail(candidate)}</section>`).join("")}</div>${commonFooter(candidates)}</div>`;
+  return `<div class="product">${chrome(candidates[0], brief, "全候補を一度に見渡す")}<div data-a-main><div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">全候補を列、同じ判断項目を行に配置</p>${runContext(report, candidates.find((candidate) => candidate.selected)?.ref)}</div><span class="context">3候補 × ${fields.length}項目</span></div>${table}${mobile}${materials(report)}${trial(candidates, report, brief)}</div><div class="detail-view" data-a-detail-view hidden><button class="link-button" type="button" data-a-back>比較表に戻る</button>${candidates.map((candidate) => `<section data-a-detail-content="${candidate.index}" hidden>${detail(candidate)}</section>`).join("")}</div>${commonFooter(candidates)}</div>`;
 }
 
 function pairPanel(candidate, fields) {
@@ -172,7 +210,7 @@ function pairScreen(candidates, fields, report, brief) {
         `<option value="${candidate.index}">候補${candidate.name}</option>`,
     )
     .join("");
-  return `<div class="product">${chrome(candidates[0], brief, "二案を並べて深く読む")}<div data-b-main><div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">比較枠への配置は作業用選択とは別です</p></div><span class="context">二案を選び直せます</span></div><div class="pair-controls"><label>左の比較枠<select data-b-select="left">${choices}</select></label><label>右の比較枠<select data-b-select="right">${candidates.map((candidate) => `<option value="${candidate.index}"${candidate.index === 1 ? " selected" : ""}>候補${candidate.name}</option>`).join("")}</select></label></div><p class="subtle" data-pair-status>候補Aと候補Bを比較中。比較枠は保存済みの選択ではありません。</p><div class="pair"><section class="panel" data-b-panel="left">${pairPanel(candidates[0], fields)}</section><section class="panel" data-b-panel="right">${pairPanel(candidates[1], fields)}</section></div>${materials(report)}${trial(candidates, report)}</div><div class="detail-view" data-b-detail-view hidden><button class="link-button" type="button" data-b-back>同じ二案の比較に戻る</button><div data-b-detail-content></div></div>${candidates.map((candidate) => `<template data-panel-template="${candidate.index}">${pairPanel(candidate, fields)}</template><template data-detail-template="${candidate.index}">${detail(candidate)}</template>`).join("")}${commonFooter(candidates)}</div>`;
+  return `<div class="product">${chrome(candidates[0], brief, "二案を並べて深く読む")}<div data-b-main><div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">比較枠への配置は作業用選択とは別です</p></div><span class="context">二案を選び直せます</span></div><div class="pair-controls"><label>左の比較枠<select data-b-select="left">${choices}</select></label><label>右の比較枠<select data-b-select="right">${candidates.map((candidate) => `<option value="${candidate.index}"${candidate.index === 1 ? " selected" : ""}>候補${candidate.name}</option>`).join("")}</select></label></div><p class="subtle" data-pair-status>候補Aと候補Bを比較中。比較枠は保存済みの選択ではありません。</p><div class="pair"><section class="panel" data-b-panel="left">${pairPanel(candidates[0], fields)}</section><section class="panel" data-b-panel="right">${pairPanel(candidates[1], fields)}</section></div>${materials(report)}${trial(candidates, report, brief)}</div><div class="detail-view" data-b-detail-view hidden><button class="link-button" type="button" data-b-back>同じ二案の比較に戻る</button><div data-b-detail-content></div></div>${candidates.map((candidate) => `<template data-panel-template="${candidate.index}">${pairPanel(candidate, fields)}</template><template data-detail-template="${candidate.index}">${detail(candidate)}</template>`).join("")}${commonFooter(candidates)}</div>`;
 }
 
 function stepCandidates(candidates, field) {
@@ -181,16 +219,6 @@ function stepCandidates(candidates, field) {
 
 function journeyScreen(candidates, fields, report, brief) {
   const stepNames = [...fields, "判断材料", "全体を再確認"];
-  const navNames = [
-    "共通項目",
-    "推奨と保留",
-    "Runと選択",
-    "選択と改訂",
-    "情報量",
-    "向く条件",
-    "判断材料",
-    "全体要約",
-  ];
   const steps = fields
     .map(
       (field, index) =>
@@ -198,27 +226,82 @@ function journeyScreen(candidates, fields, report, brief) {
     )
     .join("");
   const evidence = `<section class="step-stage" data-c-step="${fields.length}" hidden><span class="eyebrow">判断材料</span><h4>推奨と未確定事項</h4><p class="stage-intro">AIの提案と人の確認事項を分けて読みます。</p>${materials(report)}</section>`;
-  const summary = `<section class="step-stage" data-c-step="${fields.length + 1}" hidden><span class="eyebrow">全体の再確認</span><h4>全項目を振り返る</h4><div class="summary-list">${candidates.map((candidate) => `<article class="panel"><span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}</span><p>${escape(lead(candidate.summary))}</p>${fields.map((field) => `<strong>${escape(field)}</strong><p>${escape(candidate.fields[field])}</p>`).join("")}</article>`).join("")}</div>${trial(candidates, report)}</section>`;
-  return `<div class="product">${chrome(candidates[0], brief, "判断項目を順に確かめる")}<div data-c-main><div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">一項目ずつ確認し、最後に全体へ戻ります</p></div><span class="context" data-step-count>1 / ${stepNames.length}</span></div><nav class="steps" aria-label="判断項目">${stepNames.map((name, index) => `<button type="button" data-c-go="${index}" aria-label="${escape(name)}" aria-current="${index === 0 ? "step" : "false"}">${index + 1}. ${escape(navNames[index] ?? name)}</button>`).join("")}</nav>${steps}${evidence}${summary}<div class="stage-nav"><button class="action secondary" type="button" data-c-prev disabled>前へ</button><button class="action" type="button" data-c-next>次の項目へ</button></div></div><div class="detail-view" data-c-detail-view hidden><button class="link-button" type="button" data-c-back>元の判断項目に戻る</button><div data-c-detail-content></div></div>${candidates.map((candidate) => `<template data-detail-template="${candidate.index}">${detail(candidate)}</template>`).join("")}${commonFooter(candidates)}</div>`;
+  const summary = `<section class="step-stage" data-c-step="${fields.length + 1}" hidden><span class="eyebrow">全体の再確認</span><h4>全項目を振り返る</h4><div class="summary-list">${candidates.map((candidate) => `<article class="panel"><span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}</span><p>${escape(lead(candidate.summary))}</p>${fields.map((field) => `<strong>${escape(field)}</strong><p>${escape(candidate.fields[field])}</p>`).join("")}</article>`).join("")}</div>${trial(candidates, report, brief)}</section>`;
+  return `<div class="product">${chrome(candidates[0], brief, "判断項目を順に確かめる")}<div data-c-main><div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">一項目ずつ確認し、最後に全体へ戻ります</p></div><span class="context" data-step-count>1 / ${stepNames.length}</span></div><nav class="steps" aria-label="判断項目">${stepNames.map((name, index) => `<button type="button" data-c-go="${index}" aria-label="${escape(name)}" aria-current="${index === 0 ? "step" : "false"}">${index + 1}. ${escape(name)}</button>`).join("")}</nav>${steps}${evidence}${summary}<div class="stage-nav"><button class="action secondary" type="button" data-c-prev disabled>前へ</button><button class="action" type="button" data-c-next>次の項目へ</button></div></div><div class="detail-view" data-c-detail-view hidden><button class="link-button" type="button" data-c-back>元の判断項目に戻る</button><div data-c-detail-content></div></div>${candidates.map((candidate) => `<template data-detail-template="${candidate.index}">${detail(candidate)}</template>`).join("")}${commonFooter(candidates)}</div>`;
 }
 
 /** Render three Codex-authored UI sketches from one verified, saved S10/S11 packet. */
 export function renderRealScreensHtml(report, brief, expectedRef) {
+  return renderComparisonScreensHtml(report, brief, expectedRef, false);
+}
+
+/** Before selection, render only directions whose saved mechanisms identify all three layouts. */
+export function renderUnselectedScreensHtml(report, brief) {
+  return renderComparisonScreensHtml(report, brief, null, true);
+}
+
+function renderComparisonScreensHtml(report, brief, expectedRef, unselected) {
   if (
-    !report?.humanSelectionId ||
-    !sameRef(report.selectedRef, expectedRef) ||
-    !/^sha256:[a-f0-9]{64}$/.test(expectedRef?.lockDigest ?? "")
+    !unselected &&
+    (!report?.humanSelectionId ||
+      !sameRef(report.selectedRef, expectedRef) ||
+      !/^sha256:[a-f0-9]{64}$/.test(expectedRef?.lockDigest ?? ""))
   )
     throw Error("Real screens need the verified exact human working choice");
+  if (
+    unselected &&
+    (!report ||
+      !["awaiting-human-selection", "awaiting-working-selection"].includes(
+        report.status,
+      ) ||
+      report.selectedRef ||
+      report.humanSelectionId ||
+      report.condition !== "guided")
+  )
+    throw Error(
+      "Unselected screens need a complete guided Run awaiting human choice",
+    );
+  // This sketch depicts Mimic's own design comparison workflow. S10 can also
+  // describe unrelated products; a matching layout word alone is insufficient.
+  if (unselected && !matchesComparisonBrief(brief))
+    throw Error(
+      "Unselected screen sketch only supports the Mimic design comparison brief",
+    );
   const byName = new Map();
+  const markers = [
+    "候補を列、共通判断項目を行",
+    "二つの比較枠",
+    "項目単位で確認",
+  ];
+  const negated =
+    /使わず|使わない|用いない|採用しない|避ける|ではなく|不採用|排除|代わりに|しない|\b(?:not|without|avoid|exclude|instead of)\b/iu;
   for (const candidate of report.candidates ?? []) {
-    const name = candidate.summary?.match(/^案([ABC])/u)?.[1];
+    let name;
+    if (unselected) {
+      const matches = markers.flatMap((marker, index) =>
+        candidate.mechanisms?.some(
+          (item) => !negated.test(item) && item.includes(marker),
+        )
+          ? ["A", "B", "C"][index]
+          : [],
+      );
+      if (matches.length !== 1)
+        throw Error(
+          "Saved S10 mechanism does not identify one supported screen layout",
+        );
+      name = matches[0];
+    } else name = candidate.summary?.match(/^案([ABC])/u)?.[1];
     if (!name || byName.has(name))
       throw Error("Expected distinct saved A/B/C directions");
     byName.set(name, candidate);
   }
-  if (byName.size !== 3 || !sameRef(byName.get("A")?.ref, expectedRef))
+  if (
+    !unselected &&
+    (byName.size !== 3 || !sameRef(byName.get("A")?.ref, expectedRef))
+  )
     throw Error("Expected the selected saved A direction and B/C comparisons");
+  if (unselected && byName.size !== 3)
+    throw Error("Unselected screens need three distinct saved layouts");
   if (
     !brief?.content?.some(
       (item) => item.policy === "fixed-fact" && item.text === "改訂は最大2回",
@@ -226,16 +309,21 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
     !brief.content.some(
       (item) => item.policy === "fixed-copy" && item.text === "候補を比較",
     )
-  )
-    throw Error("Real screens need the saved fixed fact and copy");
-  const markers = [
-    "候補を列、共通判断項目を行",
-    "二つの比較枠",
-    "項目単位で確認",
-  ];
+  ) {
+    if (
+      !unselected ||
+      !brief?.content?.some(
+        (item) => item.policy === "fixed-fact" && item.text?.trim(),
+      ) ||
+      !brief.content.some(
+        (item) => item.policy === "fixed-copy" && item.text?.trim(),
+      )
+    )
+      throw Error("Real screens need the saved fixed fact and copy");
+  }
   const commonCriteria = (byName.get("A").evaluation ?? [])
     .filter((item) => item.criterion)
-    .slice(0, 5)
+    .slice(0, unselected ? 6 : 5)
     .map((item) => item.criterion);
   const expectedCriteria = [
     "共通判断項目の可視性",
@@ -244,13 +332,34 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
     "明示選択と改訂前の再確認",
     "情報量・不要情報と次の操作",
   ];
-  if (JSON.stringify(commonCriteria) !== JSON.stringify(expectedCriteria))
+  if (
+    !unselected &&
+    JSON.stringify(commonCriteria) !== JSON.stringify(expectedCriteria)
+  )
     throw Error("Saved S11 packet lacks five common judgment criteria");
+  if (
+    unselected &&
+    (commonCriteria.length < 2 ||
+      ["B", "C"].some((name) =>
+        commonCriteria.some(
+          (criterion) =>
+            !byName
+              .get(name)
+              .evaluation?.some(
+                (item) => item.criterion === criterion && item.reason,
+              ),
+        ),
+      ))
+  )
+    throw Error("Saved S11 packet lacks common judgment criteria");
   const candidates = ["A", "B", "C"].map((name, index) => {
     const candidate = byName.get(name);
-    if (!candidate.mechanisms?.some((item) => item.includes(markers[index])))
+    if (
+      !unselected &&
+      !candidate.mechanisms?.some((item) => item.includes(markers[index]))
+    )
       throw Error(`Saved direction ${name} lacks its structural mechanism`);
-    if (!Array.isArray(candidate.evaluation))
+    if (!Array.isArray(candidate.evaluation) || !exactRef(candidate.ref))
       throw Error(`Saved direction ${name} lacks its S11 evaluation`);
     const fields = Object.fromEntries(
       commonCriteria.map((criterion) => [
@@ -265,7 +374,7 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
       name,
       index,
       runId: report.runId,
-      selected: name === "A",
+      selected: !unselected && name === "A",
       fields,
       evaluation: Array.isArray(candidate.evaluation)
         ? candidate.evaluation
@@ -278,7 +387,7 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
       "a",
       "A",
       "全候補一覧",
-      "作業用ベース",
+      unselected ? "未選択の比較案" : "作業用ベース",
       matrixScreen(candidates, fields, report, brief),
     ),
     screen(
@@ -297,7 +406,7 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
     ),
   ].join("");
   const hash = createHash("sha256").update(script).digest("base64");
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>3つの実画面を比較 · Mimic</title><style>${style}</style></head><body><main class="index" data-real-screens="unapproved"><header class="index-head"><div><span class="eyebrow">MIMIC / DESIGN REVIEW</span><h1>3つの画面を、同じ内容で試す</h1><p>Aは人が改訂元に選んだ構造案です。BとCは未選択の比較候補。どの画面も最終採用・公開は未承認です。</p></div><aside class="source-note">Mimic S10/S11 の保存済み構造と評価を使い、Codex が画面を設計・実装しました。Mimic が完成UIを生成したものではありません。</aside></header><div class="screens">${screens}</div></main><script>${script}</script></body></html>`;
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>3つの実画面を比較 · Mimic</title><style>${style}</style></head><body><main class="index" data-real-screens="${unselected ? "unselected" : "unapproved"}"><header class="index-head"><div><span class="eyebrow">MIMIC / DESIGN REVIEW</span><h1>3つの画面を、同じ内容で試す</h1><p>${unselected ? "3案とも人の選択前です。画面内の仮選択は保存されず、最終採用・公開も未承認です。" : "Aは人が改訂元に選んだ構造案です。BとCは未選択の比較候補。どの画面も最終採用・公開は未承認です。"}</p></div><aside class="source-note">Mimic S10/S11 の保存済み構造と評価を使い、Codex が画面を設計・実装しました。Mimic が完成UIを生成したものではありません。</aside></header><div class="screens">${screens}</div></main><script>${script}</script></body></html>`;
 }
 
 /** An unselected A revision shown as an operable Codex sketch using saved Mimic directions. */
