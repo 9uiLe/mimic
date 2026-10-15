@@ -93,6 +93,9 @@ const validOpaqueId = (value: string) =>
   });
 const validEvidenceText = (value: string) =>
   typeof value === "string" && value.trim().length > 0 && value.length <= 4096;
+const explicitCreditApproval = (value: string) =>
+  value.trim() === "OK" ||
+  value.trim() === "OK, GPTのクレジットは自由に使って構いません。";
 const validModel = (value: string) =>
   /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value);
 const digest = (value: string) =>
@@ -312,7 +315,7 @@ export class HostCreditAuthorizationStore {
       !validEvidenceText(evidence.delegationText) ||
       !validEvidenceText(evidence.contextText) ||
       !validEvidenceText(evidence.approvalText) ||
-      evidence.approvalText.trim() !== "OK" ||
+      !explicitCreditApproval(evidence.approvalText) ||
       new Set([
         evidence.requestMessageId,
         evidence.delegationMessageId,

@@ -587,6 +587,12 @@ test("unsupported, expired, or altered delegation cannot authorize a Run", async
   const invalid: DelegatedCreditEvidence[] = [
     { ...evidence, approvalText: "" },
     { ...evidence, approvalText: "No" },
+    { ...evidence, approvalText: "OK, GPTのクレジットは使わないでください。" },
+    {
+      ...evidence,
+      approvalText:
+        "OK, GPTのクレジットは自由に使って構いません。追加購入もして。",
+    },
     { ...evidence, approvalMessageId: evidence.delegationMessageId },
     {
       ...evidence,
@@ -625,4 +631,25 @@ test("unsupported, expired, or altered delegation cannot authorize a Run", async
   await expect(h.store.recordDelegated(h.scope, evidence)).resolves.toMatch(
     /^grant_/,
   );
+});
+
+test("delegation preserves the owner's explicit full credit approval", async () => {
+  const h = await setup();
+  const approvalText = "OK, GPTのクレジットは自由に使って構いません。";
+  const grantId = await h.store.recordDelegated(h.scope, {
+    ...delegatedEvidence(h),
+    approvalText,
+  });
+  const database = new DatabaseSync(
+    path.join(h.root, "private", "grants.sqlite"),
+    { readOnly: true },
+  );
+  try {
+    const row = database
+      .prepare("SELECT evidence_json FROM delegated_grants WHERE grant_id = ?")
+      .get(grantId) as { evidence_json: string };
+    expect(JSON.parse(row.evidence_json).approvalText).toBe(approvalText);
+  } finally {
+    database.close();
+  }
 });
