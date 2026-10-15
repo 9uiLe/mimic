@@ -518,6 +518,48 @@ export class HostCreditAuthorizationStore {
     }
   }
 
+  /** Read-only check before a new session is journaled; port() still enforces at use. */
+  async availableForRun(
+    grantId: string,
+    workspace: string,
+    runId: string,
+    model: string,
+    packages: Readonly<Record<string, string>>,
+  ): Promise<string> {
+    const canonicalWorkspace = await realpath(workspace);
+    const inputsSha256 = await frozenRunInputsSha256(
+      canonicalWorkspace,
+      runId,
+      packages,
+    );
+    const database = await this.database(canonicalWorkspace);
+    try {
+      const grant = database
+        .prepare(
+          `SELECT workspace, run_id, model, executable, max_calls, expires_at,
+                  inputs_sha256, revoked_at FROM grants WHERE id = ?`,
+        )
+        .get(grantId) as StoredGrant | undefined;
+      const consumed = database
+        .prepare("SELECT COUNT(*) AS count FROM consumed WHERE grant_id = ?")
+        .get(grantId) as { count: number };
+      if (
+        !grant ||
+        grant.workspace !== canonicalWorkspace ||
+        grant.run_id !== runId ||
+        grant.model !== model ||
+        grant.inputs_sha256 !== inputsSha256 ||
+        grant.revoked_at !== null ||
+        grant.expires_at <= Date.now() ||
+        consumed.count >= grant.max_calls
+      )
+        throw Error("No current authorization for this execution");
+      return grant.executable;
+    } finally {
+      database.close();
+    }
+  }
+
   /** The trusted coordinator derives expectedScope from the frozen Run plan. */
   port(
     grantId: string,
