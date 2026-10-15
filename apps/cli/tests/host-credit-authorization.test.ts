@@ -111,6 +111,41 @@ test("a host decision is recorded once and consumed for one exact prompt", async
   );
 });
 
+test("read-only preflight checks the full frozen Run scope and remaining calls", async () => {
+  const h = await setup();
+  const check = (runId = h.scope.runId, model = h.scope.model) =>
+    h.store.availableForRun(
+      h.grantId,
+      h.workspace,
+      runId,
+      model,
+      h.scope.packages,
+    );
+  await expect(check()).resolves.toBe(process.execPath);
+  await expect(check(h.scope.runId, "other-model")).rejects.toThrow(
+    /No current authorization/,
+  );
+  await writeFile(path.join(h.workspace, ".mimic/runs/run_other.json"), "[]");
+  await expect(check("run_other")).rejects.toThrow(/No current authorization/);
+  await writeFile(path.join(h.workspace, "skills/s04/SKILL.md"), "changed");
+  await expect(check()).rejects.toThrow(/No current authorization/);
+  await writeFile(
+    path.join(h.workspace, "skills/s04/SKILL.md"),
+    "frozen instructions",
+  );
+  await h.store
+    .port(
+      h.grantId,
+      h.scope.runId,
+      h.expected,
+      h.inputsSha256,
+      h.scope.packages,
+      h.scope.executable,
+    )
+    .consumeUserDecision(h.expected);
+  await expect(check()).rejects.toThrow(/No current authorization/);
+});
+
 test("the recorded grant keeps the exact scope displayed before confirmation", async () => {
   const h = await setup();
   const mutable = { ...h.scope };
