@@ -266,6 +266,7 @@ export async function recoverProgressLock(configPath, operations = {}) {
     const owner = JSON.parse(await regularFile(lock));
     assert(
       owner.runId === config.runId &&
+        owner.host === os.hostname() &&
         Number.isSafeInteger(owner.pid) &&
         owner.pid > 0 &&
         /^\d{4}-\d\d-\d\dT/.test(owner.startedAt ?? ""),
@@ -326,6 +327,7 @@ export async function progressDesign(
     json({
       runId: config.runId,
       pid: process.pid,
+      host: os.hostname(),
       startedAt: new Date().toISOString(),
     }),
     { flag: "wx", mode: 0o600 },

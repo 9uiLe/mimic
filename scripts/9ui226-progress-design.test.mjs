@@ -234,7 +234,7 @@ test("a dead runner's owned lock can be released without clearing its journal", 
   const lock = path.join(workspace, ".mimic", `progress-${runId}.lock`);
   await writeFile(
     lock,
-    `${JSON.stringify({ runId, pid: 12345, startedAt: new Date().toISOString() })}\n`,
+    `${JSON.stringify({ runId, pid: 12345, host: os.hostname(), startedAt: new Date().toISOString() })}\n`,
   );
   await assert.rejects(
     recoverProgressLock(config, { processAlive: () => true }),
