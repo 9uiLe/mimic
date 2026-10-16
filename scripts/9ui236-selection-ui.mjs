@@ -121,6 +121,8 @@ function binding(current) {
     runId: current.report.runId,
     scope: current.scope,
     choices: current.choices,
+    revisionCount: current.report.revisionCount,
+    revisionBudget: current.report.revisionBudget,
   };
 }
 
@@ -130,7 +132,11 @@ const isOwnSelection = (current, journal) =>
   same(current.selection.ref, journal.request.ref) &&
   same(current.selection.reviewRef, journal.request.reviewRef) &&
   same(current.selection.actor, journal.request.actor) &&
-  current.report.status === "selected";
+  ["selected", "revision-limit"].includes(current.report.status);
+
+const canSelect = (current) =>
+  current.report.status === "awaiting-human-selection" &&
+  current.report.revisionCount < current.report.revisionBudget;
 
 async function fieldsFrom(request) {
   if (Number(request.headers["content-length"]) > 16384)
@@ -168,18 +174,22 @@ export async function startWorkingSelectionUi({
   if (!path.isAbsolute(workspace) || !validId(report.runId))
     throw new Error("Invalid workspace or Run");
   const journalFile = await journalPath(workspace, report.runId);
-  let journal = await readJournal(journalFile);
-  if (
-    journal &&
-    (journal.request?.actor?.id !== humanActorId ||
-      journal.expected?.runId !== report.runId)
-  )
-    throw new Error("Selection journal belongs to a different human or Run");
+  const readOwnJournal = async () => {
+    const saved = await readJournal(journalFile);
+    if (
+      saved &&
+      (saved.request?.actor?.kind !== "human" ||
+        saved.request?.actor?.id !== humanActorId ||
+        saved.confirmation?.humanActorId !== humanActorId ||
+        saved.expected?.runId !== report.runId)
+    )
+      throw new Error("Selection journal belongs to a different human or Run");
+    return saved;
+  };
+  let journal = await readOwnJournal();
   if (
     !isOwnSelection(initial, journal) &&
-    (initial.selection ||
-      report.status !== "awaiting-human-selection" ||
-      !initial.choices.length)
+    (initial.selection || !canSelect(initial) || !initial.choices.length)
   )
     throw new Error(
       "A reviewed, unselected Run is required; use the existing revision UI for selected Runs",
@@ -218,10 +228,14 @@ export async function startWorkingSelectionUi({
         return `<div class="option"><label><input type="radio" name="choice" value="${index}" required${choice === String(index) ? " checked" : ""}> ${escape(candidate?.summary ?? item.ref.artifactId)}</label><p>S11 の提案（人の選択ではありません）: ${escape(review?.summary ?? "UNVERIFIED")}</p><details><summary>候補と S11 の正確な参照</summary><pre>${escape(JSON.stringify(item, null, 2))}</pre></details></div>`;
       })
       .join("");
-    return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>改稿の作業用ベースを選ぶ · Mimic</title><style>body{font:16px/1.6 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1100px;margin:auto;padding:24px;overflow-wrap:anywhere}section,.option{display:block;background:white;border:1px solid #d9e4da;padding:18px;margin:16px 0}a{color:#075c4b}.matrix-scroll{overflow-x:auto}table{border-collapse:collapse;min-width:700px;width:100%;table-layout:fixed}th,td{border:1px solid #cad8cf;padding:12px;text-align:left;vertical-align:top}thead{background:#e5eee8}pre{white-space:pre-wrap;overflow-wrap:anywhere}textarea{box-sizing:border-box;display:block;width:100%;min-height:110px;font:inherit;padding:10px}button{font:inherit;background:#075c4b;color:white;border:0;padding:12px 20px;margin-top:18px;cursor:pointer}.error{background:#fff1e8;padding:12px}@media(max-width:700px){main{padding:16px}}</style></head><body><main><h1>改稿の作業用ベースを選ぶ</h1><p>目的: 比較した案のうち、次に改善する案を人が記録します。最終採用・公開ではありません。</p><p>現在: ${saved ? "作業用選択を保存済み。AI 生成は未実行。" : stale ? "保存状態が変わりました。この画面からは保存できません。" : "人の選択待ち。AI の推奨は人の判断ではありません。"}</p>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ""}${saved ? `<section><h2>次の操作</h2><p>選んだ案: ${escape(current.report.candidates.find(({ ref }) => same(ref, current.selection.ref))?.summary ?? current.selection.ref.artifactId)}</p>${prep ? `<a href="${escape(prep.url)}">修正課題を入力して次 Run の計画を保存する →</a>` : `<p>選択は保存済みです。改稿準備画面を起動できませんでした。ポートと Run を確認して再読み込みしてください。</p>`}</section>` : stale ? "<p>再読み込み、または対象 Run で画面を再起動してください。既存の選択を上書きしません。</p>" : `<section><h2>次に改善する案</h2><p>実画面の比較結果と、下の S11 評価を確認してから選んでください。変更は既存 CLI の supersession 契約で別途行います。</p><form method="post" action="/select"><input type="hidden" name="csrf" value="${csrf}">${options}<label>選ぶ理由（1〜2000文字）<textarea name="reason" required maxlength="2000">${escape(reason)}</textarea></label><p><label><input type="checkbox" name="confirm" value="yes" required> 私（${escape(humanActorId)}）は候補と S11 評価を確認し、改稿の作業用ベースとして記録します。最終採用ではありません。</label></p><button type="submit">作業用ベースを確定して改稿へ進む</button></form></section>`}${renderCandidateMatrix(current.report)}${current.report.candidates.map((candidate, index) => `<details id="candidate-${index}"><summary>${escape(candidate.summary)}</summary><p>${escape(candidate.mechanisms.join("; "))}</p><p>${escape(candidate.rationale.join("; ") || "UNVERIFIED")}</p></details>`).join("")}<details><summary>Run と操作範囲</summary><p>${escape(report.runId)} · 保存者: ${escape(humanActorId)}</p><p>別途明示起動したローカル操作画面です。通常モニターは読み取り専用。モデル実行・許可登録・最終採用は行いません。</p></details></main></body></html>`;
+    return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>改稿の作業用ベースを選ぶ · Mimic</title><style>body{font:16px/1.6 system-ui,sans-serif;color:#172d28;background:#f4f6f3;margin:0}main{max-width:1100px;margin:auto;padding:24px;overflow-wrap:anywhere}section,.option{display:block;background:white;border:1px solid #d9e4da;padding:18px;margin:16px 0}a{color:#075c4b}.matrix-scroll{overflow-x:auto}table{border-collapse:collapse;min-width:700px;width:100%;table-layout:fixed}th,td{border:1px solid #cad8cf;padding:12px;text-align:left;vertical-align:top}thead{background:#e5eee8}pre{white-space:pre-wrap;overflow-wrap:anywhere}textarea{box-sizing:border-box;display:block;width:100%;min-height:110px;font:inherit;padding:10px}button{font:inherit;background:#075c4b;color:white;border:0;padding:12px 20px;margin-top:18px;cursor:pointer}.error{background:#fff1e8;padding:12px}@media(max-width:700px){main{padding:16px}}</style></head><body><main><h1>改稿の作業用ベースを選ぶ</h1><p>目的: 比較した案のうち、次に改善する案を人が記録します。最終採用・公開ではありません。</p><p>現在: ${saved ? "作業用選択を保存済み。AI 生成は未実行。" : stale ? "保存状態が変わりました。この画面からは保存できません。" : "人の選択待ち。AI の推奨は人の判断ではありません。"}</p>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ""}${saved ? `<section><h2>次の操作</h2><p>選んだ案: ${escape(current.report.candidates.find(({ ref }) => same(ref, current.selection.ref))?.summary ?? current.selection.ref.artifactId)}</p>${prep ? `<a href="${escape(prep.url)}">修正課題を入力して次 Run の計画を保存する →</a>` : current.report.status === "revision-limit" ? "<p>改稿上限に達しています。選択は保存済みですが、次の改稿計画は準備しません。最終採用は別途人が判断します。</p>" : `<p>選択は保存済みです。改稿準備画面を起動できませんでした。ポートと Run を確認して再読み込みしてください。</p>`}</section>` : stale ? "<p>再読み込み、または対象 Run で画面を再起動してください。既存の選択を上書きしません。</p>" : `<section><h2>次に改善する案</h2><p>実画面の比較結果と、下の S11 評価を確認してから選んでください。変更は既存 CLI の supersession 契約で別途行います。</p><form method="post" action="/select"><input type="hidden" name="csrf" value="${csrf}">${options}<label>選ぶ理由（1〜2000文字）<textarea name="reason" required maxlength="2000">${escape(reason)}</textarea></label><p><label><input type="checkbox" name="confirm" value="yes" required> 私（${escape(humanActorId)}）は候補と S11 評価を確認し、改稿の作業用ベースとして記録します。最終採用ではありません。</label></p><button type="submit">作業用ベースを確定して改稿へ進む</button></form></section>`}${renderCandidateMatrix(current.report)}${current.report.candidates.map((candidate, index) => `<details id="candidate-${index}"><summary>${escape(candidate.summary)}</summary><p>${escape(candidate.mechanisms.join("; "))}</p><p>${escape(candidate.rationale.join("; ") || "UNVERIFIED")}</p></details>`).join("")}<details><summary>Run と操作範囲</summary><p>${escape(report.runId)} · 保存者: ${escape(humanActorId)}</p><p>別途明示起動したローカル操作画面です。通常モニターは読み取り専用。モデル実行・許可登録・最終採用は行いません。</p></details></main></body></html>`;
   };
   const ensurePrep = async (current) => {
-    if (isOwnSelection(current, journal) && !prep) {
+    if (
+      isOwnSelection(current, journal) &&
+      current.report.status === "selected" &&
+      !prep
+    ) {
       try {
         prep = await startPrep({ configPath, port: prepPort });
       } catch {
@@ -296,11 +310,11 @@ export async function startWorkingSelectionUi({
     inFlight = true;
     try {
       let current = await load(configPath);
-      journal = await readJournal(journalFile);
+      journal = await readOwnJournal();
       const stale =
         !isOwnSelection(current, journal) &&
         (current.selection !== null ||
-          current.report.status !== "awaiting-human-selection" ||
+          !canSelect(current) ||
           !same(binding(current), expected));
       if (request.method === "GET") {
         await ensurePrep(current);

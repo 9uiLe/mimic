@@ -22,6 +22,7 @@ import {
 import { runCli } from "../apps/cli/dist/cli.js";
 import { startDesign } from "./9ui225-start-design.mjs";
 import { renderReviewHtml } from "./9ui197-harness.mjs";
+import { renderUnselectedScreensHtml } from "./9ui197-real-screens.mjs";
 import {
   commitWorkingChoice,
   loadWorkingChoices,
@@ -414,6 +415,187 @@ test("Core refuses a stale exact candidate even if a service bypasses its read-t
     (await setup.runtime.registry.snapshot()).runs[setup.runId]
       .revisionSelection,
     undefined,
+  );
+});
+
+test("an already running UI cannot submit another human's pending confirmation", async (t) => {
+  const setup = await fixture(t);
+  const first = await uiFor(t, setup, {
+    commit: async () => {
+      throw new Error("interrupted");
+    },
+  });
+  let commits = 0;
+  const second = await uiFor(t, setup, {
+    humanActorId: "another_human",
+    commit: async (...args) => {
+      commits++;
+      return commitWorkingChoice(...args);
+    },
+  });
+  assert.equal((await post(first.url, first.csrf)).status, 409);
+  assert.equal((await post(second.url, second.csrf)).status, 409);
+  assert.equal(commits, 0);
+  assert.equal((await loadWorkingChoices(setup.config)).selection, null);
+  assert.doesNotMatch(await (await fetch(second.url)).text(), /<form/);
+});
+
+test("the final allowed child selection remains saved at the revision limit, without starting preparation", async (t) => {
+  const setup = await fixture(t);
+  const load = async () => {
+    const current = await loadWorkingChoices(setup.config);
+    current.report.revisionCount = current.selection ? 2 : 1;
+    current.report.revisionBudget = 2;
+    if (current.selection) current.report.status = "revision-limit";
+    return current;
+  };
+  let starts = 0;
+  const overrides = {
+    load,
+    startPrep: async () => {
+      starts++;
+      throw new Error("must not start");
+    },
+  };
+  const ui = await uiFor(t, setup, overrides);
+  assert.equal((await post(ui.url, ui.csrf)).status, 303);
+  const saved = await (await fetch(ui.url)).text();
+  assert.match(saved, /作業用選択を保存済み/);
+  assert.match(saved, /改稿上限に達しています/);
+  assert.equal((await post(ui.url, ui.csrf)).status, 303);
+  assert.match(
+    (await uiFor(t, setup, overrides)).html,
+    /改稿上限に達しています/,
+  );
+  assert.equal(starts, 0);
+  const empty = await fixture(t);
+  await assert.rejects(
+    () =>
+      startWorkingSelectionUi({
+        configPath: empty.config,
+        humanActorId,
+        load: async () => {
+          const c = await loadWorkingChoices(empty.config);
+          c.report.revisionBudget = 0;
+          return c;
+        },
+      }),
+    /unselected Run is required/,
+  );
+});
+
+test("the monitor serves the existing unselected renderer with exact provenance and no writes", async (t) => {
+  const setup = await fixture(t);
+  const report = (await loadWorkingChoices(setup.config)).report;
+  const mechanisms = [
+    "候補を列、共通判断項目を行にして全体を比べる",
+    "二つの比較枠で候補の違いを深く読む",
+    "項目単位で確認し、最後に全体へ戻る",
+  ];
+  report.candidates = mechanisms.map((mechanism, index) => ({
+    ...report.candidates[0],
+    ref: {
+      artifactId: `art_layout_${index}`,
+      revision: 1,
+      lockDigest: `sha256:${String(index + 1).repeat(64)}`,
+    },
+    summary: `案${["A", "B", "C"][index]} ${mechanism}`,
+    mechanisms: [mechanism],
+    evaluation: ["比較のしやすさ", "次の操作"].map((criterion) => ({
+      criterion,
+      reason: "テスト用、実画面は未検証",
+      state: "UNVERIFIED",
+    })),
+  }));
+  const brief = {
+    ...input.brief,
+    brandCharacter: "ブランドの具体的特徴と配色は未確定。確認まで創作しない",
+    content: [
+      { policy: "fixed-fact", text: "改訂の初期予算は最大2回" },
+      { policy: "fixed-copy", text: "候補を比較" },
+      { policy: "confirm", text: "どの案の違いがブランドに合うか" },
+    ],
+    references: [],
+    audience: "Mimic で画面設計を進める利用者",
+    purpose: "目的を入力して実デザイン案を比較し、改善する案を選べるようにする",
+    primaryAction: "候補を比較し、改善に使う案を明示的に選ぶ",
+    requiredInformation: [
+      "候補ごとの主操作と構造上の違い",
+      "向く条件、利点、失うもの",
+      "未検証事項と次の操作",
+    ],
+  };
+  const screens = renderUnselectedScreensHtml(report, brief);
+  const screenFile = path.join(setup.workspace, "candidate-screens.html");
+  const reviewFile = path.join(setup.workspace, "review.html");
+  await writeFile(
+    reviewFile,
+    renderReviewHtml(report, {
+      candidateScreensHref: `candidate-screens-${setup.runId}.html`,
+    }),
+  );
+  const { startMonitor } = await import("../apps/cli/dist/monitor.js");
+  const { createHash } = await import("node:crypto");
+  const before = await readFile(
+    path.join(setup.workspace, ".mimic/workspace.json"),
+    "utf8",
+  );
+  for (const [html, expected] of [
+    [screens, 200],
+    [
+      screens.replace(
+        `data-run-id="${setup.runId}"`,
+        'data-run-id="run_other"',
+      ),
+      404,
+    ],
+    [
+      screens.replace(
+        report.candidates[0].ref.lockDigest,
+        `sha256:${"9".repeat(64)}`,
+      ),
+      404,
+    ],
+  ]) {
+    await writeFile(screenFile, html);
+    const monitor = await startMonitor({
+      root: setup.workspace,
+      port: 0,
+      reviewCurrent: reviewFile,
+      realScreens: screenFile,
+      realScreensDigest: `sha256:${createHash("sha256").update(html).digest("hex")}`,
+    });
+    t.after(() => monitor.close());
+    const review = await (
+      await fetch(`${monitor.url}/trial-review/current`)
+    ).text();
+    assert.doesNotMatch(review, /href="candidate-screens-/);
+    if (expected === 200) {
+      assert.match(review, /3案とも人の作業用選択前/);
+      assert.match(review, /href="\/design-review\/real-screens"/);
+      assert.doesNotMatch(review, /Aは人が選んだ改訂用/);
+    }
+    const response = await fetch(`${monitor.url}/design-review/real-screens`);
+    assert.equal(response.status, expected);
+    if (expected === 200) {
+      assert.equal(await response.text(), screens);
+      assert.match(
+        response.headers.get("content-security-policy"),
+        /sandbox allow-scripts/,
+      );
+    }
+    assert.equal(
+      (
+        await fetch(`${monitor.url}/design-review/real-screens`, {
+          method: "POST",
+        })
+      ).status,
+      405,
+    );
+  }
+  assert.equal(
+    await readFile(path.join(setup.workspace, ".mimic/workspace.json"), "utf8"),
+    before,
   );
 });
 
