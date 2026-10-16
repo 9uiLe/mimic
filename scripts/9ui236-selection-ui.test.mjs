@@ -12,7 +12,7 @@ import {
 import path from "node:path";
 import os from "node:os";
 import { URLSearchParams } from "node:url";
-import { request as httpRequest } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import {
   artifactDigest,
   FileWorkspaceStorage,
@@ -185,12 +185,22 @@ test("explicit human choice uses real Core authority, survives reload/restart, a
     ),
   );
   assert.equal(journal.request.id, after.selection.id);
+  const reservation = createServer();
+  await new Promise((resolve) => reservation.listen(0, "127.0.0.1", resolve));
+  const restartPort = reservation.address().port;
+  await new Promise((resolve) => reservation.close(resolve));
   let restartedPreparations = 0;
   const restarted = await startWorkingSelectionUi({
     configPath: setup.config,
     humanActorId,
+    port: restartPort,
     startPrep: async (options) => {
       restartedPreparations++;
+      if (restartedPreparations === 1)
+        await assert.rejects(
+          fetch(`http://127.0.0.1:${restartPort}/run/${setup.runId}`),
+          (error) => error.cause?.code === "ECONNREFUSED",
+        );
       return startRevisionPrepUi(options);
     },
   });
@@ -201,6 +211,26 @@ test("explicit human choice uses real Core authority, survives reload/restart, a
     /作業用選択を保存済み/,
   );
   assert.equal(restartedPreparations, 1);
+  let closedPreparations = 0;
+  await assert.rejects(
+    startWorkingSelectionUi({
+      configPath: setup.config,
+      humanActorId,
+      port: ui.server.address().port,
+      startPrep: async (options) => {
+        const service = await startRevisionPrepUi(options);
+        return {
+          ...service,
+          close: async () => {
+            closedPreparations++;
+            await service.close();
+          },
+        };
+      },
+    }),
+    { code: "EADDRINUSE" },
+  );
+  assert.equal(closedPreparations, 1);
   assert.equal(
     (await setup.runtime.registry.snapshot()).events.filter(
       (e) => e.action === "select-revision-base",

@@ -414,12 +414,17 @@ export async function startWorkingSelectionUi({
       inFlight = false;
     }
   });
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, "127.0.0.1", resolve);
-  });
-  origin = `http://127.0.0.1:${server.address().port}`;
   await ensurePrep(initial);
+  try {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, "127.0.0.1", resolve);
+    });
+  } catch (error) {
+    await prep?.close();
+    throw error;
+  }
+  origin = `http://127.0.0.1:${server.address().port}`;
   return {
     server,
     url: `${origin}${route}`,
