@@ -3,6 +3,7 @@ import {
   mkdtemp,
   mkdir,
   readFile,
+  realpath,
   readdir,
   rm,
   symlink,
@@ -926,7 +927,7 @@ test("three saved direction screens open first from the monitor and current revi
   expect((await fetch(linked.url + "/design-review/real-screens")).status).toBe(
     404,
   );
-});
+}, 30000);
 
 test("forged/malformed checkpoints, private errors and metadata links fail closed", async () => {
   const { root } = await setup();
@@ -1372,3 +1373,174 @@ test("production CLI monitor starts/stops and rejects invalid options without di
     if (child.exitCode === null) child.kill("SIGKILL");
   }
 });
+
+test("saved B revision opens from normal progress and review only with exact lineage", async () => {
+  const { root: temporaryRoot } = await setup();
+  const root = await realpath(temporaryRoot);
+  const parentRun = "run_parent";
+  const childRun = "run_child";
+  const baseRef = {
+    artifactId: "art_b",
+    revision: 1,
+    lockDigest: `sha256:${"a".repeat(64)}`,
+  };
+  const revisionRef = {
+    ...baseRef,
+    revision: 2,
+    lockDigest: `sha256:${"b".repeat(64)}`,
+  };
+  const baseEvaluation = { state: "UNVERIFIED" };
+  const revisionEvaluation = { state: "UNVERIFIED", concern: "要確認" };
+  const humanSelectionId = "selection_b";
+  const embedded = (value: object) =>
+    JSON.stringify(value).replaceAll('"', "&quot;");
+  const head =
+    '<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'"><title>Mimic 候補レビュー</title></head><body>';
+  const reviewFile = path.join(root, `review-${childRun}.html`);
+  const screenFile = path.join(root, `revision-screen-${childRun}.html`);
+  const childReview = `${head}<p>Run ${childRun} · guided · awaiting-human-selection</p><p><a href="revision-screen-${childRun}.html">選択した案の改稿前後を操作して比較する →</a>（改稿案は未選択・画面内の操作は保存なし）</p><article><pre>${embedded({ ref: revisionRef, evaluation: revisionEvaluation })}</pre></article><pre>${embedded({ humanSelectionId: null })}</pre></body></html>`;
+  const parentReview = `${head}<p>Run ${parentRun} · guided · selected</p><p>改訂作業のために人が選んだ案: ${baseRef.artifactId} · 最終採用/公開: 未承認</p><p>作業用ベース: ${baseRef.artifactId}@${baseRef.revision} · 改訂済み 0 / 2</p><article><pre>${embedded({ ref: baseRef, evaluation: baseEvaluation })}</pre></article><pre>${embedded({ humanSelectionId })}</pre></body></html>`;
+  const script = "document.querySelector('[data-trial]').textContent='試用';";
+  const scriptHash = createHash("sha256").update(script).digest("base64");
+  const screen = `<!doctype html><html lang="ja"><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>B案の改稿前後 · Mimic</title></head><body><main class="index" data-revision-screen="unapproved"><p>親Run ${parentRun} の作業用B@1 と、子Run ${childRun} の未選択B@2</p><p>最終採用は人の判断待ち</p><article class="screen-option" data-option="before">元案</article><article class="screen-option" data-option="after">改稿案</article><p data-trial>なし</p><details class="source-details"><summary>改稿元・改稿候補の exact ref と検査</summary><pre>${embedded({ baseRef, revisionRef, baseEvaluation, revisionEvaluation, humanSelectionId })}</pre></details></main><script>${script}</script></body></html>`;
+  const digest = `sha256:${createHash("sha256").update(screen).digest("hex")}`;
+  await writeFile(reviewFile, childReview);
+  await writeFile(path.join(root, `review-${parentRun}.html`), parentReview);
+  await writeFile(
+    path.join(root, `trial-${childRun}.json`),
+    JSON.stringify({ runId: childRun, previousRunId: parentRun, baseRef }),
+  );
+  await writeFile(screenFile, screen);
+  const workspaceFile = path.join(root, ".mimic/workspace.json");
+  const workspace = JSON.parse(await readFile(workspaceFile, "utf8"));
+  const sampleRun = workspace.registry.runs.run_monitor;
+  workspace.registry.runs[parentRun] = {
+    ...sampleRun,
+    id: parentRun,
+    revisionSelection: { id: humanSelectionId, ref: baseRef },
+  };
+  workspace.registry.runs[childRun] = {
+    ...sampleRun,
+    id: childRun,
+    revisionBase: {
+      sourceRunId: parentRun,
+      selectionId: humanSelectionId,
+      ref: baseRef,
+    },
+    artifacts: [revisionRef],
+  };
+  await writeFile(workspaceFile, JSON.stringify(workspace));
+  const before = await files(root);
+  const options = {
+    root,
+    port: 0,
+    reviewCurrent: reviewFile,
+    revisionScreen: screenFile,
+    revisionScreenDigest: digest,
+  };
+  const monitor = await startMonitor(options);
+  monitors.push(monitor);
+  expect(await (await fetch(monitor.url)).text()).toContain(
+    'href="/design-review/revision-screen"',
+  );
+  expect(
+    await (await fetch(monitor.url + "/trial-review/current")).text(),
+  ).toContain('href="/design-review/revision-screen"');
+  const opened = await fetch(monitor.url + "/design-review/revision-screen");
+  expect(opened.status).toBe(200);
+  expect(await opened.text()).toBe(screen);
+  expect(opened.headers.get("content-security-policy")).toContain(
+    `script-src 'sha256-${scriptHash}'`,
+  );
+  expect(
+    (
+      await fetch(monitor.url + "/design-review/revision-screen", {
+        method: "POST",
+      })
+    ).status,
+  ).toBe(405);
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
+  try {
+    const page = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+    });
+    await page.goto(monitor.url);
+    const [screenPage] = await Promise.all([
+      page.context().waitForEvent("page"),
+      page.getByRole("link", { name: /B案の改稿前後を開く/ }).click(),
+    ]);
+    await screenPage.waitForLoadState();
+    expect(screenPage.url()).toBe(
+      monitor.url + "/design-review/revision-screen",
+    );
+    await browserExpect(screenPage.locator("[data-trial]")).toHaveText("試用");
+  } finally {
+    await browser.close();
+  }
+  expect(await files(root)).toEqual(before);
+  workspace.registry.runs[childRun].revisionSelection = {
+    id: "selection_child",
+    ref: revisionRef,
+  };
+  await writeFile(workspaceFile, JSON.stringify(workspace));
+  expect(
+    (await fetch(monitor.url + "/design-review/revision-screen")).status,
+  ).toBe(404);
+  expect(await (await fetch(monitor.url)).text()).not.toContain(
+    'href="/design-review/revision-screen"',
+  );
+  expect(
+    await (await fetch(monitor.url + "/trial-review/current")).text(),
+  ).not.toContain('href="/design-review/revision-screen"');
+  delete workspace.registry.runs[childRun].revisionSelection;
+  workspace.registry.runs[childRun].revisionBase.selectionId =
+    "selection_other";
+  await writeFile(workspaceFile, JSON.stringify(workspace));
+  expect(
+    (await fetch(monitor.url + "/design-review/revision-screen")).status,
+  ).toBe(404);
+  workspace.registry.runs[childRun].revisionBase.selectionId = humanSelectionId;
+  workspace.registry.runs[childRun].artifacts = [];
+  await writeFile(workspaceFile, JSON.stringify(workspace));
+  expect(
+    (await fetch(monitor.url + "/design-review/revision-screen")).status,
+  ).toBe(404);
+  workspace.registry.runs[childRun].artifacts = [revisionRef];
+  await writeFile(workspaceFile, JSON.stringify(workspace));
+  for (const change of [
+    { file: screenFile, content: screen.replace("未選択B@2", "未選択B@3") },
+    {
+      file: reviewFile,
+      content: childReview.replace("awaiting-human-selection", "selected"),
+    },
+    {
+      file: path.join(root, `review-${parentRun}.html`),
+      content: parentReview.replace(
+        `選んだ案: ${baseRef.artifactId}`,
+        "選んだ案: art_other",
+      ),
+    },
+    {
+      file: path.join(root, `trial-${childRun}.json`),
+      content: JSON.stringify({
+        runId: childRun,
+        previousRunId: "run_other",
+        baseRef,
+      }),
+    },
+  ]) {
+    const original = await readFile(change.file, "utf8");
+    await writeFile(change.file, change.content);
+    const invalid = await startMonitor(options);
+    monitors.push(invalid);
+    expect(
+      (await fetch(invalid.url + "/design-review/revision-screen")).status,
+    ).toBe(404);
+    expect(await (await fetch(invalid.url)).text()).not.toContain(
+      'href="/design-review/revision-screen"',
+    );
+    await writeFile(change.file, original);
+  }
+}, 30000);

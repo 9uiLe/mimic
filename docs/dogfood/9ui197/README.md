@@ -14,6 +14,8 @@
 
 保存済み B を作業用に選んだ後の一案改稿では、子 Run の S10/S11 が受理され、人の新しい選択がまだない時に `node scripts/9ui197-harness.mjs revision-screen <子Runのtrial-config.json>` を使える。親 B と子 B の exact lineage、各 Run の S11 評価、一覧＋詳細構造を検証して、改稿前後を開いて操作できる HTML を作る。親の A/C は比較文脈として出所を明示し、子 Run の改稿候補として扱わない。評価軸は Run 間で異なることがある。子の構造が一覧＋詳細を維持しない場合は画面化を止め、保存済み review を残す。画面は Codex が構造案を描画した試作であり、モデル生成の完成 UI や人による新案の採用ではない。
 
+子 Run が選択待ちに到達した通常の `9ui226-progress-design.mjs run` は、同じ検証で改稿前後の画面化を試し、成功時には `revisionScreenPath` を返す。失敗時は `revisionScreenUnavailable` を返して review のみを残す。`review` は既存の画面ファイルを保存済み Run から再描画した内容と照合できた場合だけ、そのファイルへのリンクを表示する。進捗モニターで公開する場合は、子 workspace の `review-<子Run>.html` を `--review-current`、`revision-screen-<子Run>.html` を `--revision-screen`、その SHA-256 を `--revision-screen-digest sha256:<64桁>` に指定する。モニターは親選択・子候補・S11・画面の一致を確認してから通常の進捗画面と review に読み取り専用の `GET /design-review/revision-screen` を表示する。さらに各表示時に Core の親選択が同じ exact ref で、子が未選択であることを再確認する。状態が変われば稼働中のモニターでもリンクと GET を無効にする。この表示は既存の localhost サービスの再起動や選択記録の変更を伴わない。
+
 1. 比較条件ごとに空の Mimic workspace を用意し、通常の `mimic init` を実行する。既存手順どおり `skills/` と `schemas/` を配置し、システム・タスク・参照の出典ファイルを `inputs/` に置く。Chrome/Chromium のみを画面検査に使う。
 2. 各 workspace に `trial-config.json` を保存する。二つの設定では `condition` と `runId`、`workspace` 以外の課題・事実・モデル・予算・証拠ファイルの内容を同じにする。`skills/` と `schemas/` の内容も同じであることをハッシュで確認する。guided 条件だけが brief の適用理由、構造案、批評指示を受ける。追加参照の処理と批評の費用は後で分けて測る。
 3. `node scripts/9ui197-harness.mjs prepare <workspace>/trial-config.json` で既存 S04–S11 plan template から不変の plan と manifest を書く。`mimic run --id <runId> --tasks tasks-<runId>.json` と公式サブスクリプションの認可済み session dispatcher で実行する。出力の手修正や保存 marker の編集は行わない。S07 は既存の `PROPOSE_ONLY` 経路を使う。

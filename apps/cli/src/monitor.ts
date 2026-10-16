@@ -489,6 +489,185 @@ async function loadRealScreens(
   };
 }
 
+async function loadRevisionScreen(
+  root: string,
+  selected: string | undefined,
+  expectedDigest: string | undefined,
+  reviewPath: string | undefined,
+  review: TrialReviewSnapshot | undefined,
+): Promise<
+  | (WorkingPreview & {
+      runId: string;
+      parentRunId: string;
+      baseRef: ReturnType<typeof ref>;
+      revisionRef: ReturnType<typeof ref>;
+      selectionId: string;
+    })
+  | undefined
+> {
+  if (!selected || !expectedDigest || !reviewPath || !review || review.stopped)
+    return undefined;
+  const file = path.resolve(selected);
+  const match = path
+    .basename(file)
+    .match(/^revision-screen-([A-Za-z][A-Za-z0-9_-]{0,79})\.html$/);
+  if (
+    !match ||
+    path.dirname(file) !== root ||
+    path.resolve(reviewPath) !== path.join(root, `review-${match[1]}.html`) ||
+    !/^sha256:[a-f0-9]{64}$/.test(expectedDigest)
+  )
+    throw new Error("Invalid revision screen scope");
+  const runId = match[1]!;
+  const html = await textFile(root, path.basename(file), 2_000_000);
+  if (
+    `sha256:${createHash("sha256").update(html).digest("hex")}` !==
+    expectedDigest
+  )
+    throw new Error("Revision screen digest mismatch");
+  const pair = html.match(
+    /親Run ([A-Za-z][A-Za-z0-9_-]{0,79}) の作業用B@([1-9]\d*) と、子Run ([A-Za-z][A-Za-z0-9_-]{0,79}) の未選択B@([1-9]\d*)/,
+  );
+  const source = html.match(
+    /<details class="source-details"><summary>改稿元・改稿候補の exact ref と検査<\/summary>(<pre>[\s\S]*?<\/pre>)/,
+  );
+  const provenance = source ? embeddedRecord(source[1]!) : undefined;
+  const baseRef = provenance ? ref(provenance.baseRef) : undefined;
+  const revisionRef = provenance ? ref(provenance.revisionRef) : undefined;
+  const current = review.html.match(
+    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · guided · awaiting-human-selection<\/p>/,
+  );
+  const childCards = [
+    ...review.html.matchAll(/<article>([\s\S]*?)<\/article>/g),
+  ];
+  const child =
+    childCards.length === 1 ? embeddedRecord(childCards[0]![1]!) : undefined;
+  const childDecision = [...review.html.matchAll(/<pre>([\s\S]*?)<\/pre>/g)].at(
+    -1,
+  );
+  const childSelection = childDecision
+    ? embeddedRecord(childDecision[0])
+    : undefined;
+  const parentRunId = pair?.[1];
+  const parentHtml = parentRunId
+    ? await textFile(root, `review-${parentRunId}.html`, 2_000_000)
+    : "";
+  const parentCards = [
+    ...parentHtml.matchAll(/<article>([\s\S]*?)<\/article>/g),
+  ];
+  const parentCandidate = parentCards
+    .map((card) => embeddedRecord(card[1]!))
+    .find((candidate) =>
+      baseRef
+        ? JSON.stringify(ref(candidate.ref)) === JSON.stringify(baseRef)
+        : false,
+    );
+  const parentDecision = [...parentHtml.matchAll(/<pre>([\s\S]*?)<\/pre>/g)].at(
+    -1,
+  );
+  const parentSelection = parentDecision
+    ? embeddedRecord(parentDecision[0])
+    : undefined;
+  const manifest = object(
+    JSON.parse(await textFile(root, `trial-${runId}.json`, 1_000_000)),
+  );
+  const script = html.match(/<script>([\s\S]*?)<\/script>/i);
+  const scriptHash = script
+    ? createHash("sha256").update(script[1]!).digest("base64")
+    : "";
+  if (
+    !html.startsWith('<!doctype html><html lang="ja">') ||
+    !html.includes("<title>B案の改稿前後 · Mimic</title>") ||
+    !html.includes('<main class="index" data-revision-screen="unapproved">') ||
+    !html.includes("最終採用は人の判断待ち") ||
+    !pair ||
+    pair[3] !== runId ||
+    !baseRef ||
+    !revisionRef ||
+    baseRef.revision !== Number(pair[2]) ||
+    revisionRef.revision !== Number(pair[4]) ||
+    baseRef.artifactId !== revisionRef.artifactId ||
+    revisionRef.revision !== baseRef.revision + 1 ||
+    !current ||
+    current[1] !== runId ||
+    !review.html.includes(`href="revision-screen-${runId}.html"`) ||
+    !child ||
+    JSON.stringify(ref(child.ref)) !== JSON.stringify(revisionRef) ||
+    JSON.stringify(child.evaluation) !==
+      JSON.stringify(provenance?.revisionEvaluation) ||
+    childSelection?.humanSelectionId !== null ||
+    !parentHtml.includes(`<p>Run ${parentRunId} · guided · selected</p>`) ||
+    !parentHtml.includes(
+      `改訂作業のために人が選んだ案: ${baseRef.artifactId} ·`,
+    ) ||
+    !parentHtml.includes(
+      `作業用ベース: ${baseRef.artifactId}@${baseRef.revision} ·`,
+    ) ||
+    !parentCandidate ||
+    JSON.stringify(parentCandidate.evaluation) !==
+      JSON.stringify(provenance?.baseEvaluation) ||
+    typeof provenance?.humanSelectionId !== "string" ||
+    parentSelection?.humanSelectionId !== provenance?.humanSelectionId ||
+    manifest.runId !== runId ||
+    manifest.previousRunId !== parentRunId ||
+    JSON.stringify(ref(manifest.baseRef)) !== JSON.stringify(baseRef) ||
+    !["before", "after"].every((option) =>
+      html.includes(`<article class="screen-option" data-option="${option}">`),
+    ) ||
+    (html.match(
+      /<article class="screen-option" data-option="(?:before|after)">/g,
+    )?.length ?? 0) !== 2 ||
+    (html.match(/<script\b/gi)?.length ?? 0) !== 1 ||
+    !script ||
+    !html.includes(
+      `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">`,
+    ) ||
+    /<(?:iframe|object|embed|form|base)\b/i.test(html) ||
+    /\b(?:href|src)\s*=/i.test(html)
+  )
+    throw new Error("Invalid revision screen");
+  return {
+    html,
+    runId,
+    parentRunId: parentRunId!,
+    baseRef,
+    revisionRef,
+    selectionId: String(provenance!.humanSelectionId),
+    csp: `default-src 'none'; script-src 'sha256-${scriptHash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; sandbox allow-scripts; frame-ancestors 'none'`,
+  };
+}
+
+async function revisionScreenStillPending(
+  root: string,
+  screen: NonNullable<Awaited<ReturnType<typeof loadRevisionScreen>>>,
+) {
+  const registry = object(
+    object(
+      JSON.parse(
+        await textFile(root, ".mimic/workspace.json", 32 * 1024 * 1024),
+      ),
+    ).registry,
+  );
+  const runs = object(registry.runs);
+  const child = object(runs[screen.runId]);
+  const parent = object(runs[screen.parentRunId]);
+  const selection = object(parent.revisionSelection);
+  const revisionBase = object(child.revisionBase);
+  return (
+    child.revisionSelection === undefined &&
+    JSON.stringify(ref(selection.ref)) === JSON.stringify(screen.baseRef) &&
+    selection.id === screen.selectionId &&
+    revisionBase.sourceRunId === screen.parentRunId &&
+    revisionBase.selectionId === screen.selectionId &&
+    JSON.stringify(ref(revisionBase.ref)) === JSON.stringify(screen.baseRef) &&
+    Array.isArray(child.artifacts) &&
+    child.artifacts.some(
+      (item) =>
+        JSON.stringify(ref(item)) === JSON.stringify(screen.revisionRef),
+    )
+  );
+}
+
 /** A fresh bounded snapshot each poll. Recorded facts are not authority proof. */
 export async function readMonitorState(root: string) {
   const raw = await textFile(root, ".mimic/workspace.json", 32 * 1024 * 1024);
@@ -679,6 +858,8 @@ export async function startMonitor(options: {
   workingPreviewDigest?: string;
   realScreens?: string;
   realScreensDigest?: string;
+  revisionScreen?: string;
+  revisionScreenDigest?: string;
   revisionPrepPort?: number;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
@@ -717,10 +898,23 @@ export async function startMonitor(options: {
     options.realScreensDigest,
     reviewCurrent,
   ).catch(() => undefined);
+  const revisionScreen = await loadRevisionScreen(
+    root,
+    options.revisionScreen,
+    options.revisionScreenDigest,
+    options.reviewCurrent,
+    reviewCurrent,
+  ).catch(() => undefined);
   if (reviewCurrent) {
     reviewCurrent.html = reviewCurrent.html.replace(
       /<p><a href="working-preview-[A-Za-z0-9_-]+\.html">人が選んだ案の作業用操作プレビューを開く（未承認）<\/a><\/p>/g,
       "",
+    );
+    reviewCurrent.html = reviewCurrent.html.replace(
+      /<p><a href="revision-screen-[A-Za-z0-9_-]+\.html">選択した案の改稿前後を操作して比較する →<\/a>（改稿案は未選択・画面内の操作は保存なし）<\/p>/g,
+      revisionScreen
+        ? '<p><a href="/design-review/revision-screen" target="_blank" rel="noopener noreferrer">選択した案の改稿前後を操作して比較する →</a>（改稿案は未選択・画面内の操作は保存なし）</p>'
+        : "",
     );
   }
   if (reviewCurrent && options.revisionPrepPort) {
@@ -790,7 +984,9 @@ export async function startMonitor(options: {
     };
     const opaquePreviewNavigation =
       ((request.url === "/trial-review/working-preview" && !!workingPreview) ||
-        (request.url === "/design-review/real-screens" && !!realScreens)) &&
+        (request.url === "/design-review/real-screens" && !!realScreens) ||
+        (request.url === "/design-review/revision-screen" &&
+          !!revisionScreen)) &&
       request.headers.origin === undefined &&
       request.headers["sec-fetch-site"] === "cross-site" &&
       request.headers["sec-fetch-mode"] === "navigate" &&
@@ -811,6 +1007,11 @@ export async function startMonitor(options: {
       return reject(403, "forbidden");
     if (request.method !== "GET") return reject(405, "method-not-allowed");
     try {
+      const revisionPending = revisionScreen
+        ? await revisionScreenStillPending(root, revisionScreen).catch(
+            () => false,
+          )
+        : false;
       if (request.url === "/api/state") {
         if (
           (request.headers["sec-fetch-dest"] !== undefined &&
@@ -844,7 +1045,11 @@ export async function startMonitor(options: {
       ) {
         const page =
           request.url === "/"
-            ? monitorPage(reviews, !!realScreens)
+            ? monitorPage(
+                reviews,
+                !!realScreens,
+                revisionPending ? revisionScreen?.runId : undefined,
+              )
             : request.url === "/design-review"
               ? designReviewPage(reviews)
               : previewPage(preview!);
@@ -865,7 +1070,12 @@ export async function startMonitor(options: {
         });
         response.end(
           request.url === "/trial-review/current"
-            ? reviewCurrent!.html
+            ? revisionPending
+              ? reviewCurrent!.html
+              : reviewCurrent!.html.replace(
+                  /<p><a href="\/design-review\/revision-screen"[^>]*>選択した案の改稿前後を操作して比較する →<\/a>（改稿案は未選択・画面内の操作は保存なし）<\/p>/g,
+                  "",
+                )
             : request.url === "/trial-review/stopped"
               ? reviewStopped!.html
               : reviewReplay!.html,
@@ -885,6 +1095,16 @@ export async function startMonitor(options: {
           "Content-Security-Policy": realScreens.csp,
         });
         response.end(realScreens.html);
+      } else if (
+        request.url === "/design-review/revision-screen" &&
+        revisionScreen &&
+        revisionPending
+      ) {
+        response.writeHead(200, {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy": revisionScreen.csp,
+        });
+        response.end(revisionScreen.html);
       } else if (
         /^\/trial-review\/(current|stopped|replay)\/capture\/[0-7]$/.test(
           request.url ?? "",
@@ -965,6 +1185,8 @@ export async function runMonitorCli(
           "--working-preview-digest",
           "--real-screens",
           "--real-screens-digest",
+          "--revision-screen",
+          "--revision-screen-digest",
           "--revision-prep-port",
         ].includes(flag) ||
         !value ||
@@ -991,6 +1213,8 @@ export async function runMonitorCli(
       workingPreviewDigest: values["--working-preview-digest"],
       realScreens: values["--real-screens"],
       realScreensDigest: values["--real-screens-digest"],
+      revisionScreen: values["--revision-screen"],
+      revisionScreenDigest: values["--revision-screen-digest"],
       revisionPrepPort: values["--revision-prep-port"]
         ? Number(values["--revision-prep-port"])
         : undefined,
