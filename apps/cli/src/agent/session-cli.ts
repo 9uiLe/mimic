@@ -141,6 +141,28 @@ function deriveOutputDigests(value: unknown, task: TaskBinding): unknown {
   }
   return envelope;
 }
+
+/** S10 emits candidates, never a human selection. Preserve the raw model
+ * string separately; this derives only the host-owned workflow state. */
+export function prepareCodexWorkEnvelope(
+  output: string,
+  task: TaskBinding,
+  deriveCandidateStatus = true,
+): unknown {
+  const envelope = parseCodexWorkEnvelope(output);
+  if (deriveCandidateStatus && task.taskId === "s10") {
+    const artifacts = mapping(envelope).artifacts;
+    if (!Array.isArray(artifacts)) throw Error("Invalid S10 artifacts");
+    for (const value of artifacts) {
+      const artifact = mapping(value);
+      if (mapping(artifact.meta).type !== "design-direction") continue;
+      const content = mapping(artifact.content);
+      if (content.selectionStatus === undefined)
+        content.selectionStatus = "candidate";
+    }
+  }
+  return deriveOutputDigests(envelope, task);
+}
 async function contained(root: string, relative: string): Promise<string> {
   if (
     path.isAbsolute(relative) ||
@@ -251,7 +273,7 @@ export function createStaticSessionPorts(
       await contained(root, folder);
       let value: unknown;
       try {
-        value = deriveOutputDigests(parseCodexWorkEnvelope(output), task);
+        value = prepareCodexWorkEnvelope(output, task);
       } catch {
         // Preserve rejected model data for local diagnosis without granting it
         // a static submission reservation or artifact authority.

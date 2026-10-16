@@ -302,6 +302,165 @@ async function writeJournal(file, value) {
   await rename(temporary, file);
 }
 
+/** Re-submit one rejected S10 raw output after deriving only the machine-owned
+ * candidate state. The original raw, prepared work, and rejected checkpoint
+ * remain unchanged; Core still performs the authoritative static validation. */
+export async function reconcileS10Candidate(
+  configPath,
+  sessionId,
+  operations = {},
+) {
+  const { config, workspace, packages } = await preparedDesign(configPath);
+  assert(
+    /^session_progress_s10_[A-Za-z0-9]+$/.test(sessionId ?? ""),
+    "Invalid S10 session ID",
+  );
+  const lock = path.join(workspace, ".mimic", `progress-${config.runId}.lock`);
+  const pending = `${lock}.${randomUUID()}.tmp`;
+  await writeFile(
+    pending,
+    json({
+      runId: config.runId,
+      pid: process.pid,
+      host: os.hostname(),
+      startedAt: new Date().toISOString(),
+    }),
+    { flag: "wx", mode: 0o600 },
+  );
+  try {
+    await link(pending, lock);
+  } catch (error) {
+    await unlink(pending);
+    if (error.code === "EEXIST")
+      throw Error("Progress is already running or needs lock reconciliation");
+    throw error;
+  }
+  await unlink(pending);
+  try {
+    const journalFile = path.join(
+      workspace,
+      `.mimic/progress-${config.runId}.json`,
+    );
+    const journal = JSON.parse(await regularFile(journalFile));
+    assert(
+      journal.version === 1 &&
+        journal.runId === config.runId &&
+        journal.inFlight?.taskId === "s10" &&
+        journal.inFlight.sessionId === sessionId,
+      "Reconciliation differs from the stopped Run",
+    );
+    const saved = await (operations.checkpoint ?? checkpoint)(
+      workspace,
+      sessionId,
+    );
+    const task = saved?.tasks?.s10;
+    assert(
+      saved?.stop === "candidate-rejected" &&
+        saved?.generationCount === 1 &&
+        task?.phase === "rejected" &&
+        task.rejectionReason === "static-validation" &&
+        task.staticFailure?.reason === "candidate-validation" &&
+        task.work?.path?.startsWith(`.mimic/agent-work/${sessionId}-s10-`) &&
+        /^[a-f0-9]{64}$/.test(task.work.digest ?? ""),
+      "Only an exact rejected S10 candidate can be reconciled",
+    );
+    const { sessionDigest } = await import("../apps/cli/dist/agent/session.js");
+    const { prepareCodexWorkEnvelope } =
+      await import("../apps/cli/dist/agent/session-cli.js");
+    const original = JSON.parse(
+      await regularFile(path.join(workspace, task.work.path)),
+    );
+    assert(
+      sessionDigest(original) === task.work.digest,
+      "Rejected work changed",
+    );
+    const folder = path.join(workspace, ".mimic/agent-work");
+    const candidates = [];
+    for (const name of await readdir(folder)) {
+      if (!name.startsWith(`${sessionId}-s10-`) || !name.endsWith(".raw.json"))
+        continue;
+      const raw = JSON.parse(await regularFile(path.join(folder, name)));
+      if (raw.normalizedDigest === task.work.digest)
+        candidates.push({ name, raw });
+    }
+    assert(candidates.length === 1, "Original model output is ambiguous");
+    const { name: rawFileName, raw } = candidates[0];
+    assert(
+      typeof raw.output === "string" &&
+        raw.outputDigest === sessionDigest(raw.output),
+      "Original model output changed",
+    );
+    const legacy = prepareCodexWorkEnvelope(raw.output, task.binding, false);
+    assert(
+      sessionDigest(legacy) === task.work.digest,
+      "Rejected work does not match the original model output",
+    );
+    const derived = prepareCodexWorkEnvelope(raw.output, task.binding);
+    assert(
+      Array.isArray(derived.artifacts) &&
+        derived.artifacts.length > 0 &&
+        derived.artifacts.every(
+          (artifact) =>
+            artifact.meta?.type === "design-direction" &&
+            artifact.content?.selectionStatus === "candidate",
+        ),
+      "Candidate state cannot be derived for this output",
+    );
+    const digest = sessionDigest(derived);
+    assert(digest !== task.work.digest, "No missing candidate state to derive");
+    const relative = `.mimic/agent-work/${sessionId}-s10-${digest}.reconciled.json`;
+    await writeSame(path.join(workspace, relative), derived);
+    await (
+      operations.submit ??
+      ((relativeWork) =>
+        command(path.join(repo, "apps/cli/dist/main.js"), [
+          "submit",
+          config.runId,
+          "--task",
+          "s10",
+          "--package",
+          packages.s10,
+          "--work",
+          relativeWork,
+          "--root",
+          workspace,
+          "--json",
+        ]))
+    )(relative);
+    const next = await (operations.next ?? cliNext)(workspace, config.runId);
+    assert(
+      next.actions?.some(
+        (action) => action.taskId === "s10" && action.action === "IGNORE",
+      ),
+      "Core did not accept the reconciled candidate",
+    );
+    await writeSame(
+      path.join(workspace, `.mimic/reconciled-${sessionId}.json`),
+      {
+        version: 1,
+        runId: config.runId,
+        sessionId,
+        rawFileName,
+        rawOutputDigest: raw.outputDigest,
+        originalWorkDigest: task.work.digest,
+        derivedWorkDigest: digest,
+        derivation: "missing-s10-selection-status-candidate",
+      },
+    );
+    await writeJournal(journalFile, { ...journal, inFlight: null });
+    return {
+      runId: config.runId,
+      taskId: "s10",
+      state: "reconciled-from-saved-output",
+      modelCalls: 0,
+      originalWorkDigest: task.work.digest,
+      derivedWorkDigest: digest,
+    };
+  } finally {
+    await unlink(lock);
+  }
+}
+
 /** A provided grant is consumed only by the existing trusted host command. */
 export async function progressDesign(
   configPath,
@@ -547,6 +706,13 @@ if (
     if (action === "scope" && configPath && process.argv.length === 4)
       console.log(json(await prepareProgress(configPath)));
     else if (
+      action === "reconcile-s10" &&
+      configPath &&
+      grantId &&
+      process.argv.length === 5
+    )
+      console.log(json(await reconcileS10Candidate(configPath, grantId)));
+    else if (
       action === "recover-lock" &&
       configPath &&
       process.argv.length === 4
@@ -562,7 +728,7 @@ if (
       console.log(json(await progressDesign(configPath, grantId, Number(cap))));
     else
       throw new Error(
-        "Usage: node scripts/9ui226-progress-design.mjs scope <trial-config.json> | run <trial-config.json> <existing-grant-id> <max-calls> | recover-lock <trial-config.json>",
+        "Usage: node scripts/9ui226-progress-design.mjs scope <trial-config.json> | run <trial-config.json> <existing-grant-id> <max-calls> | reconcile-s10 <trial-config.json> <stopped-session-id> | recover-lock <trial-config.json>",
       );
   } catch (error) {
     console.error(error.message);
