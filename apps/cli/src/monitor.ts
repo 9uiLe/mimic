@@ -861,6 +861,7 @@ export async function startMonitor(options: {
   revisionScreen?: string;
   revisionScreenDigest?: string;
   revisionPrepPort?: number;
+  workingSelectionPort?: number;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
     !Number.isInteger(options.port) ||
@@ -875,6 +876,13 @@ export async function startMonitor(options: {
       options.revisionPrepPort > 65535)
   )
     throw new Error("Invalid revision preparation port");
+  if (
+    options.workingSelectionPort !== undefined &&
+    (!Number.isInteger(options.workingSelectionPort) ||
+      options.workingSelectionPort < 1 ||
+      options.workingSelectionPort > 65535)
+  )
+    throw new Error("Invalid working selection port");
   const root = await realpath(path.resolve(options.root));
   if (!(await lstat(root)).isDirectory()) throw new Error("Invalid workspace");
   let preview: Preview | undefined;
@@ -925,6 +933,16 @@ export async function startMonitor(options: {
       reviewCurrent.html = reviewCurrent.html.replace(
         "<section><h2>次の操作</h2>",
         `<section><h2>次の操作</h2><p><a href="http://127.0.0.1:${options.revisionPrepPort}/run/${selected[1]}" target="_blank" rel="noopener noreferrer">修正課題を入力して次 Run の計画を保存する →</a>（別途明示起動した改稿準備画面。このリンクでは生成を開始しません）</p>`,
+      );
+  }
+  if (reviewCurrent && options.workingSelectionPort) {
+    const awaiting = reviewCurrent.html.match(
+      /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · awaiting-human-selection<\/p>/,
+    );
+    if (awaiting)
+      reviewCurrent.html = reviewCurrent.html.replace(
+        "<section><h2>次の操作</h2>",
+        `<section><h2>次の操作</h2><p><a href="http://127.0.0.1:${options.workingSelectionPort}/run/${awaiting[1]}" target="_blank" rel="noopener noreferrer">改稿の作業用ベースを選ぶ →</a>（別途明示起動した選択画面。最終採用や生成は行いません）</p>`,
       );
   }
   if (workingPreview && reviewCurrent) {
@@ -1188,6 +1206,7 @@ export async function runMonitorCli(
           "--revision-screen",
           "--revision-screen-digest",
           "--revision-prep-port",
+          "--working-selection-port",
         ].includes(flag) ||
         !value ||
         value.startsWith("--") ||
@@ -1217,6 +1236,9 @@ export async function runMonitorCli(
       revisionScreenDigest: values["--revision-screen-digest"],
       revisionPrepPort: values["--revision-prep-port"]
         ? Number(values["--revision-prep-port"])
+        : undefined,
+      workingSelectionPort: values["--working-selection-port"]
+        ? Number(values["--working-selection-port"])
         : undefined,
     });
     io.out(monitor.url);

@@ -1,5 +1,45 @@
 # Local workspace monitor
 
+## Explicit working-base selection
+
+For a saved `awaiting-human-selection` Run, the owner may explicitly start a
+separate loopback operation surface after reviewing its operable candidates:
+
+```sh
+node scripts/9ui236-selection-ui.mjs /absolute/workspace/trial-config.json human_actor_id 4320 4318
+```
+
+The actor ID must identify the human who will actually use the form; it is not an
+AI-generated adoption decision. This uses the existing cooperative local-host
+trust model, not remote user authentication. Do not expose or proxy the service
+to untrusted users. The form requires an unselected candidate/S11 exact-ref pair,
+a reason and explicit confirmation. It reuses `LocalRevisionSelectionAuthority`
+and Core `selectRevisionBase`; it does not merge a proposal, grant model use, run
+a model or make a final adoption decision. Selection changes are deliberately
+outside this first-selection UI: use the existing CLI confirmation and
+`supersedesSelectionId` contract rather than overwriting a saved choice.
+
+The first confirmed submission is atomically journaled under
+`.mimic/working-selection-ui/<runId>.json`. Repeated identical submission and
+restart retry that same request. A changed reason/candidate, another human,
+external selection or stale exact refs are rejected; the process never invents a
+supersession. Interrupted confirmation is not recorded as a successful selection.
+Reload to review and explicitly retry. Do not delete a pending journal to bypass
+a conflict. Once selected, the process starts the existing 9UI-220 revision
+preparation UI on the fourth argument's port and links to it. If that port is
+unavailable, the saved selection remains intact and reload retries starting the
+preparation UI. Either port may be `0` for an available port. Ctrl-C stops both
+services. A previously selected Run without this UI's matching journal must use
+the standalone 9UI-220 command instead.
+
+Add `--working-selection-port 4320` when starting the usual monitor alongside
+`--review-current <review.html>`. Only an awaiting current review gets the link
+to the explicitly started operation surface. The monitor and saved comparisons
+remain GET-only/read-only; their static snapshot does not update after selection.
+The operation surface re-reads the saved Run before displaying or saving it.
+
+## Read-only monitor
+
 After building, run the production CLI against an existing workspace:
 
 ```sh
