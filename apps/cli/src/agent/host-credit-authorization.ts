@@ -95,7 +95,8 @@ const validEvidenceText = (value: string) =>
   typeof value === "string" && value.trim().length > 0 && value.length <= 4096;
 const explicitCreditApproval = (value: string) =>
   value.trim() === "OK" ||
-  value.trim() === "OK, GPTのクレジットは自由に使って構いません。";
+  value.trim() === "OK, GPTのクレジットは自由に使って構いません。" ||
+  value.trim() === "それならどれだけ使ってもいいよ";
 const validModel = (value: string) =>
   /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value);
 const digest = (value: string) =>
