@@ -19,7 +19,7 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { designInputs } from "./9ui225-start-design.mjs";
-import { makePlan } from "./9ui197-harness.mjs";
+import { approvedHistory, makePlan } from "./9ui197-harness.mjs";
 
 const execFile = promisify(execFileCallback);
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -61,10 +61,7 @@ async function treeHash(folder) {
 export async function preparedDesign(configPath) {
   const file = await realpath(configPath);
   const config = JSON.parse(await regularFile(file));
-  assert(
-    config?.condition === "guided",
-    "Only an initial guided Run is supported",
-  );
+  assert(config?.condition === "guided", "Only a guided Run is supported");
   assert(/^run_[A-Za-z0-9_-]+$/.test(config.runId ?? ""), "Invalid Run ID");
   const workspace = await realpath(config.workspace);
   assert(
@@ -72,16 +69,18 @@ export async function preparedDesign(configPath) {
       file.startsWith(`${workspace}${path.sep}`),
     "Config must be in its canonical workspace",
   );
-  const source = JSON.parse(
-    await regularFile(path.join(workspace, "intake-source.json")),
-  );
-  const expected = designInputs(source, workspace);
-  assert(expected.runId === config.runId, "Run differs from intake");
-  for (const [name, contents] of Object.entries(expected.files))
-    assert(
-      (await regularFile(path.join(workspace, name))) === contents,
-      `Intake changed: ${name}`,
+  if (!config.previousRunId) {
+    const source = JSON.parse(
+      await regularFile(path.join(workspace, "intake-source.json")),
     );
+    const expected = designInputs(source, workspace);
+    assert(expected.runId === config.runId, "Run differs from intake");
+    for (const [name, contents] of Object.entries(expected.files))
+      assert(
+        (await regularFile(path.join(workspace, name))) === contents,
+        `Intake changed: ${name}`,
+      );
+  }
   const planText = await regularFile(
     path.join(workspace, `tasks-${config.runId}.json`),
   );
@@ -103,9 +102,17 @@ export async function preparedDesign(configPath) {
     manifest.templateDigest === sha(templateText),
     "Plan template changed",
   );
+  const history = await approvedHistory(workspace, manifest);
+  const planConfig = config.previousRunId
+    ? {
+        ...config,
+        selectedBase: history.baseContent,
+        selectedSelectionId: history.baseSelectionId,
+      }
+    : config;
   assert(
-    planText === json(makePlan(JSON.parse(templateText), config)),
-    "Plan differs from the brief and template",
+    planText === json(makePlan(JSON.parse(templateText), planConfig)),
+    "Plan differs from the brief and template or selected base",
   );
   for (const [key, value] of Object.entries(config))
     assert(
@@ -543,6 +550,34 @@ export async function progressDesign(
             action.taskId === prior.taskId && action.action === "IGNORE",
         );
         if (
+          operations.allowRejectedRetry === true &&
+          saved?.sessionId === prior.sessionId &&
+          saved.status === "stopped" &&
+          saved.stop === "candidate-rejected" &&
+          saved.executionPolicy === "authorized-existing-credit-risk-once" &&
+          saved.tasks?.[prior.taskId]?.phase === "rejected" &&
+          saved.tasks[prior.taskId].staticFailure?.candidate === true &&
+          next.actions.some(
+            (action) =>
+              action.taskId === prior.taskId &&
+              ["GENERATE", "UPDATE"].includes(action.action),
+          ) &&
+          !(journal.rejectedAttempts ?? []).some(
+            (attempt) => attempt.taskId === prior.taskId,
+          )
+        ) {
+          journal = {
+            ...journal,
+            inFlight: null,
+            rejectedAttempts: [
+              ...(journal.rejectedAttempts ?? []),
+              { taskId: prior.taskId, sessionId: prior.sessionId },
+            ],
+          };
+          await (operations.writeJournal ?? writeJournal)(journalFile, journal);
+          continue;
+        }
+        if (
           saved?.tasks?.[prior.taskId]?.phase !== "accepted" ||
           !completedInCore
         )
@@ -559,8 +594,8 @@ export async function progressDesign(
       }
       const report = await (operations.review ?? review)(configPath);
       assert(report.runId === config.runId, "Review differs from Run");
-      const runnable = next.actions.filter(
-        (action) => action.action === "GENERATE",
+      const runnable = next.actions.filter((action) =>
+        ["GENERATE", "UPDATE"].includes(action.action),
       );
       if (!runnable.length) {
         const result = {
@@ -719,6 +754,20 @@ if (
     )
       console.log(json(await recoverProgressLock(configPath)));
     else if (
+      action === "retry-rejected" &&
+      configPath &&
+      grantId &&
+      cap &&
+      process.argv.length === 6
+    )
+      console.log(
+        json(
+          await progressDesign(configPath, grantId, Number(cap), {
+            allowRejectedRetry: true,
+          }),
+        ),
+      );
+    else if (
       action === "run" &&
       configPath &&
       grantId &&
@@ -728,7 +777,7 @@ if (
       console.log(json(await progressDesign(configPath, grantId, Number(cap))));
     else
       throw new Error(
-        "Usage: node scripts/9ui226-progress-design.mjs scope <trial-config.json> | run <trial-config.json> <existing-grant-id> <max-calls> | reconcile-s10 <trial-config.json> <stopped-session-id> | recover-lock <trial-config.json>",
+        "Usage: node scripts/9ui226-progress-design.mjs scope <trial-config.json> | run <trial-config.json> <existing-grant-id> <max-calls> | retry-rejected <trial-config.json> <existing-grant-id> <max-calls> | reconcile-s10 <trial-config.json> <stopped-session-id> | recover-lock <trial-config.json>",
       );
   } catch (error) {
     console.error(error.message);

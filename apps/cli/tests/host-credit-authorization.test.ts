@@ -18,6 +18,10 @@ import {
   type HumanCreditDecisionSource,
   type DelegatedCreditEvidence,
 } from "../src/agent/host-credit-authorization.js";
+import {
+  FileSessionStore,
+  type SessionCheckpoint,
+} from "../src/agent/session.js";
 
 const folders: string[] = [];
 afterEach(async () => {
@@ -844,6 +848,396 @@ test("one broad delegated decision can authorize a reference-only continuation w
   await expect(
     h.store.availableForRun(
       continuedGrantId,
+      h.workspace,
+      h.scope.runId,
+      h.scope.model,
+      h.scope.packages,
+    ),
+  ).rejects.toThrow(/No current authorization/);
+});
+
+test("a broad decision continues only to the exact selected revision in the same workspace", async () => {
+  const h = await setup(2, "run_parent");
+  const ref = {
+    artifactId: "art_selected",
+    revision: 1,
+    lockDigest: `sha256:${"a".repeat(64)}`,
+  };
+  const revisionBase = {
+    ref,
+    sourceRunId: h.scope.runId,
+    selectionId: "selection_exact",
+  };
+  const childId = "run_revision";
+  const intervention =
+    "Design intervention: choose information and structure from the user's task and primary action. Do not add impressive but irrelevant statistics, claims or sections.";
+  const common = `Saved guided comparison brief\n${intervention}`;
+  const content = { mechanisms: ["list and detail"], summary: "Selected B" };
+  const suffix = `\nHuman-selected prior direction: ${ref.artifactId}@${ref.revision}#${ref.lockDigest} from Run ${h.scope.runId}. Its accepted content is ${JSON.stringify(content)}. Address only this requested issue: Reduce the comparison memory burden. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`;
+  const priorPlan = [
+    { id: "s04", humanBrief: common },
+    {
+      id: "s10",
+      intent: "create",
+      humanBrief: `${common}\nStart with three distinct structural candidates when they are defensible; this is an initial budget, not a quota. Compare information priority, primary action and comparison unit. Keep a conventional structure if it fits. State each option's conditions, benefits and costs. Do not claim human selection.`,
+      inputs: {
+        required: [],
+        optional: [{ name: "prior-direction", kind: "artifact" }],
+      },
+    },
+    {
+      id: "s11",
+      humanBrief: `${common}\nCritique unnecessary information, generic structure and reference misuse by screen location and reason. Keep untested operation and human preference UNVERIFIED. Give a recommendation and trade-offs, never an AI-likeness score or a ban on purple, rounded corners or a font. Human selection is pending.`,
+    },
+  ];
+  await writeFile(
+    path.join(h.workspace, `.mimic/runs/${h.scope.runId}.json`),
+    JSON.stringify(priorPlan),
+  );
+  const evidence = {
+    ...delegatedEvidence(h),
+    approvalText: "それならどれだけ使ってもいいよ",
+    attestedScope: {
+      ...delegatedEvidence(h).attestedScope,
+      inputsSha256: await frozenRunInputsSha256(
+        h.workspace,
+        h.scope.runId,
+        h.scope.packages,
+      ),
+    },
+  };
+  const priorGrantId = await h.store.recordDelegated(h.scope, evidence);
+  const plan = [
+    priorPlan[0],
+    {
+      ...priorPlan[1],
+      intent: "revise",
+      targetArtifactId: ref.artifactId,
+      revisionBase,
+      humanBrief: `${common.replace(intervention, `Revise only the human-selected direction once; do not create alternative directions.\n${intervention}`)}\nImprove the selected direction against the stated issue. Preserve its useful structure and explain the change and its cost; do not generate new options or claim another human selection.${suffix}`,
+      inputs: {
+        required: [],
+        optional: [{ name: "prior-direction", kind: "artifact", refs: [ref] }],
+      },
+    },
+    {
+      ...priorPlan[2],
+      humanBrief: `${common}\nCritique unnecessary information, generic structure and reference misuse by screen location and reason. Keep untested operation and human preference UNVERIFIED. Give a recommendation and trade-offs, never an AI-likeness score or a ban on purple, rounded corners or a font. Human selection is pending.${suffix}`,
+    },
+  ];
+  const planText = `${JSON.stringify(plan)}\n`;
+  const planDigest = `sha256:${createHash("sha256").update(planText).digest("hex")}`;
+  const frozen = {
+    condition: "guided",
+    model: h.scope.model,
+    budget: { maxGenerations: 15 },
+    brief: { purpose: "Compare Mimic directions" },
+    referenceFile: "inputs/references.md",
+    referenceDigest: "sha256:references",
+    evidenceFiles: { s04: ["inputs/system.md"] },
+    evidenceDigests: { "inputs/system.md": "sha256:system" },
+    skillTreeDigest: "sha256:skill",
+    schemaTreeDigest: "sha256:schema",
+    templateDigest: "sha256:template",
+    revisionBudget: 2,
+  };
+  const prior = { ...frozen, runId: h.scope.runId };
+  const child = {
+    ...frozen,
+    runId: childId,
+    previousRunId: h.scope.runId,
+    revisionRequest: "Reduce the comparison memory burden",
+    baseRef: ref,
+    planDigest,
+  };
+  const state = {
+    registry: {
+      runs: {
+        [h.scope.runId]: {
+          revisionSelection: {
+            id: revisionBase.selectionId,
+            runId: h.scope.runId,
+            ref,
+            actor: { kind: "human" },
+            externalRefs: ["mimic-local-revision-selection:sha256:exact"],
+          },
+        },
+        [childId]: { revisionBase },
+      },
+    },
+    snapshots: {
+      [`${ref.artifactId}@${ref.revision}`]: JSON.stringify({
+        digest: ref.lockDigest,
+        artifact: { content },
+      }),
+    },
+  };
+  const write = (name: string, value: unknown) =>
+    writeFile(path.join(h.workspace, name), `${JSON.stringify(value)}\n`);
+  await mkdir(path.join(h.workspace, "inputs"));
+  const references = "# Saved references\n";
+  await writeFile(path.join(h.workspace, "inputs/references.md"), references);
+  await write(`trial-${h.scope.runId}.json`, prior);
+  await write(`trial-${childId}.json`, child);
+  await write(".mimic/workspace.json", state);
+  await writeFile(
+    path.join(h.workspace, `.mimic/runs/${childId}.json`),
+    planText,
+  );
+  await writeFile(path.join(h.workspace, `tasks-${childId}.json`), planText);
+  const scope = { ...h.scope, runId: childId };
+  const childEvidence: DelegatedCreditEvidence = {
+    ...evidence,
+    attestedScope: {
+      ...evidence.attestedScope,
+      runId: childId,
+      inputsSha256: await frozenRunInputsSha256(
+        h.workspace,
+        childId,
+        scope.packages,
+      ),
+    },
+    continuation: {
+      kind: "selected-revision",
+      priorGrantId,
+      referenceSha256: `sha256:${createHash("sha256").update(references).digest("hex")}`,
+      changeSummary: "Revise only the saved human-selected B direction",
+    },
+  };
+  await write(".mimic/workspace.json", {
+    registry: { runs: { ...state.registry.runs, [h.scope.runId]: {} } },
+  });
+  await expect(h.store.recordDelegated(scope, childEvidence)).rejects.toThrow(
+    /Continuation changes more than/,
+  );
+  await write(".mimic/workspace.json", state);
+  const childGrant = await h.store.recordDelegated(scope, childEvidence);
+  expect(childGrant).toMatch(/^grant_/);
+  const extraPlan = [
+    ...plan,
+    { id: "s12", humanBrief: "Unrelated generation" },
+  ];
+  const extraText = `${JSON.stringify(extraPlan)}\n`;
+  await writeFile(
+    path.join(h.workspace, `.mimic/runs/${childId}.json`),
+    extraText,
+  );
+  await writeFile(path.join(h.workspace, `tasks-${childId}.json`), extraText);
+  await write(`trial-${childId}.json`, {
+    ...child,
+    planDigest: `sha256:${createHash("sha256").update(extraText).digest("hex")}`,
+  });
+  await expect(
+    h.store.recordDelegated(scope, {
+      ...childEvidence,
+      attestedScope: {
+        ...childEvidence.attestedScope,
+        inputsSha256: await frozenRunInputsSha256(
+          h.workspace,
+          childId,
+          scope.packages,
+        ),
+      },
+    }),
+  ).rejects.toThrow(/Continuation changes more than/);
+  await writeFile(
+    path.join(h.workspace, `.mimic/runs/${childId}.json`),
+    planText,
+  );
+  await writeFile(path.join(h.workspace, `tasks-${childId}.json`), planText);
+  await write(`trial-${childId}.json`, child);
+  const instructionPlan = plan.map((task) =>
+    task.id === "s10"
+      ? {
+          ...task,
+          humanBrief: `${task.humanBrief} Extra unrelated instructions.`,
+        }
+      : task,
+  );
+  const instructionText = `${JSON.stringify(instructionPlan)}\n`;
+  await writeFile(
+    path.join(h.workspace, `.mimic/runs/${childId}.json`),
+    instructionText,
+  );
+  await writeFile(
+    path.join(h.workspace, `tasks-${childId}.json`),
+    instructionText,
+  );
+  await write(`trial-${childId}.json`, {
+    ...child,
+    planDigest: `sha256:${createHash("sha256").update(instructionText).digest("hex")}`,
+  });
+  await expect(
+    h.store.recordDelegated(scope, {
+      ...childEvidence,
+      attestedScope: {
+        ...childEvidence.attestedScope,
+        inputsSha256: await frozenRunInputsSha256(
+          h.workspace,
+          childId,
+          scope.packages,
+        ),
+      },
+    }),
+  ).rejects.toThrow(/Continuation changes more than/);
+  await writeFile(
+    path.join(h.workspace, `.mimic/runs/${childId}.json`),
+    planText,
+  );
+  await writeFile(path.join(h.workspace, `tasks-${childId}.json`), planText);
+  await write(`trial-${childId}.json`, {
+    ...child,
+    brief: { purpose: "Unrelated work" },
+  });
+  await expect(h.store.recordDelegated(scope, childEvidence)).rejects.toThrow(
+    /Continuation changes more than/,
+  );
+});
+
+test("one exhausted broad delegated grant can add one same-Run retry call", async () => {
+  const h = await setup();
+  await mkdir(path.join(h.workspace, "inputs"));
+  const references = "# Saved references\n";
+  await writeFile(path.join(h.workspace, "inputs/references.md"), references);
+  const evidence = {
+    ...delegatedEvidence(h),
+    approvalText: "それならどれだけ使ってもいいよ",
+  };
+  const parent = await h.store.recordDelegated(h.scope, evidence);
+  const topupEvidence: DelegatedCreditEvidence = {
+    ...evidence,
+    continuation: {
+      kind: "same-run-retry",
+      priorGrantId: parent,
+      rejectedSessionId: "session_s04_a",
+      referenceSha256: `sha256:${createHash("sha256").update(references).digest("hex")}`,
+      changeSummary:
+        "One rejected generation used the bounded call cap; finish the frozen evaluator",
+    },
+  };
+  await expect(h.store.recordDelegated(h.scope, topupEvidence)).rejects.toThrow(
+    /lacks a saved static candidate rejection/,
+  );
+  await h.store
+    .port(
+      parent,
+      h.scope.runId,
+      h.expected,
+      h.inputsSha256,
+      h.scope.packages,
+      h.scope.executable,
+    )
+    .consumeUserDecision(h.expected);
+  const saveRejected = async (sessionId: string) => {
+    const result: SessionCheckpoint = {
+      version: 1,
+      sessionId,
+      binding: {
+        runId: h.scope.runId,
+        planDigest: "a".repeat(64),
+        settings: {
+          provider: "codex",
+          billingMode: "subscription-only",
+          model: h.scope.model,
+        },
+      },
+      generationCount: 1,
+      tasks: {
+        s04: {
+          binding: {
+            taskId: "s04",
+            inputRefs: [],
+            inputDigest: "a".repeat(64),
+            packageDigest: "b".repeat(64),
+            contextDigest: "c".repeat(64),
+            packageVersion: "0.1.0",
+          },
+          phase: "rejected",
+          rejectionReason: "static-validation",
+          staticFailure: {
+            exitCode: 3,
+            candidate: true,
+            reason: "proposal-authority-mismatch",
+            stderrSha256: "d".repeat(64),
+          },
+          diagnostics: {
+            version: 1,
+            stage: "generation",
+            backendReach: "unknown",
+            processKind: "generation",
+            process: {
+              spawned: true,
+              settled: true,
+              exitCode: 0,
+              signal: null,
+              stdoutBytes: 1,
+              stderrBytes: 0,
+              errorCode: "none",
+              failure: "none",
+            },
+            decoder: {
+              threadStarted: true,
+              turnStarted: true,
+              outputObserved: true,
+              terminalObserved: true,
+              finished: true,
+              failed: false,
+              failure: "none",
+            },
+          },
+        },
+      },
+      status: "stopped",
+      stop: "candidate-rejected",
+      questionIds: [],
+      executionPolicy: "authorized-existing-credit-risk-once",
+    };
+    await new FileSessionStore(h.workspace).write(result);
+    return result;
+  };
+  const rejected = await saveRejected("session_s04_a");
+  await expect(h.store.recordDelegated(h.scope, topupEvidence)).rejects.toThrow(
+    /lacks a host-recorded rejection/,
+  );
+  await h.store.recordAuthorizedCandidateRejection(
+    parent,
+    h.workspace,
+    rejected,
+  );
+  const topup = await h.store.recordDelegated(h.scope, topupEvidence);
+  expect(topup).toMatch(/^grant_/);
+  await expect(h.store.recordDelegated(h.scope, topupEvidence)).rejects.toThrow(
+    /requires one exhausted grant/,
+  );
+  const secondRequest = { ...h.expected, requestId: "session_s04_b-1" };
+  await h.store
+    .port(
+      topup,
+      h.scope.runId,
+      secondRequest,
+      h.inputsSha256,
+      h.scope.packages,
+      h.scope.executable,
+    )
+    .consumeUserDecision(secondRequest);
+  await saveRejected("session_s04_b");
+  await expect(
+    h.store.recordDelegated(h.scope, {
+      ...topupEvidence,
+      continuation: {
+        ...topupEvidence.continuation!,
+        priorGrantId: topup,
+        rejectedSessionId: "session_s04_b",
+      },
+    }),
+  ).rejects.toThrow(/continuation differs from the original decision/);
+  await writeFile(
+    path.join(h.workspace, ".mimic/runs", `${h.scope.runId}.json`),
+    "[{}]",
+  );
+  await expect(
+    h.store.availableForRun(
+      topup,
       h.workspace,
       h.scope.runId,
       h.scope.model,

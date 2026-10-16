@@ -11,10 +11,16 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { canonicalJson } from "@mimic/core";
 import type {
   CodexCreditRiskDecisionPort,
   CodexCreditRiskScope,
 } from "./codex.js";
+import {
+  FileSessionStore,
+  sessionDigest,
+  type SessionCheckpoint,
+} from "./session.js";
 
 export interface RunCreditScope {
   readonly workspace: string;
@@ -64,6 +70,8 @@ export interface DelegatedCreditEvidence {
     readonly priorGrantId: string;
     readonly referenceSha256: string;
     readonly changeSummary: string;
+    readonly kind?: "selected-revision" | "same-run-retry";
+    readonly rejectedSessionId?: string;
   };
   readonly attestedScope: {
     readonly workspace: string;
@@ -217,6 +225,170 @@ async function addedReferencesOnly(
     });
 }
 
+/** A second Run in the same workspace may revise only the exact direction
+ * selected in its parent Run. Core still verifies the selection at Run start. */
+async function selectedRevisionOnly(
+  workspace: string,
+  priorRunId: string,
+  runId: string,
+  priorInputsSha256: string,
+  packages: Readonly<Record<string, string>>,
+): Promise<boolean> {
+  type Ref = { artifactId: string; revision: number; lockDigest: string };
+  type Selection = {
+    id: string;
+    runId: string;
+    ref: Ref;
+    actor: { kind: string };
+    externalRefs: string[];
+  };
+  type RevisionBase = { ref: Ref; sourceRunId: string; selectionId: string };
+  type Trial = Record<string, unknown> & {
+    runId: string;
+    previousRunId?: string;
+    condition: string;
+    revisionRequest?: string;
+    baseRef?: Ref;
+  };
+  type Task = {
+    id: string;
+    humanBrief?: string;
+    intent?: string;
+    targetArtifactId?: string;
+    revisionBase?: RevisionBase;
+    inputs?: {
+      required?: unknown[];
+      optional?: { name?: string; refs?: Ref[] }[];
+    };
+    [key: string]: unknown;
+  };
+  const load = async <T>(relative: string): Promise<T> =>
+    JSON.parse(await containedIntakeFile(workspace, relative)) as T;
+  const prior = await load<Trial>(`trial-${priorRunId}.json`);
+  const child = await load<Trial>(`trial-${runId}.json`);
+  const state = await load<{
+    registry?: {
+      runs?: Record<
+        string,
+        { revisionSelection?: Selection; revisionBase?: RevisionBase }
+      >;
+    };
+    snapshots?: Record<string, string>;
+  }>(".mimic/workspace.json");
+  const priorPlan = await load<Task[]>(`.mimic/runs/${priorRunId}.json`);
+  const planText = await containedIntakeFile(
+    workspace,
+    `.mimic/runs/${runId}.json`,
+  );
+  const plan = JSON.parse(planText) as Task[];
+  const ref = child.baseRef;
+  const selection = state.registry?.runs?.[priorRunId]?.revisionSelection;
+  const revisionBase = state.registry?.runs?.[runId]?.revisionBase;
+  const s10 = Array.isArray(plan)
+    ? plan.find((task) => task.id === "s10")
+    : undefined;
+  const same = (left: unknown, right: unknown) =>
+    canonicalJson(left) === canonicalJson(right);
+  const saved = state.snapshots?.[`${ref?.artifactId}@${ref?.revision}`];
+  const snapshot = saved
+    ? (JSON.parse(saved) as {
+        digest?: string;
+        artifact?: { content?: unknown };
+      })
+    : undefined;
+  const commonBrief = plan.find((task) => task.id === "s04")?.humanBrief;
+  const intervention =
+    "Design intervention: choose information and structure from the user's task and primary action. Do not add impressive but irrelevant statistics, claims or sections.";
+  const revisedS10Brief = commonBrief?.includes(intervention)
+    ? commonBrief.replace(
+        intervention,
+        `Revise only the human-selected direction once; do not create alternative directions.\n${intervention}`,
+      )
+    : undefined;
+  const suffix =
+    ref && snapshot?.artifact?.content && child.revisionRequest
+      ? `\nHuman-selected prior direction: ${ref.artifactId}@${ref.revision}#${ref.lockDigest} from Run ${priorRunId}. Its accepted content is ${JSON.stringify(snapshot.artifact.content)}. Address only this requested issue: ${child.revisionRequest}. Retain the prior direction unless the issue requires a change. This is revision of the selected direction; do not imply a new human choice.`
+      : undefined;
+  const expectedPlan = priorPlan.map((task) => {
+    if (task.id === "s10")
+      return {
+        ...task,
+        humanBrief: `${revisedS10Brief}\nImprove the selected direction against the stated issue. Preserve its useful structure and explain the change and its cost; do not generate new options or claim another human selection.${suffix}`,
+        intent: "revise",
+        targetArtifactId: ref?.artifactId,
+        revisionBase,
+        inputs: {
+          ...task.inputs,
+          optional: task.inputs?.optional?.map((input) =>
+            input.name === "prior-direction"
+              ? { ...input, refs: [ref] }
+              : input,
+          ),
+        },
+      };
+    if (task.id === "s11")
+      return {
+        ...task,
+        humanBrief: `${commonBrief}\nCritique unnecessary information, generic structure and reference misuse by screen location and reason. Keep untested operation and human preference UNVERIFIED. Give a recommendation and trade-offs, never an AI-likeness score or a ban on purple, rounded corners or a font. Human selection is pending.${suffix}`,
+      };
+    return task;
+  });
+  const frozenFields = [
+    "condition",
+    "model",
+    "budget",
+    "brief",
+    "referenceFile",
+    "referenceDigest",
+    "evidenceFiles",
+    "evidenceDigests",
+    "skillTreeDigest",
+    "schemaTreeDigest",
+    "templateDigest",
+    "revisionBudget",
+  ];
+  return !!(
+    prior.runId === priorRunId &&
+    child.runId === runId &&
+    child.previousRunId === priorRunId &&
+    child.condition === "guided" &&
+    typeof child.revisionRequest === "string" &&
+    child.revisionRequest.trim() &&
+    child.planDigest === `sha256:${digest(planText)}` &&
+    snapshot?.digest === ref?.lockDigest &&
+    typeof commonBrief === "string" &&
+    typeof revisedS10Brief === "string" &&
+    typeof suffix === "string" &&
+    priorPlan.length === plan.length &&
+    priorPlan.some((task) => task.id === "s10") &&
+    priorPlan.some((task) => task.id === "s11") &&
+    same(plan, expectedPlan) &&
+    planText ===
+      (await containedIntakeFile(workspace, `tasks-${runId}.json`)) &&
+    frozenFields.every((field) => same(prior[field], child[field])) &&
+    ref?.artifactId &&
+    Number.isSafeInteger(ref.revision) &&
+    /^sha256:[a-f0-9]{64}$/.test(ref.lockDigest) &&
+    selection?.actor?.kind === "human" &&
+    selection.runId === priorRunId &&
+    selection.externalRefs?.length === 1 &&
+    selection.externalRefs[0].startsWith("mimic-local-revision-selection:") &&
+    same(selection.ref, ref) &&
+    same(revisionBase?.ref, ref) &&
+    revisionBase?.sourceRunId === priorRunId &&
+    revisionBase?.selectionId === selection.id &&
+    s10?.intent === "revise" &&
+    s10.targetArtifactId === ref.artifactId &&
+    same(s10.revisionBase, revisionBase) &&
+    s10.inputs?.optional?.some(
+      (input: { name?: string; refs?: unknown[] }) =>
+        input.name === "prior-direction" && same(input.refs, [ref]),
+    ) &&
+    (await frozenRunInputsSha256(workspace, priorRunId, packages)) ===
+      priorInputsSha256
+  );
+}
+
 /** Freeze the saved task plan, scope configuration, and every selected Skill
  * package file. Generated Run artifacts may append later without changing this
  * approved routing and instruction snapshot. */
@@ -339,6 +511,11 @@ export class HostCreditAuthorizationStore {
           delegate_id TEXT NOT NULL, recorded_by TEXT NOT NULL,
           evidence_json TEXT NOT NULL, recorded_at INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS rejected_sessions (
+          grant_id TEXT NOT NULL REFERENCES grants(id) ON DELETE CASCADE,
+          session_id TEXT NOT NULL, checkpoint_sha256 TEXT NOT NULL,
+          PRIMARY KEY (grant_id, session_id)
+        );
       `);
       const schema = database
         .prepare(
@@ -451,6 +628,8 @@ export class HostCreditAuthorizationStore {
             priorGrantId: source.continuation.priorGrantId,
             referenceSha256: source.continuation.referenceSha256,
             changeSummary: source.continuation.changeSummary,
+            kind: source.continuation.kind,
+            rejectedSessionId: source.continuation.rejectedSessionId,
           })
         : undefined,
       attestedScope: Object.freeze({
@@ -509,6 +688,7 @@ export class HostCreditAuthorizationStore {
         evidence.approvedAt + attested.durationMinutes * 60_000
     )
       throw Error("Delegation evidence does not bind this Run scope");
+    let rejectedCheckpointDigest: string | undefined;
     if (evidence.continuation) {
       const continuation = evidence.continuation;
       if (
@@ -534,20 +714,69 @@ export class HostCreditAuthorizationStore {
       }
       if (
         !priorScope ||
-        !(await addedReferencesOnly(
-          priorScope.workspace,
-          frozen.workspace,
-          priorScope.run_id,
-          frozen.runId,
-          priorScope.inputs_sha256,
-          frozen.packages,
-        ))
+        !(continuation.kind === "selected-revision"
+          ? priorScope.workspace === frozen.workspace &&
+            (await selectedRevisionOnly(
+              frozen.workspace,
+              priorScope.run_id,
+              frozen.runId,
+              priorScope.inputs_sha256,
+              frozen.packages,
+            ))
+          : continuation.kind === "same-run-retry"
+            ? priorScope.workspace === frozen.workspace &&
+              priorScope.run_id === frozen.runId &&
+              priorScope.inputs_sha256 === frozen.inputsSha256 &&
+              frozen.maxCalls === 1
+            : continuation.kind === undefined &&
+              (await addedReferencesOnly(
+                priorScope.workspace,
+                frozen.workspace,
+                priorScope.run_id,
+                frozen.runId,
+                priorScope.inputs_sha256,
+                frozen.packages,
+              )))
       )
-        throw Error("Continuation changes more than the guided Run references");
+        throw Error(
+          "Continuation changes more than the permitted guided Run inputs",
+        );
+      if (continuation.kind === "same-run-retry") {
+        if (
+          !/^session_[A-Za-z0-9_-]+$/.test(continuation.rejectedSessionId ?? "")
+        )
+          throw Error("Same-Run retry requires an exact rejected session ID");
+        const checkpoint = await new FileSessionStore(frozen.workspace).read(
+          continuation.rejectedSessionId!,
+        );
+        const tasks = Object.values(checkpoint?.tasks ?? {});
+        if (
+          checkpoint?.binding.runId !== frozen.runId ||
+          checkpoint?.sessionId !== continuation.rejectedSessionId ||
+          checkpoint.status !== "stopped" ||
+          checkpoint.stop !== "candidate-rejected" ||
+          checkpoint.executionPolicy !==
+            "authorized-existing-credit-risk-once" ||
+          checkpoint.generationCount !== 1 ||
+          tasks.length !== 1 ||
+          tasks[0]?.phase !== "rejected" ||
+          tasks[0].staticFailure?.candidate !== true
+        )
+          throw Error(
+            "Same-Run retry lacks a saved static candidate rejection",
+          );
+        rejectedCheckpointDigest = sessionDigest(checkpoint);
+      }
     }
     // This ID is stable across attempts and independent of the operator's text.
     const decisionId = `delegated_${digest(
-      JSON.stringify([evidence.sourceThreadId, evidence.approvalMessageId]),
+      JSON.stringify([
+        evidence.sourceThreadId,
+        evidence.approvalMessageId,
+        ...(evidence.continuation?.kind === "same-run-retry"
+          ? ["same-run-retry", evidence.continuation.priorGrantId]
+          : []),
+      ]),
     )}`;
     return this.persist(
       frozen,
@@ -558,7 +787,53 @@ export class HostCreditAuthorizationStore {
       },
       evidence,
       evidence.continuation,
+      rejectedCheckpointDigest,
     );
+  }
+
+  /** Record the in-process result of the trusted one-call host entry. A
+   * workspace checkpoint alone is never proof that a paid call was rejected. */
+  async recordAuthorizedCandidateRejection(
+    grantId: string,
+    workspace: string,
+    result: SessionCheckpoint,
+  ): Promise<void> {
+    if (
+      result.status !== "stopped" ||
+      result.stop !== "candidate-rejected" ||
+      result.executionPolicy !== "authorized-existing-credit-risk-once" ||
+      result.generationCount !== 1 ||
+      Object.values(result.tasks).length !== 1 ||
+      Object.values(result.tasks)[0]?.phase !== "rejected" ||
+      Object.values(result.tasks)[0]?.staticFailure?.candidate !== true
+    )
+      return;
+    const root = await realpath(workspace);
+    const database = await this.database(root);
+    try {
+      this.transaction(database, () => {
+        const grant = database
+          .prepare("SELECT workspace, run_id FROM grants WHERE id = ?")
+          .get(grantId) as { workspace: string; run_id: string } | undefined;
+        if (
+          grant?.workspace !== root ||
+          grant.run_id !== result.binding.runId ||
+          !database
+            .prepare(
+              "SELECT 1 FROM consumed WHERE grant_id = ? AND request_id = ?",
+            )
+            .get(grantId, `${result.sessionId}-1`)
+        )
+          throw Error("Rejected session is not bound to the spent grant");
+        database
+          .prepare(
+            "INSERT OR IGNORE INTO rejected_sessions (grant_id, session_id, checkpoint_sha256) VALUES (?, ?, ?)",
+          )
+          .run(grantId, result.sessionId, sessionDigest(result));
+      });
+    } finally {
+      database.close();
+    }
   }
 
   private async freeze(scope: RunCreditScope): Promise<FrozenRunCreditScope> {
@@ -604,6 +879,7 @@ export class HostCreditAuthorizationStore {
     decision: HumanCreditDecision,
     delegated?: DelegatedCreditEvidence,
     continuation?: NonNullable<DelegatedCreditEvidence["continuation"]>,
+    rejectedCheckpointDigest?: string,
   ): Promise<string> {
     const decidedAt = Date.now();
     if (frozen.expiresAt <= decidedAt)
@@ -662,7 +938,8 @@ export class HostCreditAuthorizationStore {
             !delegated ||
             !prior ||
             !oldEvidence ||
-            prior.decision_id !== decision.decisionId ||
+            (prior.decision_id !== decision.decisionId &&
+              continuation.kind !== "same-run-retry") ||
             prior.actor_id !== decision.actorId ||
             prior.revoked_at !== null ||
             prior.expires_at <= Date.now() ||
@@ -670,15 +947,54 @@ export class HostCreditAuthorizationStore {
             prior.model !== frozen.model ||
             prior.executable !== frozen.executable ||
             prior.max_calls < frozen.maxCalls ||
-            prior.run_id === frozen.runId ||
+            (prior.run_id === frozen.runId &&
+              continuation.kind !== "same-run-retry") ||
             oldEvidence.approvalText.trim() !==
               "それならどれだけ使ってもいいよ" ||
-            identity(oldEvidence) !== identity(delegated)
+            identity(oldEvidence) !== identity(delegated) ||
+            (continuation.kind === "same-run-retry" &&
+              oldEvidence.continuation?.kind === "same-run-retry")
           )
             throw Error(
               "Delegation continuation differs from the original decision",
             );
+          if (continuation.kind === "same-run-retry") {
+            const receipt = database
+              .prepare(
+                "SELECT checkpoint_sha256 FROM rejected_sessions WHERE grant_id = ? AND session_id = ?",
+              )
+              .get(prior.id, continuation.rejectedSessionId!) as
+              { checkpoint_sha256: string } | undefined;
+            if (
+              !receipt ||
+              receipt.checkpoint_sha256 !== rejectedCheckpointDigest
+            )
+              throw Error("Same-Run retry lacks a host-recorded rejection");
+            if (
+              !database
+                .prepare(
+                  "SELECT 1 FROM consumed WHERE grant_id = ? AND request_id = ?",
+                )
+                .get(prior.id, `${continuation.rejectedSessionId}-1`)
+            )
+              throw Error("Rejected session did not consume the prior grant");
+            const used = database
+              .prepare(
+                "SELECT COUNT(*) AS count FROM consumed WHERE grant_id = ?",
+              )
+              .get(prior.id) as { count: number };
+            const existingTopup = database
+              .prepare(
+                "SELECT id FROM grants WHERE continuation_of = ? AND run_id = ?",
+              )
+              .get(prior.id, prior.run_id);
+            if (used.count !== prior.max_calls || existingTopup)
+              throw Error(
+                "Same-Run retry requires one exhausted grant without an earlier top-up",
+              );
+          }
           if (
+            continuation.kind !== "same-run-retry" &&
             database
               .prepare(
                 "SELECT id FROM grants WHERE decision_id = ? AND workspace = ? AND run_id = ?",

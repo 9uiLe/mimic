@@ -16,6 +16,7 @@ import {
   AgentSession,
   FileSessionStore,
   SessionExecutionPolicyMismatch,
+  type SessionCheckpoint,
 } from "./session.js";
 import { createWorkspaceSessionPorts } from "./session-workspace.js";
 
@@ -129,12 +130,14 @@ export async function runAuthorizedSessionOnce(
     err: console.error,
   },
   trustedExecutable?: string,
+  onAdvance?: (result: SessionCheckpoint) => Promise<void>,
 ): Promise<number> {
   return runConfiguredSession(["start", "--config", configPath], io, {
     kind: "generate",
     decision,
     outputSchemaPath,
     trustedExecutable,
+    onAdvance,
   });
 }
 
@@ -169,6 +172,7 @@ async function runConfiguredSession(
         decision: CodexCreditRiskDecisionPort;
         outputSchemaPath: string;
         trustedExecutable?: string;
+        onAdvance?: (result: SessionCheckpoint) => Promise<void>;
       }
     | {
         kind: "reconcile";
@@ -278,13 +282,15 @@ async function runConfiguredSession(
       process.once("SIGINT", interrupt);
       process.once("SIGTERM", interrupt);
       try {
-        await session.advance({
+        const result = await session.advance({
           resume: command === "resume",
           reconciledUnknownOutcome: remaining.length === 1,
           ...(authorized?.kind === "reconcile"
             ? { reconcilePreparedWorkDigest: authorized.expectedWorkDigest }
             : {}),
         });
+        if (authorized?.kind === "generate")
+          await authorized.onAdvance?.(result);
       } finally {
         process.removeListener("SIGINT", interrupt);
         process.removeListener("SIGTERM", interrupt);

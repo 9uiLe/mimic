@@ -8,7 +8,11 @@
 
 保存済みの新規 Run を比較まで進める場合は、`node scripts/9ui226-progress-design.mjs scope <trial-config.json>` で plan・証跡・Skill 対応を照合し、返された scope config を本人が既存 `host-credit-cli authorize` に渡す。承認を代行する場合は、別途会話上の具体的な許可を得て既存 `delegated-authorize` を使う。**scope は grant を作らず、モデルも呼ばない。** 有効な grant ID を得てから `node scripts/9ui226-progress-design.mjs run <trial-config.json> <grant-id> <今回の最大呼び出し数>` を明示起動する。この入口は各回に新 session ID を作り、既存の host-credit 実行と Core の次タスクを確認して進める。事前に検出できた grant 拒否では session を開始せず、新しい grant で再開できる。事前照合後の失効や並行消費を含む失敗・不明な結果では止まり、同じタスクを自動再生成しない。再実行時に未解決 session が残る場合はその checkpoint と Core を照合する。強制終了で lock が残った場合は `recover-lock <trial-config.json>` で記録済み owner プロセスが終了したことを確認して lock だけを解放する。全タスクが受理されると既存 review HTML の候補比較へ案内し、人の選択待ちを示す。S10 は構造案で完成画面の仕様ではないため、画面そのものと最終採用は別途検証・判断する。
 
+同じ workspace の改稿 Run も、`prepare-next` の後に `mimic run` で保存してから上記 `scope` / `run` を使う。改稿の事前照合は intake の Run ID を再生成する代わりに、前 Run の保存済み選択確認、exact ref、前候補の内容を読み直して S10 `revise` plan を再計算する。新 Run 固有の有効なモデル利用許可が必要で、前 Run の grant は流用しない。
+
 受理済みの未選択3案から、構造機構が一覧比較・二案対照・項目順次にそれぞれ明確に対応する場合は、`node scripts/9ui197-harness.mjs candidate-screens <trial-config.json>` で `candidate-screens-<runId>.html` を作る。この画面化は保存済み 9UI-225 dogfood の Mimic 設計比較 brief 全体が一致する場合に限る。別製品の brief や否定・曖昧な構造説明は停止し、S10/S11 の review だけを残す。`review` を再実行すると、保存済み exact refs と現在の S11 評価に一致する画面だけをリンクする。`9ui226-progress-design.mjs run` は比較まで到達した時に同じ画面化を試し、対応できなければ理由を返して review のみ残す。画面は Codex が既存 S10/S11 から決定論的に組み立てる**未承認の操作スケッチ**で、Mimic が生成した完成 UI ではない。人の選択・改稿・実測結果は記録しない。
+
+保存済み B を作業用に選んだ後の一案改稿では、子 Run の S10/S11 が受理され、人の新しい選択がまだない時に `node scripts/9ui197-harness.mjs revision-screen <子Runのtrial-config.json>` を使える。親 B と子 B の exact lineage、各 Run の S11 評価、一覧＋詳細構造を検証して、改稿前後を開いて操作できる HTML を作る。親の A/C は比較文脈として出所を明示し、子 Run の改稿候補として扱わない。評価軸は Run 間で異なることがある。子の構造が一覧＋詳細を維持しない場合は画面化を止め、保存済み review を残す。画面は Codex が構造案を描画した試作であり、モデル生成の完成 UI や人による新案の採用ではない。
 
 1. 比較条件ごとに空の Mimic workspace を用意し、通常の `mimic init` を実行する。既存手順どおり `skills/` と `schemas/` を配置し、システム・タスク・参照の出典ファイルを `inputs/` に置く。Chrome/Chromium のみを画面検査に使う。
 2. 各 workspace に `trial-config.json` を保存する。二つの設定では `condition` と `runId`、`workspace` 以外の課題・事実・モデル・予算・証拠ファイルの内容を同じにする。`skills/` と `schemas/` の内容も同じであることをハッシュで確認する。guided 条件だけが brief の適用理由、構造案、批評指示を受ける。追加参照の処理と批評の費用は後で分けて測る。

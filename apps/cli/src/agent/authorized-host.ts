@@ -150,5 +150,11 @@ export async function runHostAuthorizedSessionOnce(
     ),
     io,
     executable,
+    (result) =>
+      authorization.recordAuthorizedCandidateRejection(
+        grantId,
+        workspace,
+        result,
+      ),
   );
 }

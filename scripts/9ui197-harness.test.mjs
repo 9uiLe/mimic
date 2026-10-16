@@ -807,6 +807,155 @@ test("an exact unselected revision renders an operable preview without changing 
   );
 });
 
+test("a sourced B revision compares operable list-detail screens without adopting the revision", () => {
+  const ref = (artifactId, revision) => ({
+    artifactId,
+    revision,
+    lockDigest: `sha256:${"a".repeat(64)}`,
+  });
+  const baseRef = ref("art_b", 1);
+  const finding = (reason) => [
+    { criterion: "比較負担", reason, state: "CONCERN" },
+    { criterion: "未検証", reason: "利用者判断は未測定", state: "UNVERIFIED" },
+  ];
+  const candidate = (name, reference, mechanism, reason) => ({
+    ref: reference,
+    summary: `${name} の向く条件と代償`,
+    mechanisms: [mechanism],
+    rationale: ["参照の適用条件を確認する"],
+    evaluation: finding(reason),
+  });
+  const original = candidate(
+    "B",
+    baseRef,
+    "候補一覧と広い詳細領域",
+    "切替時に記憶が必要",
+  );
+  const base = {
+    runId: "run_parent",
+    status: "selected",
+    selectedRef: baseRef,
+    humanSelectionId: "selection_b",
+    candidates: [
+      candidate("A", ref("art_a", 1), "表の列に候補", "一度に読める"),
+      original,
+      candidate("C", ref("art_c", 1), "論点の移動", "段階が増える"),
+    ],
+    revisionCount: 0,
+    revisionBudget: 2,
+  };
+  const revision = {
+    runId: "run_child",
+    previousRunId: base.runId,
+    status: "awaiting-human-selection",
+    priorSelectedRefs: [baseRef],
+    selectedRef: null,
+    humanSelectionId: null,
+    candidates: [
+      {
+        ...candidate(
+          "B 改稿",
+          ref("art_b", 2),
+          "候補一覧と広い詳細領域に照合の手がかりを加える",
+          "記憶負担を減らす仮説",
+        ),
+        evaluation: [
+          {
+            criterion: "改稿後の照合",
+            reason: "三項目の対を読む",
+            state: "UNVERIFIED",
+          },
+          {
+            criterion: "改稿後の余白",
+            reason: "表示量が増える",
+            state: "CONCERN",
+          },
+        ],
+      },
+    ],
+    revisionCount: 1,
+    revisionBudget: 2,
+    revisionRequest: "B の切替負担を減らす",
+  };
+  const sourcedBrief = {
+    audience: "Mimic で画面設計を進める利用者",
+    purpose: "目的を入力して実デザイン案を比較し、改善する案を選べるようにする",
+    primaryAction: "候補を比較し、改善に使う案を明示的に選ぶ",
+    requiredInformation: [
+      "候補ごとの主操作と構造上の違い",
+      "向く条件、利点、失うもの",
+      "未検証事項と次の操作",
+    ],
+    brandCharacter: "ブランドの具体的特徴と配色は未確定。確認まで創作しない",
+    content: [
+      { policy: "fixed-fact", text: "改訂の初期予算は最大2回" },
+      { policy: "fixed-copy", text: "候補を比較" },
+      { policy: "confirm", text: "どの案の違いがブランドに合うか" },
+    ],
+    references: [
+      "https://speakerdeck.com/teamlab/object-oriented-ui-design",
+      "https://smarthr.design/products/design-patterns/smarthr-table/",
+      "https://design.google/library/expressive-material-design-google-research",
+      "https://github.blog/news-insights/product-news/improving-navigation-for-github-actions/",
+    ].map((source) => ({
+      source,
+      reason: "構造を検討",
+      appliesWhen: "候補を比較する場合",
+      doNotBorrow: "外観",
+    })),
+  };
+  const html = renderRevisionScreenHtml(base, revision, sourcedBrief);
+  assert.equal(
+    renderRevisionScreenHtml(
+      { ...base, candidates: [...base.candidates].reverse() },
+      revision,
+      sourcedBrief,
+    ),
+    html,
+  );
+  assert.match(html, /B案の改稿前後を試す/);
+  assert.match(html, /data-option="before"/);
+  assert.match(html, /data-option="after"/);
+  assert.match(html, /data-list-pick="1"/);
+  assert.match(html, /三項目の対を読む/);
+  assert.match(html, /未選択B@2/);
+  assert.match(html, /data-compare-pick/);
+  assert.match(html, /他の候補と照合/);
+  assert.match(html, /この評価軸は元Runの評価にありません/);
+  assert.match(html, /評価軸はRun間で異なります/);
+  assert.match(html, /親Runの候補は改稿されていません/);
+  assert.equal((html.match(/data-try-choice=/g) ?? []).length, 4);
+  assert.match(html, /完成画面をモデルが生成したという意味ではありません/);
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        base,
+        { ...revision, selectedRef: ref("art_b", 2) },
+        sourcedBrief,
+      ),
+    /selected exact B base/,
+  );
+  assert.throws(
+    () =>
+      renderRevisionScreenHtml(
+        base,
+        {
+          ...revision,
+          candidates: [
+            candidate(
+              "B 改稿",
+              ref("art_other", 2),
+              "候補一覧と広い詳細領域",
+              "誤った対象",
+            ),
+          ],
+        },
+        sourcedBrief,
+      ),
+    /selected exact B base/,
+  );
+});
+
 test("capture binding changes with preview and screen checks", () => {
   const config = {
     previewUrls: { [exactChoice("art_one")]: "https://example.test/one" },

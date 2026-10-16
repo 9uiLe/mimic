@@ -309,6 +309,81 @@ test("failed session is not retried and an accepted crash boundary resumes witho
   assert.ok(sessionId);
 });
 
+test("explicit retry preserves a rejected UPDATE and uses one fresh authorized session", async (t) => {
+  const { config, runId, workspace } = await fixture(t);
+  let firstSession;
+  await progressDesign(config, "grant_test", 1, {
+    preflight: async () => {},
+    next: async () => next(runId, "s10", "UPDATE"),
+    review: async () => report(runId),
+    runHost: async (file) => {
+      firstSession = JSON.parse(await readFile(file, "utf8")).sessionId;
+      return {
+        sessionId: firstSession,
+        executionPolicy: "authorized-existing-credit-risk-once",
+        tasks: [{ taskId: "s10", phase: "rejected" }],
+      };
+    },
+  });
+  let retriedSession;
+  const retried = await progressDesign(config, "grant_test", 1, {
+    allowRejectedRetry: true,
+    preflight: async () => {},
+    next: async () => next(runId, "s10", "UPDATE"),
+    review: async () => report(runId),
+    checkpoint: async () => ({
+      sessionId: firstSession,
+      status: "stopped",
+      stop: "candidate-rejected",
+      executionPolicy: "authorized-existing-credit-risk-once",
+      tasks: { s10: { phase: "rejected", staticFailure: { candidate: true } } },
+    }),
+    runHost: async (file) => {
+      retriedSession = JSON.parse(await readFile(file, "utf8")).sessionId;
+      return {
+        sessionId: retriedSession,
+        executionPolicy: "authorized-existing-credit-risk-once",
+        tasks: [{ taskId: "s10", phase: "rejected" }],
+      };
+    },
+  });
+  assert.equal(retried.state, "needs-reconciliation");
+  assert.equal(retried.calls, 1);
+  assert.notEqual(retriedSession, firstSession);
+  const journal = JSON.parse(
+    await readFile(
+      path.join(workspace, `.mimic/progress-${runId}.json`),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(journal.rejectedAttempts, [
+    { taskId: "s10", sessionId: firstSession },
+  ]);
+  assert.equal(journal.inFlight.sessionId, retriedSession);
+});
+
+test("selected revision UPDATE is routed through the authorized host", async (t) => {
+  const { config, runId } = await fixture(t);
+  let invoked = false;
+  const result = await progressDesign(config, "grant_test", 1, {
+    preflight: async () => {},
+    next: async () => next(runId, "s10", "UPDATE"),
+    review: async () => report(runId),
+    runHost: async (file) => {
+      invoked = true;
+      const { sessionId } = JSON.parse(await readFile(file, "utf8"));
+      return {
+        sessionId,
+        executionPolicy: "authorized-existing-credit-risk-once",
+        tasks: [{ taskId: "s10", phase: "rejected" }],
+      };
+    },
+  });
+  assert.equal(invoked, true);
+  assert.equal(result.taskId, "s10");
+  assert.equal(result.state, "needs-reconciliation");
+});
+
 test("call cap, Run budget, and incomplete S11 cannot report a ready comparison", async (t) => {
   const { config, runId } = await fixture(t);
   const noCall = async () => {

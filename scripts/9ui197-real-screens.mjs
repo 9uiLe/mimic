@@ -89,7 +89,7 @@ function expand(option, open) {
     item.classList.toggle('expanded', active);
     item.inert = open && item !== option;
     item.querySelector('.screen-surface').inert = !active;
-    item.querySelector('[data-expand]').textContent = active ? '3画面の一覧へ戻る' : '大きく開いて操作';
+    item.querySelector('[data-expand]').textContent = active ? options.length + '画面の一覧へ戻る' : '大きく開いて操作';
   }
   document.body.classList.toggle('has-expanded', open);
 }
@@ -155,10 +155,16 @@ document.addEventListener('click', (event) => {
     const picked = button.dataset.listPick;
     option.querySelectorAll('[data-list-detail]').forEach((item) => { item.hidden = item.dataset.listDetail !== picked; });
     option.querySelectorAll('[data-list-pick]').forEach((item) => { item.setAttribute('aria-current', item === button ? 'true' : 'false'); });
-    option.querySelector('[data-list-status]').textContent = '閲覧中: 候補' + String.fromCharCode(65 + Number(picked)) + '。作業用選択は変わっていません。';
+    option.querySelector('[data-list-status]').textContent = '閲覧中: 候補' + button.dataset.listName + '。作業用選択は変わっていません。';
   }
 });
 document.addEventListener('change', (event) => {
+  if (event.target.matches('[data-compare-pick]')) {
+    const detail = event.target.closest('[data-list-detail]');
+    const picked = event.target.value;
+    detail.querySelectorAll('[data-compare-peer]').forEach((item) => { item.hidden = item.dataset.comparePeer !== picked; });
+    detail.querySelector('[data-compare-status]').textContent = picked ? '照合相手を表示しました。閲覧中の候補と作業用選択は変わっていません。' : '照合相手は未指定です。';
+  }
   if (event.target.matches('[data-b-select]')) renderPair(event.target.closest('[data-option]'));
   if (event.target.matches('[data-s-select]')) {
     const option = event.target.closest('[data-option]');
@@ -177,8 +183,9 @@ document.addEventListener('keydown', (event) => {
 
 const style = `:root{color-scheme:light;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#173331;background:#eef1ec}*{box-sizing:border-box}body{margin:0}body.has-expanded{overflow:hidden}button,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #ecad50;outline-offset:2px}h1,h2,h3,p{margin-top:0}p{line-height:1.55}.index{max-width:1600px;margin:auto;padding:30px 28px 42px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#287568}.index-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}.index-head h1{font-size:clamp(26px,3vw,43px);letter-spacing:-.04em;margin-bottom:8px}.index-head p{max-width:760px;margin-bottom:0;color:#4c625c}.source-note{border-left:4px solid #dbad62;padding:10px 14px;background:#fff8ea;font-size:13px;max-width:310px}.screens{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}.screen-option{background:#fff;border:1px solid #c9d7ce;box-shadow:0 14px 32px #24443b0f;min-width:0;overflow:hidden}.option-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #dce5de;background:#f9fbf8}.option-head h2{font-size:18px;line-height:1.25;margin:4px 0 2px}.option-head small{font-size:11px;color:#597068}.status-chip{display:inline-block;font-size:11px;font-weight:800;color:#176454;background:#e3f0ea;padding:3px 7px}.status-chip.pending{color:#705925;background:#f6edd4}.expand{border:1px solid #176454;background:#fff;color:#176454;font-weight:700;font-size:12px;padding:8px 10px;white-space:nowrap}.expand:hover{background:#e7f3ed}.screen-surface{height:490px;overflow:hidden;pointer-events:none;background:#f1f4ef}.screen-option.expanded{position:fixed;z-index:20;inset:0;width:100vw;height:100dvh;overflow:auto;border:0;box-shadow:none}.expanded .option-head{position:sticky;top:0;z-index:2;padding:14px max(20px,calc((100vw - 1320px)/2));background:#fff}.expanded .screen-surface{height:auto;min-height:calc(100dvh - 85px);overflow:visible;pointer-events:auto}.product{max-width:1320px;margin:auto;padding:24px 25px 50px}.product-top{display:flex;justify-content:space-between;align-items:start;gap:16px;padding-bottom:20px;border-bottom:1px solid #cad9cf}.product-top h3{font-size:clamp(22px,2.3vw,32px);letter-spacing:-.03em;margin:5px 0}.product-top p{font-size:13px;color:#52655c;max-width:700px;margin-bottom:0}.run-pill{border:1px solid #bfd2c6;padding:8px 12px;font-size:12px;white-space:nowrap;background:#fff}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0}.action{background:#176454;color:#fff;border:1px solid #176454;border-radius:4px;padding:10px 15px;font-weight:700}.action:hover{background:#0d493f}.action.secondary{background:#fff;color:#176454}.context{font-size:12px;color:#52655c}.fixed{font-weight:800;color:#3c4f46}.section-title{font-size:16px;margin:24px 0 12px}.candidate-tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;background:#e8f3ed;color:#176454;padding:4px 7px}.candidate-tag.selected{background:#d9ebe2}.candidate-tag.pending{background:#f8efd9;color:#705925}.subtle{color:#5b6f65;font-size:12px}.screen-copy{font-size:14px;line-height:1.55;color:#29443c}.panel{background:#fff;border:1px solid #d4e0d7;padding:18px}.panel h4{margin:10px 0;font-size:20px}.panel p:last-child{margin-bottom:0}.link-button{border:0;background:none;color:#126a5b;text-decoration:underline;font-weight:700;padding:4px 0}.trial{border-top:1px solid #d4e0d7;margin-top:25px;padding-top:18px}.trial-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.trial-status{font-size:12px;color:#52655c}.revision-confirmation{margin-top:12px;background:#fff8e7;border-left:4px solid #dbad62;padding:14px}.materials{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}.materials section{padding:16px;border:1px solid #d4e0d7;background:#fff}.materials h4{margin:0 0 9px}.materials p,.materials li{font-size:13px;line-height:1.55}.source-details{font-size:12px;margin-top:26px;color:#557066}.source-details pre{white-space:pre-wrap;overflow-wrap:anywhere}.a-table-wrap{overflow:auto;border:1px solid #c8d8cc;background:#fff}.a-table{border-collapse:collapse;table-layout:fixed;min-width:900px;width:100%}.a-table th,.a-table td{border-right:1px solid #dbe6de;border-bottom:1px solid #dbe6de;padding:15px;vertical-align:top;text-align:left;font-size:13px;line-height:1.5}.a-table thead th{position:sticky;top:0;background:#e5f0e8;z-index:1}.a-table tbody th{width:165px;background:#f0f5ef;font-size:12px;color:#35524a}.a-table .head-name{font-size:17px;display:block;margin-top:7px}.a-mobile{display:none}.a-mobile .panel{margin-bottom:12px}.a-mobile dl{margin:0}.a-mobile dt{font-weight:800;font-size:12px;color:#557066;margin-top:13px}.a-mobile dd{margin:3px 0 0;font-size:13px;line-height:1.5}.detail-view{max-width:900px;margin:auto;background:#fff;border:1px solid #cbd9ce;padding:24px}.detail-view h4{font-size:26px;margin:12px 0}.detail-view li{line-height:1.6;margin-bottom:10px}.detail-view details{border-top:1px solid #dce6de;padding-top:10px}.pair-controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}.pair-controls label{font-size:12px;font-weight:800;color:#48695b}.pair-controls select{display:block;width:100%;margin-top:7px;border:1px solid #aebfb2;padding:10px;background:#fff}.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}.pair .panel{border-top:5px solid #176454;min-width:0}.pair .panel:nth-child(2){border-top-color:#c39043}.pair .field{border-top:1px solid #e0e8e1;margin-top:14px;padding-top:11px}.pair .field strong{display:block;font-size:11px;color:#5a6e61;margin-bottom:5px}.pair .field p{font-size:13px}.wizard-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.steps{display:flex;gap:6px;overflow-x:auto;padding:10px 0 17px}.steps button{min-width:102px;border:1px solid #cbd9ce;background:#fff;color:#426358;padding:8px 11px;font-size:11px;text-align:left}.steps button[aria-current="step"]{background:#176454;color:#fff}.step-stage{background:#fff;border:1px solid #d4e0d7;padding:24px}.step-stage h4{font-size:25px;letter-spacing:-.02em;margin:0 0 8px}.step-stage .stage-intro{color:#5b6e63;font-size:13px}.stage-candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.stage-candidates .panel{background:#f8faf7;min-width:0}.stage-candidates .panel p{font-size:13px}.stage-nav{display:flex;justify-content:space-between;gap:12px;margin-top:18px}.summary-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.summary-list .panel p{font-size:12px}.summary-list strong{display:block;margin-top:12px;color:#48695b;font-size:11px}@media(max-width:1050px){.product{padding:18px}.screens{gap:10px}.screen-surface{height:390px}.option-head{align-items:start;flex-direction:column}.expand{width:100%}.expanded .option-head{flex-direction:row}.product-top{flex-direction:column}.run-pill{white-space:normal}}@media(max-width:700px){.index{padding:16px}.index-head{display:block;margin-bottom:15px}.index-head h1{font-size:27px}.source-note{max-width:none;margin-top:12px}.screens{grid-template-columns:1fr;gap:9px}.option-head{flex-direction:row;padding:10px 12px}.option-head h2{font-size:15px}.option-head small{display:none}.expand{width:auto;font-size:11px;padding:7px}.screen-surface{height:230px}.screen-option:not(.expanded) .product{padding:10px 12px}.screen-option:not(.expanded) .product-top{display:none}.screen-option:not(.expanded) .toolbar{margin:4px 0 8px}.screen-option:not(.expanded) .toolbar .context{display:none}.screen-option:not(.expanded) .pair-controls{margin:4px 0}.expanded .option-head{padding:10px 12px}.expanded .option-head small{display:block}.expanded .screen-surface{height:auto}.product{padding:16px 12px 40px}.product-top{padding-bottom:12px}.product-top h3{font-size:21px}.toolbar{margin:12px 0}.a-table-wrap{display:none}.a-mobile{display:block}.pair-controls,.pair,.materials,.stage-candidates,.summary-list{grid-template-columns:1fr}.pair-controls{gap:8px}.pair .panel{border-top-width:3px}.step-stage{padding:15px}.step-stage h4{font-size:20px}.stage-candidates{gap:8px}.steps button{min-width:87px}.detail-view{padding:16px}.run-pill{font-size:11px}}`;
 
-function detail(candidate) {
-  return `<span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}${candidate.selected ? " · 作業用ベース" : " · 未選択"}</span><h4>候補${candidate.name}の詳細</h4><p>${escape(candidate.summary)}</p><h5>画面の構造</h5><ol>${candidate.mechanisms.map((item) => `<li>${escape(item)}</li>`).join("")}</ol><details><summary>出典の適用理由とS11の設計記述評価（実画面・操作は未検証）</summary><ul>${candidate.rationale.map((item) => `<li>${escape(item)}</li>`).join("")}</ul><ul>${candidate.evaluation.map((item) => `<li>${escape(item.criterion)}: ${escape(item.reason)} (${escape(item.state)})</li>`).join("")}</ul></details>`;
+function detail(candidate, compact = false) {
+  const mechanisms = `<ol>${candidate.mechanisms.map((item) => `<li>${escape(item)}</li>`).join("")}</ol>`;
+  return `<span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}${candidate.selected ? " · 作業用ベース" : " · 未選択"}</span><h4>候補${candidate.name}の詳細</h4><p>${escape(candidate.summary)}</p>${compact ? `<details><summary>画面の構造をすべて読む</summary>${mechanisms}</details>` : `<h5>画面の構造</h5>${mechanisms}`}<details><summary>出典の適用理由とS11の設計記述評価（実画面・操作は未検証）</summary><ul>${candidate.rationale.map((item) => `<li>${escape(item)}</li>`).join("")}</ul><ul>${candidate.evaluation.map((item) => `<li>${escape(item.criterion)}: ${escape(item.reason)} (${escape(item.state)})</li>`).join("")}</ul></details>`;
 }
 
 function runContext(report, selectedRef) {
@@ -215,8 +222,13 @@ function materials(report) {
   return `<div class="materials"><section><h4>AIの推奨提案</h4>${proposal}<p class="subtle">提案は人の採用ではありません。</p></section><section><h4>未確定事項</h4><ul>${unresolved}</ul></section></div>`;
 }
 
-function chrome(candidate, brief, title) {
-  return `<header class="product-top"><div><span class="eyebrow">MIMIC / RUN ${escape(candidate.runId)}</span><h3>${escape(title)}</h3><p>同じ保存済み候補を、異なる比較方法で確認します。最終採用とブランド適合は未承認・未検証です。</p></div><div class="run-pill">現在の作業用ベース: ${candidate.selected ? `候補${candidate.name}` : "未選択"}<br><span class="fixed">${escape(brief.content.find((item) => item.policy === "fixed-fact")?.text)}</span></div></header>`;
+function chrome(
+  candidate,
+  brief,
+  title,
+  description = "同じ保存済み候補を、異なる比較方法で確認します。最終採用とブランド適合は未承認・未検証です。",
+) {
+  return `<header class="product-top"><div><span class="eyebrow">MIMIC / RUN ${escape(candidate.runId)}</span><h3>${escape(title)}</h3><p>${escape(description)}</p></div><div class="run-pill">現在の作業用ベース: ${candidate.selected ? `候補${candidate.name}` : "未選択"}<br><span class="fixed">${escape(brief.content.find((item) => item.policy === "fixed-fact")?.text)}</span></div></header>`;
 }
 
 function commonFooter(candidates) {
@@ -287,22 +299,64 @@ export function renderUnselectedScreensHtml(report, brief) {
   return renderComparisonScreensHtml(report, brief, null, true);
 }
 
-const sourcedStyle = `.list-layout{display:grid;grid-template-columns:minmax(190px,27%) 1fr;gap:15px}.list-rail{display:grid;align-content:start;gap:8px}.list-rail button{text-align:left;border:1px solid #cbd9ce;background:#fff;padding:13px;line-height:1.45}.list-rail button[aria-current="true"]{border-left:5px solid #176454;background:#e8f3ed}.list-detail{min-width:0;border:1px solid #cbd9ce;background:#fff;padding:23px}.list-detail h4{font-size:22px;margin:10px 0}.sourced-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}.sourced-pair .panel{min-width:0}.sourced-pair .panel h5{font-size:16px;margin:10px 0}.sourced-pair .panel p{font-size:14px}@media(max-width:700px){.list-layout,.sourced-pair{grid-template-columns:1fr}.list-rail{display:flex;overflow-x:auto}.list-rail button{min-width:180px}.list-detail{padding:15px}}`;
+const sourcedStyle = `.list-layout{display:grid;grid-template-columns:minmax(190px,27%) 1fr;gap:15px}.list-rail{display:grid;align-content:start;gap:8px}.list-rail button{text-align:left;border:1px solid #cbd9ce;background:#fff;padding:13px;line-height:1.45}.list-rail button[aria-current="true"]{border-left:5px solid #176454;background:#e8f3ed}.list-detail{min-width:0;border:1px solid #cbd9ce;background:#fff;padding:23px}.list-detail h4{font-size:22px;margin:10px 0}.sourced-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}.sourced-pair .panel{min-width:0}.sourced-pair .panel h5{font-size:16px;margin:10px 0}.sourced-pair .panel p{font-size:14px}.quick-compare{border:1px solid #9bb9a6;background:#f3f8f3;margin:18px 0;padding:14px}.quick-compare summary{font-weight:800;cursor:pointer}.quick-compare label{display:block;margin:12px 0}.quick-compare select{max-width:100%;padding:7px}.quick-compare .panel{background:#fff;padding:9px;border:1px solid #d1dfd4}@media(max-width:700px){.list-layout,.sourced-pair{grid-template-columns:1fr}.list-rail{display:flex;overflow-x:auto}.list-rail button{min-width:180px}.list-detail{padding:15px}}`;
 
-function sourcedListScreen(candidates, fields, report, brief) {
+function comparisonParts(candidate) {
+  const summary = candidate.summary ?? "";
+  return {
+    主操作: candidate.mechanisms?.[0] ?? "記載なし",
+    向く条件: summary.match(/向く条件は([^。]+)。/u)?.[1] ?? "記載なし",
+    失うもの:
+      summary.match(/(?:代償は|失うものは)([^。]+)。/u)?.[1] ?? "記載なし",
+  };
+}
+
+function quickCompare(candidate, candidates) {
+  const peers = candidates.filter((item) => item.index !== candidate.index);
+  const options = peers
+    .map(
+      (item) =>
+        `<option value="${item.index}">候補${escape(item.name)}</option>`,
+    )
+    .join("");
+  const panels = peers
+    .map((peer) => {
+      const left = comparisonParts(candidate);
+      const right = comparisonParts(peer);
+      return `<div data-compare-peer="${peer.index}" hidden><p class="context">候補${escape(candidate.name)} ${escape(candidate.ref.artifactId)}@${candidate.ref.revision}（Run ${escape(candidate.runId)}）と候補${escape(peer.name)} ${escape(peer.ref.artifactId)}@${peer.ref.revision}（Run ${escape(peer.runId)}）。親Runの候補は改稿されていません。記載なしは推測で埋めていません。</p>${Object.keys(
+        left,
+      )
+        .map(
+          (field) =>
+            `<div class="sourced-pair"><div class="panel"><h5>${escape(field)} · 候補${escape(candidate.name)}</h5><p>${escape(left[field])}</p></div><div class="panel"><h5>${escape(field)} · 候補${escape(peer.name)}</h5><p>${escape(right[field])}</p></div></div>`,
+        )
+        .join("")}</div>`;
+    })
+    .join("");
+  return `<details class="quick-compare"><summary>他の候補と照合</summary><label>照合相手 <select data-compare-pick><option value="">指定しない</option>${options}</select></label><p class="context" data-compare-status>照合相手は未指定です。</p>${panels}<p class="subtle">短い照合には条件が抜けるおそれがあります。詳細と元の評価を確認してください。照合操作は作業用選択を保存しません。</p></details>`;
+}
+
+function sourcedListScreen(
+  candidates,
+  fields,
+  report,
+  brief,
+  description,
+  compare = false,
+) {
   const rail = candidates
     .map(
       (candidate) =>
-        `<button type="button" data-list-pick="${candidate.index}" aria-current="${candidate.index === 0}"><strong>候補${candidate.name}</strong><br>${escape(lead(candidate.summary))}</button>`,
+        `<button type="button" data-list-pick="${candidate.index}" data-list-name="${candidate.name}" aria-current="${candidate.index === 0}"><strong>候補${candidate.name}${candidate.runId === report.runId ? "" : " · 親Run"}</strong><br>${escape(lead(candidate.summary))}</button>`,
     )
     .join("");
   const details = candidates
     .map(
       (candidate) =>
-        `<section data-list-detail="${candidate.index}"${candidate.index ? " hidden" : ""}><span class="candidate-tag pending">候補${candidate.name} · 閲覧用</span><h4>候補${candidate.name}の実画面と評価</h4><p class="subtle">画面の完成画像は未生成。保存済み構造と評価を広い詳細領域に表示しています。</p>${detail(candidate)}<h5>共通判断項目</h5>${fields.map((field) => `<div class="field"><strong>${escape(field)}</strong><p>${escape(candidate.fields[field])}</p></div>`).join("")}</section>`,
+        `<section data-list-detail="${candidate.index}"${candidate.index ? " hidden" : ""}><span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name} · 閲覧用</span><h4>候補${candidate.name}の実画面と評価</h4><p class="subtle">画面の完成画像は未生成。保存済み構造と評価を広い詳細領域に表示しています。</p>${detail(candidate, compare)}${compare ? quickCompare(candidate, candidates) : ""}<h5>評価の判断項目</h5>${fields.map((field) => `<div class="field"><strong>${escape(field)}</strong><p>${escape(candidate.fields[field])}</p></div>`).join("")}</section>`,
     )
     .join("");
-  return `<div class="product">${chrome(candidates[0], brief, "候補一覧から一案を大きく読む")}<div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">閲覧中の候補と作業用の選択は別です。</p></div><span class="context" data-list-status>閲覧中: 候補A。作業用選択はありません。</span></div><div class="list-layout"><nav class="list-rail" aria-label="閲覧する候補">${rail}</nav><div class="list-detail">${details}</div></div>${materials(report)}${trial(candidates, report, brief)}${commonFooter(candidates)}</div>`;
+  return `<div class="product">${chrome(candidates[0], brief, "候補一覧から一案を大きく読む", description)}<div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">閲覧中の候補と作業用の選択は別です。</p></div><span class="context" data-list-status>閲覧中: 候補${escape(candidates[0].name)}。作業用選択は変わっていません。</span></div><div class="list-layout"><nav class="list-rail" aria-label="閲覧する候補">${rail}</nav><div class="list-detail">${details}</div></div>${materials(report)}${trial(compare ? candidates.filter((candidate) => candidate.runId === report.runId) : candidates, report, brief)}${commonFooter(candidates)}</div>`;
 }
 
 function sourcedPairScreen(candidates, fields, report, brief) {
@@ -583,7 +637,135 @@ function renderComparisonScreensHtml(report, brief, expectedRef, unselected) {
 }
 
 /** An unselected A revision shown as an operable Codex sketch using saved Mimic directions. */
+function renderBRevisionScreenHtml(base, revision, brief) {
+  const baseRef = base.selectedRef;
+  const original = base.candidates.find((item) => sameRef(item.ref, baseRef));
+  const revised = revision.candidates?.[0];
+  const nextRef = revised?.ref;
+  if (
+    !matchesSourcedComparisonBrief(brief) ||
+    !base.humanSelectionId ||
+    base.status !== "selected" ||
+    !exactRef(baseRef) ||
+    !original?.mechanisms?.some((item) =>
+      item.includes("候補一覧と広い詳細領域"),
+    ) ||
+    base.candidates.length !== 3 ||
+    revision.previousRunId !== base.runId ||
+    revision.status !== "awaiting-human-selection" ||
+    revision.selectedRef ||
+    revision.humanSelectionId ||
+    revision.invalidRevisionRefs?.length ||
+    revision.unrelatedRevisionRefs?.length ||
+    revision.candidates?.length !== 1 ||
+    !revision.priorSelectedRefs?.some((ref) => sameRef(ref, baseRef)) ||
+    !exactRef(nextRef) ||
+    nextRef.artifactId !== baseRef.artifactId ||
+    nextRef.revision !== baseRef.revision + 1 ||
+    !revised.mechanisms?.some(
+      (item) => item.includes("一覧") && item.includes("詳細"),
+    ) ||
+    !Array.isArray(revised.evaluation) ||
+    !revised.evaluation.length ||
+    !Array.isArray(revised.rationale)
+  )
+    throw Error(
+      "B revision screen needs the selected exact B base and one evaluated, unselected list-detail revision",
+    );
+  const other = ["表の列に候補", "論点の移動"].map((marker) => {
+    const matches = base.candidates.filter(
+      (item) =>
+        !sameRef(item.ref, baseRef) &&
+        item.mechanisms?.some(
+          (mechanism) =>
+            mechanism.includes(marker) && !negatedMechanism.test(mechanism),
+        ),
+    );
+    if (matches.length !== 1)
+      throw Error("B revision screen needs distinct sourced A/C peers");
+    return matches[0];
+  });
+  if (
+    sameRef(other[0].ref, other[1].ref) ||
+    other.some(
+      (item) =>
+        !exactRef(item.ref) ||
+        !item.evaluation?.length ||
+        !Array.isArray(item.rationale),
+    ) ||
+    !Array.isArray(original.rationale)
+  )
+    throw Error("B revision screen needs the saved comparison context");
+  const beforeFields = original.evaluation
+    .slice(0, 6)
+    .map((item) => item.criterion);
+  const afterFields = revised.evaluation
+    .slice(0, 6)
+    .map((item) => item.criterion);
+  if (beforeFields.length < 2 || afterFields.length < 2)
+    throw Error("B revision screen needs saved S11 findings");
+  const build = (focus, report, selected, fields) =>
+    [focus, ...other].map((item, index) => ({
+      ...item,
+      name: index === 0 ? "B" : index === 1 ? "A" : "C",
+      index,
+      runId: index === 0 ? report.runId : base.runId,
+      selected: index === 0 && selected,
+      fields: Object.fromEntries([
+        ...fields.map((field) => [
+          field,
+          item.evaluation.find((finding) => finding.criterion === field)
+            ?.reason ??
+            "この評価軸は元Runの評価にありません。候補の元評価を確認してください。",
+        ]),
+      ]),
+    }));
+  const before = build(original, base, true, beforeFields);
+  const after = build(revised, revision, false, afterFields);
+  const screens = [
+    screen(
+      "before",
+      "B · 改稿前",
+      "保存済み作業用ベース",
+      "作業用ベース",
+      sourcedListScreen(
+        before,
+        beforeFields,
+        base,
+        brief,
+        "B@1 の保存済み構造と S11 評価を操作できる形にした試作です。改稿前の比較負担は未測定です。",
+      ),
+    ),
+    screen(
+      "after",
+      "B · 改稿後",
+      "新 Run の未選択候補",
+      "未選択の改稿案",
+      sourcedListScreen(
+        after,
+        afterFields,
+        revision,
+        brief,
+        "B@2 の保存済み構造と S11 評価を操作できる形にした試作です。人はまだ改稿案を選んでいません。",
+        true,
+      ),
+    ),
+  ].join("");
+  const hash = createHash("sha256").update(script).digest("base64");
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>B案の改稿前後 · Mimic</title><style>${style}${sourcedStyle}@media(min-width:701px){.screens{grid-template-columns:repeat(2,minmax(0,1fr))}}</style></head><body><main class="index" data-revision-screen="unapproved"><header class="index-head"><div><span class="eyebrow">MIMIC / B REVISION REVIEW</span><h1>B案の改稿前後を試す</h1><p>親Run ${escape(base.runId)} の作業用B@${baseRef.revision} と、子Run ${escape(revision.runId)} の未選択B@${nextRef.revision}。両画面で候補一覧から詳細を開き、それぞれの保存済み評価を確認できます。評価軸はRun間で異なります。</p><p>改稿の対象: ${escape(revision.revisionRequest ?? "子Runの改稿課題を参照")}</p></div><aside class="source-note">Mimic S10/S11 の保存済み構造と評価を Codex が画面化した未承認の試作です。完成画面をモデルが生成したという意味ではありません。操作は画面内の試用で保存されません。</aside></header><div class="screens">${screens}</div><p>ブランド適合、選択・修正の手間、回答時間、満足度は未測定です。最終採用は人の判断待ちです。</p><details class="source-details"><summary>改稿元・改稿候補の exact ref と検査</summary><pre>${escape(JSON.stringify({ baseRef, humanSelectionId: base.humanSelectionId, revisionRef: nextRef, baseEvaluation: original.evaluation, revisionEvaluation: revised.evaluation }, null, 2))}</pre></details></main><script>${script}</script></body></html>`;
+}
+
 export function renderRevisionScreenHtml(base, revision, brief) {
+  if (
+    base?.candidates?.some(
+      (item) =>
+        sameRef(item.ref, base.selectedRef) &&
+        item.mechanisms?.some((text) =>
+          text.includes("候補一覧と広い詳細領域"),
+        ),
+    )
+  )
+    return renderBRevisionScreenHtml(base, revision, brief);
   const baseRef = base?.selectedRef;
   const baseA = base?.candidates?.find((item) => sameRef(item.ref, baseRef));
   const revised = revision?.candidates?.[0];
