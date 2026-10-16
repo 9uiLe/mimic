@@ -32,7 +32,7 @@ One turn may contain distinct completed `agent_message` items. The decoder count
 
 `prepareCodexSubmission` checks the candidate's Run/task identity and contained paths and returns serialized work plus only `submit <run> --task <task> --package <package> --work <file> --root <workspace> --json`. It writes no files. The session owns immutable saving/checkpoints. Core's existing static Skill path validates schemas, realpath containment, digests, exact dependencies, immutable retry reservations and review gates. Approval and commit remain human actions; no `CliHost.executeSkill` bypass is constructed.
 
-Fresh ephemeral execution has no persisted native session, so native resume is unsupported. Mimic checkpoint recovery reconciles accepted submissions and does not regenerate accepted work. The integrated launcher/decoder/static handoff is implemented; actual real-model generation and its acceptance evidence remain unperformed until the separate user authorization and live prerequisites are satisfied.
+Fresh ephemeral execution has no persisted native session, so native resume is unsupported. Mimic checkpoint recovery reconciles accepted submissions and does not regenerate accepted work. The integrated launcher/decoder/static handoff is implemented. The authorized sourced guided Run `run_design_2f698ea9a89d534c` exercised the official model path on 2026-10-16: S04 through S09 were accepted, and S10 was rejected by static validation after generation. This is evidence of the path and its failure handling, not proof of design quality, billing state, or completed human review.
 
 ## Verification
 

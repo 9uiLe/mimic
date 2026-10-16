@@ -16,7 +16,10 @@ import {
   prepareProgress,
   progressDesign,
   recoverProgressLock,
+  reconcileS10Candidate,
 } from "./9ui226-progress-design.mjs";
+import { sessionDigest } from "../apps/cli/dist/agent/session.js";
+import { prepareCodexWorkEnvelope } from "../apps/cli/dist/agent/session-cli.js";
 
 const input = {
   model: "gpt-6.1-sol",
@@ -64,6 +67,129 @@ const report = (runId, status = "generating", count = 0, reservations = 0) => ({
   humanSelectionId: null,
   reviewPath: `/review-${runId}.html`,
   usage: { generationReservations: reservations },
+});
+
+test("rejected S10 raw output is reconciled without a new generation or erased rejection", async (t) => {
+  const { config, runId, workspace } = await fixture(t);
+  const sessionId = "session_progress_s10_exact";
+  const example = JSON.parse(
+    await readFile(
+      path.join(
+        workspace,
+        "skills/s10-design-direction-generator/examples/directions.json",
+      ),
+      "utf8",
+    ),
+  );
+  const artifact = JSON.parse(JSON.stringify(example.candidate));
+  delete artifact.content.selectionStatus;
+  const output = JSON.stringify({
+    artifacts: [artifact],
+    work: {
+      result: {
+        runId,
+        taskId: "s10",
+        skillId: "mimic.s10.design-direction-generator",
+        inputRefs: [],
+        outputRefs: [
+          {
+            artifactId: artifact.meta.id,
+            revision: artifact.meta.revision,
+            lockDigest: "host-derived",
+          },
+        ],
+      },
+    },
+  });
+  const binding = { taskId: "s10", inputRefs: [] };
+  const oldWork = prepareCodexWorkEnvelope(output, binding, false);
+  const originalDigest = sessionDigest(oldWork);
+  const workPath = `.mimic/agent-work/${sessionId}-s10-${originalDigest}.json`;
+  await mkdir(path.join(workspace, ".mimic/agent-work"), { recursive: true });
+  await writeFile(path.join(workspace, workPath), JSON.stringify(oldWork));
+  const rawPath = path.join(
+    workspace,
+    `.mimic/agent-work/${sessionId}-s10-${sessionDigest(output)}.raw.json`,
+  );
+  await writeFile(
+    rawPath,
+    JSON.stringify({
+      version: 1,
+      output,
+      outputDigest: sessionDigest(output),
+      normalizedDigest: originalDigest,
+    }),
+  );
+  const journalFile = path.join(workspace, `.mimic/progress-${runId}.json`);
+  await writeFile(
+    journalFile,
+    JSON.stringify({
+      version: 1,
+      runId,
+      inFlight: { taskId: "s10", sessionId },
+    }),
+  );
+  const checkpoint = {
+    stop: "candidate-rejected",
+    generationCount: 1,
+    tasks: {
+      s10: {
+        phase: "rejected",
+        rejectionReason: "static-validation",
+        staticFailure: { reason: "candidate-validation" },
+        work: { path: workPath, digest: originalDigest },
+        binding,
+      },
+    },
+  };
+  let submissions = 0;
+  const operations = {
+    checkpoint: async () => checkpoint,
+    submit: async (relative) => {
+      submissions++;
+      const derived = JSON.parse(
+        await readFile(path.join(workspace, relative), "utf8"),
+      );
+      assert.equal(derived.artifacts[0].content.selectionStatus, "candidate");
+      assert.notEqual(sessionDigest(derived), originalDigest);
+    },
+    next: async () => next(runId, "s10", "IGNORE"),
+  };
+  await assert.rejects(
+    reconcileS10Candidate(config, "session_progress_s10_wrong", operations),
+    /differs from the stopped Run/,
+  );
+  const originalRaw = await readFile(rawPath, "utf8");
+  await writeFile(
+    rawPath,
+    JSON.stringify({ ...JSON.parse(originalRaw), output: "{}" }),
+  );
+  await assert.rejects(
+    reconcileS10Candidate(config, sessionId, operations),
+    /Original model output changed/,
+  );
+  assert.equal(submissions, 0);
+  await writeFile(rawPath, originalRaw);
+  const result = await reconcileS10Candidate(config, sessionId, operations);
+  assert.equal(result.state, "reconciled-from-saved-output");
+  assert.equal(result.modelCalls, 0);
+  assert.equal(submissions, 1);
+  assert.equal(JSON.parse(await readFile(journalFile, "utf8")).inFlight, null);
+  assert.equal(JSON.parse(await readFile(rawPath, "utf8")).output, output);
+  assert.equal(
+    JSON.parse(await readFile(path.join(workspace, workPath), "utf8"))
+      .artifacts[0].content.selectionStatus,
+    undefined,
+  );
+  const receipt = JSON.parse(
+    await readFile(
+      path.join(workspace, `.mimic/reconciled-${sessionId}.json`),
+      "utf8",
+    ),
+  );
+  assert.equal(receipt.originalWorkDigest, originalDigest);
+  assert.equal(receipt.rawFileName, path.basename(rawPath));
+  assert.equal(receipt.rawOutputDigest, sessionDigest(output));
 });
 
 test("scope reads the actual saved Run and never starts generation", async (t) => {
