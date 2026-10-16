@@ -231,6 +231,13 @@ async function candidateScreens(configPath) {
   ]);
 }
 
+async function revisionScreen(configPath) {
+  return command(path.join(repo, "scripts/9ui197-harness.mjs"), [
+    "revision-screen",
+    configPath,
+  ]);
+}
+
 async function runHost(sessionFile, grantId) {
   return command(path.join(repo, "apps/cli/dist/agent/host-credit-cli.js"), [
     "run",
@@ -625,12 +632,23 @@ export async function progressDesign(
         };
         if (result.state === "review-ready" && !result.humanSelectionId) {
           try {
-            const preview = await (
-              operations.candidateScreens ?? candidateScreens
-            )(configPath);
+            const isRevision = !!config.previousRunId;
+            const preview = await (isRevision
+              ? (operations.revisionScreen ?? revisionScreen)(configPath)
+              : (operations.candidateScreens ?? candidateScreens)(configPath));
             assert(
-              preview.previewPath?.startsWith(`${workspace}${path.sep}`),
-              "Candidate screens path differs from Run",
+              isRevision
+                ? preview.previewPath ===
+                    path.join(
+                      workspace,
+                      `revision-screen-${config.runId}.html`,
+                    ) &&
+                    JSON.stringify(preview.baseRef) ===
+                      JSON.stringify(config.baseRef) &&
+                    JSON.stringify(preview.revisionRef) ===
+                      JSON.stringify(report.candidates[0]?.ref)
+                : preview.previewPath?.startsWith(`${workspace}${path.sep}`),
+              "Design screen path differs from Run",
             );
             const linked = await (operations.review ?? review)(configPath);
             assert(
@@ -638,9 +656,12 @@ export async function progressDesign(
               "Linked review differs from Run",
             );
             result.reviewPath = linked.reviewPath;
-            result.candidateScreensPath = preview.previewPath;
+            if (isRevision) result.revisionScreenPath = preview.previewPath;
+            else result.candidateScreensPath = preview.previewPath;
           } catch (error) {
-            result.candidateScreensUnavailable = error.message;
+            if (config.previousRunId)
+              result.revisionScreenUnavailable = error.message;
+            else result.candidateScreensUnavailable = error.message;
           }
         }
         return result;

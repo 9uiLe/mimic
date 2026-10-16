@@ -408,6 +408,16 @@ test("normal review uses the A matrix for varying saved candidates and states", 
   assert.match(html, /<th scope="row">表示の横はみ出し<\/th><td>FAIL<\/td>/);
   assert.match(html, /改訂用ベース/);
   assert.match(html, /prepare-next/);
+  const revisionLink = renderReviewHtml(
+    report,
+    {},
+    undefined,
+    undefined,
+    "revision-screen-run_child.html",
+  );
+  assert.match(revisionLink, /href="revision-screen-run_child\.html"/);
+  assert.match(revisionLink, /改稿案は未選択・画面内の操作は保存なし/);
+  assert.doesNotMatch(html, /revision-screen-run_child/);
   assert.match(html, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
   assert.doesNotMatch(html, /<img/);
   assert.match(
