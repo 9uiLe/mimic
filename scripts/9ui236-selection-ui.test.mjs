@@ -13,6 +13,7 @@ import path from "node:path";
 import os from "node:os";
 import { URLSearchParams } from "node:url";
 import { createServer, request as httpRequest } from "node:http";
+import { setImmediate } from "node:timers/promises";
 import {
   artifactDigest,
   FileWorkspaceStorage,
@@ -140,6 +141,14 @@ async function uiFor(t, setup, overrides = {}) {
   return { ...ui, html, csrf: token(html) };
 }
 
+async function freePort() {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = server.address().port;
+  await new Promise((resolve) => server.close(resolve));
+  return port;
+}
+
 test("explicit human choice uses real Core authority, survives reload/restart, and reaches existing revision preparation", async (t) => {
   const setup = await fixture(t);
   const before = await loadWorkingChoices(setup.config);
@@ -185,52 +194,72 @@ test("explicit human choice uses real Core authority, survives reload/restart, a
     ),
   );
   assert.equal(journal.request.id, after.selection.id);
-  const reservation = createServer();
-  await new Promise((resolve) => reservation.listen(0, "127.0.0.1", resolve));
-  const restartPort = reservation.address().port;
-  await new Promise((resolve) => reservation.close(resolve));
+  const restartPort = await freePort();
+  let preparationStarted, releasePreparation, readDuringStartup;
+  const started = new Promise((resolve) => {
+    preparationStarted = resolve;
+  });
+  const released = new Promise((resolve) => {
+    releasePreparation = resolve;
+  });
+  const startupRead = new Promise((resolve) => {
+    readDuringStartup = resolve;
+  });
+  let loads = 0;
   let restartedPreparations = 0;
-  const restarted = await startWorkingSelectionUi({
+  const restarting = startWorkingSelectionUi({
     configPath: setup.config,
     humanActorId,
     port: restartPort,
+    load: async (config) => {
+      const loaded = await loadWorkingChoices(config);
+      if (++loads === 2) readDuringStartup();
+      return loaded;
+    },
     startPrep: async (options) => {
       restartedPreparations++;
-      if (restartedPreparations === 1)
-        await assert.rejects(
-          fetch(`http://127.0.0.1:${restartPort}/run/${setup.runId}`),
-          (error) => error.cause?.code === "ECONNREFUSED",
-        );
+      preparationStarted();
+      await released;
       return startRevisionPrepUi(options);
     },
   });
+  await started;
+  const startupRequest = fetch(
+    `http://127.0.0.1:${restartPort}/run/${setup.runId}`,
+  );
+  await startupRead;
+  await setImmediate();
+  releasePreparation();
+  const restarted = await restarting;
   t.after(() => restarted.close());
+  assert.match(await (await startupRequest).text(), /作業用選択を保存済み/);
   assert.equal(restartedPreparations, 1);
   assert.match(
     await (await fetch(restarted.url)).text(),
     /作業用選択を保存済み/,
   );
   assert.equal(restartedPreparations, 1);
-  let closedPreparations = 0;
+  let failedPreparations = 0;
   await assert.rejects(
     startWorkingSelectionUi({
       configPath: setup.config,
       humanActorId,
       port: ui.server.address().port,
-      startPrep: async (options) => {
-        const service = await startRevisionPrepUi(options);
-        return {
-          ...service,
-          close: async () => {
-            closedPreparations++;
-            await service.close();
-          },
-        };
+      startPrep: async () => {
+        failedPreparations++;
       },
     }),
     { code: "EADDRINUSE" },
   );
-  assert.equal(closedPreparations, 1);
+  assert.equal(failedPreparations, 0);
+  const sharedPort = await freePort();
+  const shared = await uiFor(t, setup, {
+    port: sharedPort,
+    prepPort: sharedPort,
+  });
+  assert.match(shared.html, /作業用選択を保存済み/);
+  assert.match(shared.html, /改稿準備画面を起動できませんでした/);
+  assert.equal((await fetch(shared.url)).status, 200);
   assert.equal(
     (await setup.runtime.registry.snapshot()).events.filter(
       (e) => e.action === "select-revision-base",

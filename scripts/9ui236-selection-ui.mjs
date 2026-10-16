@@ -202,6 +202,7 @@ export async function startWorkingSelectionUi({
   let origin = "";
   let inFlight = false;
   let prep;
+  let preparing;
   const page = (
     current,
     { stale = false, error = "", reason = "", choice = "" } = {},
@@ -236,11 +237,18 @@ export async function startWorkingSelectionUi({
       current.report.status === "selected" &&
       !prep
     ) {
-      try {
-        prep = await startPrep({ configPath, port: prepPort });
-      } catch {
-        /* The selection remains durable; retry on reload. */
-      }
+      preparing ??= Promise.resolve()
+        .then(() => startPrep({ configPath, port: prepPort }))
+        .then((service) => {
+          prep = service;
+        })
+        .catch(() => {
+          /* The selection remains durable; retry on reload. */
+        })
+        .finally(() => {
+          preparing = undefined;
+        });
+      await preparing;
     }
   };
   const server = createServer(async (request, response) => {
@@ -414,17 +422,12 @@ export async function startWorkingSelectionUi({
       inFlight = false;
     }
   });
-  await ensurePrep(initial);
-  try {
-    await new Promise((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(port, "127.0.0.1", resolve);
-    });
-  } catch (error) {
-    await prep?.close();
-    throw error;
-  }
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "127.0.0.1", resolve);
+  });
   origin = `http://127.0.0.1:${server.address().port}`;
+  await ensurePrep(initial);
   return {
     server,
     url: `${origin}${route}`,
