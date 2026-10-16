@@ -157,7 +157,10 @@ async function delegatedAuthorize(
     `${JSON.stringify({
       grantId,
       runId: scope.runId,
-      kind: "delegated",
+      kind: evidence.continuation ? "delegated-continuation" : "delegated",
+      ...(evidence.continuation
+        ? { continuationOf: evidence.continuation.priorGrantId }
+        : {}),
       approverId: evidence.approverId,
       delegateId: evidence.delegateId,
     })}\n`,

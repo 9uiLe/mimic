@@ -60,6 +60,11 @@ export interface DelegatedCreditEvidence {
   readonly recordedBy: string;
   readonly approvedAt: number;
   readonly approvalTimePrecision: "minute" | "millisecond";
+  readonly continuation?: {
+    readonly priorGrantId: string;
+    readonly referenceSha256: string;
+    readonly changeSummary: string;
+  };
   readonly attestedScope: {
     readonly workspace: string;
     readonly runId: string;
@@ -80,6 +85,8 @@ interface StoredGrant {
   expires_at: number;
   inputs_sha256: string;
   revoked_at: number | null;
+  reference_sha256: string | null;
+  continuation_of: string | null;
 }
 
 const validId = (value: string) => /^[A-Za-z][A-Za-z0-9_-]{0,79}$/.test(value);
@@ -102,6 +109,113 @@ const validModel = (value: string) =>
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 const day = 24 * 60 * 60_000;
+
+async function containedIntakeFile(
+  workspace: string,
+  relative: string,
+): Promise<string> {
+  const file = path.join(workspace, relative);
+  if ((await realpath(file)) !== file)
+    throw Error("Continuation input changed");
+  const handle = await open(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  try {
+    const info = await handle.stat();
+    if (!info.isFile() || info.size > 1024 * 1024)
+      throw Error("Invalid continuation input file");
+    return handle.readFile({ encoding: "utf8" });
+  } finally {
+    await handle.close();
+  }
+}
+
+async function referenceDigest(workspace: string): Promise<string> {
+  return `sha256:${digest(await containedIntakeFile(workspace, "inputs/references.md"))}`;
+}
+
+/** This continuation is limited to adding references to the same guided
+ * design brief. The operator remains responsible for verifying the sources. */
+async function addedReferencesOnly(
+  priorWorkspace: string,
+  workspace: string,
+  priorRunId: string,
+  runId: string,
+  priorInputsSha256: string,
+  packages: Readonly<Record<string, string>>,
+): Promise<boolean> {
+  if (
+    priorWorkspace === workspace ||
+    path.dirname(priorWorkspace) !== path.dirname(workspace)
+  )
+    return false;
+  const intake = async (root: string) => {
+    return JSON.parse(
+      await containedIntakeFile(root, "intake-source.json"),
+    ) as {
+      model: string;
+      brief: { references: unknown[] };
+      [key: string]: unknown;
+    };
+  };
+  const prior = await intake(priorWorkspace);
+  const next = await intake(workspace);
+  const guidedRunId = (value: typeof prior) =>
+    `run_design_${digest(JSON.stringify(value)).slice(0, 16)}`;
+  if (
+    guidedRunId(prior) !== priorRunId ||
+    guidedRunId(next) !== runId ||
+    (await frozenRunInputsSha256(priorWorkspace, priorRunId, packages)) !==
+      priorInputsSha256
+  )
+    return false;
+  if (
+    !Array.isArray(prior.brief?.references) ||
+    !Array.isArray(next.brief?.references) ||
+    next.brief.references.length <= prior.brief.references.length ||
+    JSON.stringify(
+      next.brief.references.slice(0, prior.brief.references.length),
+    ) !== JSON.stringify(prior.brief.references)
+  )
+    return false;
+  const withoutReferences = (value: typeof prior) => ({
+    ...value,
+    brief: { ...value.brief, references: [] },
+  });
+  if (
+    JSON.stringify(withoutReferences(prior)) !==
+    JSON.stringify(withoutReferences(next))
+  )
+    return false;
+  const renderedReferences = (value: typeof prior) => {
+    const text = value.brief.references.length
+      ? value.brief.references
+          .map((item) => {
+            const ref = item as Record<string, unknown>;
+            return `- Source: ${ref.source}\n  Reason: ${ref.reason}\n  Applies when: ${ref.appliesWhen}\n  Do not borrow: ${ref.doNotBorrow}`;
+          })
+          .join("\n")
+      : "No references were supplied. Do not infer or invent a source.";
+    return `# References supplied by the user\n\n${text}\n`;
+  };
+  if (
+    (await containedIntakeFile(priorWorkspace, "inputs/references.md")) !==
+      renderedReferences(prior) ||
+    (await containedIntakeFile(workspace, "inputs/references.md")) !==
+      renderedReferences(next)
+  )
+    return false;
+  return next.brief.references
+    .slice(prior.brief.references.length)
+    .every((value) => {
+      const item = value as Record<string, unknown>;
+      return (
+        typeof item?.source === "string" &&
+        /https:\/\/[^\s,)]+/.test(item.source) &&
+        [item.reason, item.appliesWhen, item.doNotBorrow].every(
+          (part) => typeof part === "string" && validEvidenceText(part),
+        )
+      );
+    });
+}
 
 /** Freeze the saved task plan, scope configuration, and every selected Skill
  * package file. Generated Run artifacts may append later without changing this
@@ -208,8 +322,9 @@ export class HostCreditAuthorizationStore {
           model TEXT NOT NULL, executable TEXT NOT NULL,
           max_calls INTEGER NOT NULL, expires_at INTEGER NOT NULL,
           inputs_sha256 TEXT NOT NULL,
-          decision_id TEXT NOT NULL UNIQUE, actor_id TEXT NOT NULL,
-          approved_at INTEGER NOT NULL, revoked_at INTEGER
+          decision_id TEXT NOT NULL, actor_id TEXT NOT NULL,
+          approved_at INTEGER NOT NULL, revoked_at INTEGER,
+          reference_sha256 TEXT, continuation_of TEXT
         );
         CREATE TABLE IF NOT EXISTS consumed (
           grant_id TEXT NOT NULL REFERENCES grants(id) ON DELETE CASCADE,
@@ -224,6 +339,49 @@ export class HostCreditAuthorizationStore {
           delegate_id TEXT NOT NULL, recorded_by TEXT NOT NULL,
           evidence_json TEXT NOT NULL, recorded_at INTEGER NOT NULL
         );
+      `);
+      const schema = database
+        .prepare(
+          "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'grants'",
+        )
+        .get() as { sql: string };
+      if (/decision_id TEXT NOT NULL UNIQUE/i.test(schema.sql)) {
+        // Existing grants and consumption receipts must survive the one-to-many
+        // decision migration. SQLite cannot drop a column UNIQUE constraint.
+        database.exec("PRAGMA foreign_keys = OFF; BEGIN IMMEDIATE");
+        try {
+          database.exec(`
+            CREATE TABLE grants_v2 (
+              id TEXT PRIMARY KEY, workspace TEXT NOT NULL, run_id TEXT NOT NULL,
+              model TEXT NOT NULL, executable TEXT NOT NULL,
+              max_calls INTEGER NOT NULL, expires_at INTEGER NOT NULL,
+              inputs_sha256 TEXT NOT NULL,
+              decision_id TEXT NOT NULL, actor_id TEXT NOT NULL,
+              approved_at INTEGER NOT NULL, revoked_at INTEGER,
+              reference_sha256 TEXT, continuation_of TEXT
+            );
+            INSERT INTO grants_v2
+              (id, workspace, run_id, model, executable, max_calls, expires_at,
+               inputs_sha256, decision_id, actor_id, approved_at, revoked_at)
+            SELECT id, workspace, run_id, model, executable, max_calls, expires_at,
+                   inputs_sha256, decision_id, actor_id, approved_at, revoked_at
+            FROM grants;
+            DROP TABLE grants;
+            ALTER TABLE grants_v2 RENAME TO grants;
+          `);
+          database.exec("COMMIT");
+        } catch (error) {
+          database.exec("ROLLBACK");
+          throw error;
+        } finally {
+          database.exec("PRAGMA foreign_keys = ON");
+        }
+        if (database.prepare("PRAGMA foreign_key_check").get())
+          throw Error("Authorization migration broke a receipt reference");
+      }
+      database.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS grants_decision_scope
+        ON grants(decision_id, workspace, run_id, inputs_sha256);
       `);
       return database;
     } catch (error) {
@@ -288,6 +446,13 @@ export class HostCreditAuthorizationStore {
       recordedBy: source.recordedBy,
       approvedAt: source.approvedAt,
       approvalTimePrecision: source.approvalTimePrecision,
+      continuation: source.continuation
+        ? Object.freeze({
+            priorGrantId: source.continuation.priorGrantId,
+            referenceSha256: source.continuation.referenceSha256,
+            changeSummary: source.continuation.changeSummary,
+          })
+        : undefined,
       attestedScope: Object.freeze({
         workspace: source.attestedScope.workspace,
         runId: source.attestedScope.runId,
@@ -344,6 +509,42 @@ export class HostCreditAuthorizationStore {
         evidence.approvedAt + attested.durationMinutes * 60_000
     )
       throw Error("Delegation evidence does not bind this Run scope");
+    if (evidence.continuation) {
+      const continuation = evidence.continuation;
+      if (
+        evidence.approvalText.trim() !== "それならどれだけ使ってもいいよ" ||
+        !/^grant_[A-Za-z0-9_-]+$/.test(continuation.priorGrantId) ||
+        !/^sha256:[a-f0-9]{64}$/.test(continuation.referenceSha256) ||
+        !validEvidenceText(continuation.changeSummary) ||
+        (await referenceDigest(frozen.workspace)) !==
+          continuation.referenceSha256
+      )
+        throw Error("Delegation continuation does not bind its references");
+      const database = await this.database(frozen.workspace);
+      let priorScope:
+        Pick<StoredGrant, "workspace" | "run_id" | "inputs_sha256"> | undefined;
+      try {
+        priorScope = database
+          .prepare(
+            "SELECT workspace, run_id, inputs_sha256 FROM grants WHERE id = ?",
+          )
+          .get(continuation.priorGrantId) as typeof priorScope;
+      } finally {
+        database.close();
+      }
+      if (
+        !priorScope ||
+        !(await addedReferencesOnly(
+          priorScope.workspace,
+          frozen.workspace,
+          priorScope.run_id,
+          frozen.runId,
+          priorScope.inputs_sha256,
+          frozen.packages,
+        ))
+      )
+        throw Error("Continuation changes more than the guided Run references");
+    }
     // This ID is stable across attempts and independent of the operator's text.
     const decisionId = `delegated_${digest(
       JSON.stringify([evidence.sourceThreadId, evidence.approvalMessageId]),
@@ -356,6 +557,7 @@ export class HostCreditAuthorizationStore {
         approvedAt: evidence.approvedAt,
       },
       evidence,
+      evidence.continuation,
     );
   }
 
@@ -401,6 +603,7 @@ export class HostCreditAuthorizationStore {
     frozen: FrozenRunCreditScope,
     decision: HumanCreditDecision,
     delegated?: DelegatedCreditEvidence,
+    continuation?: NonNullable<DelegatedCreditEvidence["continuation"]>,
   ): Promise<string> {
     const decidedAt = Date.now();
     if (frozen.expiresAt <= decidedAt)
@@ -416,7 +619,76 @@ export class HostCreditAuthorizationStore {
             "DELETE FROM grants WHERE expires_at <= ? AND approved_at < ?",
           )
           .run(decidedAt, decidedAt - day);
-        if (
+        const prior = continuation
+          ? (database
+              .prepare("SELECT * FROM grants WHERE id = ?")
+              .get(continuation.priorGrantId) as
+              | (StoredGrant & {
+                  decision_id: string;
+                  actor_id: string;
+                  id: string;
+                })
+              | undefined)
+          : undefined;
+        if (continuation) {
+          const stored = prior
+            ? (database
+                .prepare(
+                  "SELECT evidence_json FROM delegated_grants WHERE grant_id = ?",
+                )
+                .get(prior.id) as { evidence_json: string } | undefined)
+            : undefined;
+          const oldEvidence = stored
+            ? (JSON.parse(stored.evidence_json) as DelegatedCreditEvidence)
+            : undefined;
+          const identity = (value: DelegatedCreditEvidence) =>
+            JSON.stringify([
+              value.sourceThreadId,
+              value.requestMessageId,
+              value.requestText,
+              value.delegationMessageId,
+              value.delegationText,
+              value.contextMessageId,
+              value.contextText,
+              value.approvalMessageId,
+              value.approvalText,
+              value.approverId,
+              value.delegateId,
+              value.recordedBy,
+              value.approvedAt,
+              value.approvalTimePrecision,
+            ]);
+          if (
+            !delegated ||
+            !prior ||
+            !oldEvidence ||
+            prior.decision_id !== decision.decisionId ||
+            prior.actor_id !== decision.actorId ||
+            prior.revoked_at !== null ||
+            prior.expires_at <= Date.now() ||
+            frozen.expiresAt > prior.expires_at ||
+            prior.model !== frozen.model ||
+            prior.executable !== frozen.executable ||
+            prior.max_calls < frozen.maxCalls ||
+            prior.run_id === frozen.runId ||
+            oldEvidence.approvalText.trim() !==
+              "それならどれだけ使ってもいいよ" ||
+            identity(oldEvidence) !== identity(delegated)
+          )
+            throw Error(
+              "Delegation continuation differs from the original decision",
+            );
+          if (
+            database
+              .prepare(
+                "SELECT id FROM grants WHERE decision_id = ? AND workspace = ? AND run_id = ?",
+              )
+              .get(decision.decisionId, frozen.workspace, frozen.runId)
+          )
+            throw Error(
+              "Human decision has already been recorded for this Run",
+            );
+        } else if (
           database
             .prepare("SELECT id FROM grants WHERE decision_id = ?")
             .get(decision.decisionId)
@@ -428,8 +700,8 @@ export class HostCreditAuthorizationStore {
             `
           INSERT INTO grants
           (id, workspace, run_id, model, executable, max_calls, expires_at, inputs_sha256,
-           decision_id, actor_id, approved_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           decision_id, actor_id, approved_at, reference_sha256, continuation_of)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
           )
           .run(
@@ -444,6 +716,8 @@ export class HostCreditAuthorizationStore {
             decision.decisionId,
             decision.actorId,
             decision.approvedAt,
+            continuation?.referenceSha256 ?? null,
+            continuation?.priorGrantId ?? null,
           );
         if (delegated)
           database
@@ -478,15 +752,27 @@ export class HostCreditAuthorizationStore {
     const database = await this.database(canonicalWorkspace);
     try {
       this.transaction(database, () => {
+        if (
+          !database
+            .prepare("SELECT 1 FROM grants WHERE id = ? AND workspace = ?")
+            .get(grantId, canonicalWorkspace)
+        )
+          throw Error("Unknown grant");
         const result = database
           .prepare(
             `
+          WITH RECURSIVE descendants(id) AS (
+            SELECT id FROM grants WHERE id = ? AND workspace = ?
+            UNION ALL
+            SELECT child.id FROM grants child
+            JOIN descendants parent ON child.continuation_of = parent.id
+          )
           UPDATE grants SET revoked_at = COALESCE(revoked_at, ?)
-          WHERE id = ? AND workspace = ?
+          WHERE id IN (SELECT id FROM descendants)
         `,
           )
-          .run(Date.now(), grantId, canonicalWorkspace);
-        if (result.changes !== 1) throw Error("Unknown grant");
+          .run(grantId, canonicalWorkspace, Date.now());
+        if (result.changes < 1) throw Error("Unknown grant");
       });
     } finally {
       database.close();
@@ -500,13 +786,18 @@ export class HostCreditAuthorizationStore {
       const grant = database
         .prepare(
           `
-        SELECT workspace, executable, expires_at, revoked_at FROM grants WHERE id = ?
+        SELECT workspace, executable, expires_at, revoked_at, reference_sha256
+        FROM grants WHERE id = ?
       `,
         )
         .get(grantId) as
         | Pick<
             StoredGrant,
-            "workspace" | "executable" | "expires_at" | "revoked_at"
+            | "workspace"
+            | "executable"
+            | "expires_at"
+            | "revoked_at"
+            | "reference_sha256"
           >
         | undefined;
       if (
@@ -514,6 +805,11 @@ export class HostCreditAuthorizationStore {
         grant.workspace !== canonicalWorkspace ||
         grant.revoked_at !== null ||
         grant.expires_at <= Date.now()
+      )
+        throw Error("No current authorization for this workspace");
+      if (
+        grant.reference_sha256 &&
+        (await referenceDigest(canonicalWorkspace)) !== grant.reference_sha256
       )
         throw Error("No current authorization for this workspace");
       return grant.executable;
@@ -541,7 +837,8 @@ export class HostCreditAuthorizationStore {
       const grant = database
         .prepare(
           `SELECT workspace, run_id, model, executable, max_calls, expires_at,
-                  inputs_sha256, revoked_at FROM grants WHERE id = ?`,
+          inputs_sha256, revoked_at, reference_sha256, continuation_of
+          FROM grants WHERE id = ?`,
         )
         .get(grantId) as StoredGrant | undefined;
       const consumed = database
@@ -556,6 +853,11 @@ export class HostCreditAuthorizationStore {
         grant.revoked_at !== null ||
         grant.expires_at <= Date.now() ||
         consumed.count >= grant.max_calls
+      )
+        throw Error("No current authorization for this execution");
+      if (
+        grant.reference_sha256 &&
+        (await referenceDigest(canonicalWorkspace)) !== grant.reference_sha256
       )
         throw Error("No current authorization for this execution");
       return grant.executable;
@@ -590,6 +892,9 @@ export class HostCreditAuthorizationStore {
           inputsSha256
         )
           throw Error("Frozen Run inputs changed before authorization");
+        const currentReferenceSha256 = await referenceDigest(workspace).catch(
+          () => null,
+        );
         const database = await this.database(workspace);
         try {
           return this.transaction(database, () => {
@@ -598,7 +903,7 @@ export class HostCreditAuthorizationStore {
               .prepare(
                 `
               SELECT workspace, run_id, model, executable, max_calls, expires_at,
-                     inputs_sha256, revoked_at
+                     inputs_sha256, revoked_at, reference_sha256, continuation_of
               FROM grants WHERE id = ?
             `,
               )
@@ -616,6 +921,8 @@ export class HostCreditAuthorizationStore {
               grant.model !== actual.model ||
               grant.executable !== executable ||
               grant.inputs_sha256 !== inputsSha256 ||
+              (grant.reference_sha256 !== null &&
+                grant.reference_sha256 !== currentReferenceSha256) ||
               grant.revoked_at !== null ||
               grant.expires_at <= now ||
               count.count >= grant.max_calls ||
