@@ -60,6 +60,152 @@ const report = {
   })),
 };
 
+const sourcedBrief = {
+  ...brief,
+  references: [
+    "https://speakerdeck.com/teamlab/object-oriented-ui-design",
+    "https://smarthr.design/products/design-patterns/smarthr-table/",
+    "https://design.google/library/expressive-material-design-google-research",
+    "https://github.blog/news-insights/product-news/improving-navigation-for-github-actions/",
+  ].map((source) => ({
+    source,
+    reason: "候補構造の検討に使う",
+    appliesWhen: "候補を比較するとき",
+    doNotBorrow: "見た目を模倣しない",
+  })),
+};
+const sourcedReport = {
+  ...report,
+  candidates: report.candidates.map((candidate, index) => ({
+    ...candidate,
+    mechanisms: [
+      "表の列に候補、行に主操作を置いて横断する",
+      "候補一覧と広い詳細領域を往復する",
+      "論点の移動領域と二案の実デザイン案を対照する",
+    ].slice(index, index + 1),
+  })),
+};
+
+test("sourced screens bind three distinct saved layouts without a human choice", () => {
+  const html = renderUnselectedScreensHtml(sourcedReport, sourcedBrief);
+  expect(html.match(/class="screen-option"/g)).toHaveLength(3);
+  expect(html).toContain("一覧と広い単案詳細");
+  expect(html).toContain("論点別の二案対照");
+  expect(html).toContain("案Cの次の操作に関する未検証の理由");
+  expect(html).toContain("UNVERIFIED");
+  expect(html).toContain("作業用ベースはありません");
+  expect(html).toContain("実画面・操作は未検証");
+  expect(() =>
+    renderUnselectedScreensHtml(
+      { ...sourcedReport, humanSelectionId: "selection_forged" },
+      sourcedBrief,
+    ),
+  ).toThrow(/evaluated, unselected directions/);
+  expect(() =>
+    renderUnselectedScreensHtml(
+      {
+        ...sourcedReport,
+        candidates: sourcedReport.candidates.map((candidate, index) =>
+          index === 1
+            ? { ...candidate, mechanisms: ["候補を色で区別"] }
+            : candidate,
+        ),
+      },
+      sourcedBrief,
+    ),
+  ).toThrow(/does not identify one sourced layout/);
+  expect(() =>
+    renderUnselectedScreensHtml(
+      {
+        ...sourcedReport,
+        candidates: sourcedReport.candidates.map((candidate, index) =>
+          index === 0
+            ? {
+                ...candidate,
+                mechanisms: ["表の列に候補、行に主操作を置かない"],
+              }
+            : candidate,
+        ),
+      },
+      sourcedBrief,
+    ),
+  ).toThrow(/does not identify one sourced layout/);
+  expect(() =>
+    renderUnselectedScreensHtml(sourcedReport, {
+      ...sourcedBrief,
+      references: sourcedBrief.references.slice(0, 3),
+    }),
+  ).toThrow(/only supports the Mimic design comparison brief/);
+  expect(() =>
+    renderUnselectedScreensHtml(sourcedReport, {
+      ...sourcedBrief,
+      references: [
+        {
+          ...sourcedBrief.references[0],
+          source: sourcedBrief.references.map((item) => item.source).join(" "),
+        },
+        ...sourcedBrief.references.slice(1).map((item) => ({
+          ...item,
+          source: "https://example.invalid/unrelated",
+        })),
+      ],
+    }),
+  ).toThrow(/only supports the Mimic design comparison brief/);
+});
+
+test("Chrome desktop and mobile can inspect sourced list and change a staged pair", async () => {
+  const folder = await mkdtemp(path.join(os.tmpdir(), "mimic-233-"));
+  const file = path.join(folder, "candidate-screens.html");
+  await writeFile(
+    file,
+    renderUnselectedScreensHtml(sourcedReport, sourcedBrief),
+  );
+  const browser = await chromium.launch({
+    executablePath: process.env.MIMIC_CHROME_EXECUTABLE,
+  });
+  try {
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      const page = await browser.newPage({ viewport });
+      await page.goto(pathToFileURL(file).href);
+      const a = page.locator('[data-option="a"]');
+      await a.locator("[data-expand]").click();
+      await a.locator('[data-a-detail="1"]:visible').first().click();
+      await browserExpect(
+        a.locator('[data-a-detail-content="1"]'),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+      const b = page.locator('[data-option="b"]');
+      await b.locator("[data-expand]").click();
+      await b.locator('[data-list-pick="2"]').click();
+      await browserExpect(b.locator('[data-list-detail="2"]')).toBeVisible();
+      await browserExpect(b.locator("[data-list-status]")).toContainText(
+        "候補C",
+      );
+      await page.keyboard.press("Escape");
+      const c = page.locator('[data-option="c"]');
+      await c.locator("[data-expand]").click();
+      await c.locator('[data-s-select="right"]').selectOption("2");
+      await browserExpect(
+        c.locator('[data-s-slot="right"] [data-s-card="2"]').first(),
+      ).toBeVisible();
+      await c.locator("[data-c-next]").click();
+      await browserExpect(c.locator('[data-c-step="1"]')).toBeVisible();
+      await c.locator('[data-c-go="3"]').click();
+      await c.locator('[data-try-choice="B"]').click();
+      await browserExpect(c.locator("[data-trial-status]")).toContainText(
+        "候補B（保存なし）",
+      );
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+    await rm(folder, { recursive: true, force: true });
+  }
+}, 60_000);
+
 test("unselected screens bind saved structures and facts without inventing a human choice", () => {
   const html = renderUnselectedScreensHtml(report, brief);
   expect(html).toContain('data-real-screens="unselected"');

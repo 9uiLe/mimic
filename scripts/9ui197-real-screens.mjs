@@ -48,6 +48,38 @@ const matchesComparisonBrief = (brief) =>
   brief.references.length === 0 &&
   (!brief.brandColors || brief.brandColors.length === 0);
 
+const sourcedReferences = [
+  "https://speakerdeck.com/teamlab/object-oriented-ui-design",
+  "https://smarthr.design/products/design-patterns/smarthr-table/",
+  "https://design.google/library/expressive-material-design-google-research",
+  "https://github.blog/news-insights/product-news/improving-navigation-for-github-actions/",
+];
+const referenceUrl = (reference) =>
+  reference?.source?.match(/https?:\/\/[^\s)]+/u)?.[0];
+const negatedMechanism =
+  /置かない|使わず|使わない|用いない|採用しない|避ける|ではなく|不採用|排除|代わりに|しない|\b(?:not|without|avoid|exclude|instead of)\b/iu;
+const matchesSourcedComparisonBrief = (brief) =>
+  brief?.audience === comparisonBrief.audience &&
+  brief.purpose === comparisonBrief.purpose &&
+  brief.primaryAction === comparisonBrief.primaryAction &&
+  brief.brandCharacter === comparisonBrief.brandCharacter &&
+  JSON.stringify(brief.requiredInformation) ===
+    JSON.stringify(comparisonBrief.requiredInformation) &&
+  JSON.stringify(brief.content) === JSON.stringify(comparisonBrief.content) &&
+  Array.isArray(brief.references) &&
+  brief.references.length === sourcedReferences.length &&
+  sourcedReferences.every(
+    (source) =>
+      brief.references.filter(
+        (reference) =>
+          referenceUrl(reference) === source &&
+          reference.reason?.trim() &&
+          reference.appliesWhen?.trim() &&
+          reference.doNotBorrow?.trim(),
+      ).length === 1,
+  ) &&
+  (!brief.brandColors || brief.brandColors.length === 0);
+
 const lead = (text) => `${String(text ?? "未提供").split("。")[0]}。`;
 
 const script = `const options = [...document.querySelectorAll('[data-option]')];
@@ -119,9 +151,22 @@ document.addEventListener('click', (event) => {
   if (button.hasAttribute('data-c-go')) { showStep(option, Number(button.dataset.cGo)); return; }
   if (button.hasAttribute('data-c-prev')) { showStep(option, Number(option.dataset.currentStep ?? '0') - 1); return; }
   if (button.hasAttribute('data-c-next')) { showStep(option, Number(option.dataset.currentStep ?? '0') + 1); }
+  if (button.hasAttribute('data-list-pick')) {
+    const picked = button.dataset.listPick;
+    option.querySelectorAll('[data-list-detail]').forEach((item) => { item.hidden = item.dataset.listDetail !== picked; });
+    option.querySelectorAll('[data-list-pick]').forEach((item) => { item.setAttribute('aria-current', item === button ? 'true' : 'false'); });
+    option.querySelector('[data-list-status]').textContent = '閲覧中: 候補' + String.fromCharCode(65 + Number(picked)) + '。作業用選択は変わっていません。';
+  }
 });
 document.addEventListener('change', (event) => {
   if (event.target.matches('[data-b-select]')) renderPair(event.target.closest('[data-option]'));
+  if (event.target.matches('[data-s-select]')) {
+    const option = event.target.closest('[data-option]');
+    const side = event.target.dataset.sSelect;
+    const picked = event.target.value;
+    option.querySelectorAll('[data-s-slot="' + side + '"] [data-s-card]').forEach((item) => { item.hidden = item.dataset.sCard !== picked; });
+    option.querySelector('[data-s-status]').textContent = '閲覧ペアを更新しました。作業用選択は変わっていません。';
+  }
 });
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
@@ -133,7 +178,7 @@ document.addEventListener('keydown', (event) => {
 const style = `:root{color-scheme:light;font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:#173331;background:#eef1ec}*{box-sizing:border-box}body{margin:0}body.has-expanded{overflow:hidden}button,select{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #ecad50;outline-offset:2px}h1,h2,h3,p{margin-top:0}p{line-height:1.55}.index{max-width:1600px;margin:auto;padding:30px 28px 42px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#287568}.index-head{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:22px}.index-head h1{font-size:clamp(26px,3vw,43px);letter-spacing:-.04em;margin-bottom:8px}.index-head p{max-width:760px;margin-bottom:0;color:#4c625c}.source-note{border-left:4px solid #dbad62;padding:10px 14px;background:#fff8ea;font-size:13px;max-width:310px}.screens{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}.screen-option{background:#fff;border:1px solid #c9d7ce;box-shadow:0 14px 32px #24443b0f;min-width:0;overflow:hidden}.option-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #dce5de;background:#f9fbf8}.option-head h2{font-size:18px;line-height:1.25;margin:4px 0 2px}.option-head small{font-size:11px;color:#597068}.status-chip{display:inline-block;font-size:11px;font-weight:800;color:#176454;background:#e3f0ea;padding:3px 7px}.status-chip.pending{color:#705925;background:#f6edd4}.expand{border:1px solid #176454;background:#fff;color:#176454;font-weight:700;font-size:12px;padding:8px 10px;white-space:nowrap}.expand:hover{background:#e7f3ed}.screen-surface{height:490px;overflow:hidden;pointer-events:none;background:#f1f4ef}.screen-option.expanded{position:fixed;z-index:20;inset:0;width:100vw;height:100dvh;overflow:auto;border:0;box-shadow:none}.expanded .option-head{position:sticky;top:0;z-index:2;padding:14px max(20px,calc((100vw - 1320px)/2));background:#fff}.expanded .screen-surface{height:auto;min-height:calc(100dvh - 85px);overflow:visible;pointer-events:auto}.product{max-width:1320px;margin:auto;padding:24px 25px 50px}.product-top{display:flex;justify-content:space-between;align-items:start;gap:16px;padding-bottom:20px;border-bottom:1px solid #cad9cf}.product-top h3{font-size:clamp(22px,2.3vw,32px);letter-spacing:-.03em;margin:5px 0}.product-top p{font-size:13px;color:#52655c;max-width:700px;margin-bottom:0}.run-pill{border:1px solid #bfd2c6;padding:8px 12px;font-size:12px;white-space:nowrap;background:#fff}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:18px 0}.action{background:#176454;color:#fff;border:1px solid #176454;border-radius:4px;padding:10px 15px;font-weight:700}.action:hover{background:#0d493f}.action.secondary{background:#fff;color:#176454}.context{font-size:12px;color:#52655c}.fixed{font-weight:800;color:#3c4f46}.section-title{font-size:16px;margin:24px 0 12px}.candidate-tag{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.04em;background:#e8f3ed;color:#176454;padding:4px 7px}.candidate-tag.selected{background:#d9ebe2}.candidate-tag.pending{background:#f8efd9;color:#705925}.subtle{color:#5b6f65;font-size:12px}.screen-copy{font-size:14px;line-height:1.55;color:#29443c}.panel{background:#fff;border:1px solid #d4e0d7;padding:18px}.panel h4{margin:10px 0;font-size:20px}.panel p:last-child{margin-bottom:0}.link-button{border:0;background:none;color:#126a5b;text-decoration:underline;font-weight:700;padding:4px 0}.trial{border-top:1px solid #d4e0d7;margin-top:25px;padding-top:18px}.trial-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.trial-status{font-size:12px;color:#52655c}.revision-confirmation{margin-top:12px;background:#fff8e7;border-left:4px solid #dbad62;padding:14px}.materials{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}.materials section{padding:16px;border:1px solid #d4e0d7;background:#fff}.materials h4{margin:0 0 9px}.materials p,.materials li{font-size:13px;line-height:1.55}.source-details{font-size:12px;margin-top:26px;color:#557066}.source-details pre{white-space:pre-wrap;overflow-wrap:anywhere}.a-table-wrap{overflow:auto;border:1px solid #c8d8cc;background:#fff}.a-table{border-collapse:collapse;table-layout:fixed;min-width:900px;width:100%}.a-table th,.a-table td{border-right:1px solid #dbe6de;border-bottom:1px solid #dbe6de;padding:15px;vertical-align:top;text-align:left;font-size:13px;line-height:1.5}.a-table thead th{position:sticky;top:0;background:#e5f0e8;z-index:1}.a-table tbody th{width:165px;background:#f0f5ef;font-size:12px;color:#35524a}.a-table .head-name{font-size:17px;display:block;margin-top:7px}.a-mobile{display:none}.a-mobile .panel{margin-bottom:12px}.a-mobile dl{margin:0}.a-mobile dt{font-weight:800;font-size:12px;color:#557066;margin-top:13px}.a-mobile dd{margin:3px 0 0;font-size:13px;line-height:1.5}.detail-view{max-width:900px;margin:auto;background:#fff;border:1px solid #cbd9ce;padding:24px}.detail-view h4{font-size:26px;margin:12px 0}.detail-view li{line-height:1.6;margin-bottom:10px}.detail-view details{border-top:1px solid #dce6de;padding-top:10px}.pair-controls{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:20px 0}.pair-controls label{font-size:12px;font-weight:800;color:#48695b}.pair-controls select{display:block;width:100%;margin-top:7px;border:1px solid #aebfb2;padding:10px;background:#fff}.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}.pair .panel{border-top:5px solid #176454;min-width:0}.pair .panel:nth-child(2){border-top-color:#c39043}.pair .field{border-top:1px solid #e0e8e1;margin-top:14px;padding-top:11px}.pair .field strong{display:block;font-size:11px;color:#5a6e61;margin-bottom:5px}.pair .field p{font-size:13px}.wizard-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.steps{display:flex;gap:6px;overflow-x:auto;padding:10px 0 17px}.steps button{min-width:102px;border:1px solid #cbd9ce;background:#fff;color:#426358;padding:8px 11px;font-size:11px;text-align:left}.steps button[aria-current="step"]{background:#176454;color:#fff}.step-stage{background:#fff;border:1px solid #d4e0d7;padding:24px}.step-stage h4{font-size:25px;letter-spacing:-.02em;margin:0 0 8px}.step-stage .stage-intro{color:#5b6e63;font-size:13px}.stage-candidates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}.stage-candidates .panel{background:#f8faf7;min-width:0}.stage-candidates .panel p{font-size:13px}.stage-nav{display:flex;justify-content:space-between;gap:12px;margin-top:18px}.summary-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}.summary-list .panel p{font-size:12px}.summary-list strong{display:block;margin-top:12px;color:#48695b;font-size:11px}@media(max-width:1050px){.product{padding:18px}.screens{gap:10px}.screen-surface{height:390px}.option-head{align-items:start;flex-direction:column}.expand{width:100%}.expanded .option-head{flex-direction:row}.product-top{flex-direction:column}.run-pill{white-space:normal}}@media(max-width:700px){.index{padding:16px}.index-head{display:block;margin-bottom:15px}.index-head h1{font-size:27px}.source-note{max-width:none;margin-top:12px}.screens{grid-template-columns:1fr;gap:9px}.option-head{flex-direction:row;padding:10px 12px}.option-head h2{font-size:15px}.option-head small{display:none}.expand{width:auto;font-size:11px;padding:7px}.screen-surface{height:230px}.screen-option:not(.expanded) .product{padding:10px 12px}.screen-option:not(.expanded) .product-top{display:none}.screen-option:not(.expanded) .toolbar{margin:4px 0 8px}.screen-option:not(.expanded) .toolbar .context{display:none}.screen-option:not(.expanded) .pair-controls{margin:4px 0}.expanded .option-head{padding:10px 12px}.expanded .option-head small{display:block}.expanded .screen-surface{height:auto}.product{padding:16px 12px 40px}.product-top{padding-bottom:12px}.product-top h3{font-size:21px}.toolbar{margin:12px 0}.a-table-wrap{display:none}.a-mobile{display:block}.pair-controls,.pair,.materials,.stage-candidates,.summary-list{grid-template-columns:1fr}.pair-controls{gap:8px}.pair .panel{border-top-width:3px}.step-stage{padding:15px}.step-stage h4{font-size:20px}.stage-candidates{gap:8px}.steps button{min-width:87px}.detail-view{padding:16px}.run-pill{font-size:11px}}`;
 
 function detail(candidate) {
-  return `<span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}${candidate.selected ? " · 作業用ベース" : " · 未選択"}</span><h4>候補${candidate.name}の詳細</h4><p>${escape(candidate.summary)}</p><h5>画面の構造</h5><ol>${candidate.mechanisms.map((item) => `<li>${escape(item)}</li>`).join("")}</ol><details><summary>出典の適用理由とS11評価</summary><ul>${candidate.rationale.map((item) => `<li>${escape(item)}</li>`).join("")}</ul><ul>${candidate.evaluation.map((item) => `<li>${escape(item.criterion)}: ${escape(item.reason)} (${escape(item.state)})</li>`).join("")}</ul></details>`;
+  return `<span class="candidate-tag ${candidate.selected ? "selected" : "pending"}">候補${candidate.name}${candidate.selected ? " · 作業用ベース" : " · 未選択"}</span><h4>候補${candidate.name}の詳細</h4><p>${escape(candidate.summary)}</p><h5>画面の構造</h5><ol>${candidate.mechanisms.map((item) => `<li>${escape(item)}</li>`).join("")}</ol><details><summary>出典の適用理由とS11の設計記述評価（実画面・操作は未検証）</summary><ul>${candidate.rationale.map((item) => `<li>${escape(item)}</li>`).join("")}</ul><ul>${candidate.evaluation.map((item) => `<li>${escape(item.criterion)}: ${escape(item.reason)} (${escape(item.state)})</li>`).join("")}</ul></details>`;
 }
 
 function runContext(report, selectedRef) {
@@ -237,7 +282,135 @@ export function renderRealScreensHtml(report, brief, expectedRef) {
 
 /** Before selection, render only directions whose saved mechanisms identify all three layouts. */
 export function renderUnselectedScreensHtml(report, brief) {
+  if (matchesSourcedComparisonBrief(brief))
+    return renderSourcedScreensHtml(report, brief);
   return renderComparisonScreensHtml(report, brief, null, true);
+}
+
+const sourcedStyle = `.list-layout{display:grid;grid-template-columns:minmax(190px,27%) 1fr;gap:15px}.list-rail{display:grid;align-content:start;gap:8px}.list-rail button{text-align:left;border:1px solid #cbd9ce;background:#fff;padding:13px;line-height:1.45}.list-rail button[aria-current="true"]{border-left:5px solid #176454;background:#e8f3ed}.list-detail{min-width:0;border:1px solid #cbd9ce;background:#fff;padding:23px}.list-detail h4{font-size:22px;margin:10px 0}.sourced-pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}.sourced-pair .panel{min-width:0}.sourced-pair .panel h5{font-size:16px;margin:10px 0}.sourced-pair .panel p{font-size:14px}@media(max-width:700px){.list-layout,.sourced-pair{grid-template-columns:1fr}.list-rail{display:flex;overflow-x:auto}.list-rail button{min-width:180px}.list-detail{padding:15px}}`;
+
+function sourcedListScreen(candidates, fields, report, brief) {
+  const rail = candidates
+    .map(
+      (candidate) =>
+        `<button type="button" data-list-pick="${candidate.index}" aria-current="${candidate.index === 0}"><strong>候補${candidate.name}</strong><br>${escape(lead(candidate.summary))}</button>`,
+    )
+    .join("");
+  const details = candidates
+    .map(
+      (candidate) =>
+        `<section data-list-detail="${candidate.index}"${candidate.index ? " hidden" : ""}><span class="candidate-tag pending">候補${candidate.name} · 閲覧用</span><h4>候補${candidate.name}の実画面と評価</h4><p class="subtle">画面の完成画像は未生成。保存済み構造と評価を広い詳細領域に表示しています。</p>${detail(candidate)}<h5>共通判断項目</h5>${fields.map((field) => `<div class="field"><strong>${escape(field)}</strong><p>${escape(candidate.fields[field])}</p></div>`).join("")}</section>`,
+    )
+    .join("");
+  return `<div class="product">${chrome(candidates[0], brief, "候補一覧から一案を大きく読む")}<div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">閲覧中の候補と作業用の選択は別です。</p></div><span class="context" data-list-status>閲覧中: 候補A。作業用選択はありません。</span></div><div class="list-layout"><nav class="list-rail" aria-label="閲覧する候補">${rail}</nav><div class="list-detail">${details}</div></div>${materials(report)}${trial(candidates, report, brief)}${commonFooter(candidates)}</div>`;
+}
+
+function sourcedPairScreen(candidates, fields, report, brief) {
+  const choices = (selected) =>
+    candidates
+      .map(
+        (candidate) =>
+          `<option value="${candidate.index}"${candidate.index === selected ? " selected" : ""}>候補${candidate.name}</option>`,
+      )
+      .join("");
+  const stages = fields
+    .map(
+      (field, index) =>
+        `<section class="step-stage" data-c-step="${index}"${index ? " hidden" : ""}><span class="eyebrow">論点 ${index + 1}</span><h4>${escape(field)}</h4><p class="stage-intro">二案の同じ論点を対照します。閲覧ペアの変更は作業用選択を変えません。</p><div class="sourced-pair">${["left", "right"].map((side, sideIndex) => `<div data-s-slot="${side}">${candidates.map((candidate) => `<article class="panel" data-s-card="${candidate.index}"${candidate.index !== sideIndex ? " hidden" : ""}><span class="candidate-tag pending">候補${candidate.name}</span><h5>${escape(lead(candidate.summary))}</h5><p>${escape(candidate.fields[field])}</p></article>`).join("")}</div>`).join("")}</div></section>`,
+    )
+    .join("");
+  const last = fields.length;
+  return `<div class="product">${chrome(candidates[0], brief, "論点ごとに二案を対照する")}<div class="toolbar"><div><strong>${escape(brief.content.find((item) => item.policy === "fixed-copy")?.text)}</strong><p class="context">論点を行き来し、二案を入れ替えて確認します。</p></div><span class="context" data-step-count>1 / ${last + 1}</span></div><div class="pair-controls"><label>左の閲覧候補<select data-s-select="left">${choices(0)}</select></label><label>右の閲覧候補<select data-s-select="right">${choices(1)}</select></label></div><p class="subtle" data-s-status>候補Aと候補Bを閲覧中。作業用選択はありません。</p><nav class="steps" aria-label="比較する論点">${[...fields, "総括と未確定"].map((name, index) => `<button type="button" data-c-go="${index}" aria-current="${index === 0 ? "step" : "false"}">${index + 1}. ${escape(name)}</button>`).join("")}</nav>${stages}<section class="step-stage" data-c-step="${last}" hidden><h4>全候補の向く条件と代償</h4><div class="summary-list">${candidates.map((candidate) => `<article class="panel"><span class="candidate-tag pending">候補${candidate.name}</span><p>${escape(candidate.summary)}</p></article>`).join("")}</div>${materials(report)}${trial(candidates, report, brief)}</section><div class="stage-nav"><button class="action secondary" type="button" data-c-prev disabled>前へ</button><button class="action" type="button" data-c-next>次の論点へ</button></div>${commonFooter(candidates)}</div>`;
+}
+
+function renderSourcedScreensHtml(report, brief) {
+  if (
+    !report ||
+    report.condition !== "guided" ||
+    !["awaiting-human-selection", "awaiting-working-selection"].includes(
+      report.status,
+    ) ||
+    report.selectedRef ||
+    report.humanSelectionId ||
+    report.candidates?.length !== 3
+  )
+    throw Error("Sourced screens need three evaluated, unselected directions");
+  const markers = [
+    "表の列に候補、行に主操作",
+    "候補一覧と広い詳細領域",
+    "論点の移動領域と二案",
+  ];
+  const byLayout = markers.map((marker) => {
+    const matches = report.candidates.filter(
+      (candidate) =>
+        candidate.mechanisms?.some(
+          (item) => item.includes(marker) && !negatedMechanism.test(item),
+        ) &&
+        exactRef(candidate.ref) &&
+        Array.isArray(candidate.evaluation) &&
+        candidate.evaluation.length > 0,
+    );
+    if (matches.length !== 1)
+      throw Error("Saved S10/S11 does not identify one sourced layout");
+    return matches[0];
+  });
+  if (new Set(byLayout.map((item) => item.ref.artifactId)).size !== 3)
+    throw Error("Saved S10 directions overlap between sourced layouts");
+  const fields = byLayout[0].evaluation
+    .filter(
+      (item) =>
+        item.criterion &&
+        item.reason &&
+        byLayout.every((candidate) =>
+          candidate.evaluation.some(
+            (peer) => peer.criterion === item.criterion && peer.reason,
+          ),
+        ),
+    )
+    .slice(0, 6)
+    .map((item) => item.criterion);
+  if (fields.length < 2)
+    throw Error("Saved S11 lacks common sourced judgment criteria");
+  const candidates = byLayout.map((candidate, index) => ({
+    ...candidate,
+    name: ["A", "B", "C"][index],
+    index,
+    runId: report.runId,
+    selected: false,
+    fields: Object.fromEntries([
+      ...fields.map((field) => [
+        field,
+        candidate.evaluation.find((item) => item.criterion === field).reason,
+      ]),
+      ["向く条件と代償", candidate.summary],
+    ]),
+  }));
+  const allFields = Object.keys(candidates[0].fields);
+  const screens = [
+    screen(
+      "a",
+      "A",
+      "共通項目の比較表",
+      "未選択の比較案",
+      matrixScreen(candidates, allFields, report, brief),
+    ),
+    screen(
+      "b",
+      "B",
+      "一覧と広い単案詳細",
+      "未選択の比較案",
+      sourcedListScreen(candidates, allFields, report, brief),
+    ),
+    screen(
+      "c",
+      "C",
+      "論点別の二案対照",
+      "未選択の比較案",
+      sourcedPairScreen(candidates, allFields, report, brief),
+    ),
+  ].join("");
+  const hash = createHash("sha256").update(script).digest("base64");
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-${hash}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>3つの候補画面を比較 · Mimic</title><style>${style}${sourcedStyle}</style></head><body><main class="index" data-real-screens="unselected"><header class="index-head"><div><span class="eyebrow">MIMIC / DESIGN REVIEW</span><h1>3つの画面を、同じ内容で試す</h1><p>3案とも人の選択前です。画面内の仮選択は保存されず、最終採用・公開も未承認です。</p></div><aside class="source-note">Mimic S10/S11 の保存済み構造と評価を使い、Codex が画面を設計・実装しました。完成画面画像とブランド適合は未検証です。</aside></header><div class="screens">${screens}</div></main><script>${script}</script></body></html>`;
 }
 
 function renderComparisonScreensHtml(report, brief, expectedRef, unselected) {
