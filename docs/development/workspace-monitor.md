@@ -32,6 +32,12 @@ preparation UI. Either port may be `0` for an available port. Ctrl-C stops both
 services. A previously selected Run without this UI's matching journal must use
 the standalone 9UI-220 command instead.
 
+On restart with the matching saved selection, the preparation service starts
+before the selection service reports ready; an existing preparation tab can be
+reloaded first when its configured port is unchanged. If that port is occupied,
+reload the selection page to see the saved choice and retry preparation. An old
+CSRF token is rejected with instructions to return and reload the selection page.
+
 If this selection consumes the last allowed revision, it remains saved and the
 page reports the revision limit without starting preparation. An unselected Run
 with no remaining revision budget cannot open the form. Each journal reload

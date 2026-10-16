@@ -325,7 +325,10 @@ export async function startWorkingSelectionUi({
         !/^[a-f0-9]{64}$/.test(fields.csrf) ||
         !timingSafeEqual(Buffer.from(fields.csrf), Buffer.from(csrf))
       )
-        return reject(403, "Forbidden");
+        return reject(
+          403,
+          "確認情報が無効か、古くなっています。選択画面へ戻って再読み込みし、保存状態を確認してください。",
+        );
       if (stale) return send(409, current, { stale: true });
       const reason = fields.reason.trim();
       const choice = /^(0|[1-9][0-9]*)$/.test(fields.choice)
@@ -416,6 +419,7 @@ export async function startWorkingSelectionUi({
     server.listen(port, "127.0.0.1", resolve);
   });
   origin = `http://127.0.0.1:${server.address().port}`;
+  await ensurePrep(initial);
   return {
     server,
     url: `${origin}${route}`,

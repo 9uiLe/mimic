@@ -23,6 +23,7 @@ import { runCli } from "../apps/cli/dist/cli.js";
 import { startDesign } from "./9ui225-start-design.mjs";
 import { renderReviewHtml } from "./9ui197-harness.mjs";
 import { renderUnselectedScreensHtml } from "./9ui197-real-screens.mjs";
+import { startRevisionPrepUi } from "./9ui220-revision-ui.mjs";
 import {
   commitWorkingChoice,
   loadWorkingChoices,
@@ -184,8 +185,22 @@ test("explicit human choice uses real Core authority, survives reload/restart, a
     ),
   );
   assert.equal(journal.request.id, after.selection.id);
-  const restarted = await uiFor(t, setup);
-  assert.match(restarted.html, /作業用選択を保存済み/);
+  let restartedPreparations = 0;
+  const restarted = await startWorkingSelectionUi({
+    configPath: setup.config,
+    humanActorId,
+    startPrep: async (options) => {
+      restartedPreparations++;
+      return startRevisionPrepUi(options);
+    },
+  });
+  t.after(() => restarted.close());
+  assert.equal(restartedPreparations, 1);
+  assert.match(
+    await (await fetch(restarted.url)).text(),
+    /作業用選択を保存済み/,
+  );
+  assert.equal(restartedPreparations, 1);
   assert.equal(
     (await setup.runtime.registry.snapshot()).events.filter(
       (e) => e.action === "select-revision-base",
@@ -204,7 +219,9 @@ test("input, CSRF, cross-origin, Host, arbitrary routes, and oversized bodies ca
     { confirm: "no" },
   ])
     assert.equal((await post(ui.url, ui.csrf, changes)).status, 422);
-  assert.equal((await post(ui.url, "a".repeat(64))).status, 403);
+  const expired = await post(ui.url, "a".repeat(64));
+  assert.equal(expired.status, 403);
+  assert.match(await expired.text(), /選択画面へ戻って再読み込み/);
   assert.equal(
     (await post(ui.url, ui.csrf, {}, { Origin: "https://foreign.example" }))
       .status,
@@ -571,6 +588,9 @@ test("the monitor serves the existing unselected renderer with exact provenance 
     ).text();
     assert.doesNotMatch(review, /href="candidate-screens-/);
     if (expected === 200) {
+      const home = await (await fetch(monitor.url)).text();
+      assert.doesNotMatch(home, /Aは人が選んだ改訂用/);
+      assert.match(home, /作業用の選択状態は現在の候補レビューで確認/);
       assert.match(review, /3案とも人の作業用選択前/);
       assert.match(review, /href="\/design-review\/real-screens"/);
       assert.doesNotMatch(review, /Aは人が選んだ改訂用/);
