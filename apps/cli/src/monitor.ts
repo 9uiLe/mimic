@@ -411,7 +411,11 @@ async function loadRealScreens(
   )
     throw new Error("Real screens digest mismatch");
   const current = review.html.match(
-    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · (?:selected|revision-limit)<\/p>/,
+    /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · (selected|revision-limit|awaiting-human-selection)<\/p>/,
+  );
+  const unselected = current?.[2] === "awaiting-human-selection";
+  const unselectedRun = html.match(
+    /<main class="index" data-real-screens="unselected" data-run-id="([A-Za-z][A-Za-z0-9_-]{0,79})">/,
   );
   const selectedRef = review.html.match(
     /改訂作業のために人が選んだ案: (art_[A-Za-z0-9_-]{1,255}) · 最終採用\/公開: 未承認/,
@@ -445,15 +449,21 @@ async function loadRealScreens(
   const expectedCandidates = JSON.stringify(byArtifact(reviewCandidates));
   if (
     !html.startsWith('<!doctype html><html lang="ja">') ||
-    !html.includes("<title>3つの実画面を比較 · Mimic</title>") ||
-    !html.includes('<main class="index" data-real-screens="unapproved">') ||
-    !html.includes("最終採用・公開は未承認") ||
+    !(unselected
+      ? /<title>3つの(?:実|候補)画面を比較 · Mimic<\/title>/.test(html)
+      : html.includes("<title>3つの実画面を比較 · Mimic</title>")) ||
+    !(unselected
+      ? unselectedRun
+      : html.includes('<main class="index" data-real-screens="unapproved">')) ||
+    !/最終採用・公開(?:は|も)未承認/.test(html) ||
     !review.html.includes("</h1>") ||
     !current ||
-    !selectedRef ||
-    !screen ||
-    current[1] !== screen[1] ||
-    selectedRef[1] !== screen[2] ||
+    (unselected
+      ? selectedRef || current[1] !== unselectedRun?.[1]
+      : !selectedRef ||
+        !screen ||
+        current[1] !== screen[1] ||
+        selectedRef[1] !== screen[2]) ||
     reviewCandidates.length !== 3 ||
     screenProvenances.length !== 3 ||
     screenProvenances.some(
@@ -461,11 +471,12 @@ async function loadRealScreens(
         candidates.length !== 3 ||
         JSON.stringify(byArtifact(candidates)) !== expectedCandidates,
     ) ||
-    !reviewCandidates.some(
-      (candidate) =>
-        candidate.ref.artifactId === selectedRef[1] &&
-        candidate.ref.revision === Number(screen[3]),
-    ) ||
+    (!unselected &&
+      !reviewCandidates.some(
+        (candidate) =>
+          candidate.ref.artifactId === selectedRef?.[1] &&
+          candidate.ref.revision === Number(screen?.[3]),
+      )) ||
     ["a", "b", "c"].some(
       (option) =>
         !html.includes(
@@ -861,6 +872,7 @@ export async function startMonitor(options: {
   revisionScreen?: string;
   revisionScreenDigest?: string;
   revisionPrepPort?: number;
+  workingSelectionPort?: number;
 }): Promise<{ server: Server; url: string; close(): Promise<void> }> {
   if (
     !Number.isInteger(options.port) ||
@@ -875,6 +887,13 @@ export async function startMonitor(options: {
       options.revisionPrepPort > 65535)
   )
     throw new Error("Invalid revision preparation port");
+  if (
+    options.workingSelectionPort !== undefined &&
+    (!Number.isInteger(options.workingSelectionPort) ||
+      options.workingSelectionPort < 1 ||
+      options.workingSelectionPort > 65535)
+  )
+    throw new Error("Invalid working selection port");
   const root = await realpath(path.resolve(options.root));
   if (!(await lstat(root)).isDirectory()) throw new Error("Invalid workspace");
   let preview: Preview | undefined;
@@ -907,6 +926,10 @@ export async function startMonitor(options: {
   ).catch(() => undefined);
   if (reviewCurrent) {
     reviewCurrent.html = reviewCurrent.html.replace(
+      /<p><a href="candidate-screens-[A-Za-z0-9_-]+\.html"[^>]*>[^<]*<\/a>[^<]*<\/p>/g,
+      "",
+    );
+    reviewCurrent.html = reviewCurrent.html.replace(
       /<p><a href="working-preview-[A-Za-z0-9_-]+\.html">人が選んだ案の作業用操作プレビューを開く（未承認）<\/a><\/p>/g,
       "",
     );
@@ -927,6 +950,16 @@ export async function startMonitor(options: {
         `<section><h2>次の操作</h2><p><a href="http://127.0.0.1:${options.revisionPrepPort}/run/${selected[1]}" target="_blank" rel="noopener noreferrer">修正課題を入力して次 Run の計画を保存する →</a>（別途明示起動した改稿準備画面。このリンクでは生成を開始しません）</p>`,
       );
   }
+  if (reviewCurrent && options.workingSelectionPort) {
+    const awaiting = reviewCurrent.html.match(
+      /<p>Run ([A-Za-z][A-Za-z0-9_-]{0,79}) · [^<]+ · awaiting-human-selection<\/p>/,
+    );
+    if (awaiting)
+      reviewCurrent.html = reviewCurrent.html.replace(
+        "<section><h2>次の操作</h2>",
+        `<section><h2>次の操作</h2><p><a href="http://127.0.0.1:${options.workingSelectionPort}/run/${awaiting[1]}" target="_blank" rel="noopener noreferrer">改稿の作業用ベースを選ぶ →</a>（別途明示起動した選択画面。最終採用や生成は行いません）</p>`,
+      );
+  }
   if (workingPreview && reviewCurrent) {
     const marker = reviewCurrent.html.includes("<section><h2>次の操作</h2>")
       ? "<section><h2>次の操作</h2>"
@@ -943,8 +976,12 @@ export async function startMonitor(options: {
     )
       ? '<section id="candidate-details">'
       : "</h1>";
-    const entry =
-      '<section aria-label="3案の実画面"><h2>保存済み3案の実画面も見る</h2><p>Aは人が選んだ改訂用の作業ベース、BとCは未選択の比較候補です。最終採用・公開は未承認です。</p><p><a href="/design-review/real-screens" target="_blank" rel="noopener noreferrer"><strong>3案の実画面を比較する →</strong></a>（画面内の操作は保存されません）</p></section>';
+    const description = realScreens.html.includes(
+      'data-real-screens="unselected"',
+    )
+      ? "3案とも人の作業用選択前です。画面内の仮選択は保存されず、最終採用・公開も未承認です。"
+      : "Aは人が選んだ改訂用の作業ベース、BとCは未選択の比較候補です。最終採用・公開は未承認です。";
+    const entry = `<section aria-label="3案の実画面"><h2>保存済み3案の実画面も見る</h2><p>${description}</p><p><a href="/design-review/real-screens" target="_blank" rel="noopener noreferrer"><strong>3案の実画面を比較する →</strong></a>（画面内の操作は保存されません）</p></section>`;
     reviewCurrent.html = reviewCurrent.html.replace(
       marker,
       marker === "</h1>" ? marker + entry : entry + marker,
@@ -1188,6 +1225,7 @@ export async function runMonitorCli(
           "--revision-screen",
           "--revision-screen-digest",
           "--revision-prep-port",
+          "--working-selection-port",
         ].includes(flag) ||
         !value ||
         value.startsWith("--") ||
@@ -1217,6 +1255,9 @@ export async function runMonitorCli(
       revisionScreenDigest: values["--revision-screen-digest"],
       revisionPrepPort: values["--revision-prep-port"]
         ? Number(values["--revision-prep-port"])
+        : undefined,
+      workingSelectionPort: values["--working-selection-port"]
+        ? Number(values["--working-selection-port"])
         : undefined,
     });
     io.out(monitor.url);
