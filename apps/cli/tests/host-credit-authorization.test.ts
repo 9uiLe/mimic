@@ -2,7 +2,14 @@ import { afterEach, expect, test, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -22,7 +29,7 @@ afterEach(async () => {
   );
 });
 
-async function setup(maxCalls = 1) {
+async function setup(maxCalls = 1, runId = "run_197") {
   const root = await mkdtemp(path.join(os.tmpdir(), "mimic-host-auth-"));
   folders.push(root);
   const workspace = path.join(root, "workspace");
@@ -33,7 +40,10 @@ async function setup(maxCalls = 1) {
     path.join(workspace, ".mimic", "config.json"),
     '{"scopes":[]}',
   );
-  await writeFile(path.join(workspace, ".mimic", "runs", "run_197.json"), "[]");
+  await writeFile(
+    path.join(workspace, ".mimic", "runs", `${runId}.json`),
+    "[]",
+  );
   await writeFile(
     path.join(workspace, "skills", "s04", "SKILL.md"),
     "frozen instructions",
@@ -42,7 +52,7 @@ async function setup(maxCalls = 1) {
   const store = new HostCreditAuthorizationStore(path.join(root, "private"));
   const scope = {
     workspace: canonicalWorkspace,
-    runId: "run_197",
+    runId,
     model: "gpt-6.1-sol",
     executable: process.execPath,
     maxCalls,
@@ -665,3 +675,355 @@ test.each([
     }
   },
 );
+
+async function referenceContinuation() {
+  const original = {
+    model: "gpt-6.1-sol",
+    budget: { maxGenerations: 15 },
+    systemContext: "Mimic comparison",
+    brief: {
+      audience: "Mimic designers",
+      purpose: "Compare directions and select one",
+      primaryAction: "Select a direction",
+      references: [] as {
+        source: string;
+        reason: string;
+        appliesWhen: string;
+        doNotBorrow: string;
+      }[],
+    },
+  };
+  const runId = (value: typeof original) =>
+    `run_design_${createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0, 16)}`;
+  const referenceFile = (value: typeof original) =>
+    `# References supplied by the user\n\n${value.brief.references.length ? value.brief.references.map((item) => `- Source: ${item.source}\n  Reason: ${item.reason}\n  Applies when: ${item.appliesWhen}\n  Do not borrow: ${item.doNotBorrow}`).join("\n") : "No references were supplied. Do not infer or invent a source."}\n`;
+  const h = await setup(2, runId(original));
+  await mkdir(path.join(h.workspace, "inputs"));
+  await writeFile(
+    path.join(h.workspace, "intake-source.json"),
+    JSON.stringify(original),
+  );
+  await writeFile(
+    path.join(h.workspace, "inputs/references.md"),
+    referenceFile(original),
+  );
+  const evidence = {
+    ...delegatedEvidence(h),
+    approvalText: "それならどれだけ使ってもいいよ",
+    attestedScope: {
+      ...delegatedEvidence(h).attestedScope,
+      maxCalls: 2,
+    },
+  };
+  const priorGrantId = await h.store.recordDelegated(h.scope, evidence);
+  const workspace = path.join(h.root, "sourced-workspace");
+  await mkdir(path.join(workspace, ".mimic/runs"), { recursive: true });
+  await mkdir(path.join(workspace, "skills/s04"), { recursive: true });
+  await mkdir(path.join(workspace, "inputs"));
+  await writeFile(path.join(workspace, ".mimic/config.json"), '{"scopes":[]}');
+  await writeFile(
+    path.join(workspace, "skills/s04/SKILL.md"),
+    "frozen instructions",
+  );
+  const references = [
+    {
+      source:
+        "SmartHR https://smarthr.design/products/design-patterns/smarthr-table/",
+      reason: "Comparable rows and actions",
+      appliesWhen: "Directions share criteria",
+      doNotBorrow: "The SmartHR visual style",
+    },
+  ];
+  const next = { ...original, brief: { ...original.brief, references } };
+  await writeFile(
+    path.join(workspace, `.mimic/runs/${runId(next)}.json`),
+    "[]",
+  );
+  await writeFile(
+    path.join(workspace, "intake-source.json"),
+    JSON.stringify(next),
+  );
+  const referenceText = referenceFile(next);
+  await writeFile(path.join(workspace, "inputs/references.md"), referenceText);
+  const scope = {
+    ...h.scope,
+    workspace: await realpath(workspace),
+    runId: runId(next),
+  };
+  const inputsSha256 = await frozenRunInputsSha256(
+    scope.workspace,
+    scope.runId,
+    scope.packages,
+  );
+  const nextEvidence: DelegatedCreditEvidence = {
+    ...evidence,
+    attestedScope: {
+      ...evidence.attestedScope,
+      workspace: scope.workspace,
+      runId: scope.runId,
+      inputsSha256,
+    },
+    continuation: {
+      priorGrantId,
+      referenceSha256: `sha256:${createHash("sha256").update(referenceText).digest("hex")}`,
+      changeSummary: "Added the source-linked comparison reference",
+    },
+  };
+  return {
+    ...h,
+    priorGrantId,
+    workspace: scope.workspace,
+    scope,
+    nextEvidence,
+  };
+}
+
+test("one broad delegated decision can authorize a reference-only continuation with separate consumption", async () => {
+  const h = await referenceContinuation();
+  const continuedGrantId = await h.store.recordDelegated(
+    h.scope,
+    h.nextEvidence,
+  );
+  const database = new DatabaseSync(
+    path.join(h.root, "private/grants.sqlite"),
+    {
+      readOnly: true,
+    },
+  );
+  try {
+    const rows = database
+      .prepare(
+        "SELECT id, decision_id, continuation_of FROM grants WHERE id IN (?, ?)",
+      )
+      .all(h.priorGrantId, continuedGrantId) as {
+      id: string;
+      decision_id: string;
+      continuation_of: string | null;
+    }[];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.decision_id).toBe(rows[1]?.decision_id);
+    expect(
+      rows.find((row) => row.id === continuedGrantId)?.continuation_of,
+    ).toBe(h.priorGrantId);
+  } finally {
+    database.close();
+  }
+  const expected = {
+    ...h.expected,
+    workspace: h.workspace,
+    requestId: "continued-s04",
+  };
+  const hash = await frozenRunInputsSha256(
+    h.workspace,
+    h.scope.runId,
+    h.scope.packages,
+  );
+  await h.store
+    .port(
+      continuedGrantId,
+      h.scope.runId,
+      expected,
+      hash,
+      h.scope.packages,
+      h.scope.executable,
+    )
+    .consumeUserDecision(expected);
+  await expect(
+    h.store.availableForRun(
+      continuedGrantId,
+      h.workspace,
+      h.scope.runId,
+      h.scope.model,
+      h.scope.packages,
+    ),
+  ).resolves.toBe(process.execPath);
+  await expect(
+    h.store.recordDelegated(h.scope, h.nextEvidence),
+  ).rejects.toThrow(/already been recorded for this Run/);
+  await writeFile(path.join(h.workspace, "inputs/references.md"), "changed");
+  await expect(
+    h.store.availableForRun(
+      continuedGrantId,
+      h.workspace,
+      h.scope.runId,
+      h.scope.model,
+      h.scope.packages,
+    ),
+  ).rejects.toThrow(/No current authorization/);
+});
+
+test("revoking the original decision also revokes its continuation", async () => {
+  const h = await referenceContinuation();
+  const child = await h.store.recordDelegated(h.scope, h.nextEvidence);
+  await h.store.revoke(h.priorGrantId, path.join(h.root, "workspace"));
+  await expect(
+    h.store.availableForRun(
+      child,
+      h.workspace,
+      h.scope.runId,
+      h.scope.model,
+      h.scope.packages,
+    ),
+  ).rejects.toThrow(/No current authorization/);
+  await expect(h.store.executableFor(child, h.workspace)).rejects.toThrow(
+    /No current authorization/,
+  );
+});
+
+test("continuation binds the original intake and generated references", async () => {
+  const h = await referenceContinuation();
+  const originalFile = path.join(h.root, "workspace/intake-source.json");
+  const original = JSON.parse(await readFile(originalFile, "utf8"));
+  await writeFile(
+    originalFile,
+    JSON.stringify({ ...original, systemContext: "Changed after approval" }),
+  );
+  await expect(
+    h.store.recordDelegated(h.scope, h.nextEvidence),
+  ).rejects.toThrow(/changes more than/);
+  await writeFile(originalFile, JSON.stringify(original));
+  const altered =
+    "# References supplied by the user\n\nUnrelated model guidance\n";
+  await writeFile(path.join(h.workspace, "inputs/references.md"), altered);
+  await expect(
+    h.store.recordDelegated(h.scope, {
+      ...h.nextEvidence,
+      continuation: {
+        ...h.nextEvidence.continuation!,
+        referenceSha256: `sha256:${createHash("sha256").update(altered).digest("hex")}`,
+      },
+    }),
+  ).rejects.toThrow(/changes more than/);
+});
+
+test("continuation cannot extend the original grant expiry", async () => {
+  const h = await referenceContinuation();
+  await expect(
+    h.store.recordDelegated(
+      { ...h.scope, expiresAt: h.scope.expiresAt + 60_000 },
+      {
+        ...h.nextEvidence,
+        attestedScope: {
+          ...h.nextEvidence.attestedScope,
+          durationMinutes: 2,
+        },
+      },
+    ),
+  ).rejects.toThrow(/differs from the original decision/);
+});
+
+test("continuation rejects changed purpose, model, approval, and unsupported lineage", async () => {
+  const h = await referenceContinuation();
+  for (const evidence of [
+    { ...h.nextEvidence, approvalText: "OK" },
+    { ...h.nextEvidence, contextText: "Different context" },
+    {
+      ...h.nextEvidence,
+      continuation: {
+        ...h.nextEvidence.continuation!,
+        priorGrantId: h.grantId,
+      },
+    },
+    {
+      ...h.nextEvidence,
+      continuation: {
+        ...h.nextEvidence.continuation!,
+        referenceSha256: `sha256:${"0".repeat(64)}`,
+      },
+    },
+  ])
+    await expect(h.store.recordDelegated(h.scope, evidence)).rejects.toThrow();
+  await writeFile(
+    path.join(h.workspace, "intake-source.json"),
+    JSON.stringify({
+      model: h.scope.model,
+      systemContext: "Different purpose",
+      brief: {
+        references: [
+          {
+            source: "https://example.com",
+            reason: "x",
+            appliesWhen: "y",
+            doNotBorrow: "z",
+          },
+        ],
+      },
+    }),
+  );
+  await expect(
+    h.store.recordDelegated(h.scope, h.nextEvidence),
+  ).rejects.toThrow(/changes more than/);
+  await expect(
+    h.store.recordDelegated(
+      { ...h.scope, model: "other-model" },
+      {
+        ...h.nextEvidence,
+        attestedScope: {
+          ...h.nextEvidence.attestedScope,
+          model: "other-model",
+        },
+      },
+    ),
+  ).rejects.toThrow();
+});
+
+test("an existing one-decision database migrates without losing grant or consumption", async () => {
+  const h = await setup(2);
+  await h.store
+    .port(
+      h.grantId,
+      h.scope.runId,
+      h.expected,
+      h.inputsSha256,
+      h.scope.packages,
+      h.scope.executable,
+    )
+    .consumeUserDecision(h.expected);
+  const file = path.join(h.root, "private/grants.sqlite");
+  const legacy = new DatabaseSync(file);
+  try {
+    legacy.exec(`
+      PRAGMA foreign_keys = OFF;
+      BEGIN IMMEDIATE;
+      CREATE TABLE grants_legacy (
+        id TEXT PRIMARY KEY, workspace TEXT NOT NULL, run_id TEXT NOT NULL,
+        model TEXT NOT NULL, executable TEXT NOT NULL,
+        max_calls INTEGER NOT NULL, expires_at INTEGER NOT NULL,
+        inputs_sha256 TEXT NOT NULL,
+        decision_id TEXT NOT NULL UNIQUE, actor_id TEXT NOT NULL,
+        approved_at INTEGER NOT NULL, revoked_at INTEGER
+      );
+      INSERT INTO grants_legacy
+        SELECT id, workspace, run_id, model, executable, max_calls,
+               expires_at, inputs_sha256, decision_id, actor_id,
+               approved_at, revoked_at FROM grants;
+      DROP TABLE grants;
+      ALTER TABLE grants_legacy RENAME TO grants;
+      COMMIT;
+      PRAGMA foreign_keys = ON;
+    `);
+  } finally {
+    legacy.close();
+  }
+  await expect(
+    h.store.availableForRun(
+      h.grantId,
+      h.workspace,
+      h.scope.runId,
+      h.scope.model,
+      h.scope.packages,
+    ),
+  ).resolves.toBe(process.execPath);
+  const migrated = new DatabaseSync(file, { readOnly: true });
+  try {
+    expect(
+      migrated.prepare("SELECT COUNT(*) AS count FROM consumed").get(),
+    ).toEqual({ count: 1 });
+    expect(
+      migrated.prepare("SELECT id FROM grants WHERE id = ?").get(h.grantId),
+    ).toEqual({ id: h.grantId });
+    expect(migrated.prepare("PRAGMA foreign_key_check").get()).toBeUndefined();
+  } finally {
+    migrated.close();
+  }
+});
