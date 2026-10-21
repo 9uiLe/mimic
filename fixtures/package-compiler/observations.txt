@@ -1,1 +1,0 @@
-Synthetic fixture observation only. No empirical outcome is asserted.
