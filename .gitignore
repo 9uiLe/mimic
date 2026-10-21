@@ -7,3 +7,12 @@ __pycache__/
 
 # macOS metadata
 .DS_Store
+
+# Local JavaScript dependencies
+/node_modules/
+
+# Explicitly assembled GitHub Pages artifact
+/_site/
+
+# Local review exports (including PDFs)
+/output/

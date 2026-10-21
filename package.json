@@ -1,0 +1,15 @@
+{
+  "name": "mimic-knowledge-prototype",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build:prototype": "node scripts/build-knowledge.mjs",
+    "check:prototype": "node scripts/build-knowledge.mjs --check",
+    "build:research-prototype": "node scripts/build-knowledge.mjs --source prototypes/decision-material-selection/draft.md --out-dir prototypes/decision-material-selection/research",
+    "check:research-prototype": "node scripts/build-knowledge.mjs --source prototypes/decision-material-selection/draft.md --out-dir prototypes/decision-material-selection/research --check",
+    "build:pages": "npm run build:prototype && npm run build:research-prototype && node scripts/build-pages.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": { "marked": "17.0.5" }
+}
