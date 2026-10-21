@@ -3,12 +3,12 @@ import { createHash } from 'node:crypto';
 import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import { afterEach, test } from 'bun:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { buildPages } from '../scripts/build-pages.mjs';
+import { buildPages } from '../scripts/build-pages.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { marked } = await import(process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : 'marked');
+const { marked } = await import(process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : 'marked') as typeof import('marked');
 const expectedFiles = [
   '.nojekyll',
   'index.html',
@@ -21,16 +21,21 @@ const expectedFiles = [
   'prototypes/decision-material-selection/research/ai.md',
   'prototypes/decision-material-selection/research/index.html',
 ];
-const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-async function fixture(t) {
+const temporaryDirectories: string[] = [];
+afterEach(async () => {
+  await Promise.all(temporaryDirectories.splice(0).map(directory => rm(directory, { recursive: true, force: true })));
+});
+
+async function fixture() {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-pages-'));
-  t.after(() => rm(directory, { recursive: true, force: true }));
+  temporaryDirectories.push(directory);
   return { directory, out: path.join(directory, '_site') };
 }
 
-async function filesIn(directory, prefix = '') {
-  const files = [];
+async function filesIn(directory: string, prefix = ''): Promise<string[]> {
+  const files: string[] = [];
   for (const name of await readdir(directory)) {
     const file = prefix ? `${prefix}/${name}` : name;
     const info = await lstat(path.join(directory, name));
@@ -41,8 +46,8 @@ async function filesIn(directory, prefix = '') {
   return files.sort();
 }
 
-test('Pages contains exactly the reviewed ten files and repeated builds preserve their bytes', async t => {
-  const { out } = await fixture(t);
+test('Pages contains exactly the reviewed ten files and repeated builds preserve their bytes', async () => {
+  const { out } = await fixture();
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -56,15 +61,18 @@ test('Pages contains exactly the reviewed ten files and repeated builds preserve
   assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|README|log/i.test(file)));
 });
 
-test('every local HTML and Markdown link resolves inside the artifact at the GitHub project prefix', async t => {
-  const { out } = await fixture(t);
+test('every local HTML and Markdown link resolves inside the artifact at the GitHub project prefix', async () => {
+  const { out } = await fixture();
   await buildPages(out);
   const prefix = 'https://example.test/mimic/';
   for (const file of expectedFiles.filter(file => /\.(html|md)$/.test(file))) {
     const text = await readFile(path.join(out, file), 'utf8');
-    const links = [];
+    const links: string[] = [];
     if (file.endsWith('.html')) {
-      links.push(...[...text.matchAll(/href="([^"]*)"/g)].map(match => match[1]));
+      links.push(...[...text.matchAll(/href="([^"]*)"/g)].map(match => {
+        assert.ok(match[1] !== undefined);
+        return match[1];
+      }));
     } else {
       marked.walkTokens(marked.lexer(text.replace(/^---\n[\s\S]*?\n---\n/, '')), token => {
         if (token.type === 'link') links.push(token.href);
@@ -87,16 +95,17 @@ test('every local HTML and Markdown link resolves inside the artifact at the Git
   }
 });
 
-test('artifact copies match their generated or canonical sources and retain repository-relative provenance', async t => {
-  const { out } = await fixture(t);
+test('artifact copies match their generated or canonical sources and retain repository-relative provenance', async () => {
+  const { out } = await fixture();
   await buildPages(out);
   for (const file of expectedFiles.filter(file => file !== 'index.html' && file !== '.nojekyll')) {
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
-  for (const [htmlFile, sourceFile, status] of [
+  const provenanceCases: [string, string, string][] = [
     ['prototypes/decision-material-selection/index.html', 'knowledge/decision-material-selection.md', 'proposed'],
     ['prototypes/decision-material-selection/research/index.html', 'prototypes/decision-material-selection/draft.md', 'draft'],
-  ]) {
+  ];
+  for (const [htmlFile, sourceFile, status] of provenanceCases) {
     const html = await readFile(path.join(out, htmlFile), 'utf8');
     const source = await readFile(path.join(root, sourceFile));
     assert.ok(html.includes(`<dt>source</dt><dd>${sourceFile}</dd>`));
@@ -106,9 +115,9 @@ test('artifact copies match their generated or canonical sources and retain repo
   }
 });
 
-test('unknown files, unknown directories, and symlinks fail before any existing output is overwritten', async t => {
+test('unknown files, unknown directories, and symlinks fail before any existing output is overwritten', async () => {
   for (const kind of ['file', 'directory', 'symlink', 'root-symlink']) {
-    const { directory, out } = await fixture(t);
+    const { directory, out } = await fixture();
     const untouched = path.join(directory, 'untouched.txt');
     await writeFile(untouched, 'outside content');
     if (kind === 'root-symlink') {

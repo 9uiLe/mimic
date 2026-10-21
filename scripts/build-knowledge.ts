@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import type { Token, Tokens } from 'marked';
 
 const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
@@ -19,37 +20,53 @@ const sectionLabels = {
   sources: '根拠といえる範囲',
   unverified: 'まだ確かめていないこと',
 };
-const sectionRoles = Object.keys(sectionLabels);
+type SectionRole = keyof typeof sectionLabels;
+const sectionRoles = Object.keys(sectionLabels) as SectionRole[];
 const noteLabels = { proposal: '提案', assumption: '仮定', limitation: '限界・未確認', 'evidence-scope': '根拠の範囲' };
 const statusLabels = { proposed: '仮案', draft: '更新案（未採用）' };
-const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const assert = (condition, message) => { if (!condition) throw new Error(`Source schema: ${message}`); };
-const relativeLink = (from, to) => path.relative(from, to).split(path.sep).join('/');
-const isRelativeHref = href => !/^[a-z][a-z\d+.-]*:/i.test(href) && !href.startsWith('#');
+type NoteType = keyof typeof noteLabels;
+type Marked = typeof import('marked')['marked'];
+type MimicToken = Token & { mimicId?: string; mimicNote?: NoteType; mimicSteps?: boolean };
+type MimicHeading = Tokens.Heading & { mimicId?: string };
+type MimicParagraph = Tokens.Paragraph & { mimicNote?: NoteType };
+type MimicList = Tokens.List & { mimicSteps?: boolean };
+type Directive = { kind: 'section'; value: SectionRole } | { kind: 'heading'; value: string } | { kind: 'note'; value: NoteType };
+interface Metadata { id: string; title: string; status: string; version: string; scope: string; related: string[] }
+interface Group { heading: MimicHeading; tokens: MimicToken[] }
+interface Provenance { source: string; stylesheet: string; generator: string; renderer: string }
+const isHeading = (token: Token): token is MimicHeading => token.type === 'heading';
+const isLink = (token: Token): token is Tokens.Link => token.type === 'link';
+const isList = (token: Token): token is MimicList => token.type === 'list';
+const hasOwn = <T extends object>(object: T, key: string): key is Extract<keyof T, string> => Object.hasOwn(object, key);
+const inlineTokens = (token: Token): Token[] | undefined => (token as { tokens?: Token[] }).tokens;
+const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+const escape = (value: unknown) => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Source schema: ${message}`); }
+const relativeLink = (from: string, to: string) => path.relative(from, to).split(path.sep).join('/');
+const isRelativeHref = (href: string) => !/^[a-z][a-z\d+.-]*:/i.test(href) && !href.startsWith('#');
 
-function resolveLink(href, sourcePath, outDir) {
+function resolveLink(href: string, sourcePath: string, outDir: string) {
   if (/^[a-z][a-z\d+.-]*:/i.test(href)) {
     assert(/^https?:/i.test(href), `unsupported link protocol ${href}`);
     return href;
   }
   if (href.startsWith('#')) return href;
   assert(!href.startsWith('//') && !path.isAbsolute(href), `unsupported absolute link ${href}`);
-  const [, pathname, suffix] = href.match(/^([^?#]*)(.*)$/s);
+  const [, pathname = '', suffix = ''] = href.match(/^([^?#]*)(.*)$/s)!;
   return relativeLink(outDir, path.resolve(path.dirname(sourcePath), decodeURI(pathname))) + suffix;
 }
 
-function makeAiMarkdown(source, marked, sourcePath, outDir) {
-  const failUnless = (condition, message) => { if (!condition) throw new Error(`AI Markdown links: ${message}`); };
+function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outDir: string) {
+  const failUnless = (condition: unknown, message: string) => { if (!condition) throw new Error(`AI Markdown links: ${message}`); };
   const text = source.toString('utf8');
-  const frontmatter = text.match(/^---\n[\s\S]*?\n---\n/)[0];
+  const frontmatter = text.match(/^---\n[\s\S]*?\n---\n/)![0];
   const body = text.slice(frontmatter.length);
   const blocks = marked.lexer(body);
   failUnless(!Object.keys(blocks.links || {}).length, 'reference-style link definitions are unsupported');
   failUnless(blocks.map(token => token.raw).join('') === body, 'source cannot be preserved exactly; reference definitions and normalized block syntax are unsupported');
-  const localLinks = tokens => {
-    const links = [];
-    marked.walkTokens(tokens, token => { if (token.type === 'link' && isRelativeHref(token.href)) links.push(token); });
+  const localLinks = (tokens: Token[]) => {
+    const links: Tokens.Link[] = [];
+    marked.walkTokens(tokens, token => { if (isLink(token) && isRelativeHref(token.href)) links.push(token); });
     return links;
   };
   const result = blocks.map(block => {
@@ -58,35 +75,38 @@ function makeAiMarkdown(source, marked, sourcePath, outDir) {
     failUnless(['paragraph', 'heading', 'table'].includes(block.type), `relative links inside ${block.type} are unsupported; use a paragraph, heading, or table`);
     const inline = marked.Lexer.lexInline(block.raw);
     failUnless(inline.map(token => token.raw).join('') === block.raw, 'inline syntax cannot be preserved exactly');
-    const edits = [];
-    const found = [];
-    const visit = (tokens, offset) => {
+    const edits: { start: number; end: number; href: string }[] = [];
+    const found: Tokens.Link[] = [];
+    const visit = (tokens: Token[], offset: number): void => {
       let cursor = offset;
       for (const token of tokens) {
-        if (token.type === 'link' && isRelativeHref(token.href)) {
+        if (isLink(token) && isRelativeHref(token.href)) {
           const prefix = `[${token.text}](`;
           failUnless(token.raw.startsWith(prefix), 'only inline [label](path) relative links are supported');
-          const destinationOffset = prefix.length + token.raw.slice(prefix.length).match(/^\s*/)[0].length;
+          const destinationOffset = prefix.length + token.raw.slice(prefix.length).match(/^\s*/)![0].length;
           const destinationEnd = destinationOffset + token.href.length;
           failUnless(token.raw.slice(destinationOffset, destinationEnd) === token.href && /[\s)]/.test(token.raw[destinationEnd] || ''), `escaped or angle-bracket destination is unsupported: ${token.raw}`);
           failUnless(/^[\p{L}\p{N}._~/-]+(?:[?#][^\s<>"'()\\]*)?$/u.test(token.href), `unsupported relative destination: ${token.href}`);
-          const suffix = token.href.match(/^([^?#]*)(.*)$/s)[2];
+          const suffix = token.href.match(/^([^?#]*)(.*)$/s)![2]!;
           const target = resolveLink(token.href, sourcePath, outDir);
           const targetPath = suffix ? target.slice(0, -suffix.length) : target;
           const href = targetPath.split('/').map(segment => encodeURIComponent(segment)).join('/') + suffix;
           edits.push({ start: cursor + destinationOffset, end: cursor + destinationEnd, href });
           found.push(token);
-        } else if (token.type !== 'link' && token.tokens && localLinks(token.tokens).length) {
-          const inner = token.tokens.map(child => child.raw).join('');
-          const start = token.raw.indexOf(inner);
-          failUnless(start >= 0 && start === token.raw.lastIndexOf(inner), `unsupported nested inline syntax: ${token.type}`);
-          visit(token.tokens, cursor + start);
+        } else if (!isLink(token)) {
+          const children = inlineTokens(token);
+          if (children && localLinks(children).length) {
+            const inner = children.map(child => child.raw).join('');
+            const start = token.raw.indexOf(inner);
+            failUnless(start >= 0 && start === token.raw.lastIndexOf(inner), `unsupported nested inline syntax: ${token.type}`);
+            visit(children, cursor + start);
+          }
         }
         cursor += token.raw.length;
       }
     };
     visit(inline, 0);
-    const signature = tokens => JSON.stringify(tokens.map(token => [token.raw, token.href]));
+    const signature = (tokens: Tokens.Link[]) => JSON.stringify(tokens.map(token => [token.raw, token.href]));
     failUnless(signature(found) === signature(links), 'block and inline link positions disagree; this syntax is unsupported');
     let raw = block.raw;
     for (const edit of edits.sort((a, b) => b.start - a.start)) raw = raw.slice(0, edit.start) + edit.href + raw.slice(edit.end);
@@ -95,50 +115,64 @@ function makeAiMarkdown(source, marked, sourcePath, outDir) {
   return Buffer.from(frontmatter + result);
 }
 
-function parseSource(text, marked) {
+function parseSource(text: string, marked: Marked) {
   const frontmatter = text.match(/^---\n([\s\S]*?)\n---\n/);
   assert(frontmatter, 'expected LF frontmatter at the start');
-  const metadata = {};
-  for (const line of frontmatter[1].split('\n')) {
+  const fields: Record<string, string | string[] | undefined> = {};
+  for (const line of frontmatter[1]!.split('\n')) {
     if (/^  - /.test(line)) {
-      assert(Array.isArray(metadata.related), 'unexpected frontmatter list');
-      metadata.related.push(line.slice(4));
+      assert(Array.isArray(fields.related), 'unexpected frontmatter list');
+      fields.related.push(line.slice(4));
       continue;
     }
     const field = line.match(/^(id|title|status|version|scope|related):(?: (.*))?$/);
-    assert(field && !Object.hasOwn(metadata, field[1]), `unsupported or duplicate frontmatter: ${line}`);
-    metadata[field[1]] = field[1] === 'related' ? [] : (field[2] || '').replace(/^"(.*)"$/, '$1');
+    assert(field && !Object.hasOwn(fields, field[1]!), `unsupported or duplicate frontmatter: ${line}`);
+    fields[field[1]!] = field[1] === 'related' ? [] : (field[2] || '').replace(/^"(.*)"$/, '$1');
   }
-  for (const key of ['id', 'title', 'status', 'version', 'scope']) assert(typeof metadata[key] === 'string' && metadata[key], `missing ${key}`);
-  assert(Array.isArray(metadata.related) && metadata.related.length, 'missing related');
+  const requiredField = (key: string): string => {
+    const value = fields[key];
+    assert(typeof value === 'string' && value, `missing ${key}`);
+    return value;
+  };
+  const metadata: Metadata = { id: requiredField('id'), title: requiredField('title'), status: requiredField('status'), version: requiredField('version'), scope: requiredField('scope'), related: [] };
+  assert(Array.isArray(fields.related) && fields.related.length, 'missing related');
+  metadata.related = fields.related;
   assert(metadata.id === 'decision-material-selection', 'unsupported knowledge id');
-  const tokens = marked.lexer(text.slice(frontmatter[0].length));
+  const tokens: MimicToken[] = marked.lexer(text.slice(frontmatter[0].length));
   const content = tokens.filter(token => token.type !== 'space');
-  assert(content[0]?.type === 'heading' && content[0].depth === 1 && content[0].text === metadata.title, 'title and H1 must match');
-  assert(content.filter(token => token.type === 'heading' && token.depth === 1).length === 1, 'expected one H1');
-  const groups = new Map();
+  assert(content[0] && isHeading(content[0]) && content[0].depth === 1 && content[0].text === metadata.title, 'title and H1 must match');
+  assert(content.filter(token => isHeading(token) && token.depth === 1).length === 1, 'expected one H1');
+  const groups = new Map<SectionRole, Group>();
   const usedIds = new Set([...sectionRoles, 'top', 'title', 'view-actions', 'source-provenance']);
-  let current;
-  let pending;
+  let current: SectionRole | undefined;
+  let pending: Directive | undefined;
   for (const token of content.slice(1)) {
     if (token.type === 'html') {
       const directive = token.raw.trim().match(/^<!-- mimic:(section|heading|note) ([a-z][a-z0-9-]*) -->$/);
       assert(directive, 'unsupported HTML or directive; only mimic:section, mimic:heading, and mimic:note comments are allowed');
       assert(!pending, 'a directive must be followed by its content');
       const [, kind, value] = directive;
-      if (kind === 'section') assert(Object.hasOwn(sectionLabels, value), `unknown section role ${value}`);
-      if (kind === 'note') assert(Object.hasOwn(noteLabels, value), `unknown note type ${value}`);
-      pending = { kind, value };
+      assert(value, 'directive must have a value');
+      if (kind === 'section') {
+        assert(hasOwn(sectionLabels, value), `unknown section role ${value}`);
+        pending = { kind, value };
+      } else if (kind === 'note') {
+        assert(hasOwn(noteLabels, value), `unknown note type ${value}`);
+        pending = { kind, value };
+      } else {
+        assert(kind === 'heading', `unsupported directive ${kind}`);
+        pending = { kind, value };
+      }
       continue;
     }
-    if (token.type === 'heading' && token.depth === 2) {
+    if (isHeading(token) && token.depth === 2) {
       assert(pending?.kind === 'section', `H2 needs a mimic:section directive: ${token.text}`);
       current = pending.value;
       assert(!groups.has(current), `duplicate section role ${current}`);
       groups.set(current, { heading: token, tokens: [] });
     } else {
       assert(current, 'content outside a section');
-      if (token.type === 'heading') {
+      if (isHeading(token)) {
         assert(token.depth >= 3 && pending?.kind === 'heading', `subheading needs a mimic:heading directive: ${token.text}`);
         assert(!usedIds.has(pending.value), `duplicate or reserved heading ID ${pending.value}`);
         token.mimicId = pending.value;
@@ -147,53 +181,53 @@ function parseSource(text, marked) {
         assert(pending.kind === 'note' && token.type === 'paragraph', 'mimic:note must immediately precede one paragraph');
         token.mimicNote = pending.value;
       }
-      if (current === 'procedure' && token.type === 'list' && token.ordered) token.mimicSteps = true;
-      groups.get(current).tokens.push(token);
+      if (current === 'procedure' && isList(token) && token.ordered) token.mimicSteps = true;
+      groups.get(current)!.tokens.push(token);
     }
-    pending = null;
+    pending = undefined;
   }
   assert(!pending, 'directive at the end has no content');
   for (const role of sectionRoles) {
     assert(groups.has(role), `missing section role ${role}`);
-    assert(groups.get(role).tokens.some(token => token.type !== 'heading'), `empty section ${role}`);
+    assert(groups.get(role)!.tokens.some(token => token.type !== 'heading'), `empty section ${role}`);
   }
-  assert(groups.get('procedure').tokens.some(token => token.mimicSteps), 'procedure needs an ordered list');
+  assert(groups.get('procedure')!.tokens.some(token => token.mimicSteps), 'procedure needs an ordered list');
   marked.walkTokens([content[0], ...[...groups.values()].flatMap(group => [group.heading, ...group.tokens])], token => {
     assert(token.type !== 'html' && token.type !== 'image', `unsupported ${token.type}; no embedded HTML or remote assets`);
   });
   return { metadata, groups };
 }
 
-function makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet) {
+function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, sourcePath: string, outDir: string, stylesheet: string) {
   const { metadata, groups } = parseSource(source.toString('utf8'), marked);
   const renderer = new marked.Renderer();
-  let tableLabel;
+  let tableLabel: string | undefined;
   renderer.link = ({ href, title, tokens }) => {
     const target = resolveLink(href, sourcePath, outDir);
     return `<a href="${escape(target)}"${title ? ` title="${escape(title)}"` : ''}>${marked.Parser.parseInline(tokens, { renderer })}</a>`;
   };
   renderer.table = token => `<div class="table-scroll" tabindex="0" role="region" aria-label="${escape(tableLabel)}の表">${marked.Renderer.prototype.table.call(renderer, token)}</div>`;
-  renderer.heading = token => {
+  renderer.heading = (token: MimicHeading) => {
     assert(token.mimicId, `subheading needs a mimic:heading directive: ${token.text}`);
     tableLabel = token.text;
     return `<h${token.depth} id="${token.mimicId}">${marked.Parser.parseInline(token.tokens, { renderer })}</h${token.depth}>`;
   };
-  renderer.paragraph = token => {
+  renderer.paragraph = (token: MimicParagraph) => {
     const paragraph = marked.Renderer.prototype.paragraph.call(renderer, token);
     if (!token.mimicNote) return paragraph;
     const label = noteLabels[token.mimicNote];
     return `<aside class="note note-${token.mimicNote}" aria-label="${escape(label)}"><p class="note-label">${escape(label)}</p>${paragraph}</aside>`;
   };
-  renderer.list = token => {
+  renderer.list = (token: MimicList) => {
     const list = marked.Renderer.prototype.list.call(renderer, token);
     return token.mimicSteps ? list.replace('<ol', `<ol class="steps" style="counter-reset:step ${Number(token.start) - 1}"`) : list;
   };
-  const render = tokens => marked.Parser.parse(tokens, { renderer });
-  const section = id => {
-    const { heading, tokens } = groups.get(id);
+  const render = (tokens: Token[]) => marked.Parser.parse(tokens, { renderer });
+  const section = (id: SectionRole) => {
+    const { heading, tokens } = groups.get(id)!;
     const title = heading.text;
     tableLabel = title;
-    const subheadings = tokens.filter(token => token.type === 'heading');
+    const subheadings = tokens.filter(isHeading);
     const links = subheadings.length ? `<ul class="section-links">${subheadings.map(token => `<li><a href="#${token.mimicId}">${marked.Parser.parseInline(token.tokens, { renderer })}</a></li>`).join('')}</ul>` : '';
     const body = render(tokens);
     const headingHtml = marked.Parser.parseInline(heading.tokens, { renderer });
@@ -201,7 +235,7 @@ function makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet) {
     return `<section id="${id}" class="knowledge-section" data-section-role="${id}"><div class="section-heading"><h2>${headingHtml}</h2><a class="permalink" href="#${id}" aria-label="${escape(title)}のリンク">#</a></div>${links}${body}${actions}</section>`;
   };
   const navigation = sectionRoles.map(id => `<li><a href="#${id}">${escape(sectionLabels[id])}</a></li>`).join('');
-  const statusLabel = Object.hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
+  const statusLabel = hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
   const sourceLabel = metadata.status === 'proposed' ? '正本を読む' : metadata.status === 'draft' ? '更新案の原文を読む' : '編集元を読む';
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -231,9 +265,10 @@ async function main() {
   const modulePath = values['marked-module'] || process.env.MARKED_MODULE;
   const markedUrl = modulePath ? pathToFileURL(path.resolve(modulePath)).href : import.meta.resolve('marked');
   const packagePath = path.resolve(path.dirname(fileURLToPath(markedUrl)), '../package.json');
-  const dependency = JSON.parse(await readFile(packagePath, 'utf8'));
+  const dependency: unknown = JSON.parse(await readFile(packagePath, 'utf8'));
+  if (typeof dependency !== 'object' || dependency === null || !('name' in dependency) || !('version' in dependency)) throw new Error(`Expected marked ${markedVersion}; got invalid package metadata`);
   if (dependency.name !== 'marked' || dependency.version !== markedVersion) throw new Error(`Expected marked ${markedVersion}; got ${dependency.name} ${dependency.version}`);
-  const { marked } = await import(markedUrl);
+  const { marked }: typeof import('marked') = await import(markedUrl);
   const source = await readFile(sourcePath);
   const stylesheet = await readFile(stylesheetPath);
   assert(!/@import|url\(|<\/?style\b/i.test(stylesheet.toString('utf8')), 'stylesheet must be self-contained CSS');
@@ -243,7 +278,7 @@ async function main() {
   if (values.check) {
     const stale = [];
     for (const [name, expected] of outputs) {
-      const actual = await readFile(path.join(outDir, name)).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
+      const actual = await readFile(path.join(outDir, name)).catch((error: unknown) => { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null; throw error; });
       if (!actual?.equals(expected)) stale.push(name);
     }
     if (stale.length) throw new Error(`Generated output is stale or missing: ${stale.join(', ')}. Run build:prototype.`);
@@ -255,4 +290,4 @@ async function main() {
   }
 }
 
-main().catch(error => { console.error(error.message); process.exitCode = 1; });
+if (import.meta.main) main().catch((error: unknown) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });

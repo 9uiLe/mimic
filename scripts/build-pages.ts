@@ -28,8 +28,8 @@ const entryHtml = `<!doctype html>
 </body></html>
 `;
 
-async function inspectOutput(directory, relative = '') {
-  const info = await lstat(directory).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
+async function inspectOutput(directory: string, relative = ''): Promise<void> {
+  const info = await lstat(directory).catch((error: unknown) => { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null; throw error; });
   if (!info) return;
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error(`Pages output must be a real directory: ${directory}`);
   for (const name of await readdir(directory)) {
@@ -44,11 +44,11 @@ async function inspectOutput(directory, relative = '') {
   }
 }
 
-async function readSource(file) {
+async function readSource(file: string) {
   let current = root;
   const segments = file.split('/');
-  for (let index = 0; index < segments.length; index++) {
-    current = path.join(current, segments[index]);
+  for (const [index, segment] of segments.entries()) {
+    current = path.join(current, segment);
     const info = await lstat(current);
     const expectedType = index === segments.length - 1 ? info.isFile() : info.isDirectory();
     if (info.isSymbolicLink() || !expectedType) throw new Error(`Pages source must be a regular file in real directories: ${file}`);
@@ -70,7 +70,7 @@ export async function buildPages(outDir = path.join(root, '_site')) {
   return [...outputs.keys()].sort();
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   buildPages().then(files => console.log(`Assembled ${files.length} allowlisted Pages files in _site/.`))
-    .catch(error => { console.error(error.message); process.exitCode = 1; });
+    .catch((error: unknown) => { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; });
 }
