@@ -8,7 +8,8 @@ import test from 'node:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const original = await readFile(path.join(root, 'knowledge/decision-material-selection.md'));
-const { marked } = await import(process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : 'marked');
+const markedModule = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
+const { marked } = await import(markedModule);
 const run = args => spawnSync(process.execPath, [path.join(root, 'scripts/build-knowledge.mjs'), ...args], { encoding: 'utf8' });
 const textContent = html => html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]*>/g, ' ')
   .replace(/&(amp|lt|gt|quot|#39);/g, (_, name) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[name])
@@ -188,9 +189,10 @@ test('stylesheet and renderer/rule changes make the human output stale independe
   const stylesheet = await readFile(path.join(root, 'scripts/knowledge-view.css'), 'utf8');
   await writeFile(script, generator);
   await writeFile(cssPath, stylesheet);
-  const args = [script, '--source', source, '--out-dir', out];
+  const args = [script, '--source', source, '--out-dir', out, '--marked-module', fileURLToPath(markedModule)];
   const execute = extra => spawnSync(process.execPath, [...args, ...extra], { encoding: 'utf8' });
-  assert.equal(execute([]).status, 0);
+  const generated = execute([]);
+  assert.equal(generated.status, 0, generated.stderr);
   assert.equal(execute(['--check']).status, 0);
   const originalAi = await readFile(path.join(out, 'ai.md'));
   for (const [file, changed] of [
