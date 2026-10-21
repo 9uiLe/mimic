@@ -25,9 +25,9 @@ const allowedDirectories = new Set(copiedFiles.flatMap(file => {
 const entryHtml = `<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'">
-<meta http-equiv="refresh" content="0; url=prototypes/decision-material-selection/research/">
-<title>Mimic — 更新案（未採用）</title></head><body>
-<p><a href="prototypes/decision-material-selection/research/">判断材料の選定 — 更新案（未採用）を読む</a></p>
+<meta http-equiv="refresh" content="0; url=prototypes/decision-material-selection/">
+<title>Mimic — デザインの知識</title></head><body>
+<p><a href="prototypes/decision-material-selection/">判断材料の選定を読む（採用状態は本文を確認）</a></p>
 </body></html>
 `;
 

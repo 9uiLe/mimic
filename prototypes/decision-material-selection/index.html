@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="0.1.1"><meta name="source-sha256" content="ced8a9b568b8ecc7144962c5f5a0d4d8a5601c282d6a25618930bb9a7bad7dc3">
-<meta name="design-id" content="mimic-knowledge-view"><meta name="design-version" content="1.0.0"><meta name="stylesheet-sha256" content="8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b">
+<meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="0.2.0"><meta name="source-sha256" content="1e4f8817b39e3a497d16053d0837951bd1e3e6bcdb28457478a151aeb6ee7bf3">
+<meta name="design-id" content="mimic-knowledge-view"><meta name="design-version" content="2.0.0"><meta name="stylesheet-sha256" content="8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b">
 <title>判断材料の選定 — Mimic</title>
 <style>
 :root{color-scheme:light;--paper:#f6f5ef;--ink:#243630;--muted:#586960;--line:#cdd6cc;--accent:#285e4d;--wash:#e8eee6;--warm:#f5ecdb}
@@ -97,204 +97,36 @@ details>*{display:block}
 
 
 </style></head><body>
-<a class="skip" href="#purpose">本文へ</a>
+<a class="skip" href="#何を提示するかを考えるための概念">本文へ</a>
 <header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="../../knowledge/decision-material-selection.md">正本を読む</a><a href="ai.md">AI 向け全文</a></div></div>
-<div class="hero"><div class="eyebrow"><span class="badge">仮案</span>KNOWLEDGE</div><h1 id="title">判断材料の選定</h1><div class="meta">decision-material-selection · v0.1.1</div></div></header>
-<main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol><li><a href="#purpose">目的と使う場面</a></li><li><a href="#inputs">使う前に確かめること</a></li><li><a href="#procedure">判断の進め方</a></li><li><a href="#outputs">判断案と選定理由</a></li><li><a href="#related">他の知識との関係</a></li><li><a href="#example">例で確かめる</a></li><li><a href="#sources">根拠といえる範囲</a></li><li><a href="#unverified">まだ確かめていないこと</a></li></ol></nav><article>
-<section id="purpose" class="knowledge-section" data-section-role="purpose"><div class="section-heading"><h2>目的と適用条件</h2><a class="permalink" href="#purpose" aria-label="目的と適用条件のリンク">#</a></div><p>利用者が必要な判断をできるように、情報の組み合わせと表示する量を選びます。目的は、判断の正しさ・重要な見落とし・読む負担の釣り合いを取ることです。少ない項目数そのものを目標にしません。</p>
-<p>比較一覧、候補選択、状況確認など、判断材料の候補が複数ある場面に使います。全情報を常時表示する必要も、常に上位の数件へ絞る必要もありません。条件によって、常時表示・必要時の表示・詳細への分離を選びます。</p>
-<aside class="note note-proposal" aria-label="提案"><p class="note-label">提案</p><p>以下の手順と例は <strong>Mimic の提案</strong>です。ブランディングと個人の好みは判断軸に含めません。</p>
-</aside><div id="view-actions" class="reading-links"><a href="#procedure">判断の進め方へ</a><a href="#outputs">判断案と選定理由へ</a><a href="#unverified">未検証事項を確認する</a></div></section>
-<section id="inputs" class="knowledge-section" data-section-role="inputs"><div class="section-heading"><h2>AI が確認する入力</h2><a class="permalink" href="#inputs" aria-label="AI が確認する入力のリンク">#</a></div><ul>
-<li>誰が、何を決めるか。人が選ぶのか、システムの選択を人が確認するのか。</li>
-<li>正しい判断の条件と、間違い・見落としの影響。通常時だけでなく例外も含む。</li>
-<li>候補となる情報の意味、相互依存、重複、欠損、鮮度、信頼性。</li>
-<li>一度に比較する必要がある情報と、後から確認してよい情報。</li>
-<li>一覧の対象範囲、絞り込み、並び順など、行の外から既に分かる文脈。</li>
-</ul>
-<p>利用者の目的に照らして、候補となる情報の役割と相互関係を調べます。未確認の情報を「不要」とみなして切り捨てず、調査できていない部分は、その範囲を残して暫定案にします。</p>
+<div class="hero"><div class="eyebrow"><span class="badge">採用前の文書</span>KNOWLEDGE</div><h1 id="title">判断材料の選定</h1><div class="meta">decision-material-selection · v0.2.0</div></div></header>
+<main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol><li><a href="#何を提示するかを考えるための概念">何を提示するかを考えるための概念</a></li><li><a href="#情報内容と表現">情報内容と表現</a></li><li><a href="#外的表象と意味を理解する枠組み">外的表象と、意味を理解する枠組み</a></li><li><a href="#情報を段階的に示す">情報を段階的に示す</a></li><li><a href="#短い説明例">短い説明例</a></li><li><a href="#関連する知識">関連する知識</a></li><li><a href="#出典と説明の範囲">出典と説明の範囲</a></li></ol></nav><article>
+<section id="何を提示するかを考えるための概念" class="knowledge-section"><div class="section-heading"><h2>何を提示するかを考えるための概念</h2><a class="permalink" href="#何を提示するかを考えるための概念" aria-label="何を提示するかを考えるための概念のリンク">#</a></div><p>この文書は、利用者が判断に使う情報の内容と提示の仕方を、既存の概念から説明します。「判断材料の選定」は複数の考え方を扱う題目であり、一つの理論の名称ではありません。以下では、それぞれの立場と対象範囲を区別します。</p>
 </section>
-<section id="procedure" class="knowledge-section" data-section-role="procedure"><div class="section-heading"><h2>判断手順</h2><a class="permalink" href="#procedure" aria-label="判断手順のリンク">#</a></div><ol class="steps" style="counter-reset:step 0">
-<li><strong>判断の成功条件を置く。</strong> 通常・境界・例外の場面で、何を選べればよいか、何を見落としてはいけないかを定める。</li>
-<li><strong>情報が判断へどう効くかを調べる。</strong> なくすと必要な判断ができない情報、条件次第で必要な情報、重複、今回の判断に関係しない情報を整理する。単項だけでなく組み合わせも確かめる。選択結果が変わることだけでは、改善とは判定しない。</li>
-<li><strong>表示する段階を選ぶ。</strong> 常時必要なら表示し、特定条件で必要なら、その条件を確実に検出・提示できる場合に限り必要時表示にする。補足は詳細へ置く。まれでも結論を左右する条件を、頻度だけで隠さない。必要なときに現れる保証がなければ、常時表示などを候補に戻す。</li>
-<li><strong>要約と文脈を試す。</strong> 複数の元情報を、意味を保つ要約値へまとめられるか確認する。計算方法・単位・不確かさを伝え、必要なら内訳へ到達できるようにする。グループ名や絞り込みで伝える情報も、判断材料として数える。</li>
-<li><strong>候補の組み合わせを比較する。</strong> 判断の正しさ、重要な見落とし、探す負担、所要時間を確かめる。項目を減らして必要な判断を損なう案は戻し、同程度に判断できる案では読む負担も比較する。固定の件数や根拠のない重み付き点数では決めない。</li>
-<li><strong>採用範囲と保留を残す。</strong> 選んだ組み合わせ・件数と成立条件を記録する。条件や評価が足りなければ「最適」と断定せず、候補案と確認方法を返す。</li>
-</ol>
-<aside class="note note-limitation" aria-label="限界・未確認"><p class="note-label">限界・未確認</p><p>「重要そうな数件」という印象だけで選ばず、単独の情報で判断できることと、組み合わせて初めて判断できる関係を調べます。目的に必要な判断が成立するかと読む負担で提示案を比較し、確認が足りない間は暫定案として扱います。特定の候補数を検証することは完成条件にしません。</p>
-</aside></section>
-<section id="outputs" class="knowledge-section" data-section-role="outputs"><div class="section-heading"><h2>AI が返す内容</h2><a class="permalink" href="#outputs" aria-label="AI が返す内容のリンク">#</a></div><div class="table-scroll" tabindex="0" role="region" aria-label="AI が返す内容の表"><table>
-<thead>
-<tr>
-<th>内容</th>
-<th>残すこと</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>表示案</td>
-<td>項目名、件数、常時表示・必要時表示・詳細の区別</td>
-</tr>
-<tr>
-<td>数え方</td>
-<td>1行当たりか画面全体か。元データ数と表示項目数を分け、行外の文脈も記載</td>
-</tr>
-<tr>
-<td>選定理由</td>
-<td>どの判断を支えるか。除外・詳細送りの理由と、必要になる条件</td>
-</tr>
-<tr>
-<td>要約の根拠</td>
-<td>元情報、計算方法、単位、不確かさ、内訳の確認先</td>
-</tr>
-<tr>
-<td>適用の限界</td>
-<td>代替案、仮定、未確認の候補・例外、検証方法</td>
-</tr>
-</tbody></table>
-</div></section>
-<section id="related" class="knowledge-section" data-section-role="related"><div class="section-heading"><h2>関連知識</h2><a class="permalink" href="#related" aria-label="関連知識のリンク">#</a></div><div class="table-scroll" tabindex="0" role="region" aria-label="関連知識の表"><table>
-<thead>
-<tr>
-<th>ナレッジ</th>
-<th>関係</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><a href="../../knowledge/grouping.md">グルーピング</a></td>
-<td>選んだ情報をまとめる。グループ名や対象範囲が文脈を伝えることで、各行で繰り返す項目が変わる場合がある。分類で必要な情報が見つからなくなれば選定を見直す</td>
-</tr>
-<tr>
-<td><a href="../../knowledge/visual-hierarchy.md">視覚的な優先順位</a></td>
-<td>選んだ情報の関係・相対的重要度を伝える。強調は不足する材料を補わない。読み取りに過剰な負担や欠落が見つかれば、選定へ戻る</td>
-</tr>
-</tbody></table>
-</div></section>
-<section id="example" class="knowledge-section" data-section-role="example"><div class="section-heading"><h2>説明用の例</h2><a class="permalink" href="#example" aria-label="説明用の例のリンク">#</a></div><ul class="section-links"><li><a href="#example-assumptions">判断規則と仮定</a></li><li><a href="#example-options">8候補から表示案を作る</a></li></ul><h3 id="example-assumptions">判断規則と仮定</h3><p>架空の仕事一覧から、人が「<strong>今着手できる仕事のうち、期限までの余裕が最も小さいもの</strong>」を選びます。ここで余裕は「期限までの作業可能時間 − 残り作業時間」です。単なる経過時間ではありません。</p>
-<aside class="note note-assumption" aria-label="仮定"><p class="note-label">仮定</p><p>時間の見積もりは現在の状況に合い、欠損がなく、比較可能で、信頼できると仮定します。仕事の影響や他の業務上の優先条件は同じとします。一覧には着手不可の仕事も残っており、別の着手可否の表示はない前提です。</p>
-</aside><h3 id="example-options">8候補から表示案を作る</h3><div class="table-scroll" tabindex="0" role="region" aria-label="8候補から表示案を作るの表"><table>
-<thead>
-<tr>
-<th>元情報の候補</th>
-<th>この仮定での扱い</th>
-<th>理由・変わる条件</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>仕事名</td>
-<td>常時表示</td>
-<td>選ぶ対象を識別する</td>
-</tr>
-<tr>
-<td>着手可否</td>
-<td>常時表示</td>
-<td>選んでよい仕事を区別する</td>
-</tr>
-<tr>
-<td>期限までの作業可能時間</td>
-<td>常時表示の候補 → 要約の内訳</td>
-<td>残り作業時間との組み合わせで余裕を判断する</td>
-</tr>
-<tr>
-<td>残り作業時間</td>
-<td>常時表示の候補 → 要約の内訳</td>
-<td>期限の近さだけでは余裕が分からない</td>
-</tr>
-<tr>
-<td>作成日</td>
-<td>必要なら詳細</td>
-<td>この判断規則では選択に使わない。古い順に扱う規則なら再検討</td>
-</tr>
-<tr>
-<td>最終更新日</td>
-<td>必要なら詳細</td>
-<td>今回は鮮度を仮定済み。古い見積もりがあるなら再検討</td>
-</tr>
-<tr>
-<td>依頼者名</td>
-<td>必要なら詳細</td>
-<td>今回は依頼者による優先条件がない。条件があれば再検討</td>
-</tr>
-<tr>
-<td>変更履歴</td>
-<td>必要なら詳細</td>
-<td>今回は信頼性を仮定済み。見積もりの根拠確認に必要なら再検討</td>
-</tr>
-</tbody></table>
-</div><p>初めに「仕事名・着手可否・作業可能時間・残り作業時間」の <strong>4項目</strong>を候補にします。ここから残り作業時間だけを消すと、余裕を求められません。</p>
-<p>次に二つの時間を「余裕」へまとめると、<strong>仕事名・着手可否・余裕の3項目</strong>にできます。8個の元情報が3個になったのではなく、一覧の1行当たりの表示を3項目にした案です。二つの時間と計算の説明は詳細から確認できる想定です。</p>
-<div class="table-scroll" tabindex="0" role="region" aria-label="8候補から表示案を作るの表"><table>
-<thead>
-<tr>
-<th>仕事</th>
-<th>着手可否</th>
-<th>作業可能時間</th>
-<th>残り作業時間</th>
-<th>余裕</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>A</td>
-<td>可</td>
-<td>3時間</td>
-<td>2時間</td>
-<td>1時間</td>
-</tr>
-<tr>
-<td>B</td>
-<td>可</td>
-<td>2時間</td>
-<td>0.5時間</td>
-<td>1.5時間</td>
-</tr>
-<tr>
-<td>C</td>
-<td>返答待ち・不可</td>
-<td>1時間</td>
-<td>0.5時間</td>
-<td>0.5時間</td>
-</tr>
-</tbody></table>
-</div><p>規則どおりなら A を選びます。4項目案と3項目案のどちらも、この計算では A に到達できます。着手可否を消して、全件の余裕だけで選ぶと C になり、規則を満たしません。</p>
-<p>ただし、一覧を「着手可能な仕事だけ」に絞り、その範囲が利用者に伝わるなら、<strong>仕事名・余裕の2項目</strong>も候補になります。着手可否の情報は一覧の文脈へ移ったのであり、判断から消えたわけではありません。</p>
-<aside class="note note-limitation" aria-label="限界・未確認"><p class="note-label">限界・未確認</p><p>これは件数の絞り方を示す論理例です。3項目が最適、2項目は常に不足、8項目は常に過剰、という結論ではありません。</p>
-</aside></section>
-<section id="sources" class="knowledge-section" data-section-role="sources"><div class="section-heading"><h2>出典と根拠の範囲</h2><a class="permalink" href="#sources" aria-label="出典と根拠の範囲のリンク">#</a></div><div class="table-scroll" tabindex="0" role="region" aria-label="出典と根拠の範囲の表"><table>
-<thead>
-<tr>
-<th>出典</th>
-<th>支える範囲</th>
-<th>この出典だけでは言えないこと</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><a href="https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines">Carbon — Data table guidelines</a></td>
-<td>補足情報を展開領域へ分ける扱いの参考</td>
-<td>Mimic の選定手順全体や、適切な項目数の保証</td>
-</tr>
-<tr>
-<td><a href="https://design-system.service.gov.uk/components/accordion/">GOV.UK Design System — Accordion</a></td>
-<td>全員が必要とする内容を隠す問題や、ユーザーによる確認の必要性</td>
-<td>あらゆる UI での常時表示・必要時表示の境界</td>
-</tr>
-<tr>
-<td><a href="https://www.gov.uk/service-manual/user-research/using-moderated-usability-testing">GOV.UK — Using moderated usability testing</a></td>
-<td>実際または想定される利用者が、関連する課題を行う検証方法</td>
-<td>この架空例の項目数や使いやすさの検証結果</td>
-</tr>
-</tbody></table>
-</div><aside class="note note-evidence-scope" aria-label="根拠の範囲"><p class="note-label">根拠の範囲</p><p>会話で参照した資料の引継ぎです。今回、原文とリンクを再確認していません。選定手順、情報の分類、8→4→3項目の例は Mimic の整理案であり、出典からの引用ではありません。</p>
-</aside></section>
-<section id="unverified" class="knowledge-section" data-section-role="unverified"><div class="section-heading"><h2>未検証事項</h2><a class="permalink" href="#unverified" aria-label="未検証事項のリンク">#</a></div><ul>
-<li>実際の利用者が、4項目案と3項目案で同程度に正しく、負担少なく判断できるか。通常・例外の課題で正答、見落とし、所要時間を比較する必要がある。</li>
-<li>必要時表示や詳細の情報を、必要な場面で発見できるか。対象画面と端末で確認する必要がある。</li>
-<li>余裕が負、同値、全件着手不可、見積もり欠損・低信頼の場合の判断規則と表示。</li>
-<li>情報の種類や関係、利用者の目的が異なる場面でも、必要な判断材料を選べるか。現在の例は8候補であり、その証拠にはならない。</li>
-<li>出典の現行内容・リンク到達性。適用時の原文再照合は未実施。</li>
+<section id="情報内容と表現" class="knowledge-section"><div class="section-heading"><h2>情報内容と表現</h2><a class="permalink" href="#情報内容と表現" aria-label="情報内容と表現のリンク">#</a></div><p>VicenteとRasmussenのEcological Interface Design（EID）は、複雑な人間機械システムのための設計枠組みです。原典は、インターフェースに含める情報の内容・構造と、その情報を人へ伝える表現の問題を区別します。</p>
+<p>EIDで用いる抽象化階層は、同じ作業領域を異なる抽象度で記述し、各層を目的と手段の関係で結びます。上位ではシステムの目的に関わる関係を、下位では物理的な実装に関わる要素を表します。背景には、運転者が想定外の異常にも対処できるよう、作業領域の制約を表現するという課題があります。一般のUIで表示項目を減らす手順や、適切な項目数を定めた理論ではありません。</p>
+</section>
+<section id="外的表象と意味を理解する枠組み" class="knowledge-section"><div class="section-heading"><h2>外的表象と、意味を理解する枠組み</h2><a class="permalink" href="#外的表象と意味を理解する枠組み" aria-label="外的表象と、意味を理解する枠組みのリンク">#</a></div><p>ZhangとNormanは、認知的な課題を、頭の中の情報と外部環境の情報の相互作用として捉えます。図や物の配置などの外的表象は、記憶を助けるだけでなく、直接知覚できる情報や可能な操作を変え、課題の進め方にも関わるという立場です。原典ではハノイの塔を分析・実験の対象にしています。</p>
+<p>一方、Normanの著者解説は、デザインを通じた意味の伝達を論じます。同じ物でも、置かれた文脈によって役割の解釈が変わります。概念モデルは、構成要素を結び、仕組みと動作の理由を理解する枠組みです。製品そのものや説明が伝える情報を通じて、利用者がその理解を組み立てると説明しています。外に情報があることと、その意味を理解できることは、区別して考えられます。</p>
+</section>
+<section id="情報を段階的に示す" class="knowledge-section"><div class="section-heading"><h2>情報を段階的に示す</h2><a class="permalink" href="#情報を段階的に示す" aria-label="情報を段階的に示すのリンク">#</a></div><p>情報を最初からすべて見せず、操作に応じて詳細を示す部品もあります。Carbonのデータテーブル指針は、行の展開領域を補足情報や追加の取得時間が必要なデータに使うとしています。展開領域が窮屈なら、専用ページやサイドパネルなども選択肢に挙げています。</p>
+<p>GOV.UKのアコーディオン指針は、隠れた内容に気づかない人や操作を理解しない人がいることを説明し、全員が見る必要のある内容には使わないとしています。これらは、それぞれの部品で何を隠すかに関する指針です。すべてのUIで常時表示と詳細表示の境界を定める共通規則ではありません。</p>
+</section>
+<section id="短い説明例" class="knowledge-section"><div class="section-heading"><h2>短い説明例</h2><a class="permalink" href="#短い説明例" aria-label="短い説明例のリンク">#</a></div><p>外的表象と文脈の説明例として、架空の温度表示を考えます。地点AとBの温度を並べる表示では、差を知るために二つの値を照合します。「AとBの温度差」を示す表示では、差が外に表されています。後者でも、比較する地点や単位は意味の理解に関わります。これは表示と頭の中の処理の違いを説明する例であり、どちらの表示が優れているかを示すものではありません。</p>
+</section>
+<section id="関連する知識" class="knowledge-section"><div class="section-heading"><h2>関連する知識</h2><a class="permalink" href="#関連する知識" aria-label="関連する知識のリンク">#</a></div><p><a href="../../knowledge/grouping.md">グルーピング</a>は、情報をどのような意味のまとまりとして構成し、表すかを扱います。<a href="../../knowledge/visual-hierarchy.md">視覚的な優先順位</a>は、提示する情報の相対的な強調や関係の表し方を扱います。情報の内容、まとまり、強調は関連しますが、同じ概念ではありません。</p>
+</section>
+<section id="出典と説明の範囲" class="knowledge-section"><div class="section-heading"><h2>出典と説明の範囲</h2><a class="permalink" href="#出典と説明の範囲" aria-label="出典と説明の範囲のリンク">#</a></div><ul>
+<li><a href="https://backend.orbit.dtu.dk/ws/files/158017888/SMC.PDF">Vicente &amp; Rasmussen — Ecological Interface Design: Theoretical Foundations（1992）</a>：§II.B、§III.A–B。EIDにおける情報内容と表現の区別、抽象化階層とその背景。</li>
+<li><a href="https://worrydream.com/refs/Zhang_2004_-_Representations_in_Distributed_Cognitive_Tasks.pdf">Zhang &amp; Norman — Representations in Distributed Cognitive Tasks（1994年プレプリント）</a>：The Nature of External Representations、原稿29–30頁。外的表象の役割。</li>
+<li><a href="https://jnd.org/design-as-communication/">Don Norman — Design as Communication</a>：Communication &amp; Context、Conceptual Modelsの各節。文脈、概念モデル、製品を介した意味の伝達に関する著者の説明。</li>
+<li><a href="https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines">Carbon — Data table guidelines</a>：Expandable。データテーブルの展開領域の用途。</li>
+<li><a href="https://design-system.service.gov.uk/components/accordion/">GOV.UK Design System — Accordion</a>：When not to use this component。内容を隠す問題と、この部品を使わない条件。</li>
 </ul>
+<p>章立てと温度表示の例は、この文書の説明用の整理です。上記の出典が、一つの情報選定手法としてまとめて提唱したものではありません。</p>
 </section>
 </article></main>
 <footer><div><p><a href="../../knowledge/decision-material-selection.md">正本を読む</a> · <a href="ai.md">AI 向け全文</a> · <a href="#top">ページ上部へ</a></p>
 <details id="source-provenance"><summary>生成情報・正本との対応</summary><p>このページと AI 向け全文は編集元の Markdown から生成しています。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
-<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>0.1.1</dd><dt>status</dt><dd>proposed</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>grouping, visual-hierarchy</dd><dt>source</dt><dd>knowledge/decision-material-selection.md</dd><dt>source SHA-256</dt><dd>ced8a9b568b8ecc7144962c5f5a0d4d8a5601c282d6a25618930bb9a7bad7dc3</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>1.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>0b98aab3d1dc78391401fb312db4787285782a67fdad209d8125e02b40aaadd4</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
+<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>0.2.0</dd><dt>status</dt><dd>proposed</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>grouping, visual-hierarchy</dd><dt>source</dt><dd>knowledge/decision-material-selection.md</dd><dt>source SHA-256</dt><dd>1e4f8817b39e3a497d16053d0837951bd1e3e6bcdb28457478a151aeb6ee7bf3</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>2.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>91f99cc74d51fe981541aa9e397c9f8221d3acd8eae0173231aeba2487a4cab1</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
 </dl></details></div></footer></body></html>

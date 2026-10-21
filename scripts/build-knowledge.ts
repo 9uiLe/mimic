@@ -9,7 +9,7 @@ const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
 const markedVersion = '17.0.5';
 const stylesheetPath = path.join(path.dirname(generatorPath), 'knowledge-view.css');
-const design = { id: 'mimic-knowledge-view', version: '1.0.0' };
+const design = { id: 'mimic-knowledge-view', version: '2.0.0' };
 const sectionLabels = {
   purpose: '目的と使う場面',
   inputs: '使う前に確かめること',
@@ -23,7 +23,7 @@ const sectionLabels = {
 type SectionRole = keyof typeof sectionLabels;
 const sectionRoles = Object.keys(sectionLabels) as SectionRole[];
 const noteLabels = { proposal: '提案', assumption: '仮定', limitation: '限界・未確認', 'evidence-scope': '根拠の範囲' };
-const statusLabels = { proposed: '仮案', draft: '更新案（未採用）' };
+const statusLabels = { proposed: '採用前の文書', draft: '研究資料（未採用）' };
 type NoteType = keyof typeof noteLabels;
 type Marked = typeof import('marked')['marked'];
 type MimicToken = Token & { mimicId?: string; mimicNote?: NoteType; mimicSteps?: boolean };
@@ -33,6 +33,7 @@ type MimicList = Tokens.List & { mimicSteps?: boolean };
 type Directive = { kind: 'section'; value: SectionRole } | { kind: 'heading'; value: string } | { kind: 'note'; value: NoteType };
 interface Metadata { id: string; title: string; status: string; version: string; scope: string; related: string[] }
 interface Group { heading: MimicHeading; tokens: MimicToken[] }
+interface Section extends Group { id: string; role?: SectionRole }
 interface Provenance { source: string; stylesheet: string; generator: string; renderer: string }
 const isHeading = (token: Token): token is MimicHeading => token.type === 'heading';
 const isLink = (token: Token): token is Tokens.Link => token.type === 'link';
@@ -115,6 +116,30 @@ function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outD
   return Buffer.from(frontmatter + result);
 }
 
+function parseConceptSections(content: MimicToken[]): Section[] {
+  const sections: Section[] = [];
+  const usedIds = new Set(['top', 'title', 'source-provenance']);
+  for (const token of content) {
+    if (isHeading(token)) {
+      const base = token.text.toLowerCase().trim().replace(/[^\p{L}\p{N}\s_-]/gu, '').replace(/\s+/g, '-') || 'section';
+      let id = base;
+      for (let suffix = 2; usedIds.has(id); suffix += 1) id = `${base}-${suffix}`;
+      usedIds.add(id);
+      token.mimicId = id;
+      if (token.depth === 2) {
+        sections.push({ id, heading: token, tokens: [] });
+        continue;
+      }
+    }
+    const section = sections[sections.length - 1];
+    assert(section, 'content must begin with an H2 section');
+    section.tokens.push(token);
+  }
+  assert(sections.length, 'expected an H2 section');
+  for (const section of sections) assert(section.tokens.some(token => !isHeading(token)), `empty section ${section.id}`);
+  return sections;
+}
+
 function parseSource(text: string, marked: Marked) {
   const frontmatter = text.match(/^---\n([\s\S]*?)\n---\n/);
   assert(frontmatter, 'expected LF frontmatter at the start');
@@ -142,6 +167,11 @@ function parseSource(text: string, marked: Marked) {
   const content = tokens.filter(token => token.type !== 'space');
   assert(content[0] && isHeading(content[0]) && content[0].depth === 1 && content[0].text === metadata.title, 'title and H1 must match');
   assert(content.filter(token => isHeading(token) && token.depth === 1).length === 1, 'expected one H1');
+  const structured = content.some(token => token.type === 'html' && /^<!-- mimic:section /.test(token.raw.trim()));
+  if (!structured) {
+    marked.walkTokens(content, token => assert(token.type !== 'html' && token.type !== 'image', `unsupported ${token.type}; no embedded HTML or remote assets`));
+    return { metadata, sections: parseConceptSections(content.slice(1)) };
+  }
   const groups = new Map<SectionRole, Group>();
   const usedIds = new Set([...sectionRoles, 'top', 'title', 'view-actions', 'source-provenance']);
   let current: SectionRole | undefined;
@@ -195,11 +225,11 @@ function parseSource(text: string, marked: Marked) {
   marked.walkTokens([content[0], ...[...groups.values()].flatMap(group => [group.heading, ...group.tokens])], token => {
     assert(token.type !== 'html' && token.type !== 'image', `unsupported ${token.type}; no embedded HTML or remote assets`);
   });
-  return { metadata, groups };
+  return { metadata, sections: sectionRoles.map(role => ({ ...groups.get(role)!, id: role, role })) };
 }
 
 function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, sourcePath: string, outDir: string, stylesheet: string) {
-  const { metadata, groups } = parseSource(source.toString('utf8'), marked);
+  const { metadata, sections } = parseSource(source.toString('utf8'), marked);
   const renderer = new marked.Renderer();
   let tableLabel: string | undefined;
   renderer.link = ({ href, title, tokens }) => {
@@ -223,20 +253,19 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
     return token.mimicSteps ? list.replace('<ol', `<ol class="steps" style="counter-reset:step ${Number(token.start) - 1}"`) : list;
   };
   const render = (tokens: Token[]) => marked.Parser.parse(tokens, { renderer });
-  const section = (id: SectionRole) => {
-    const { heading, tokens } = groups.get(id)!;
+  const section = ({ id, role, heading, tokens }: Section) => {
     const title = heading.text;
     tableLabel = title;
     const subheadings = tokens.filter(isHeading);
     const links = subheadings.length ? `<ul class="section-links">${subheadings.map(token => `<li><a href="#${token.mimicId}">${marked.Parser.parseInline(token.tokens, { renderer })}</a></li>`).join('')}</ul>` : '';
     const body = render(tokens);
     const headingHtml = marked.Parser.parseInline(heading.tokens, { renderer });
-    const actions = id === 'purpose' ? '<div id="view-actions" class="reading-links"><a href="#procedure">判断の進め方へ</a><a href="#outputs">判断案と選定理由へ</a><a href="#unverified">未検証事項を確認する</a></div>' : '';
-    return `<section id="${id}" class="knowledge-section" data-section-role="${id}"><div class="section-heading"><h2>${headingHtml}</h2><a class="permalink" href="#${id}" aria-label="${escape(title)}のリンク">#</a></div>${links}${body}${actions}</section>`;
+    const actions = role === 'purpose' ? '<div id="view-actions" class="reading-links"><a href="#procedure">判断の進め方へ</a><a href="#outputs">判断案と選定理由へ</a><a href="#unverified">未検証事項を確認する</a></div>' : '';
+    return `<section id="${escape(id)}" class="knowledge-section"${role ? ` data-section-role="${role}"` : ''}><div class="section-heading"><h2>${headingHtml}</h2><a class="permalink" href="#${escape(id)}" aria-label="${escape(title)}のリンク">#</a></div>${links}${body}${actions}</section>`;
   };
-  const navigation = sectionRoles.map(id => `<li><a href="#${id}">${escape(sectionLabels[id])}</a></li>`).join('');
+  const navigation = sections.map(({ id, role, heading }) => `<li><a href="#${escape(id)}">${escape(role ? sectionLabels[role] : heading.text)}</a></li>`).join('');
   const statusLabel = hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
-  const sourceLabel = metadata.status === 'proposed' ? '正本を読む' : metadata.status === 'draft' ? '更新案の原文を読む' : '編集元を読む';
+  const sourceLabel = metadata.status === 'proposed' ? '正本を読む' : metadata.status === 'draft' ? '研究資料の原文を読む' : '編集元を読む';
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
@@ -246,11 +275,11 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
 <style>
 ${stylesheet}
 </style></head><body>
-<a class="skip" href="#purpose">本文へ</a>
+<a class="skip" href="#${escape(sections[0]!.id)}">本文へ</a>
 <header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a><a href="ai.md">AI 向け全文</a></div></div>
 <div class="hero"><div class="eyebrow"><span class="badge">${escape(statusLabel)}</span>KNOWLEDGE</div><h1 id="title">${escape(metadata.title)}</h1><div class="meta">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>
 <main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol>${navigation}</ol></nav><article>
-${sectionRoles.map(id => section(id)).join('\n')}
+${sections.map(section).join('\n')}
 </article></main>
 <footer><div><p><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">AI 向け全文</a> · <a href="#top">ページ上部へ</a></p>
 <details id="source-provenance"><summary>生成情報・正本との対応</summary><p>このページと AI 向け全文は編集元の Markdown から生成しています。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">

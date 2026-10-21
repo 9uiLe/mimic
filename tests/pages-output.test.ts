@@ -61,8 +61,9 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.deepEqual(after, before);
   assert.equal((await readFile(path.join(out, '.nojekyll'))).length, 0);
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
-  assert.match(entry, /content="0; url=prototypes\/decision-material-selection\/research\/"/);
-  assert.match(entry, /更新案（未採用）/);
+  assert.match(entry, /content="0; url=prototypes\/decision-material-selection\/"/);
+  assert.match(entry, /採用状態は本文を確認/);
+  assert.doesNotMatch(entry, /research\//);
   assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|log/i.test(file)));
 });
 
@@ -139,7 +140,7 @@ test('invalid guideline input leaves all existing Pages output untouched', async
   assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);
 });
 
-test('readers can reach both guideline pages, their original Markdown, and the research page', async () => {
+test('readers can reach both guideline pages, their original Markdown, and the current knowledge page', async () => {
   const { out } = await fixture();
   await buildPages(out);
   for (const file of ['prototypes/decision-material-selection/index.html', 'prototypes/decision-material-selection/research/index.html']) {
@@ -159,7 +160,7 @@ test('readers can reach both guideline pages, their original Markdown, and the r
     assert.ok(html.includes(`href="${otherFile}"`));
     const originalLinks = [...html.matchAll(/href="([^"]*)"/g)].filter(match => match[1] === path.basename(sourceFile));
     assert.equal(originalLinks.length, 2);
-    assert.match(html, /href="\.\.\/prototypes\/decision-material-selection\/research\/"/);
+    assert.match(html, /href="\.\.\/prototypes\/decision-material-selection\/"/);
     assert.match(html, /href="#content"/);
     assert.match(html, /<nav aria-label="目次">/);
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\//);

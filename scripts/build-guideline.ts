@@ -80,7 +80,7 @@ export async function renderGuideline(source: Buffer, sourceFile: GuidelineSourc
   const navigation = sections.map(heading => `<li><a href="#${escape(headings.get(heading)!)}">${escape(heading.text)}</a></li>`).join('');
   const sourceLink = path.posix.basename(sourceFile);
   const other = sourceFile === 'guideline/README.md' ? '<a href="ai.html">AI向けガイド</a>' : '<a href="index.html">人向けガイド</a>';
-  const links = `<a href="../prototypes/decision-material-selection/research/">研究案を読む</a>${other}<a href="${sourceLink}">Markdown原文</a>`;
+  const links = `<a href="../prototypes/decision-material-selection/">知識を読む</a>${other}<a href="${sourceLink}">Markdown原文</a>`;
   return Buffer.from(`<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
