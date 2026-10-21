@@ -1,9 +1,12 @@
 import { lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderGuideline } from './build-guideline.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const copiedFiles = Object.freeze([
+  'guideline/README.md',
+  'guideline/ai.md',
   'prototypes/decision-material-selection/index.html',
   'prototypes/decision-material-selection/ai.md',
   'prototypes/decision-material-selection/draft.md',
@@ -13,7 +16,7 @@ export const copiedFiles = Object.freeze([
   'knowledge/grouping.md',
   'knowledge/visual-hierarchy.md',
 ]);
-export const publishedFiles = Object.freeze(['index.html', '.nojekyll', ...copiedFiles].sort());
+export const publishedFiles = Object.freeze(['index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html', ...copiedFiles].sort());
 const allowedFiles = new Set(publishedFiles);
 const allowedDirectories = new Set(copiedFiles.flatMap(file => {
   const segments = file.split('/');
@@ -59,8 +62,11 @@ async function readSource(file: string) {
 export async function buildPages(outDir = path.join(root, '_site')) {
   outDir = path.resolve(outDir);
   await inspectOutput(outDir);
-  const outputs = new Map([['index.html', Buffer.from(entryHtml)], ['.nojekyll', Buffer.alloc(0)]]);
+  const outputs = new Map<string, Buffer>([['index.html', Buffer.from(entryHtml)], ['.nojekyll', Buffer.alloc(0)]]);
   for (const file of copiedFiles) outputs.set(file, await readSource(file));
+  const stylesheet = await readSource('scripts/knowledge-view.css');
+  outputs.set('guideline/index.html', await renderGuideline(outputs.get('guideline/README.md')!, 'guideline/README.md', stylesheet));
+  outputs.set('guideline/ai.html', await renderGuideline(outputs.get('guideline/ai.md')!, 'guideline/ai.md', stylesheet));
   // Preflight all inputs and existing output before updating any artifact file.
   for (const [file, bytes] of outputs) {
     const destination = path.join(outDir, file);

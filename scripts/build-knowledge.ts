@@ -247,7 +247,7 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
 ${stylesheet}
 </style></head><body>
 <a class="skip" href="#purpose">本文へ</a>
-<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a><a href="ai.md">AI 向け全文</a></div></div>
+<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a><a href="ai.md">AI 向け全文</a></div></div>
 <div class="hero"><div class="eyebrow"><span class="badge">${escape(statusLabel)}</span>KNOWLEDGE</div><h1 id="title">${escape(metadata.title)}</h1><div class="meta">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>
 <main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol>${navigation}</ol></nav><article>
 ${sectionRoles.map(id => section(id)).join('\n')}

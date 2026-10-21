@@ -1,8 +1,10 @@
 # Mimic
 
-人とAIが、デジタルUIを考えるための共通知識です。各工程のAIが、今回の条件に合う知識を参照し、判断の理由と未確認事項を説明できる状態を目指します。
+デジタルUIに関するデザインの知識・概念・思想・哲学を言語化し、人とAIが理解できるように説明する知識データベースです。
 
 このREADMEは人向けの入口です。AIは [AI向けの入口](knowledge/README.md) から、詳細な知識の正本を読みます。判断の条件・手順・根拠・限界は正本に定義し、このREADMEはその説明として扱います。
+
+Repositoryの掲載・編集・採用方針は [人向けの利用ガイド](guideline/README.md) に、AIの参照・編集・確認の手順は [AI向けの作業ガイド](guideline/ai.md) に記載しています。
 
 ## 全体像
 
@@ -21,6 +23,8 @@
 Web（PC・モバイル）、iOS、Androidなどに使う共通のUI知識を扱います。案件固有の仕様・設計書・レビュー資料は各案件に置きます。ブランディング、個別のDesign System、個人の好みは対象外です。
 
 3件はいずれも仮案（`proposed`）です。出典が支える指針、Mimicの提案、説明用の仮定を正本で区別しています。出典の現行内容の再照合、実画面での有効性、各工程への自動参照の組み込みは未確認です。
+
+知識の採用では、原典への忠実さと説明の明確さを確認します。画面での効果測定や自動参照の動作確認は、対象機能の品質として別に扱います。採用の基準は [利用ガイド](guideline/README.md) に従います。ガイドの公開によって、既存3件の採用状態は変わりません。
 
 過去の参照比較では、記録された全件成功の誤報は両版とも0件で、追加手順による低減効果の差は未実証でした。保存記録はGitの `fc54bf0` から確認できます。
 
@@ -47,7 +51,7 @@ bun run verify
 
 Nixが`nix-command`または`flakes`を無効としている場合は、最初のコマンドを`nix --extra-experimental-features 'nix-command flakes' develop path:.`に置き換えます。環境に入るだけでは依存の導入・生成・公開を行いません。
 
-`verify`はTypeScriptの型検査、両版の生成物の鮮度確認、9件の振る舞いのテストを実行します。TypeScriptとして実行できるだけでは型検査済みと扱いません。片方だけ更新する場合は`bun run build:prototype`または`bun run build:research-prototype`、対応する鮮度確認には`bun run check:prototype`または`bun run check:research-prototype`を使います。
+`verify`はTypeScriptの型検査、両版の生成物の鮮度確認、生成と公開の振る舞いのテストを実行します。TypeScriptとして実行できるだけでは型検査済みと扱いません。片方だけ更新する場合は`bun run build:prototype`または`bun run build:research-prototype`、対応する鮮度確認には`bun run check:prototype`または`bun run check:research-prototype`を使います。
 
 既に利用できるmarkedモジュールを使う場合は、生成スクリプトの`--marked-module`で絶対パスを指定できます。`MARKED_MODULE`環境変数でも指定でき、生成・鮮度確認・テストに共通して使えます。この試作は「判断材料の選定」に対応し、8つの意味役割を編集元で明示します。見出し文言・本文量・例の数の変更は受け付け、未知の役割や重複IDは生成を止めます。HTMLや画像の埋め込みは受け付けません。
 
@@ -61,18 +65,20 @@ Nixが`nix-command`または`flakes`を無効としている場合は、最初�
 
 入口は「判断材料の選定」の研究案です。ページ上で「更新案（未採用）」と表示し、公開したことを共通知識への採用とは扱いません。現行版と研究案のHTML・AI全文、対応する編集元と関連知識を配信します。
 
+[人向けの利用ガイド](https://9uile.github.io/mimic/guideline/) と [AI向けの作業ガイド](https://9uile.github.io/mimic/guideline/ai.html) も公開します。両知識ページの上部から利用ガイドへ移動できます。編集元は `guideline/README.md` と `guideline/ai.md` で、両方のMarkdownと生成HTMLを配信します。
+
 ```sh
 nix develop path:. --command bun run build:pages
 nix develop path:. --command bun run verify
 ```
 
-`build:pages`は同じ正本・生成器から両版を再生成し、[公開ファイルの一覧](scripts/build-pages.ts)にある10ファイルだけを `_site/` へ組み立てます。PDF、作業ログ、Moletta、Git履歴はPagesの配信対象に含めません。`_site/` とローカル出力の `output/` はGit管理対象から除外します。Public Repositoryにコミットしたファイルは、GitHub上では閲覧可能です。
+`build:pages`は同じ正本・生成器から両知識ページを再生成し、ガイドのMarkdownからHTMLを生成して、[公開ファイルの一覧](scripts/build-pages.ts)にある14ファイルだけを `_site/` へ組み立てます。PDF、作業ログ、Moletta、Git履歴はPagesの配信対象に含めません。`_site/` とローカル出力の `output/` はGit管理対象から除外します。Public Repositoryにコミットしたファイルは、GitHub上では閲覧可能です。
 
 出力先に一覧外のファイルやリンクがあれば生成を止めます。自動で削除して続行せず、内容を確認します。HTMLとMarkdownの相対リンクは、Repository名を含む `/mimic/` 配下でも同じ資料へ届く構成です。
 
 初回の公開では、確認済みの成果を最新の `main` に追加し、GitHubのSettings → Pages → SourceをGitHub Actionsに設定します。`github-pages` 環境も `main` からの公開に限定します。[GitHub公式の設定手順](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
-[公開処理](.github/workflows/pages.yml)は標準の `ubuntu-latest` 上で同じNix環境に入り、固定した依存の導入、生成、型検査、鮮度確認とテストを行い、成功した `_site/` だけを配信します。`main` へのpushのみをきっかけに再公開します。PRでは[検査処理](.github/workflows/ci.yml)が同じ生成と検査を行います。**有効化後、`main` への反映は公開操作になります。** 公開・送信前に確認する運用を、以後の更新にも適用します。
+[公開処理](.github/workflows/pages.yml)は標準の `ubuntu-latest` 上で同じNix環境に入り、固定した依存の導入、生成、型検査、鮮度確認とテストを行い、成功した `_site/` だけを配信します。`main` へのpushのみをきっかけに再公開します。PRでは[検査処理](.github/workflows/ci.yml)が同じ生成と検査を行います。**有効化後、`main` への反映は公開操作になります。** 公開・送信前に許可を確認し、既に明示的な許可がある範囲では再確認せず進めます。
 
 ローカル検査は、配信対象・内容・リンクと更新手順の整合性を確認するものです。Bun・TypeScript・Nixの構成はApple SiliconのmacOSで、依存未導入の一時フォルダーから生成と全検査まで確認しています。Linuxでの生成・検査はPRの自動処理で、公開はmainの自動処理で確かめます。iPhone／iPadの実機での閲覧と操作は、ローカル検査だけでは判断できません。見た目の記録にはHTMLのフルページ画像を使い、PDFは採用しません。
 

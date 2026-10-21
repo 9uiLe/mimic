@@ -11,6 +11,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { marked } = await import(process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : 'marked') as typeof import('marked');
 const expectedFiles = [
   '.nojekyll',
+  'guideline/README.md',
+  'guideline/ai.html',
+  'guideline/ai.md',
+  'guideline/index.html',
   'index.html',
   'knowledge/decision-material-selection.md',
   'knowledge/grouping.md',
@@ -22,6 +26,7 @@ const expectedFiles = [
   'prototypes/decision-material-selection/research/index.html',
 ];
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+const generatedPages = ['index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html'];
 
 const temporaryDirectories: string[] = [];
 afterEach(async () => {
@@ -46,7 +51,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
   return files.sort();
 }
 
-test('Pages contains exactly the reviewed ten files and repeated builds preserve their bytes', async () => {
+test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
@@ -58,7 +63,7 @@ test('Pages contains exactly the reviewed ten files and repeated builds preserve
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
   assert.match(entry, /content="0; url=prototypes\/decision-material-selection\/research\/"/);
   assert.match(entry, /更新案（未採用）/);
-  assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|README|log/i.test(file)));
+  assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|log/i.test(file)));
 });
 
 test('every local HTML and Markdown link resolves inside the artifact at the GitHub project prefix', async () => {
@@ -98,7 +103,7 @@ test('every local HTML and Markdown link resolves inside the artifact at the Git
 test('artifact copies match their generated or canonical sources and retain repository-relative provenance', async () => {
   const { out } = await fixture();
   await buildPages(out);
-  for (const file of expectedFiles.filter(file => file !== 'index.html' && file !== '.nojekyll')) {
+  for (const file of expectedFiles.filter(file => !generatedPages.includes(file))) {
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
   const provenanceCases: [string, string, string][] = [
@@ -112,6 +117,52 @@ test('artifact copies match their generated or canonical sources and retain repo
     assert.ok(html.includes(`<meta name="source-sha256" content="${hash(source)}">`));
     assert.ok(html.includes(`<dt>status</dt><dd>${status}</dd>`));
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\/|KNOWLEDGE \/ LOCAL VIEW/);
+  }
+});
+
+test('invalid guideline input leaves all existing Pages output untouched', async () => {
+  const { directory, out } = await fixture();
+  const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/knowledge-view.css', ...expectedFiles.filter(file => !generatedPages.includes(file))];
+  for (const file of inputs) {
+    const destination = path.join(directory, file);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, await readFile(path.join(root, file)));
+  }
+  const markedUrl = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
+  await mkdir(path.join(directory, 'node_modules'));
+  await symlink(path.resolve(path.dirname(fileURLToPath(markedUrl)), '..'), path.join(directory, 'node_modules/marked'));
+  const isolated: typeof import('../scripts/build-pages.ts') = await import(pathToFileURL(path.join(directory, 'scripts/build-pages.ts')).href);
+  await isolated.buildPages(out);
+  const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
+  await writeFile(path.join(directory, 'guideline/ai.md'), '# AI向けガイド\n\n## 本文\n\n<script>外部コード</script>\n');
+  await assert.rejects(isolated.buildPages(out), /Guideline source: unsupported html/);
+  assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);
+});
+
+test('readers can reach both guideline pages, their original Markdown, and the research page', async () => {
+  const { out } = await fixture();
+  await buildPages(out);
+  for (const file of ['prototypes/decision-material-selection/index.html', 'prototypes/decision-material-selection/research/index.html']) {
+    const html = await readFile(path.join(out, file), 'utf8');
+    assert.ok(html.includes('href="https://9uile.github.io/mimic/guideline/"'), `${file}: missing guideline link`);
+  }
+  for (const [htmlFile, sourceFile, otherFile] of [
+    ['guideline/index.html', 'guideline/README.md', 'ai.html'],
+    ['guideline/ai.html', 'guideline/ai.md', 'index.html'],
+  ]) {
+    assert.ok(htmlFile && sourceFile && otherFile);
+    const html = await readFile(path.join(out, htmlFile), 'utf8');
+    const source = await readFile(path.join(root, sourceFile));
+    assert.equal([...html.matchAll(/<h1(?:\s|>)/g)].length, 1, htmlFile);
+    assert.ok(html.includes(`<dt>source</dt><dd>${sourceFile}</dd>`));
+    assert.ok(html.includes(`<meta name="source-sha256" content="${hash(source)}">`));
+    assert.ok(html.includes(`href="${otherFile}"`));
+    const originalLinks = [...html.matchAll(/href="([^"]*)"/g)].filter(match => match[1] === path.basename(sourceFile));
+    assert.equal(originalLinks.length, 2);
+    assert.match(html, /href="\.\.\/prototypes\/decision-material-selection\/research\/"/);
+    assert.match(html, /href="#content"/);
+    assert.match(html, /<nav aria-label="目次">/);
+    assert.doesNotMatch(html, /\/Users\/|\/home\/runner\//);
   }
 });
 
