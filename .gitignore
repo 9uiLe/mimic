@@ -1,9 +1,9 @@
-node_modules/
-**/node_modules/
-**/dist/
-**/.vite/
-**/.cache/
-coverage/
-playwright-report/
-test-results/
-*.tsbuildinfo
+# Local Moletta execution records
+/.moletta-runs/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# macOS metadata
+.DS_Store
