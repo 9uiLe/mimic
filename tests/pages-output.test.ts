@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, test } from 'bun:test';
@@ -16,17 +16,32 @@ const expectedFiles = [
   'guideline/ai.md',
   'guideline/index.html',
   'index.html',
+  'knowledge/conceptual-models/KNOWLEDGE.md',
+  'knowledge/conceptual-models/references/sources.md',
   'knowledge/decision-material-selection.md',
+  'knowledge/ecological-interface-design/KNOWLEDGE.md',
+  'knowledge/ecological-interface-design/references/sources.md',
+  'knowledge/external-representations/KNOWLEDGE.md',
+  'knowledge/external-representations/examples/temperature.md',
+  'knowledge/external-representations/references/sources.md',
   'knowledge/grouping.md',
+  'knowledge/grouping/KNOWLEDGE.md',
+  'knowledge/grouping/examples/schedule.md',
+  'knowledge/grouping/references/sources.md',
   'knowledge/visual-hierarchy.md',
+  'knowledge/visual-hierarchy/KNOWLEDGE.md',
+  'knowledge/visual-hierarchy/examples/schedule.md',
+  'knowledge/visual-hierarchy/references/sources.md',
   'prototypes/decision-material-selection/ai.md',
   'prototypes/decision-material-selection/draft.md',
   'prototypes/decision-material-selection/index.html',
   'prototypes/decision-material-selection/research/ai.md',
   'prototypes/decision-material-selection/research/index.html',
+  'topics/decision-material-selection.md',
 ];
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
-const generatedPages = ['index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html'];
+const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
+const generatedPages = ['index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html', ...movedPages];
 
 const temporaryDirectories: string[] = [];
 afterEach(async () => {
@@ -37,6 +52,19 @@ async function fixture() {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-pages-'));
   temporaryDirectories.push(directory);
   return { directory, out: path.join(directory, '_site') };
+}
+
+async function isolatedBuilder(directory: string) {
+  const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/knowledge-view.css', ...expectedFiles.filter(file => !generatedPages.includes(file))];
+  for (const file of inputs) {
+    const destination = path.join(directory, file);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, await readFile(path.join(root, file)));
+  }
+  const markedUrl = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
+  await mkdir(path.join(directory, 'node_modules'));
+  await symlink(path.resolve(path.dirname(fileURLToPath(markedUrl)), '..'), path.join(directory, 'node_modules/marked'));
+  return import(pathToFileURL(path.join(directory, 'scripts/build-pages.ts')).href) as Promise<typeof import('../scripts/build-pages.ts')>;
 }
 
 async function filesIn(directory: string, prefix = ''): Promise<string[]> {
@@ -61,9 +89,10 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.deepEqual(after, before);
   assert.equal((await readFile(path.join(out, '.nojekyll'))).length, 0);
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
-  assert.match(entry, /content="0; url=prototypes\/decision-material-selection\/research\/"/);
-  assert.match(entry, /更新案（未採用）/);
-  assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|log/i.test(file)));
+  assert.match(entry, /content="0; url=prototypes\/decision-material-selection\/"/);
+  assert.match(entry, /採用状態は本文を確認/);
+  assert.doesNotMatch(entry, /research\//);
+  assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|(?:^|\/)logs?(?:\/|$)|\.log$/i.test(file)));
 });
 
 test('every local HTML and Markdown link resolves inside the artifact at the GitHub project prefix', async () => {
@@ -107,7 +136,7 @@ test('artifact copies match their generated or canonical sources and retain repo
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
   const provenanceCases: [string, string, string][] = [
-    ['prototypes/decision-material-selection/index.html', 'knowledge/decision-material-selection.md', 'proposed'],
+    ['prototypes/decision-material-selection/index.html', 'topics/decision-material-selection.md', 'proposed'],
     ['prototypes/decision-material-selection/research/index.html', 'prototypes/decision-material-selection/draft.md', 'draft'],
   ];
   for (const [htmlFile, sourceFile, status] of provenanceCases) {
@@ -122,16 +151,7 @@ test('artifact copies match their generated or canonical sources and retain repo
 
 test('invalid guideline input leaves all existing Pages output untouched', async () => {
   const { directory, out } = await fixture();
-  const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/knowledge-view.css', ...expectedFiles.filter(file => !generatedPages.includes(file))];
-  for (const file of inputs) {
-    const destination = path.join(directory, file);
-    await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, await readFile(path.join(root, file)));
-  }
-  const markedUrl = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
-  await mkdir(path.join(directory, 'node_modules'));
-  await symlink(path.resolve(path.dirname(fileURLToPath(markedUrl)), '..'), path.join(directory, 'node_modules/marked'));
-  const isolated: typeof import('../scripts/build-pages.ts') = await import(pathToFileURL(path.join(directory, 'scripts/build-pages.ts')).href);
+  const isolated = await isolatedBuilder(directory);
   await isolated.buildPages(out);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
   await writeFile(path.join(directory, 'guideline/ai.md'), '# AI向けガイド\n\n## 本文\n\n<script>外部コード</script>\n');
@@ -139,7 +159,33 @@ test('invalid guideline input leaves all existing Pages output untouched', async
   assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);
 });
 
-test('readers can reach both guideline pages, their original Markdown, and the research page', async () => {
+test('old Markdown URLs become generated navigation while concept scripts remain unexecuted and unpublished', async () => {
+  const { directory, out } = await fixture();
+  const isolated = await isolatedBuilder(directory);
+  const marker = path.join(directory, 'script-was-run.txt');
+  const script = path.join(directory, 'knowledge/grouping/scripts/example.ts');
+  await mkdir(path.dirname(script), { recursive: true });
+  await writeFile(script, `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(marker)}, 'executed');\n`);
+  await mkdir(path.join(out, 'knowledge'), { recursive: true });
+  for (const file of movedPages) await writeFile(path.join(out, file), 'old source content');
+  await isolated.buildPages(out);
+  for (const [file, target] of [
+    ['knowledge/decision-material-selection.md', '../topics/decision-material-selection.md'],
+    ['knowledge/grouping.md', 'grouping/KNOWLEDGE.md'],
+    ['knowledge/visual-hierarchy.md', 'visual-hierarchy/KNOWLEDGE.md'],
+  ]) {
+    assert.ok(file && target);
+    const alias = await readFile(path.join(out, file), 'utf8');
+    assert.match(alias, /移動案内.*正本ではありません/);
+    assert.ok(alias.includes(`](${target})`));
+    assert.doesNotMatch(alias, /old source content|^---/);
+  }
+  assert.deepEqual(await filesIn(out), expectedFiles);
+  await assert.rejects(access(marker), { code: 'ENOENT' });
+  await assert.rejects(access(path.join(out, 'knowledge/grouping/scripts/example.ts')), { code: 'ENOENT' });
+});
+
+test('readers can reach both guideline pages, their original Markdown, and the current knowledge page', async () => {
   const { out } = await fixture();
   await buildPages(out);
   for (const file of ['prototypes/decision-material-selection/index.html', 'prototypes/decision-material-selection/research/index.html']) {
@@ -159,7 +205,7 @@ test('readers can reach both guideline pages, their original Markdown, and the r
     assert.ok(html.includes(`href="${otherFile}"`));
     const originalLinks = [...html.matchAll(/href="([^"]*)"/g)].filter(match => match[1] === path.basename(sourceFile));
     assert.equal(originalLinks.length, 2);
-    assert.match(html, /href="\.\.\/prototypes\/decision-material-selection\/research\/"/);
+    assert.match(html, /href="\.\.\/prototypes\/decision-material-selection\/"/);
     assert.match(html, /href="#content"/);
     assert.match(html, /<nav aria-label="目次">/);
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\//);

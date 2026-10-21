@@ -12,7 +12,7 @@ const source = `# ガイドの例
 
 [AI向け](ai.md)と[人向け](README.md)を使います。
 
-[研究案](../prototypes/decision-material-selection/research/)と[正本](../knowledge/grouping.md)も参照します。
+[研究案](../prototypes/decision-material-selection/research/)と[正本](../knowledge/grouping/KNOWLEDGE.md)も参照します。
 
 ### 条件を確かめる
 
@@ -39,7 +39,7 @@ test('guideline HTML keeps the document content, gives sections distinct anchors
   assert.match(html, /href="ai.html">AI向け/);
   assert.match(html, /href="index.html">人向け/);
   assert.match(html, /href="\.\.\/prototypes\/decision-material-selection\/research\/">研究案/);
-  assert.match(html, /href="\.\.\/knowledge\/grouping.md">正本/);
+  assert.match(html, /href="\.\.\/knowledge\/grouping\/KNOWLEDGE.md">正本/);
   assert.match(html, /<ol>\s*<li>目的を読む。<\/li>\s*<li>条件を読む。<\/li>\s*<\/ol>/);
   assert.match(html, /class="table-scroll" tabindex="0" role="region"/);
   assert.match(html, /<td>保留<\/td>/);
