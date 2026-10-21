@@ -37,7 +37,7 @@
 
 意味区分はH2直前の `<!-- mimic:section purpose -->`、小見出しの安定IDは `<!-- mimic:heading axis-purpose -->`、一段落の注記種別は `<!-- mimic:note proposal -->` の形で指定します。注記種別は `proposal`・`assumption`・`limitation`・`evidence-scope` です。本文をコメントや生成器へ重複して書きません。8役割は必須で、未知の役割・重複ID・未定義の注記は生成を止めます。
 
-表示構造と生成規則は [生成器](../scripts/build-knowledge.mjs)、書体・色・余白・画面幅への対応は [共通CSS](../scripts/knowledge-view.css) が実装です。CSSはHTMLへ埋め込み、外部配信の書体・画像・スクリプトに依存しません。知識の版と表示方式の版を分け、原文・CSS・生成器の指紋を生成HTMLへ記録します。
+表示構造と生成規則は [生成器](../scripts/build-knowledge.ts)、書体・色・余白・画面幅への対応は [共通CSS](../scripts/knowledge-view.css) が実装です。CSSはHTMLへ埋め込み、外部配信の書体・画像・スクリプトに依存しません。知識の版と表示方式の版を分け、原文・CSS・生成器の指紋を生成HTMLへ記録します。
 
 ## 確認する範囲
 
