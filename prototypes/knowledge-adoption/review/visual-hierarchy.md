@@ -1,6 +1,8 @@
 # 「視覚的な優先順位」採用候補の照合記録
 
-この文書は採用判断用の編集資料です。[改稿した本文](../../../knowledge/visual-hierarchy.md)は `status: proposed`、`version: "0.2.0"` であり、正本の改稿案として反映し、正式採用の判断は人のレビューに残しています。
+この記録は、[8a7f839時点の原稿](https://github.com/9uiLe/mimic/blob/8a7f839e8235fa016db6fb033a792799db56c8ef/knowledge/visual-hierarchy.md)と出典を照合したものです。[現在の参照先](../../../knowledge/visual-hierarchy/KNOWLEDGE.md)とその補足ファイルを一括して確認済みとする記録ではありません。
+
+この文書は採用判断用の編集資料です。[改稿した本文](https://github.com/9uiLe/mimic/blob/8a7f839e8235fa016db6fb033a792799db56c8ef/knowledge/visual-hierarchy.md)は `status: proposed`、`version: "0.2.0"` であり、正本の改稿案として反映し、正式採用の判断は人のレビューに残しています。
 
 ## 照合した節と本文の対応
 

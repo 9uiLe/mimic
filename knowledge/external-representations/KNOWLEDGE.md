@@ -1,0 +1,32 @@
+---
+id: external-representations
+title: 外的表象
+status: proposed
+version: "0.1.0"
+scope: cognitive-tasks
+related:
+  - conceptual-models
+  - ecological-interface-design
+---
+
+# 外的表象
+
+## 概念
+
+ZhangとNormanは、認知的な課題を、頭の中の情報と外部環境の情報の相互作用として捉えます。図や物の配置などの外的表象は、記憶を助けるだけでなく、直接知覚できる情報や可能な操作を変え、課題の進め方にも関わるという立場です。
+
+## 背景と対象範囲
+
+原典ではハノイの塔を分析・実験の対象にしています。この項目は、その立場から外的表象の役割を説明します。個々のUIでどの表示が優れているかや、情報を外に示せば必ず理解できることを保証するものではありません。
+
+## 関連する概念
+
+[概念モデル](../conceptual-models/KNOWLEDGE.md)は、構成要素を結び、仕組みと動作の理由を理解する枠組みです。外に情報があることと、その意味を理解できることは、区別して考えられます。
+
+[Ecological Interface Design](../ecological-interface-design/KNOWLEDGE.md)は、複雑な人間機械システムで情報の内容・構造と表現を扱う設計枠組みです。情報の表し方という接点はありますが、同じ理論としてまとめません。この関連づけは本書の説明上の整理です。
+
+## 説明例と出典
+
+[温度表示の説明例](examples/temperature.md)は、外に表された情報と頭の中の処理の違いを説明します。表示方法の優劣を確かめた実験ではありません。
+
+[原典と説明の範囲](references/sources.md)に、参照した論文と対応箇所を記載します。複数の概念への入口は[判断材料の選定](../../topics/decision-material-selection.md)にあります。

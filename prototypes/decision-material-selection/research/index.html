@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="0.2.0-draft"><meta name="source-sha256" content="f479fd4fa4dec7405510836bcca7d5aa1286af38f16457b27389d755fa972bd1">
+<meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="0.2.0-draft"><meta name="source-sha256" content="b904fa9a7c4b5ff627ac4f0788ab6e71baaf1533eeefa053877290541e7023b0">
 <meta name="design-id" content="mimic-knowledge-view"><meta name="design-version" content="2.0.0"><meta name="stylesheet-sha256" content="8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b">
 <title>判断材料の選定 — Mimic</title>
 <style>
@@ -98,11 +98,11 @@ details>*{display:block}
 
 </style></head><body>
 <a class="skip" href="#purpose">本文へ</a>
-<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="../draft.md">研究資料の原文を読む</a><a href="ai.md">AI 向け全文</a></div></div>
+<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="../draft.md">研究資料の原文を読む</a><a href="ai.md">研究資料のMarkdown</a></div></div>
 <div class="hero"><div class="eyebrow"><span class="badge">研究資料（未採用）</span>KNOWLEDGE</div><h1 id="title">判断材料の選定</h1><div class="meta">decision-material-selection · v0.2.0-draft</div></div></header>
 <main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol><li><a href="#purpose">目的と使う場面</a></li><li><a href="#inputs">使う前に確かめること</a></li><li><a href="#procedure">判断の進め方</a></li><li><a href="#outputs">判断案と選定理由</a></li><li><a href="#related">他の知識との関係</a></li><li><a href="#example">例で確かめる</a></li><li><a href="#sources">根拠といえる範囲</a></li><li><a href="#unverified">まだ確かめていないこと</a></li></ol></nav><article>
 <section id="purpose" class="knowledge-section" data-section-role="purpose"><div class="section-heading"><h2>何を、なぜ提示するかを説明する</h2><a class="permalink" href="#purpose" aria-label="何を、なぜ提示するかを説明するのリンク">#</a></div><p>利用者の目的から必要な判断材料を導き、単独の情報で足りるか、組み合わせや要約が必要かを比較します。目的は、正しく判断でき、重要な条件を見落とさず、読む・覚える・計算する負担を抑えることです。表示項目の少なさを目的にしません。</p>
-<aside class="note note-proposal" aria-label="提案"><p class="note-label">提案</p><p>これは旧版 0.1.1 に対して作成した、未採用の研究資料です。出典を踏まえてまとめた5つの判断軸と手順は Mimic の提案であり、現行の知識本文に採用したものではありません。現行の説明は<a href="../../../knowledge/decision-material-selection.md">知識の正本</a>を参照してください。この研究資料はこの下書きだけを編集し、AI向け全文と人向けHTMLを生成します。</p>
+<aside class="note note-proposal" aria-label="提案"><p class="note-label">提案</p><p>これは旧版 0.1.1 に対して作成した、未採用の研究資料です。出典を踏まえてまとめた5つの判断軸と手順は Mimic の提案であり、現行の知識本文に採用したものではありません。現行の説明は<a href="../../../topics/decision-material-selection.md">概念を読む案内</a>を参照してください。この研究資料はこの下書きだけを編集し、AI向け全文と人向けHTMLを生成します。</p>
 </aside><p>比較一覧、候補選択、状況確認などに使います。5つの軸は「目的と制約」「情報同士の関係」「意味の一貫性」「頭の中の処理」「情報への到達」です。適用条件を共有し、採用・不採用の理由を検証できるようにします。同じ条件に合う案が複数残る場合もあります。</p>
 <aside class="note note-limitation" aria-label="限界・未確認"><p class="note-label">限界・未確認</p><p>この試作は汎用UIへの応用案です。個別業務の優先規則、安全上・制度上の条件、ブランディング、個人の好みを決めるものではありません。理論を参照しただけでは、情報選定の正しさや実際の使いやすさは保証できません。</p>
 </aside><div id="view-actions" class="reading-links"><a href="#procedure">判断の進め方へ</a><a href="#outputs">判断案と選定理由へ</a><a href="#unverified">未検証事項を確認する</a></div></section>
@@ -178,11 +178,11 @@ details>*{display:block}
 </tr>
 </thead>
 <tbody><tr>
-<td><a href="../../../knowledge/grouping.md">グルーピング</a></td>
+<td><a href="../../../knowledge/grouping/KNOWLEDGE.md">グルーピング</a></td>
 <td>見出しや一覧の範囲が条件を伝えるなら、各行で繰り返す情報が変わる。まとまりから必要な情報を探せなければ選定へ戻る</td>
 </tr>
 <tr>
-<td><a href="../../../knowledge/visual-hierarchy.md">視覚的な優先順位</a></td>
+<td><a href="../../../knowledge/visual-hierarchy/KNOWLEDGE.md">視覚的な優先順位</a></td>
 <td>選んだ情報の関係や重要度を伝える。強調だけで不足した情報を補うことはできない</td>
 </tr>
 </tbody></table>
@@ -306,7 +306,7 @@ details>*{display:block}
 </ul>
 </section>
 </article></main>
-<footer><div><p><a href="../draft.md">研究資料の原文を読む</a> · <a href="ai.md">AI 向け全文</a> · <a href="#top">ページ上部へ</a></p>
-<details id="source-provenance"><summary>生成情報・正本との対応</summary><p>このページと AI 向け全文は編集元の Markdown から生成しています。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
-<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>0.2.0-draft</dd><dt>status</dt><dd>draft</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>grouping, visual-hierarchy</dd><dt>source</dt><dd>prototypes/decision-material-selection/draft.md</dd><dt>source SHA-256</dt><dd>f479fd4fa4dec7405510836bcca7d5aa1286af38f16457b27389d755fa972bd1</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>2.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>91f99cc74d51fe981541aa9e397c9f8221d3acd8eae0173231aeba2487a4cab1</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
+<footer><div><p><a href="../draft.md">研究資料の原文を読む</a> · <a href="ai.md">研究資料のMarkdown</a> · <a href="#top">ページ上部へ</a></p>
+<details id="source-provenance"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
+<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>0.2.0-draft</dd><dt>status</dt><dd>draft</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>grouping, visual-hierarchy</dd><dt>source</dt><dd>prototypes/decision-material-selection/draft.md</dd><dt>source SHA-256</dt><dd>b904fa9a7c4b5ff627ac4f0788ab6e71baaf1533eeefa053877290541e7023b0</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>2.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>ac09b5417dc1910c225f3a265aa4f31274565cd4064153be1621fe35e4248333</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
 </dl></details></div></footer></body></html>

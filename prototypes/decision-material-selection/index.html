@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="0.2.0"><meta name="source-sha256" content="1e4f8817b39e3a497d16053d0837951bd1e3e6bcdb28457478a151aeb6ee7bf3">
+<meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="0.2.0"><meta name="source-sha256" content="c046663bb1b359bb1a64747b671e63c79ae94a01bc9c840b20368272d4478d10">
 <meta name="design-id" content="mimic-knowledge-view"><meta name="design-version" content="2.0.0"><meta name="stylesheet-sha256" content="8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b">
 <title>判断材料の選定 — Mimic</title>
 <style>
@@ -97,36 +97,27 @@ details>*{display:block}
 
 
 </style></head><body>
-<a class="skip" href="#何を提示するかを考えるための概念">本文へ</a>
-<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="../../knowledge/decision-material-selection.md">正本を読む</a><a href="ai.md">AI 向け全文</a></div></div>
-<div class="hero"><div class="eyebrow"><span class="badge">採用前の文書</span>KNOWLEDGE</div><h1 id="title">判断材料の選定</h1><div class="meta">decision-material-selection · v0.2.0</div></div></header>
-<main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol><li><a href="#何を提示するかを考えるための概念">何を提示するかを考えるための概念</a></li><li><a href="#情報内容と表現">情報内容と表現</a></li><li><a href="#外的表象と意味を理解する枠組み">外的表象と、意味を理解する枠組み</a></li><li><a href="#情報を段階的に示す">情報を段階的に示す</a></li><li><a href="#短い説明例">短い説明例</a></li><li><a href="#関連する知識">関連する知識</a></li><li><a href="#出典と説明の範囲">出典と説明の範囲</a></li></ol></nav><article>
-<section id="何を提示するかを考えるための概念" class="knowledge-section"><div class="section-heading"><h2>何を提示するかを考えるための概念</h2><a class="permalink" href="#何を提示するかを考えるための概念" aria-label="何を提示するかを考えるための概念のリンク">#</a></div><p>この文書は、利用者が判断に使う情報の内容と提示の仕方を、既存の概念から説明します。「判断材料の選定」は複数の考え方を扱う題目であり、一つの理論の名称ではありません。以下では、それぞれの立場と対象範囲を区別します。</p>
+<a class="skip" href="#この案内について">本文へ</a>
+<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="../../topics/decision-material-selection.md">案内の原文を読む</a><a href="ai.md">案内のMarkdown</a></div></div>
+<div class="hero"><div class="eyebrow"><span class="badge">採用前の文書</span>TOPIC</div><h1 id="title">判断材料の選定</h1><div class="meta">decision-material-selection · v0.2.0</div></div></header>
+<main class="layout"><nav aria-label="目次"><p>この案内の全体像</p><ol><li><a href="#この案内について">この案内について</a></li><li><a href="#情報の内容と表現">情報の内容と表現</a></li><li><a href="#外部の情報とその意味の理解">外部の情報と、その意味の理解</a></li><li><a href="#まとまりと強調">まとまりと強調</a></li><li><a href="#部品に応じて情報を段階的に示す">部品に応じて情報を段階的に示す</a></li><li><a href="#出典とこの案内の範囲">出典とこの案内の範囲</a></li></ol></nav><article>
+<section id="この案内について" class="knowledge-section"><div class="section-heading"><h2>この案内について</h2><a class="permalink" href="#この案内について" aria-label="この案内についてのリンク">#</a></div><p>利用者が判断に使う情報の内容と提示の仕方を考えるために、関連する知識へ進む案内です。「判断材料の選定」は複数の考え方を扱う題目であり、一つの理論の名称ではありません。各概念の定義・背景・対象範囲は、リンク先の <code>KNOWLEDGE.md</code> と、そこから参照する出典・説明例で読みます。この案内が、それらの本文をまとめて置き換えるものではありません。</p>
 </section>
-<section id="情報内容と表現" class="knowledge-section"><div class="section-heading"><h2>情報内容と表現</h2><a class="permalink" href="#情報内容と表現" aria-label="情報内容と表現のリンク">#</a></div><p>VicenteとRasmussenのEcological Interface Design（EID）は、複雑な人間機械システムのための設計枠組みです。原典は、インターフェースに含める情報の内容・構造と、その情報を人へ伝える表現の問題を区別します。</p>
-<p>EIDで用いる抽象化階層は、同じ作業領域を異なる抽象度で記述し、各層を目的と手段の関係で結びます。上位ではシステムの目的に関わる関係を、下位では物理的な実装に関わる要素を表します。背景には、運転者が想定外の異常にも対処できるよう、作業領域の制約を表現するという課題があります。一般のUIで表示項目を減らす手順や、適切な項目数を定めた理論ではありません。</p>
+<section id="情報の内容と表現" class="knowledge-section"><div class="section-heading"><h2>情報の内容と表現</h2><a class="permalink" href="#情報の内容と表現" aria-label="情報の内容と表現のリンク">#</a></div><p><a href="../../knowledge/ecological-interface-design/KNOWLEDGE.md">Ecological Interface Design（EID）</a>は、複雑な人間機械システムで情報の内容・構造と表現を考える枠組みを説明します。一般のUIで表示項目を減らす手順や、適切な項目数の理論としては扱いません。</p>
 </section>
-<section id="外的表象と意味を理解する枠組み" class="knowledge-section"><div class="section-heading"><h2>外的表象と、意味を理解する枠組み</h2><a class="permalink" href="#外的表象と意味を理解する枠組み" aria-label="外的表象と、意味を理解する枠組みのリンク">#</a></div><p>ZhangとNormanは、認知的な課題を、頭の中の情報と外部環境の情報の相互作用として捉えます。図や物の配置などの外的表象は、記憶を助けるだけでなく、直接知覚できる情報や可能な操作を変え、課題の進め方にも関わるという立場です。原典ではハノイの塔を分析・実験の対象にしています。</p>
-<p>一方、Normanの著者解説は、デザインを通じた意味の伝達を論じます。同じ物でも、置かれた文脈によって役割の解釈が変わります。概念モデルは、構成要素を結び、仕組みと動作の理由を理解する枠組みです。製品そのものや説明が伝える情報を通じて、利用者がその理解を組み立てると説明しています。外に情報があることと、その意味を理解できることは、区別して考えられます。</p>
+<section id="外部の情報とその意味の理解" class="knowledge-section"><div class="section-heading"><h2>外部の情報と、その意味の理解</h2><a class="permalink" href="#外部の情報とその意味の理解" aria-label="外部の情報と、その意味の理解のリンク">#</a></div><p><a href="../../knowledge/external-representations/KNOWLEDGE.md">外的表象</a>は、図や配置など外部環境にある情報と、認知的な課題との関係を説明します。<a href="../../knowledge/conceptual-models/KNOWLEDGE.md">概念モデル</a>は、構成要素を結び、仕組みと動作の理由を理解する枠組みを説明します。外に情報があることと、その意味を理解できることを区別して読みます。</p>
 </section>
-<section id="情報を段階的に示す" class="knowledge-section"><div class="section-heading"><h2>情報を段階的に示す</h2><a class="permalink" href="#情報を段階的に示す" aria-label="情報を段階的に示すのリンク">#</a></div><p>情報を最初からすべて見せず、操作に応じて詳細を示す部品もあります。Carbonのデータテーブル指針は、行の展開領域を補足情報や追加の取得時間が必要なデータに使うとしています。展開領域が窮屈なら、専用ページやサイドパネルなども選択肢に挙げています。</p>
-<p>GOV.UKのアコーディオン指針は、隠れた内容に気づかない人や操作を理解しない人がいることを説明し、全員が見る必要のある内容には使わないとしています。これらは、それぞれの部品で何を隠すかに関する指針です。すべてのUIで常時表示と詳細表示の境界を定める共通規則ではありません。</p>
+<section id="まとまりと強調" class="knowledge-section"><div class="section-heading"><h2>まとまりと強調</h2><a class="permalink" href="#まとまりと強調" aria-label="まとまりと強調のリンク">#</a></div><p><a href="../../knowledge/grouping/KNOWLEDGE.md">グルーピング</a>は、情報をどのような意味のまとまりとして構成し、表すかを扱います。<a href="../../knowledge/visual-hierarchy/KNOWLEDGE.md">視覚的な優先順位</a>は、提示する情報の相対的な強調や関係の表し方を扱います。情報の内容、まとまり、強調は関連しますが、同じ概念ではありません。</p>
 </section>
-<section id="短い説明例" class="knowledge-section"><div class="section-heading"><h2>短い説明例</h2><a class="permalink" href="#短い説明例" aria-label="短い説明例のリンク">#</a></div><p>外的表象と文脈の説明例として、架空の温度表示を考えます。地点AとBの温度を並べる表示では、差を知るために二つの値を照合します。「AとBの温度差」を示す表示では、差が外に表されています。後者でも、比較する地点や単位は意味の理解に関わります。これは表示と頭の中の処理の違いを説明する例であり、どちらの表示が優れているかを示すものではありません。</p>
+<section id="部品に応じて情報を段階的に示す" class="knowledge-section"><div class="section-heading"><h2>部品に応じて情報を段階的に示す</h2><a class="permalink" href="#部品に応じて情報を段階的に示す" aria-label="部品に応じて情報を段階的に示すのリンク">#</a></div><p>情報を最初からすべて見せず、操作に応じて詳細を示す部品もあります。<a href="https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines">Carbonのデータテーブル指針</a>のExpandableは、行の展開領域を補足情報や追加の取得時間が必要なデータに使うとしています。展開領域が窮屈なら、専用ページやサイドパネルなども選択肢に挙げています。</p>
+<p><a href="https://design-system.service.gov.uk/components/accordion/">GOV.UKのアコーディオン指針</a>のWhen not to use this componentは、隠れた内容に気づかない人や操作を理解しない人がいることを説明し、全員が見る必要のある内容には使わないとしています。</p>
+<p>これらは、それぞれの部品で何を隠すかに関する指針です。すべてのUIで常時表示と詳細表示の境界を定める共通規則ではありません。</p>
 </section>
-<section id="関連する知識" class="knowledge-section"><div class="section-heading"><h2>関連する知識</h2><a class="permalink" href="#関連する知識" aria-label="関連する知識のリンク">#</a></div><p><a href="../../knowledge/grouping.md">グルーピング</a>は、情報をどのような意味のまとまりとして構成し、表すかを扱います。<a href="../../knowledge/visual-hierarchy.md">視覚的な優先順位</a>は、提示する情報の相対的な強調や関係の表し方を扱います。情報の内容、まとまり、強調は関連しますが、同じ概念ではありません。</p>
-</section>
-<section id="出典と説明の範囲" class="knowledge-section"><div class="section-heading"><h2>出典と説明の範囲</h2><a class="permalink" href="#出典と説明の範囲" aria-label="出典と説明の範囲のリンク">#</a></div><ul>
-<li><a href="https://backend.orbit.dtu.dk/ws/files/158017888/SMC.PDF">Vicente &amp; Rasmussen — Ecological Interface Design: Theoretical Foundations（1992）</a>：§II.B、§III.A–B。EIDにおける情報内容と表現の区別、抽象化階層とその背景。</li>
-<li><a href="https://worrydream.com/refs/Zhang_2004_-_Representations_in_Distributed_Cognitive_Tasks.pdf">Zhang &amp; Norman — Representations in Distributed Cognitive Tasks（1994年プレプリント）</a>：The Nature of External Representations、原稿29–30頁。外的表象の役割。</li>
-<li><a href="https://jnd.org/design-as-communication/">Don Norman — Design as Communication</a>：Communication &amp; Context、Conceptual Modelsの各節。文脈、概念モデル、製品を介した意味の伝達に関する著者の説明。</li>
-<li><a href="https://www.carbondesignsystem.com/building-blocks/core/components/data-table/guidelines">Carbon — Data table guidelines</a>：Expandable。データテーブルの展開領域の用途。</li>
-<li><a href="https://design-system.service.gov.uk/components/accordion/">GOV.UK Design System — Accordion</a>：When not to use this component。内容を隠す問題と、この部品を使わない条件。</li>
-</ul>
-<p>章立てと温度表示の例は、この文書の説明用の整理です。上記の出典が、一つの情報選定手法としてまとめて提唱したものではありません。</p>
+<section id="出典とこの案内の範囲" class="knowledge-section"><div class="section-heading"><h2>出典とこの案内の範囲</h2><a class="permalink" href="#出典とこの案内の範囲" aria-label="出典とこの案内の範囲のリンク">#</a></div><p>各概念の出典と確認箇所は、それぞれの <code>KNOWLEDGE.md</code> から参照する <code>references/sources.md</code> に記載します。部品の説明は、上記のCarbonとGOV.UKの該当節に基づきます。</p>
+<p>概念をつなぐ章立てはMimicの編集上の整理です。複数の出典が、一つの情報選定手法としてまとめて提唱したものではありません。</p>
 </section>
 </article></main>
-<footer><div><p><a href="../../knowledge/decision-material-selection.md">正本を読む</a> · <a href="ai.md">AI 向け全文</a> · <a href="#top">ページ上部へ</a></p>
-<details id="source-provenance"><summary>生成情報・正本との対応</summary><p>このページと AI 向け全文は編集元の Markdown から生成しています。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
-<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>0.2.0</dd><dt>status</dt><dd>proposed</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>grouping, visual-hierarchy</dd><dt>source</dt><dd>knowledge/decision-material-selection.md</dd><dt>source SHA-256</dt><dd>1e4f8817b39e3a497d16053d0837951bd1e3e6bcdb28457478a151aeb6ee7bf3</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>2.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>91f99cc74d51fe981541aa9e397c9f8221d3acd8eae0173231aeba2487a4cab1</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
+<footer><div><p><a href="../../topics/decision-material-selection.md">案内の原文を読む</a> · <a href="ai.md">案内のMarkdown</a> · <a href="#top">ページ上部へ</a></p>
+<details id="source-provenance"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
+<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>0.2.0</dd><dt>status</dt><dd>proposed</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>ecological-interface-design, external-representations, conceptual-models, grouping, visual-hierarchy</dd><dt>source</dt><dd>topics/decision-material-selection.md</dd><dt>source SHA-256</dt><dd>c046663bb1b359bb1a64747b671e63c79ae94a01bc9c840b20368272d4478d10</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>2.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>ac09b5417dc1910c225f3a265aa4f31274565cd4064153be1621fe35e4248333</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
 </dl></details></div></footer></body></html>

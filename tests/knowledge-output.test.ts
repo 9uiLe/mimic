@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, writeFile, rm, mkdir, stat } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, readdir, writeFile, rm, mkdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, test } from 'bun:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const canonical = await readFile(path.join(root, 'knowledge/decision-material-selection.md'));
+const canonical = await readFile(path.join(root, 'topics/decision-material-selection.md'));
 const original = (await readFile(path.join(root, 'prototypes/decision-material-selection/draft.md'), 'utf8'))
-  .replace('status: draft', 'status: proposed').replaceAll('](../../knowledge/', '](');
+  .replace('status: draft', 'status: proposed').replaceAll('](../../knowledge/', '](../knowledge/').replaceAll('](../../topics/', '](');
 const markedModule = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
 const { marked } = await import(markedModule) as typeof import('marked');
 const run = (args: string[]) => spawnSync(process.execPath, [path.join(root, 'scripts/build-knowledge.ts'), ...args], { encoding: 'utf8' });
@@ -62,7 +62,7 @@ async function assertRelatedFiles(ai: Markdown, aiPath: string) {
     if (token.type === 'link' && !/^[a-z][a-z\d+.-]*:/i.test(token.href) && !token.href.startsWith('#')) links.push(token.href);
   });
   assert.ok(links.length >= 2);
-  for (const href of links) assert.ok((await stat(path.resolve(path.dirname(aiPath), decodeURI(href)))).isFile());
+  for (const href of links) assert.ok((await stat(path.resolve(path.dirname(aiPath), decodeURI(href.split(/[?#]/)[0]!)))).isFile());
 }
 
 const temporaryDirectories: string[] = [];
@@ -70,14 +70,15 @@ afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map(directory => rm(directory, { recursive: true, force: true })));
 });
 
-async function fixture(input: Markdown = original) {
+async function fixture(input: Markdown = original, relativeSource = 'topics/decision-material-selection.md') {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-knowledge-'));
   temporaryDirectories.push(directory);
-  const source = path.join(directory, 'knowledge/decision-material-selection.md');
+  const source = path.join(directory, relativeSource);
   const out = path.join(directory, 'prototypes/decision-material-selection');
+  await cp(path.join(root, 'knowledge'), path.join(directory, 'knowledge'), { recursive: true });
+  await cp(path.join(root, 'topics'), path.join(directory, 'topics'), { recursive: true });
   await mkdir(path.dirname(source), { recursive: true });
   await writeFile(source, input);
-  for (const name of ['grouping.md', 'visual-hierarchy.md']) await writeFile(path.join(path.dirname(source), name), await readFile(path.join(root, 'knowledge', name)));
   const args = ['--source', source, '--out-dir', out];
   const result = run(args);
   assert.equal(result.status, 0, result.stderr);
@@ -99,7 +100,7 @@ test('AI preserves all metadata and knowledge with working related links in both
   const aiPath = path.join(out, 'ai.md');
   const ai = await readFile(aiPath);
   assertAiContent(ai, original, aiPath, source);
-  assert.match(ai.toString(), /\[グルーピング\]\(\.\.\/\.\.\/knowledge\/grouping\.md\)/);
+  assert.match(ai.toString(), /\[グルーピング\]\(\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md\)/);
   await assertRelatedFiles(ai, aiPath);
   const html = await readFile(path.join(out, 'index.html'), 'utf8');
   assertAllContent(html, original);
@@ -108,9 +109,9 @@ test('AI preserves all metadata and knowledge with working related links in both
   assert.equal(html.split('この規則とデータなら仕事 A を選びます。').length - 1, 1);
   assert.match(html, /href="#outputs">判断案と選定理由へ/);
   assert.match(html, /href="#unverified">未検証事項を確認する/);
-  assert.match(html, /href="\.\.\/\.\.\/knowledge\/grouping\.md"/);
-  assert.match(html, /href="\.\.\/\.\.\/knowledge\/visual-hierarchy\.md"/);
-  assert.match(html, /href="\.\.\/\.\.\/knowledge\/decision-material-selection\.md"/);
+  assert.match(html, /href="\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md"/);
+  assert.match(html, /href="\.\.\/\.\.\/knowledge\/visual-hierarchy\/KNOWLEDGE\.md"/);
+  assert.match(html, /href="\.\.\/\.\.\/topics\/decision-material-selection\.md"/);
   assert.match(html, /href="ai\.md"/);
   assert.match(html, /<span class="badge">採用前の文書<\/span>/);
   assert.match(html, /<dt>status<\/dt><dd>proposed<\/dd>/);
@@ -121,7 +122,7 @@ test('AI preserves all metadata and knowledge with working related links in both
   assert.equal(run(args).status, 0);
   assert.equal(await readFile(path.join(out, 'index.html'), 'utf8'), html, 'Generation must be deterministic');
   const draftSource = path.join(out, 'draft.md');
-  const draft = original.toString().replace('status: proposed', 'status: draft').replace('](grouping.md)', '](../../knowledge/grouping.md)').replace('](visual-hierarchy.md)', '](../../knowledge/visual-hierarchy.md)').replace('](decision-material-selection.md)', '](../../knowledge/decision-material-selection.md)');
+  const draft = original.toString().replace('status: proposed', 'status: draft').replaceAll('](../knowledge/', '](../../knowledge/').replace('](decision-material-selection.md)', '](../../topics/decision-material-selection.md)');
   const researchOut = path.join(out, 'research');
   await writeFile(draftSource, draft);
   const result = run(['--source', draftSource, '--out-dir', researchOut]);
@@ -129,7 +130,7 @@ test('AI preserves all metadata and knowledge with working related links in both
   const researchAiPath = path.join(researchOut, 'ai.md');
   const researchAi = await readFile(researchAiPath);
   assertAiContent(researchAi, draft, researchAiPath, draftSource);
-  assert.match(researchAi.toString(), /\[グルーピング\]\(\.\.\/\.\.\/\.\.\/knowledge\/grouping\.md\)/);
+  assert.match(researchAi.toString(), /\[グルーピング\]\(\.\.\/\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md\)/);
   await assertRelatedFiles(researchAi, researchAiPath);
 });
 
@@ -146,6 +147,9 @@ test('conceptual knowledge keeps its original chapters and all source content wi
   const navigation = html.match(/<nav aria-label="目次">([\s\S]*?)<\/nav>/)![1]!;
   for (const heading of headings) assert.ok(textContent(navigation).includes(heading.text));
   assert.doesNotMatch(html, /data-section-role=|class="steps"|id="view-actions"|判断の進め方へ|未検証事項を確認する/);
+  assert.match(html, /href="ai\.md">案内のMarkdown/);
+  assert.match(html, /リンク先の概念・出典・例は取り込まない/);
+  assert.doesNotMatch(html, /AI 向け全文/);
   for (const id of sectionIds(html)) assert.ok(html.includes(`href="#${id}"`));
   assert.equal(run([...args, '--check']).status, 0);
   assert.equal(run(args).status, 0);
@@ -167,6 +171,33 @@ test('conceptual knowledge keeps its original chapters and all source content wi
   }
 });
 
+test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
+  const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
+  assert.deepEqual(concepts, ['conceptual-models', 'ecological-interface-design', 'external-representations', 'grouping', 'visual-hierarchy']);
+  for (const id of concepts) {
+    const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;
+    const entry = await readFile(path.join(root, relativeSource));
+    assert.match(entry.toString(), new RegExp(`^id: ${id}$`, 'm'));
+    const related = frontmatter(entry).match(/^  - (.+)$/gm)?.map(line => line.slice(4)) || [];
+    for (const relatedId of related) assert.ok(concepts.includes(relatedId), `${id}: missing related concept ${relatedId}`);
+    const { source, out, args } = await fixture(entry, relativeSource);
+    const html = await readFile(path.join(out, 'index.html'), 'utf8');
+    assertAllContent(html, entry);
+    assert.match(html, /href="ai\.md">本文のMarkdown/);
+    const aiPath = path.join(out, 'ai.md');
+    assertAiContent(await readFile(aiPath), entry, aiPath, source);
+    await assertRelatedFiles(await readFile(aiPath), aiPath);
+    await writeFile(source, entry.toString().replace(/^related:\n(?:  - .*\n)*/m, 'related:\n'));
+    assert.equal(run(args).status, 0, `${id}: a concept may have no related concepts`);
+    for (const [metadataId, message] of [['another-concept', /directory and id must match/], ['../escape', /invalid knowledge id/]] as const) {
+      await writeFile(source, entry.toString().replace(`id: ${id}`, `id: ${metadataId}`));
+      const result = run(args);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, message);
+    }
+  }
+});
+
 test('content, headings, candidate names, section order, and extra steps/examples change without changing design or section identities', async () => {
   const { source, out, args } = await fixture();
   const before = await readFile(path.join(out, 'index.html'), 'utf8');
@@ -175,7 +206,7 @@ test('content, headings, candidate names, section order, and extra steps/example
     .replace('### 成立条件で比較する', '### 提示候補を比べる')
     .replaceAll('仕事名', 'タスク名')
     .replace('<!-- mimic:note limitation -->', '7. 追加の手順は太字を必須にしない。\n\n<!-- mimic:note limitation -->')
-    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\n\n### 別の場面で使う例\n\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\n\n| 候補 | 採否 | 理由 |\n| --- | --- | --- |\n| 新しい候補 | 保留 | 条件未確認 |\n\n\`\`\`md\n[コードの参照](grouping.md)\n\`\`\`\n\n\`[コードの参照](grouping.md)\` と [実際の参照](grouping.md "補足")、**[強調内の参照](grouping.md)**。\n\n<!-- mimic:section sources -->`)
+    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\n\n### 別の場面で使う例\n\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\n\n| 候補 | 採否 | 理由 |\n| --- | --- | --- |\n| 新しい候補 | 保留 | 条件未確認 |\n\n\`\`\`md\n[コードの参照](grouping.md)\n\`\`\`\n\n\`[コードの参照](grouping.md)\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md "補足")、**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。\n\n<!-- mimic:section sources -->`)
     .replace('status: proposed', 'status: draft');
   const relatedMatch = changed.match(/<!-- mimic:section related -->[\s\S]*?(?=<!-- mimic:section example -->)/);
   assert.ok(relatedMatch, 'Fixture must contain the related section');
@@ -198,7 +229,7 @@ test('content, headings, candidate names, section order, and extra steps/example
   assertAiContent(ai, changed, path.join(out, 'ai.md'), source);
   assert.match(ai.toString(), /```md\n\[コードの参照\]\(grouping\.md\)\n```/);
   assert.ok(ai.toString().includes('`[コードの参照](grouping.md)`'));
-  assert.match(ai.toString(), /\[実際の参照\]\(\.\.\/\.\.\/knowledge\/grouping\.md "補足"\)/);
+  assert.match(ai.toString(), /\[実際の参照\]\(\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md "補足"\)/);
   await writeFile(source, changed.replace('status: draft', 'status: awaiting_research'));
   result = run(args);
   assert.equal(result.status, 0, result.stderr);

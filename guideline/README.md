@@ -2,7 +2,7 @@
 
 Mimicは、デザインの知識・概念・思想・哲学を言語化し、人とAIが理解できるように説明する知識データベースです。デジタルUIに関する知識を扱います。
 
-この文書はRepositoryの運用方針の正本です。[AI向けの作業ガイド](ai.md)は、この方針に沿って参照・編集・報告を行うための指示です。デザイン知識の本文は `knowledge/` に置きます。
+この文書はRepositoryの運用方針の正本です。[AI向けの作業ガイド](ai.md)は、この方針に沿って参照・編集・報告を行うための指示です。デザイン知識は `knowledge/` に、一つの概念・思想・哲学につき一つのディレクトリを用意し、固定の入口 `KNOWLEDGE.md` から読みます。
 
 ## 掲載する内容
 
@@ -53,6 +53,8 @@ READMEは、そのRepositoryやディレクトリの目的、現在の内容、�
 
 この文書と[AI向けの作業ガイド](ai.md)はMarkdownを編集元とし、GitHub Pages用のHTMLを生成します。説明を変更するときはMarkdownを編集し、生成HTMLを直接編集しません。
 
-[知識の入口](https://github.com/9uiLe/mimic/blob/main/knowledge/README.md)には、知識本文の参照先と版の確認方法があります。Repositoryの方針は `guideline/`、デザイン知識は `knowledge/`、編集・研究資料は採用状態を明示した別の場所で扱います。
+[知識の入口](https://github.com/9uiLe/mimic/blob/main/knowledge/README.md)には、各概念の `KNOWLEDGE.md` と版の確認方法があります。入口から、出典を置く `references/`、必要に応じて用意する `examples/` や `scripts/` などの補足へ案内します。配置と役割は[知識の構造ガイド](https://github.com/9uiLe/mimic/blob/main/guideline/knowledge-structure.md)に定めます。スキルに似た資料の配置を用いますが、ClaudeやCodexのスキルとしての呼び出しや実行は定義しません。
+
+複数の概念を横断する案内は `topics/` に置き、個別概念の本文を重複して持ちません。Repositoryの方針は `guideline/`、個別のデザイン知識は `knowledge/`、編集・研究資料は採用状態を明示した別の場所で扱います。
 
 生成物の更新・検査・公開の手順は[開発・公開ガイド](https://github.com/9uiLe/mimic/blob/main/guideline/development.md)に記載します。

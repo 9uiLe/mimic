@@ -1,6 +1,8 @@
 # 「判断材料の選定」採用候補の編集確認
 
-対象は[改稿した本文](../../../knowledge/decision-material-selection.md)。2026年10月22日に作成した、採用判断用の編集資料であり、本文の正式採用や公開を完了した記録ではない。
+この記録は、[8a7f839時点の原稿](https://github.com/9uiLe/mimic/blob/8a7f839e8235fa016db6fb033a792799db56c8ef/knowledge/decision-material-selection.md)と出典を照合したものです。[現在の参照先](../../../topics/decision-material-selection.md)とその補足ファイルを一括して確認済みとする記録ではありません。
+
+対象は[改稿した本文](https://github.com/9uiLe/mimic/blob/8a7f839e8235fa016db6fb033a792799db56c8ef/knowledge/decision-material-selection.md)。2026年10月22日に作成した、採用判断用の編集資料であり、本文の正式採用や公開を完了した記録ではない。
 
 ## 変更の目的
 

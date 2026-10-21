@@ -140,7 +140,7 @@ function parseConceptSections(content: MimicToken[]): Section[] {
   return sections;
 }
 
-function parseSource(text: string, marked: Marked) {
+function parseSource(text: string, marked: Marked, sourcePath: string) {
   const frontmatter = text.match(/^---\n([\s\S]*?)\n---\n/);
   assert(frontmatter, 'expected LF frontmatter at the start');
   const fields: Record<string, string | string[] | undefined> = {};
@@ -160,9 +160,15 @@ function parseSource(text: string, marked: Marked) {
     return value;
   };
   const metadata: Metadata = { id: requiredField('id'), title: requiredField('title'), status: requiredField('status'), version: requiredField('version'), scope: requiredField('scope'), related: [] };
-  assert(Array.isArray(fields.related) && fields.related.length, 'missing related');
+  assert(Array.isArray(fields.related), 'missing related');
   metadata.related = fields.related;
-  assert(metadata.id === 'decision-material-selection', 'unsupported knowledge id');
+  const validId = (id: string) => /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(id);
+  assert(validId(metadata.id), 'invalid knowledge id');
+  assert(metadata.related.every(validId), 'invalid related id');
+  assert(new Set(metadata.related).size === metadata.related.length && !metadata.related.includes(metadata.id), 'related ids must be unique and exclude this knowledge');
+  if (path.basename(sourcePath) === 'KNOWLEDGE.md') {
+    assert(path.basename(path.dirname(sourcePath)) === metadata.id, 'knowledge directory and id must match');
+  }
   const tokens: MimicToken[] = marked.lexer(text.slice(frontmatter[0].length));
   const content = tokens.filter(token => token.type !== 'space');
   assert(content[0] && isHeading(content[0]) && content[0].depth === 1 && content[0].text === metadata.title, 'title and H1 must match');
@@ -229,7 +235,7 @@ function parseSource(text: string, marked: Marked) {
 }
 
 function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, sourcePath: string, outDir: string, stylesheet: string) {
-  const { metadata, sections } = parseSource(source.toString('utf8'), marked);
+  const { metadata, sections } = parseSource(source.toString('utf8'), marked, sourcePath);
   const renderer = new marked.Renderer();
   let tableLabel: string | undefined;
   renderer.link = ({ href, title, tokens }) => {
@@ -265,7 +271,9 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
   };
   const navigation = sections.map(({ id, role, heading }) => `<li><a href="#${escape(id)}">${escape(role ? sectionLabels[role] : heading.text)}</a></li>`).join('');
   const statusLabel = hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
-  const sourceLabel = metadata.status === 'proposed' ? '正本を読む' : metadata.status === 'draft' ? '研究資料の原文を読む' : '編集元を読む';
+  const topic = path.basename(path.dirname(sourcePath)) === 'topics';
+  const sourceLabel = metadata.status === 'draft' ? '研究資料の原文を読む' : topic ? '案内の原文を読む' : '知識本文を読む';
+  const markdownLabel = metadata.status === 'draft' ? '研究資料のMarkdown' : topic ? '案内のMarkdown' : '本文のMarkdown';
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
@@ -276,20 +284,20 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
 ${stylesheet}
 </style></head><body>
 <a class="skip" href="#${escape(sections[0]!.id)}">本文へ</a>
-<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a><a href="ai.md">AI 向け全文</a></div></div>
-<div class="hero"><div class="eyebrow"><span class="badge">${escape(statusLabel)}</span>KNOWLEDGE</div><h1 id="title">${escape(metadata.title)}</h1><div class="meta">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>
-<main class="layout"><nav aria-label="目次"><p>この知識の全体像</p><ol>${navigation}</ol></nav><article>
+<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a><a href="ai.md">${markdownLabel}</a></div></div>
+<div class="hero"><div class="eyebrow"><span class="badge">${escape(statusLabel)}</span>${topic ? 'TOPIC' : 'KNOWLEDGE'}</div><h1 id="title">${escape(metadata.title)}</h1><div class="meta">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>
+<main class="layout"><nav aria-label="目次"><p>${topic ? 'この案内の全体像' : 'この知識の全体像'}</p><ol>${navigation}</ol></nav><article>
 ${sections.map(section).join('\n')}
 </article></main>
-<footer><div><p><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">AI 向け全文</a> · <a href="#top">ページ上部へ</a></p>
-<details id="source-provenance"><summary>生成情報・正本との対応</summary><p>このページと AI 向け全文は編集元の Markdown から生成しています。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
+<footer><div><p><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">${markdownLabel}</a> · <a href="#top">ページ上部へ</a></p>
+<details id="source-provenance"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
 ${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}
 </dl></details></div></footer></body></html>\n`;
 }
 
 async function main() {
   const { values } = parseArgs({ options: { check: { type: 'boolean', default: false }, source: { type: 'string' }, 'out-dir': { type: 'string' }, 'marked-module': { type: 'string' } } });
-  const sourcePath = path.resolve(values.source || path.join(root, 'knowledge/decision-material-selection.md'));
+  const sourcePath = path.resolve(values.source || path.join(root, 'topics/decision-material-selection.md'));
   const outDir = path.resolve(values['out-dir'] || path.join(root, 'prototypes/decision-material-selection'));
   const modulePath = values['marked-module'] || process.env.MARKED_MODULE;
   const markedUrl = modulePath ? pathToFileURL(path.resolve(modulePath)).href : import.meta.resolve('marked');

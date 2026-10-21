@@ -12,11 +12,27 @@ export const copiedFiles = Object.freeze([
   'prototypes/decision-material-selection/draft.md',
   'prototypes/decision-material-selection/research/index.html',
   'prototypes/decision-material-selection/research/ai.md',
-  'knowledge/decision-material-selection.md',
-  'knowledge/grouping.md',
-  'knowledge/visual-hierarchy.md',
+  'topics/decision-material-selection.md',
+  'knowledge/ecological-interface-design/KNOWLEDGE.md',
+  'knowledge/ecological-interface-design/references/sources.md',
+  'knowledge/external-representations/KNOWLEDGE.md',
+  'knowledge/external-representations/references/sources.md',
+  'knowledge/external-representations/examples/temperature.md',
+  'knowledge/conceptual-models/KNOWLEDGE.md',
+  'knowledge/conceptual-models/references/sources.md',
+  'knowledge/grouping/KNOWLEDGE.md',
+  'knowledge/grouping/references/sources.md',
+  'knowledge/grouping/examples/schedule.md',
+  'knowledge/visual-hierarchy/KNOWLEDGE.md',
+  'knowledge/visual-hierarchy/references/sources.md',
+  'knowledge/visual-hierarchy/examples/schedule.md',
 ]);
-export const publishedFiles = Object.freeze(['index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html', ...copiedFiles].sort());
+const movedKnowledge = Object.freeze({
+  'knowledge/decision-material-selection.md': { title: '判断材料の選定', target: '../topics/decision-material-selection.md' },
+  'knowledge/grouping.md': { title: 'グルーピング', target: 'grouping/KNOWLEDGE.md' },
+  'knowledge/visual-hierarchy.md': { title: '視覚的な優先順位', target: 'visual-hierarchy/KNOWLEDGE.md' },
+});
+export const publishedFiles = Object.freeze(['index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html', ...copiedFiles, ...Object.keys(movedKnowledge)].sort());
 const allowedFiles = new Set(publishedFiles);
 const allowedDirectories = new Set(copiedFiles.flatMap(file => {
   const segments = file.split('/');
@@ -64,6 +80,9 @@ export async function buildPages(outDir = path.join(root, '_site')) {
   await inspectOutput(outDir);
   const outputs = new Map<string, Buffer>([['index.html', Buffer.from(entryHtml)], ['.nojekyll', Buffer.alloc(0)]]);
   for (const file of copiedFiles) outputs.set(file, await readSource(file));
+  for (const [file, { title, target }] of Object.entries(movedKnowledge)) {
+    outputs.set(file, Buffer.from(`# ${title}の参照先\n\nこのURLは移動案内です。知識本文の正本ではありません。\n\n[${title}を読む](${target})。\n`));
+  }
   const stylesheet = await readSource('scripts/knowledge-view.css');
   outputs.set('guideline/index.html', await renderGuideline(outputs.get('guideline/README.md')!, 'guideline/README.md', stylesheet));
   outputs.set('guideline/ai.html', await renderGuideline(outputs.get('guideline/ai.md')!, 'guideline/ai.md', stylesheet));

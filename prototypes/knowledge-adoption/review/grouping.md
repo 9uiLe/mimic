@@ -1,6 +1,8 @@
 # グルーピング：採用候補の確認記録
 
-対象は [改稿した本文](../../../knowledge/grouping.md)。本文は正本の改稿案として更新し、`status: proposed` を維持している。この状態は文書の採用前であることを示す。
+この記録は、[8a7f839時点の原稿](https://github.com/9uiLe/mimic/blob/8a7f839e8235fa016db6fb033a792799db56c8ef/knowledge/grouping.md)と出典を照合したものです。[現在の参照先](../../../knowledge/grouping/KNOWLEDGE.md)とその補足ファイルを一括して確認済みとする記録ではありません。
+
+対象は [改稿した本文](https://github.com/9uiLe/mimic/blob/8a7f839e8235fa016db6fb033a792799db56c8ef/knowledge/grouping.md)。本文は正本の改稿案として更新し、`status: proposed` を維持している。この状態は文書の採用前であることを示す。
 
 ## 目的と確認方法
 
