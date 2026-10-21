@@ -72,7 +72,7 @@ nix develop path:. --command bun run verify
 
 初回の公開では、確認済みの成果を最新の `main` に追加し、GitHubのSettings → Pages → SourceをGitHub Actionsに設定します。`github-pages` 環境も `main` からの公開に限定します。[GitHub公式の設定手順](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
-[公開処理](.github/workflows/pages.yml)は標準の `ubuntu-latest` 上で同じNix環境に入り、固定した依存の導入、生成、型検査、鮮度確認とテストを行い、成功した `_site/` だけを配信します。`main` の関連ファイル更新時、または `main` を指定した手動実行で再公開します。PRでも同じ生成と検査を行いますが、公開用アップロードと配信は`main`だけで行います。**有効化後、`main` への反映は公開操作になります。** 公開・送信前に確認する運用を、以後の更新にも適用します。
+[公開処理](.github/workflows/pages.yml)は標準の `ubuntu-latest` 上で同じNix環境に入り、固定した依存の導入、生成、型検査、鮮度確認とテストを行い、成功した `_site/` だけを配信します。`main` へのpushのみをきっかけに再公開します。PRでは[検査処理](.github/workflows/ci.yml)が同じ生成と検査を行います。**有効化後、`main` への反映は公開操作になります。** 公開・送信前に確認する運用を、以後の更新にも適用します。
 
 ローカル検査は、配信対象・内容・リンクと更新手順の整合性を確認するものです。Bun・TypeScript・Nixの構成はApple SiliconのmacOSで、依存未導入の一時フォルダーから生成と全検査まで確認しています。Linuxでの生成・検査はPRの自動処理で、公開はmainの自動処理で確かめます。iPhone／iPadの実機での閲覧と操作は、ローカル検査だけでは判断できません。見た目の記録にはHTMLのフルページ画像を使い、PDFは採用しません。
 
@@ -83,3 +83,7 @@ nix develop path:. --command bun run verify
 ## 開発支援
 
 [Moletta](.agents/skills/moletta/SKILL.md) は、このRepositoryを調査・変更・確認するための作業支援です。UI知識の正本は `knowledge/` に置きます。
+
+## ライセンス
+
+このRepositoryは[MITライセンス](LICENSE)で提供します。参照先の資料と依存ライブラリには、それぞれの権利・ライセンス条件が適用されます。

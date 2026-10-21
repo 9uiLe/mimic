@@ -1,0 +1,17 @@
+name: Verify Mimic
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v31
+      - run: nix develop --no-update-lock-file --command bun install --frozen-lockfile --ignore-scripts
+      - run: nix develop --no-update-lock-file --command bun run build:pages
+      - run: nix develop --no-update-lock-file --command bun run verify

@@ -1,23 +1,8 @@
 name: Publish Mimic to GitHub Pages
 
 on:
-  pull_request:
   push:
     branches: [main]
-    paths:
-      - 'knowledge/decision-material-selection.md'
-      - 'knowledge/grouping.md'
-      - 'knowledge/visual-hierarchy.md'
-      - 'prototypes/decision-material-selection/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - 'package.json'
-      - 'bun.lock'
-      - 'tsconfig.json'
-      - 'flake.nix'
-      - 'flake.lock'
-      - '.github/workflows/pages.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,7 +13,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -37,13 +22,11 @@ jobs:
       - run: nix develop --no-update-lock-file --command bun run build:pages
       - run: nix develop --no-update-lock-file --command bun run verify
       - uses: actions/configure-pages@v5
-        if: github.ref == 'refs/heads/main'
       - uses: actions/upload-pages-artifact@v4
-        if: github.ref == 'refs/heads/main'
         with:
           path: _site
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
