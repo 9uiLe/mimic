@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="450"
+  viewBox="0 0 1100 450" role="img" aria-labelledby="figure-title figure-desc">
+  <title id="figure-title">整列とグリッド：別々の基準線と共有する基準線</title>
+  <desc id="figure-desc">
+    同じ架空の申請A・B・C、それぞれの日付と確認状態を左右に表示しています。
+    左は各行の文字の左端が別々、右は三列の左端を縦の基準線で共有します。
+    内容、文字サイズ、太さ、行間は共通で、配置関係だけを変えた説明用の作例です。
+    最適なグリッドや、使いやすさ・美しさの効果を示すものではありません。
+  </desc>
+  <rect width="1100" height="450" fill="#FFFFFF"/>
+  <g fill="#222222" font-family="sans-serif">
+    <text x="50" y="52" font-size="29" font-weight="700">整列とグリッド</text>
+    <text x="50" y="84" font-size="19">同じ内容を、どの基準線に合わせて置くか</text>
+    <text x="70" y="131" font-size="23" font-weight="700">基準線が別々</text>
+    <text x="600" y="131" font-size="23" font-weight="700">基準線を共有</text>
+  </g>
+  <g fill="none" stroke="#888888" stroke-width="1.5" stroke-dasharray="4 5">
+    <path d="M90 158V205 M115 218V265 M100 278V325"/>
+    <path d="M245 158V205 M265 218V265 M235 278V325"/>
+    <path d="M410 158V205 M395 218V265 M420 278V325"/>
+    <path d="M600 158V325 M780 158V325 M945 158V325"/>
+  </g>
+  <g fill="#222222" font-family="sans-serif" font-size="22" font-weight="400">
+    <text x="90" y="190">申請A</text>
+    <text x="245" y="190">10/24</text>
+    <text x="410" y="190">確認前</text>
+    <text x="115" y="250">申請B</text>
+    <text x="265" y="250">10/25</text>
+    <text x="395" y="250">確認前</text>
+    <text x="100" y="310">申請C</text>
+    <text x="235" y="310">10/26</text>
+    <text x="420" y="310">確認前</text>
+    <text x="600" y="190">申請A</text>
+    <text x="780" y="190">10/24</text>
+    <text x="945" y="190">確認前</text>
+    <text x="600" y="250">申請B</text>
+    <text x="780" y="250">10/25</text>
+    <text x="945" y="250">確認前</text>
+    <text x="600" y="310">申請C</text>
+    <text x="780" y="310">10/26</text>
+    <text x="945" y="310">確認前</text>
+  </g>
+  <path d="M70 357H112" fill="none" stroke="#888888" stroke-width="1.5" stroke-dasharray="4 5"/>
+  <g fill="#222222" font-family="sans-serif" font-size="19">
+    <text x="125" y="364">破線：文字の左端を合わせる基準線</text>
+    <text x="600" y="364">配置関係だけを変えた比較です</text>
+  </g>
+  <text x="550" y="421" fill="#222222" font-family="sans-serif"
+    font-size="19" text-anchor="middle">説明用の作例。グリッドの最適解や効果実証ではありません。</text>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="440"
+  viewBox="0 0 900 440" role="img" aria-labelledby="figure-title figure-desc">
+  <title id="figure-title">色と周囲の関係：同じ中央色と異なる台紙</title>
+  <desc id="figure-desc">
+    左右の中央の正方形はどちらも64×64で、RGB値は128、128、128です。
+    同じ寸法の台紙だけを変え、左はRGB値48、48、48、右は232、232、232にしています。
+    周囲との関係を考える説明用の作例です。見え方には個人差があります。
+    UIの推奨配色や、効果の実証ではありません。
+  </desc>
+  <rect width="900" height="440" fill="#FFFFFF"/>
+  <g fill="#222222" font-family="sans-serif">
+    <text x="50" y="50" font-size="29" font-weight="700">色と周囲の関係</text>
+    <text x="50" y="87" font-size="22">中央の色値は同じ／周囲だけが違う</text>
+    <text x="270" y="129" font-size="21" text-anchor="middle">暗い台紙</text>
+    <text x="630" y="129" font-size="21" text-anchor="middle">明るい台紙</text>
+  </g>
+  <rect id="sample-ground-dark" x="130" y="145" width="280" height="150" fill="#303030"/>
+  <rect id="sample-ground-light" x="490" y="145" width="280" height="150" fill="#E8E8E8"/>
+  <rect id="sample-chip-dark" x="238" y="188" width="64" height="64" fill="#808080"/>
+  <rect id="sample-chip-light" x="598" y="188" width="64" height="64" fill="#808080"/>
+  <g fill="#222222" font-family="sans-serif" text-anchor="middle">
+    <text x="450" y="329" font-size="21">中央：どちらも RGB（128, 128, 128）・64 × 64</text>
+    <text x="450" y="361" font-size="21">見え方には個人差があります</text>
+    <text x="450" y="390" font-size="18">値は説明図用で、UIの推奨配色ではありません。</text>
+    <text x="450" y="422" font-size="18">説明用の作例。配色の最適解や効果実証ではありません。</text>
+  </g>
+</svg>

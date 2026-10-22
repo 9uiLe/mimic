@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { renderDocument } from './build-guideline.ts';
 import { renderKnowledge } from './build-knowledge.ts';
 import { additionalSources, conceptFiles, conceptIds, exampleFiles, readerViews, renderCatalog } from './pages-catalog.ts';
+import { figureFiles, validateFigure } from './knowledge-images.ts';
 import { pagesFontFiles, readPagesFontAssets } from './pages-fonts.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -11,7 +12,7 @@ export const copiedFiles = Object.freeze([
   'guideline/README.md',
   'guideline/ai.md',
   'topics/decision-material-selection.md',
-  ...conceptFiles, ...exampleFiles, ...additionalSources,
+  ...conceptFiles, ...exampleFiles, ...additionalSources, ...figureFiles,
 ]);
 const movedKnowledge = Object.freeze({
   'knowledge/decision-material-selection.md': { title: '判断材料の選定', target: '../topics/decision-material-selection.md' },
@@ -61,7 +62,11 @@ export async function buildPages(outDir = path.join(root, '_site')) {
   outDir = path.resolve(outDir);
   await inspectOutput(outDir);
   const outputs = new Map<string, Buffer>([['.nojekyll', Buffer.alloc(0)]]);
-  for (const file of copiedFiles) outputs.set(file, await readSource(file));
+  for (const file of copiedFiles) {
+    const bytes = await readSource(file);
+    if (figureFiles.includes(file)) validateFigure(file, bytes);
+    outputs.set(file, bytes);
+  }
   for (const [file, { title, target }] of Object.entries(movedKnowledge)) {
     outputs.set(file, Buffer.from(`# ${title}の参照先\n\nこのURLは移動案内です。知識本文の正本ではありません。\n\n[${title}を読む](${target})。\n`));
   }

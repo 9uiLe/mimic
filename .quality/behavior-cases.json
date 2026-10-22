@@ -17,9 +17,7 @@
         "targetPath": "/repo/knowledge/grouping/KNOWLEDGE.md"
       },
       "expected": "../../knowledge/grouping/KNOWLEDGE.md",
-      "assumptions": [
-        "同一参照先の維持を検査する。知識本文の意味やWindowsのパス対応は保証しない。"
-      ],
+      "assumptions": ["同一参照先の維持を検査する。知識本文の意味やWindowsのパス対応は保証しない。"],
       "implementation": "scripts/knowledge-paths.ts",
       "test": "tests/knowledge-paths.test.ts",
       "supportingFiles": [],
@@ -55,10 +53,7 @@
         "aiSource": "正本と同一",
         "legacyStatus": "拒否"
       },
-      "assumptions": [
-        "架空の正本を入力し、実際の知識の意味や原典への忠実さは判定しない。",
-        "状態項目を廃止しても版と編集元の対応を保持する。"
-      ],
+      "assumptions": ["架空の正本を入力し、実際の知識の意味や原典への忠実さは判定しない。", "状態項目を廃止しても版と編集元の対応を保持する。"],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/knowledge-output.test.ts",
       "supportingFiles": [
@@ -103,7 +98,16 @@
         "knowledge/layout-spacing/KNOWLEDGE.md",
         "knowledge/layout-spacing/references/sources.md",
         "knowledge/layout-spacing/examples/component-spacing.md",
-        "scripts/pages-fonts.ts"
+        "scripts/pages-fonts.ts",
+        "scripts/knowledge-images.ts",
+        "knowledge/alignment-and-grids/KNOWLEDGE.md",
+        "knowledge/alignment-and-grids/examples/alignment.md",
+        "knowledge/alignment-and-grids/examples/alignment.svg",
+        "knowledge/alignment-and-grids/references/sources.md",
+        "knowledge/color-context/KNOWLEDGE.md",
+        "knowledge/color-context/examples/surrounding-colors.md",
+        "knowledge/color-context/examples/surrounding-colors.svg",
+        "knowledge/color-context/references/sources.md"
       ],
       "testName": "knowledge reader preserves version and provenance while AI output preserves canonical metadata",
       "mutation": {
@@ -134,9 +138,7 @@
         "htmlVersion": "1.0.0",
         "htmlSourceSha256": "正本のSHA-256と一致する。"
       },
-      "assumptions": [
-        "コピーと生成HTMLの正本対応を検査する。知識本文の意味や原典への忠実さは判定しない。"
-      ],
+      "assumptions": ["コピーと生成HTMLの正本対応を検査する。知識本文の意味や原典への忠実さは判定しない。"],
       "implementation": "scripts/build-pages.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
@@ -147,10 +149,7 @@
         "replace": "const source = Buffer.from(outputs.get(sourceFile)!.toString().replace('1.0.0', '0.0.0'));",
         "assertionMessage": "canonical topic reader must show source version"
       },
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ]
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "color-knowledge-entry",
@@ -169,9 +168,7 @@
       "expected": {
         "id": "lightness-and-luminance"
       },
-      "assumptions": [
-        "入口idの一致とリンク・メタデータ保持に関するテストであり、知識本文の原典への忠実さを保証しない。"
-      ],
+      "assumptions": ["入口idの一致とリンク・メタデータ保持に関するテストであり、知識本文の原典への忠実さを保証しない。"],
       "implementation": "knowledge/lightness-and-luminance/KNOWLEDGE.md",
       "test": "tests/knowledge-output.test.ts",
       "supportingFiles": [
@@ -217,7 +214,16 @@
         "knowledge/layout-spacing/KNOWLEDGE.md",
         "knowledge/layout-spacing/references/sources.md",
         "knowledge/layout-spacing/examples/component-spacing.md",
-        "scripts/pages-fonts.ts"
+        "scripts/pages-fonts.ts",
+        "scripts/knowledge-images.ts",
+        "knowledge/alignment-and-grids/KNOWLEDGE.md",
+        "knowledge/alignment-and-grids/examples/alignment.md",
+        "knowledge/alignment-and-grids/examples/alignment.svg",
+        "knowledge/alignment-and-grids/references/sources.md",
+        "knowledge/color-context/KNOWLEDGE.md",
+        "knowledge/color-context/examples/surrounding-colors.md",
+        "knowledge/color-context/examples/surrounding-colors.svg",
+        "knowledge/color-context/references/sources.md"
       ],
       "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
       "mutation": {
@@ -243,14 +249,10 @@
         "out": "knowledge/visual-hierarchy/index.html"
       },
       "expected": "../grouping/index.html#概念",
-      "assumptions": [
-        "対応表で明示された配信先だけを置換する。本文の意味、使いやすさ、外部サイトの可用性は保証しない。"
-      ],
+      "assumptions": ["対応表で明示された配信先だけを置換する。本文の意味、使いやすさ、外部サイトの可用性は保証しない。"],
       "implementation": "scripts/pages-catalog.ts",
       "test": "tests/pages-catalog.test.ts",
-      "supportingFiles": [
-        "scripts/pages-fonts.ts"
-      ],
+      "supportingFiles": ["scripts/pages-fonts.ts"],
       "testName": "reader navigation maps a canonical concept to its HTML view and preserves the section fragment",
       "mutation": {
         "description": "閲覧先への対応を無視し、正本Markdownに留まる誤実装にする。",
@@ -261,25 +263,23 @@
     },
     {
       "id": "pages-catalog-completeness",
-      "requirement": "Pagesの入口から全12概念の本文を選べる。",
+      "requirement": "Pagesの入口から全14概念の本文を選べる。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
-        "quotation": "一覧の対象は明示した12概念と照合し、ファイルを追加しただけでは掲載しません。",
-        "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき12件を固定する。実装配列の長さから期待値を作らない。"
+        "quotation": "一覧の対象は明示した14概念と照合し、ファイルを追加しただけでは掲載しません。",
+        "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき14件を固定する。実装配列の長さから期待値を作らない。"
       },
       "input": {
         "index": "knowledge/README.md",
-        "conceptCount": 12
+        "conceptCount": 14
       },
       "expected": {
-        "readerLinks": 12,
+        "readerLinks": 14,
         "redirect": false
       },
-      "assumptions": [
-        "索引掲載数と選択経路を機械検査する。本文の意味や使いやすさの実証ではない。"
-      ],
+      "assumptions": ["索引掲載数と選択経路を機械検査する。本文の意味や使いやすさの実証ではない。"],
       "implementation": "scripts/pages-catalog.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
@@ -288,38 +288,33 @@
         "description": "配信ファイルは残すが、一覧から最後の概念だけ落とす。",
         "find": "const items = rows.map(row => {",
         "replace": "const items = rows.slice(0, -1).map(row => {",
-        "assertionMessage": "catalog must expose all twelve reviewed concepts"
+        "assertionMessage": "catalog must expose all fourteen reviewed concepts"
       },
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ]
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "pages-catalog-version",
-      "requirement": "Pages入口の全12概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。",
+      "requirement": "Pages入口の全14概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
         "quotation": "一覧の説明は `knowledge/README.md` の表から読み、題名・版は各本文から読みます。",
         "relatedSource": "knowledge/README.md#参照する前に",
-        "reasoning": "12本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
+        "reasoning": "14本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
       },
       "input": {
         "index": "knowledge/README.md",
-        "concepts": 12
+        "concepts": 14
       },
       "expected": {
         "conceptVersions": {
           "design-tokens": "1.1.0",
-          "other11Concepts": "1.0.0"
+          "other13Concepts": "1.0.0"
         },
-        "count": 12
+        "count": 14
       },
-      "assumptions": [
-        "12概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"
-      ],
+      "assumptions": ["14概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
       "implementation": "scripts/pages-catalog.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
@@ -330,10 +325,7 @@
         "replace": "const version = '0.0.0';",
         "assertionMessage": "catalog must map each concept to its source version"
       },
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ]
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "pages-reader-source-paths",
@@ -346,20 +338,18 @@
         "reasoning": "概念の独立性と関連資料を辿る読書経路は表示規約と利用者の改善依頼に基づく。期待hrefは固定した入出力パスから記載し、実装を呼んで計算しない。"
       },
       "input": {
-        "concepts": 12,
-        "supplements": 19
+        "concepts": 14,
+        "supplements": 23
       },
       "expected": {
-        "htmlReaders": 31,
+        "htmlReaders": 37,
         "sourcesHref": "references/sources.html",
         "relatedHref": "../visual-hierarchy/index.html"
       },
-      "assumptions": [
-        "全文ブロック保持と版・リンクを機械で検査する。知識の妥当性や利用者への効果の検証ではない。"
-      ],
+      "assumptions": ["全文ブロック保持と版・リンクを機械で検査する。知識の妥当性や利用者への効果の検証ではない。"],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/pages-output.test.ts",
-      "supportingFiles": [],
+      "supportingFiles": ["scripts/knowledge-images.ts"],
       "testName": "HTML readers retain every source block, concept version, and paths to related knowledge and supplements",
       "mutation": {
         "description": "Pagesの概念HTMLだけ対応表の利用を止め、出典・例・関連概念をMarkdownへ戻す。",
@@ -367,10 +357,7 @@
         "replace": "const target = views && false ? readerHref",
         "assertionMessage": "sources must open in the reader"
       },
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ]
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "pages-reader-safe-links",
@@ -390,12 +377,10 @@
         "rejection": "unsupported link protocol",
         "existingOutput": "unchanged"
       },
-      "assumptions": [
-        "ローカル生成器のprotocol拒否と出力保全を確認する。Web全体の安全性を証明するものではない。"
-      ],
+      "assumptions": ["ローカル生成器のprotocol拒否と出力保全を確認する。Web全体の安全性を証明するものではない。"],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/pages-output.test.ts",
-      "supportingFiles": [],
+      "supportingFiles": ["scripts/knowledge-images.ts"],
       "testName": "unsafe concept links fail before existing Pages output is changed",
       "mutation": {
         "description": "概念リンクのprotocol検証を迂回し、危険なリンクをHTMLへ通す。",
@@ -403,10 +388,7 @@
         "replace": "const canonicalTarget = href;",
         "assertionMessage": "unsafe concept links must reject before Pages output changes"
       },
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ]
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "pages-decision-topic-reader",
@@ -426,9 +408,7 @@
         "reader": "topics/decision-material-selection.html",
         "firstConceptHref": "../knowledge/ecological-interface-design/index.html"
       },
-      "assumptions": [
-        "題目別案内の表示・関連リンクを機械で確認する。案内本文の意味や知識の妥当性は、この閲覧テストでは保証しない。"
-      ],
+      "assumptions": ["題目別案内の表示・関連リンクを機械で確認する。案内本文の意味や知識の妥当性は、この閲覧テストでは保証しない。"],
       "implementation": "scripts/pages-catalog.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
@@ -439,10 +419,7 @@
         "replace": "const destination = sourceFile === 'topics/decision-material-selection.md' ? target : views[target] ?? target;",
         "assertionMessage": "topic must open the concept reader"
       },
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ]
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "guideline-html-navigation",
@@ -461,9 +438,7 @@
       "expected": {
         "readerHref": "ai.html"
       },
-      "assumptions": [
-        "架空の短いガイドを用い、ガイド内リンクの変換だけを確認する。閲覧体験全体は証明しない。"
-      ],
+      "assumptions": ["架空の短いガイドを用い、ガイド内リンクの変換だけを確認する。閲覧体験全体は証明しない。"],
       "implementation": "scripts/build-guideline.ts",
       "test": "tests/guideline-output.test.ts",
       "supportingFiles": [
@@ -471,7 +446,8 @@
         "scripts/knowledge-view.css",
         "node_modules/marked/lib/marked.esm.js",
         "node_modules/marked/package.json",
-        "scripts/pages-fonts.ts"
+        "scripts/pages-fonts.ts",
+        "scripts/knowledge-images.ts"
       ],
       "testName": "guideline HTML keeps the document content, gives sections distinct anchors, and maps document links to their HTML views",
       "mutation": {
@@ -491,27 +467,19 @@
       },
       "input": {
         "fontVersion": "0.8.0",
-        "weights": [
-          400,
-          600
-        ],
+        "weights": [400, 600],
         "subsetsPerWeight": 128
       },
       "expected": {
         "publishedFontFiles": 259,
-        "allPublishedFiles": 338,
+        "allPublishedFiles": 352,
         "stylesheetLinks": 2
       },
-      "assumptions": [
-        "CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"
-      ],
+      "assumptions": ["CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"],
       "implementation": "scripts/pages-fonts.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ],
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"],
       "id": "pages-pinned-fonts",
       "testName": "Pages uses only pinned same-origin font subsets and keeps their license",
       "mutation": {
@@ -531,26 +499,18 @@
       },
       "input": {
         "fontVersion": "0.8.0",
-        "weights": [
-          400,
-          600
-        ],
+        "weights": [400, 600],
         "subsetsPerWeight": 128
       },
       "expected": {
         "corruptSubset": "w/normal/400/127.woff2",
         "outcome": "rejection before output update"
       },
-      "assumptions": [
-        "CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"
-      ],
+      "assumptions": ["CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"],
       "implementation": "scripts/pages-fonts.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
-      "supportingFileSets": [
-        "pages-build-inputs",
-        "pages-font-assets"
-      ],
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"],
       "id": "pages-font-corruption",
       "testName": "altered font bytes fail before Pages output is updated",
       "mutation": {
@@ -558,6 +518,240 @@
         "find": "if (bytes.length !== size || createHash('sha256').update(bytes).digest('hex') !== sha256) {",
         "replace": "if (false) {",
         "assertionMessage": "Missing expected rejection"
+      }
+    },
+    {
+      "id": "figure-output-source",
+      "requirement": "画像のsrcは出力位置から同じ許可済みSVGへ到達する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "画像のsrcは出力位置から同じ許可済みSVGへ到達する。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/knowledge-images.ts",
+      "test": "tests/knowledge-images.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["image-renderer-inputs"],
+      "testName": "only reviewed inline image destinations render with escaped alt text and output-relative sources",
+      "mutation": {
+        "description": "画像のsrcは出力位置から同じ許可済みSVGへ到達する。を故障させる。",
+        "find": "const relative = path.posix.relative(path.posix.dirname(outFile), target);",
+        "replace": "const relative = href;",
+        "assertionMessage": "image src must preserve the reviewed source from the output location"
+      }
+    },
+    {
+      "id": "figure-image-allowlist",
+      "requirement": "未掲載、外部、data、走査を含む画像参照は拒否する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "未掲載、外部、data、走査を含む画像参照は拒否する。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/knowledge-images.ts",
+      "test": "tests/knowledge-images.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["image-renderer-inputs"],
+      "testName": "only reviewed inline image destinations render with escaped alt text and output-relative sources",
+      "mutation": {
+        "description": "未掲載、外部、data、走査を含む画像参照は拒否する。を故障させる。",
+        "find": "if (!imageFiles.has(target)) throw",
+        "replace": "if (false) throw",
+        "assertionMessage": "unreviewed image destinations must reject"
+      }
+    },
+    {
+      "id": "figure-static-markup",
+      "requirement": "実行可能要素を含むSVGは許可しない。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "実行可能要素を含むSVGは許可しない。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/knowledge-images.ts",
+      "test": "tests/knowledge-images.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["image-renderer-inputs"],
+      "testName": "reviewed static SVG validates while executable, external, malformed, and unlisted figures reject",
+      "mutation": {
+        "description": "実行可能要素を含むSVGは許可しない。を故障させる。",
+        "find": "!elementNames.has(opening[1]!)",
+        "replace": "false",
+        "assertionMessage": "unsafe static SVG must reject"
+      }
+    },
+    {
+      "id": "figure-ai-image-destination",
+      "requirement": "AI Markdownのインライン画像は宛先だけを補正し他のバイトを保持する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "AI Markdownのインライン画像は宛先だけを補正し他のバイトを保持する。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/build-knowledge.ts",
+      "test": "tests/knowledge-images.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["image-renderer-inputs"],
+      "testName": "AI Markdown preserves approved inline image source and all other bytes at both output locations",
+      "mutation": {
+        "description": "AI Markdownのインライン画像は宛先だけを補正し他のバイトを保持する。を故障させる。",
+        "find": "const target = resolveLink(token.href, sourcePath, outDir);",
+        "replace": "const target = token.type === 'image' ? token.href : resolveLink(token.href, sourcePath, outDir);",
+        "assertionMessage": "AI image must preserve source bytes except the destination"
+      }
+    },
+    {
+      "id": "figure-csp",
+      "requirement": "PagesとローカルプレビューのCSPは同一オリジンの説明図を表示できる。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "PagesとローカルプレビューのCSPは同一オリジンの説明図を表示できる。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/pages-fonts.ts",
+      "test": "tests/knowledge-images.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["image-renderer-inputs"],
+      "testName": "image CSP permits same-origin figures in Pages and local previews without external images",
+      "mutation": {
+        "description": "PagesとローカルプレビューのCSPは同一オリジンの説明図を表示できる。を故障させる。",
+        "find": "const standalonePolicy = \"default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\";",
+        "replace": "const standalonePolicy = \"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'\";",
+        "assertionMessage": "image CSP must permit the same-origin reviewed figures"
+      }
+    },
+    {
+      "id": "figure-published-bytes",
+      "requirement": "公開SVGは正本のバイト列を保持する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "公開SVGは正本のバイト列を保持する。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/build-pages.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"],
+      "testName": "reviewed figure bytes and responsive reader images publish together and bad figure inputs preserve existing output",
+      "mutation": {
+        "description": "公開SVGは正本のバイト列を保持する。を故障させる。",
+        "find": "    outputs.set(file, bytes);\n  }",
+        "replace": "    outputs.set(file, figureFiles.includes(file) ? Buffer.concat([bytes, Buffer.from(' ')]) : bytes);\n  }",
+        "assertionMessage": "published figure must retain reviewed bytes"
+      }
+    },
+    {
+      "id": "figure-preflight",
+      "requirement": "不正な説明図では既存成果物を更新する前に生成を止める。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "不正な説明図では既存成果物を更新する前に生成を止める。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/build-pages.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"],
+      "testName": "reviewed figure bytes and responsive reader images publish together and bad figure inputs preserve existing output",
+      "mutation": {
+        "description": "不正な説明図では既存成果物を更新する前に生成を止める。を故障させる。",
+        "find": "if (figureFiles.includes(file)) validateFigure(file, bytes);",
+        "replace": "if (false) validateFigure(file, bytes);",
+        "assertionMessage": "bad figure inputs must reject before any output mutation"
+      }
+    },
+    {
+      "id": "figure-xml-characters",
+      "requirement": "XMLで禁止された文字を含むSVGは拒否する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "必要な図が欠けている場合や図の形式が不正な場合は、既存の出力を書き換える前に生成を止めます。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "XMLで禁止された文字を含むSVGは許可しない。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/knowledge-images.ts",
+      "test": "tests/knowledge-images.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["image-renderer-inputs"],
+      "testName": "reviewed static SVG validates while executable, external, malformed, and unlisted figures reject",
+      "mutation": {
+        "description": "XML文字検証を迂回し禁止文字を通す。",
+        "find": "if (/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\ufffe\\uffff]/u.test(decoded)) fail();",
+        "replace": "if (false) fail();",
+        "assertionMessage": "invalid XML characters must reject"
+      }
+    },
+    {
+      "id": "figure-project-prefix",
+      "requirement": "HTMLとMarkdownの画像参照はGitHub project prefix内の公開済みSVGへ届く。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-view.md",
+        "section": "説明図と画像",
+        "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
+      },
+      "input": {
+        "figures": ["alignment.svg", "surrounding-colors.svg"]
+      },
+      "expected": "公開SVGは正本のバイト列を保持する。",
+      "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
+      "implementation": "scripts/knowledge-images.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [],
+      "supportingFileSets": ["pages-build-inputs", "pages-font-assets"],
+      "testName": "every local HTML and Markdown link resolves inside the artifact at the GitHub project prefix",
+      "mutation": {
+        "description": "画像のsrcだけをproject prefix外へ逸脱させる。",
+        "find": "const relative = path.posix.relative(path.posix.dirname(outFile), target);",
+        "replace": "const relative = '../../../../private.svg';",
+        "assertionMessage": "link escapes /mimic/"
       }
     }
   ]

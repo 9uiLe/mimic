@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import type { Token, Tokens } from 'marked';
+import { approvedImage, renderImage } from './knowledge-images.ts';
 import { relativeLink } from './knowledge-paths.ts';
 import { readerHref } from './pages-catalog.ts';
 import { pageFontHead } from './pages-fonts.ts';
@@ -12,7 +13,7 @@ const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
 const markedVersion = '17.0.5';
 const stylesheetPath = path.join(path.dirname(generatorPath), 'knowledge-view.css');
-const design = { id: 'mimic-knowledge-view', version: '3.2.0' };
+const design = { id: 'mimic-knowledge-view', version: '3.3.0' };
 const sectionLabels = {
   purpose: '目的と使う場面',
   inputs: '使う前に確かめること',
@@ -38,7 +39,7 @@ interface Group { heading: MimicHeading; tokens: MimicToken[] }
 interface Section extends Group { id: string; role?: SectionRole }
 interface Provenance { source: string; stylesheet: string; generator: string; renderer: string }
 const isHeading = (token: Token): token is MimicHeading => token.type === 'heading';
-const isLink = (token: Token): token is Tokens.Link => token.type === 'link';
+const isLinkOrImage = (token: Token): token is Tokens.Link | Tokens.Image => token.type === 'link' || token.type === 'image';
 const isList = (token: Token): token is MimicList => token.type === 'list';
 const hasOwn = <T extends object>(object: T, key: string): key is Extract<keyof T, string> => Object.hasOwn(object, key);
 const inlineTokens = (token: Token): Token[] | undefined => (token as { tokens?: Token[] }).tokens;
@@ -58,17 +59,20 @@ function resolveLink(href: string, sourcePath: string, outDir: string) {
   return relativeLink(outDir, path.resolve(path.dirname(sourcePath), decodeURI(pathname))) + suffix;
 }
 
-function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outDir: string) {
+export function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outDir: string) {
   const failUnless = (condition: unknown, message: string) => { if (!condition) throw new Error(`AI Markdown links: ${message}`); };
   const text = source.toString('utf8');
   const frontmatter = text.match(/^---\n[\s\S]*?\n---\n/)![0];
   const body = text.slice(frontmatter.length);
   const blocks = marked.lexer(body);
+  marked.walkTokens(blocks, token => {
+    if (token.type === 'image') approvedImage(token.href, relativeLink(root, sourcePath), token.raw, token.text);
+  });
   failUnless(!Object.keys(blocks.links || {}).length, 'reference-style link definitions are unsupported');
   failUnless(blocks.map(token => token.raw).join('') === body, 'source cannot be preserved exactly; reference definitions and normalized block syntax are unsupported');
   const localLinks = (tokens: Token[]) => {
-    const links: Tokens.Link[] = [];
-    marked.walkTokens(tokens, token => { if (isLink(token) && isRelativeHref(token.href)) links.push(token); });
+    const links: (Tokens.Link | Tokens.Image)[] = [];
+    marked.walkTokens(tokens, token => { if (isLinkOrImage(token) && isRelativeHref(token.href)) links.push(token); });
     return links;
   };
   const result = blocks.map(block => {
@@ -78,12 +82,13 @@ function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outD
     const inline = marked.Lexer.lexInline(block.raw);
     failUnless(inline.map(token => token.raw).join('') === block.raw, 'inline syntax cannot be preserved exactly');
     const edits: { start: number; end: number; href: string }[] = [];
-    const found: Tokens.Link[] = [];
+    const found: (Tokens.Link | Tokens.Image)[] = [];
     const visit = (tokens: Token[], offset: number): void => {
       let cursor = offset;
       for (const token of tokens) {
-        if (isLink(token) && isRelativeHref(token.href)) {
-          const prefix = `[${token.text}](`;
+        if (isLinkOrImage(token) && isRelativeHref(token.href)) {
+          if (token.type === 'image') approvedImage(token.href, relativeLink(root, sourcePath), token.raw, token.text);
+          const prefix = `${token.type === 'image' ? '!' : ''}[${token.text}](`;
           failUnless(token.raw.startsWith(prefix), 'only inline [label](path) relative links are supported');
           const destinationOffset = prefix.length + token.raw.slice(prefix.length).match(/^\s*/)![0].length;
           const destinationEnd = destinationOffset + token.href.length;
@@ -95,7 +100,7 @@ function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outD
           const href = targetPath.split('/').map(segment => encodeURIComponent(segment)).join('/') + suffix;
           edits.push({ start: cursor + destinationOffset, end: cursor + destinationEnd, href });
           found.push(token);
-        } else if (!isLink(token)) {
+        } else if (!isLinkOrImage(token)) {
           const children = inlineTokens(token);
           if (children && localLinks(children).length) {
             const inner = children.map(child => child.raw).join('');
@@ -108,7 +113,7 @@ function makeAiMarkdown(source: Buffer, marked: Marked, sourcePath: string, outD
       }
     };
     visit(inline, 0);
-    const signature = (tokens: Tokens.Link[]) => JSON.stringify(tokens.map(token => [token.raw, token.href]));
+    const signature = (tokens: (Tokens.Link | Tokens.Image)[]) => JSON.stringify(tokens.map(token => [token.raw, token.href]));
     failUnless(signature(found) === signature(links), 'block and inline link positions disagree; this syntax is unsupported');
     let raw = block.raw;
     for (const edit of edits.sort((a, b) => b.start - a.start)) raw = raw.slice(0, edit.start) + edit.href + raw.slice(edit.end);
@@ -176,7 +181,10 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
   assert(content.filter(token => isHeading(token) && token.depth === 1).length === 1, 'expected one H1');
   const structured = content.some(token => token.type === 'html' && /^<!-- mimic:section /.test(token.raw.trim()));
   if (!structured) {
-    marked.walkTokens(content, token => assert(token.type !== 'html' && token.type !== 'image', `unsupported ${token.type}; no embedded HTML or remote assets`));
+    marked.walkTokens(content, token => {
+      assert(token.type !== 'html', `unsupported ${token.type}; no embedded HTML`);
+      if (token.type === 'image') approvedImage(token.href, relativeLink(root, sourcePath), token.raw, token.text);
+    });
     return { metadata, sections: parseConceptSections(content.slice(1)) };
   }
   const groups = new Map<SectionRole, Group>();
@@ -230,7 +238,8 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
   }
   assert(groups.get('procedure')!.tokens.some(token => token.mimicSteps), 'procedure needs an ordered list');
   marked.walkTokens([content[0], ...[...groups.values()].flatMap(group => [group.heading, ...group.tokens])], token => {
-    assert(token.type !== 'html' && token.type !== 'image', `unsupported ${token.type}; no embedded HTML or remote assets`);
+    assert(token.type !== 'html', `unsupported ${token.type}; no embedded HTML`);
+    if (token.type === 'image') approvedImage(token.href, relativeLink(root, sourcePath), token.raw, token.text);
   });
   return { metadata, sections: sectionRoles.map(role => ({ ...groups.get(role)!, id: role, role })) };
 }
@@ -248,6 +257,8 @@ function makeHtml(
       : canonicalTarget;
     return `<a href="${escape(target)}"${title ? ` title="${escape(title)}"` : ''}>${marked.Parser.parseInline(tokens, { renderer })}</a>`;
   };
+  renderer.image = token => renderImage(token.href, relativeLink(root, sourcePath),
+    relativeLink(root, path.join(outDir, 'index.html')), token.raw, token.text, token.title);
   renderer.table = token => `<div class="table-scroll" tabindex="0" role="region" aria-label="${escape(tableLabel)}の表">${marked.Renderer.prototype.table.call(renderer, token)}</div>`;
   renderer.heading = (token: MimicHeading) => {
     assert(token.mimicId, `subheading needs a mimic:heading directive: ${token.text}`);
@@ -323,7 +334,8 @@ export async function renderKnowledge(
   const provenance = {
     source: hash(source), stylesheet: hash(stylesheet),
     generator: hash(Buffer.concat([await readFile(generatorPath), await readFile(path.join(root, 'scripts/knowledge-paths.ts')),
-      await readFile(path.join(root, 'scripts/pages-catalog.ts')), await readFile(path.join(root, 'scripts/pages-fonts.ts'))])),
+      await readFile(path.join(root, 'scripts/pages-catalog.ts')), await readFile(path.join(root, 'scripts/pages-fonts.ts')),
+      await readFile(path.join(root, 'scripts/knowledge-images.ts'))])),
     renderer: hash(await readFile(fileURLToPath(markedUrl))),
   };
   return Buffer.from(makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet.toString('utf8'), views, pagesAssets));
@@ -348,6 +360,7 @@ async function main() {
     await readFile(path.join(path.dirname(generatorPath), 'knowledge-paths.ts')),
     await readFile(path.join(path.dirname(generatorPath), 'pages-catalog.ts')),
     await readFile(path.join(path.dirname(generatorPath), 'pages-fonts.ts')),
+    await readFile(path.join(path.dirname(generatorPath), 'knowledge-images.ts')),
   ]);
   const provenance = {
     source: hash(source),

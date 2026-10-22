@@ -82,7 +82,7 @@
         "tests/pages-catalog.test.ts",
         "tests/guideline-output.test.ts"
       ],
-      "purpose": "全12概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
+      "purpose": "全14概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
       "basis_status": "confirmed",
       "basis": [
         "guideline/knowledge-view.md#Pagesの読書経路",
@@ -128,6 +128,32 @@
       "unresolved": [
         "実ブラウザの字形・折返し・拡大表示と実転送量は別に確認する。",
         "公開は許可後のmain反映まで実施しない。"
+      ]
+    },
+    {
+      "id": "knowledge-explanatory-images",
+      "paths": [
+        "scripts/knowledge-images.ts",
+        "scripts/pages-fonts.ts",
+        "tests/knowledge-images.test.ts",
+        "knowledge/alignment-and-grids/examples/*.svg",
+        "knowledge/color-context/examples/*.svg"
+      ],
+      "purpose": "正本MarkdownとPagesから、説明文と代替テキストを伴う明示した自己完結SVGへ到達できるようにする。",
+      "basis_status": "confirmed",
+      "basis": [
+        "guideline/knowledge-view.md#説明図と画像",
+        "guideline/knowledge-structure.md#固定の入口と補足",
+        "guideline/development.md#生成の規則"
+      ],
+      "validation": [
+        "bun run build:pages",
+        "bun run verify",
+        "bun run test:effectiveness",
+        "実ブラウザで説明図の表示と全体表示リンク、狭幅での配置を確認する。"
+      ],
+      "unresolved": [
+        "画像の理解しやすさ、知識の正しさ、全体のアクセシビリティ適合は生成と配信の検査では保証しない。"
       ]
     }
   ]

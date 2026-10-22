@@ -10,8 +10,8 @@ const relativeFiles = [
   ...weights.flatMap(weight => slices.map(slice => `w/normal/${weight}/${slice}.woff2`)),
 ];
 export const pagesFontFiles = Object.freeze(relativeFiles.map(file => `${fontDirectory}/${file}`));
-const standalonePolicy = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
-const pagesPolicy = "default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'";
+const standalonePolicy = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
+const pagesPolicy = "default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'";
 
 export function pageFontHead(outFile: string, pagesAssets = false) {
   const policy = pagesAssets ? pagesPolicy : standalonePolicy;

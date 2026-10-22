@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Token, Tokens } from 'marked';
+import { renderImage } from './knowledge-images.ts';
 import { readerHref } from './pages-catalog.ts';
 import { pageFontHead } from './pages-fonts.ts';
 
@@ -54,7 +55,11 @@ export async function renderDocument(source: Buffer, stylesheet: Buffer, options
   const ids = new Set(['top', 'title', 'content', 'source-provenance']);
   let h1Count = 0;
   marked.walkTokens(tokens, token => {
-    assert(token.type !== 'html' && token.type !== 'image', `unsupported ${token.type}; no embedded HTML or images`);
+    assert(token.type !== 'html', `unsupported ${token.type}; no embedded HTML`);
+    if (token.type === 'image') {
+      try { renderImage(token.href, sourceFile, outFile, token.raw, token.text, token.title); }
+      catch (error) { throw new Error(`Guideline source: ${error instanceof Error ? error.message : error}`); }
+    }
     if (token.type === 'link') htmlHref(token.href, sourceFile, outFile, views);
     if (!isHeading(token)) return;
     if (token.depth === 1) { h1Count += 1; return; }
@@ -69,6 +74,7 @@ export async function renderDocument(source: Buffer, stylesheet: Buffer, options
   const renderer = new marked.Renderer();
   const inline = (tokens: Token[]) => marked.Parser.parseInline(tokens, { renderer });
   renderer.link = ({ href, title, tokens }) => `<a href="${escape(htmlHref(href, sourceFile, outFile, views))}"${title ? ` title="${escape(title)}"` : ''}>${inline(tokens)}</a>`;
+  renderer.image = token => renderImage(token.href, sourceFile, outFile, token.raw, token.text, token.title);
   renderer.heading = token => `<h${token.depth} id="${escape(headings.get(token)!)}">${inline(token.tokens)}</h${token.depth}>\n`;
   renderer.table = token => `<div class="table-scroll" tabindex="0" role="region" aria-label="${escape(title.text)}の表">${marked.Renderer.prototype.table.call(renderer, token)}</div>`;
   const bodyTokens = content.slice(1);

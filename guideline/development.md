@@ -9,7 +9,7 @@
 - Repositoryの運用方針は[利用ガイド](README.md)、AIの作業指示は[AI向けガイド](ai.md)を編集します。
 - 閲覧ページは生成物です。Markdownの正本を変更してから再生成します。
 
-「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した12概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
+「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した14概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
 
 旧 `prototypes/decision-material-selection/index.html` の人向けURLには短い移動案内を生成します。旧研究資料の全文はPagesへ配信しません。
 
@@ -48,11 +48,11 @@ bun run verify
 
 横断的な案内のページは通常のMarkdownから生成し、H2見出しと本文の順序を保持します。生成器がリンク先の概念を読み込んだり、独自の判断手順を知識へ追加したりすることはありません。閲覧表示には正本の版を示します。8役割を指定するMarkdownの生成契約は表示規約とテストで確認します。
 
-ローカルプレビューの生成Markdownは正本の本文とメタデータを保持し、相対リンクだけを出力位置から同じ参照先へ届く形に補正します。段落・見出し・表にあるインライン形式のリンク `[名前](相対パス)` に対応し、コード中の文字は変更しません。参照形式のリンクや、位置を確実に特定できない複雑な構文は、誤変換せず生成を止めます。HTMLや画像の埋め込みも受け付けません。
+ローカルプレビューの生成Markdownは正本の本文とメタデータを保持し、相対リンクだけを出力位置から同じ参照先へ届く形に補正します。段落・見出し・表にあるインライン形式のリンク `[名前](相対パス)` に対応し、コード中の文字は変更しません。参照形式のリンクや、位置を確実に特定できない複雑な構文は、誤変換せず生成を止めます。HTMLの埋め込みと外部画像は受け付けません。説明用の画像は、公開一覧に明示した自己完結のSVGだけを扱います。Markdownの代替テキストと通常のリンクを保持し、画像と編集元を同じ相対位置で配信します。
 
 ## GitHub Pagesへの公開
 
-公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口は全12概念の一覧です。各概念のHTMLから関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。色の知識とAI Slopに関する案内も別の読書経路として表示します。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
+公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口は全14概念の一覧です。各概念のHTMLから関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。色の知識とAI Slopに関する案内も別の読書経路として表示します。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
 
 [公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
 

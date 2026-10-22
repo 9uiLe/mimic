@@ -154,3 +154,5 @@ header,main,footer{max-width:none;padding:0}
 details{display:block}
 details>*{display:block}
 }
+
+article img { max-width: 100%; height: auto; }

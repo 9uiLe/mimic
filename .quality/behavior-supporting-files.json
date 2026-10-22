@@ -10,6 +10,14 @@
       "knowledge/ai-slop/KNOWLEDGE.md",
       "knowledge/ai-slop/examples/ui-decisions.md",
       "knowledge/ai-slop/references/sources.md",
+      "knowledge/alignment-and-grids/KNOWLEDGE.md",
+      "knowledge/alignment-and-grids/examples/alignment.md",
+      "knowledge/alignment-and-grids/examples/alignment.svg",
+      "knowledge/alignment-and-grids/references/sources.md",
+      "knowledge/color-context/KNOWLEDGE.md",
+      "knowledge/color-context/examples/surrounding-colors.md",
+      "knowledge/color-context/examples/surrounding-colors.svg",
+      "knowledge/color-context/references/sources.md",
       "knowledge/color-contrast/KNOWLEDGE.md",
       "knowledge/color-contrast/references/sources.md",
       "knowledge/conceptual-models/KNOWLEDGE.md",
@@ -41,6 +49,7 @@
       "scripts/build-guideline.ts",
       "scripts/build-knowledge.ts",
       "scripts/build-pages.ts",
+      "scripts/knowledge-images.ts",
       "scripts/knowledge-paths.ts",
       "scripts/knowledge-view.css",
       "scripts/pages-catalog.ts",
@@ -311,6 +320,16 @@
       "node_modules/gen-interface-jp/w/normal/600/125.woff2",
       "node_modules/gen-interface-jp/w/normal/600/126.woff2",
       "node_modules/gen-interface-jp/w/normal/600/127.woff2"
+    ],
+    "image-renderer-inputs": [
+      "scripts/knowledge-images.ts",
+      "scripts/build-guideline.ts",
+      "scripts/build-knowledge.ts",
+      "scripts/knowledge-paths.ts",
+      "scripts/pages-catalog.ts",
+      "scripts/pages-fonts.ts",
+      "node_modules/marked/lib/marked.esm.js",
+      "node_modules/marked/package.json"
     ]
   }
 }
