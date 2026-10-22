@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import type { Token, Tokens } from 'marked';
+import { relativeLink } from './knowledge-paths.ts';
 
 const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
@@ -43,7 +44,6 @@ const inlineTokens = (token: Token): Token[] | undefined => (token as { tokens?:
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const escape = (value: unknown) => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(`Source schema: ${message}`); }
-const relativeLink = (from: string, to: string) => path.relative(from, to).split(path.sep).join('/');
 const isRelativeHref = (href: string) => !/^[a-z][a-z\d+.-]*:/i.test(href) && !href.startsWith('#');
 
 function resolveLink(href: string, sourcePath: string, outDir: string) {
@@ -309,7 +309,16 @@ async function main() {
   const source = await readFile(sourcePath);
   const stylesheet = await readFile(stylesheetPath);
   assert(!/@import|url\(|<\/?style\b/i.test(stylesheet.toString('utf8')), 'stylesheet must be self-contained CSS');
-  const provenance = { source: hash(source), stylesheet: hash(stylesheet), generator: hash(await readFile(generatorPath)), renderer: hash(await readFile(fileURLToPath(markedUrl))) };
+  const generatorSources = Buffer.concat([
+    await readFile(generatorPath),
+    await readFile(path.join(path.dirname(generatorPath), 'knowledge-paths.ts')),
+  ]);
+  const provenance = {
+    source: hash(source),
+    stylesheet: hash(stylesheet),
+    generator: hash(generatorSources),
+    renderer: hash(await readFile(fileURLToPath(markedUrl))),
+  };
   const html = Buffer.from(makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet.toString('utf8')));
   const outputs = new Map([['ai.md', makeAiMarkdown(source, marked, sourcePath, outDir)], ['index.html', html]]);
   if (values.check) {

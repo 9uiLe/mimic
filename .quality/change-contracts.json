@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "contracts": [
+    {
+      "id": "repository-quality-policy",
+      "paths": ["scripts/quality/*", "tests/quality_*", ".githooks/*", ".quality/*", ".github/workflows/*", "package.json", "flake.nix"],
+      "purpose": "変更候補の長さ・限定した禁止名・基準の緩和を、確定済みの版と比較して検査する。",
+      "basis_status": "confirmed",
+      "basis": ["guideline/quality-checks.md#確定した検査条件"],
+      "validation": ["bun run quality:test", "bun run quality:check", "bun run quality:staged"],
+      "unresolved": ["名前の意味、仕様の妥当性、検査コード自体の変更の妥当性は人のレビューが必要。"]
+    },
+    {
+      "id": "knowledge-link-destination",
+      "paths": ["scripts/knowledge-paths.ts", "scripts/build-knowledge.ts", "tests/knowledge-paths.test.ts", "tests/knowledge-output.test.ts"],
+      "purpose": "出力先から編集元と同じ概念の入口へ届く相対リンクを保つ。",
+      "basis_status": "confirmed",
+      "basis": ["guideline/development.md#生成の規則", ".quality/behavior-cases.json"],
+      "validation": ["bun scripts/quality/verify-behavior.ts --case knowledge-relative-link", "bun run verify"],
+      "unresolved": ["この具体例は概念の意味やWindows対応の保証ではない。"]
+    }
+  ]
+}

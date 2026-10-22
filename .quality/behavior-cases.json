@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "knowledge-relative-link",
+      "requirement": "出力位置が変わっても、相対リンクは編集元と同じ概念の入口へ到達する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/development.md",
+        "section": "生成の規則",
+        "quotation": "相対リンクだけを出力位置から同じ参照先へ届く形に補正します。",
+        "relatedSource": "guideline/knowledge-structure.md#固定の入口と補足",
+        "reasoning": "出力先から2階層上へ進み、knowledge/grouping/KNOWLEDGE.mdへ到達する具体例。実装の戻り値から期待値を導いていない。"
+      },
+      "input": {
+        "fromDirectory": "/repo/prototypes/decision-material-selection",
+        "targetPath": "/repo/knowledge/grouping/KNOWLEDGE.md"
+      },
+      "expected": "../../knowledge/grouping/KNOWLEDGE.md",
+      "assumptions": [
+        "このケースの絶対パスはmacOS/Linux用の説明用パスであり、実在を必要としない。",
+        "同一参照先の維持を検査する。知識本文の意味、採用状態、Windowsのパス対応は保証しない。"
+      ],
+      "implementation": "scripts/knowledge-paths.ts",
+      "test": "tests/knowledge-paths.test.ts",
+      "supportingFiles": [],
+      "testName": "output-relative knowledge link preserves the documented concept destination",
+      "mutation": {
+        "description": "相対パス計算の起点と参照先を逆にし、別の場所へ届く誤実装にする。",
+        "find": "path.relative(fromDirectory, targetPath)",
+        "replace": "path.relative(targetPath, fromDirectory)",
+        "assertionMessage": "generated knowledge link must preserve the documented concept destination"
+      }
+    }
+  ]
+}

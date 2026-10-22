@@ -1,5 +1,5 @@
 {
-  description = "Mimic Bun and TypeScript development environment";
+  description = "Mimic development and quality-check environment";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
@@ -13,7 +13,7 @@
         let pkgs = import nixpkgs { inherit system; };
         in {
           default = pkgs.mkShellNoCC {
-            packages = [ pkgs.bun ];
+            packages = [ pkgs.bun pkgs.python3 ];
           };
         });
     };

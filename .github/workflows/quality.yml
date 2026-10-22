@@ -1,0 +1,38 @@
+name: Repository Quality
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-quality:
+    runs-on: ubuntu-latest
+    env:
+      QUALITY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      QUALITY_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+      - run: nix develop --no-update-lock-file --command bun install --frozen-lockfile --ignore-scripts
+      - name: Check using the trusted base entrypoint
+        shell: bash
+        run: |
+          guard_root="$(mktemp -d)"
+          if git cat-file -e "$QUALITY_BASE_SHA:scripts/quality/ci_check.py" 2>/dev/null; then
+            git archive "$QUALITY_BASE_SHA" scripts/quality | tar -x -C "$guard_root"
+          else
+            echo '::warning::Initial guard adoption requires independent review.'
+            mkdir -p "$guard_root/scripts"
+            cp -R scripts/quality "$guard_root/scripts/quality"
+          fi
+          nix develop --no-update-lock-file --command python3 "$guard_root/scripts/quality/ci_check.py" \
+            --base "$QUALITY_BASE_SHA" --commit "$QUALITY_CANDIDATE_SHA"
+      - run: nix develop --no-update-lock-file --command bun run quality:test
+      - run: nix develop --no-update-lock-file --command bun run test:effectiveness
+      - run: nix develop --no-update-lock-file --command bun run verify
+      - run: nix develop --no-update-lock-file --command bun run build:pages
