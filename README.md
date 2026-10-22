@@ -8,6 +8,8 @@
 
 概念の説明は `knowledge/<概念ID>/KNOWLEDGE.md`、構造化した関係は `relations/graph.json`、関係型の意味は `relations/vocabulary.json` が正本です。説明に使う本文の版・対象範囲と必要な出典・例を確認します。索引やグラフだけを本文の代わりにしません。
 
+[プロダクト全体のUI設計](topics/product-ui-design.md)は、必要な情報、情報構造、画面・遷移、共通の指針、確かめ方を関連付けて読むための案内です。
+
 ## 人向けの閲覧
 
 [GitHub Pages](https://9uile.github.io/mimic/) 向けの閲覧ページには、概念一覧と[関係グラフ](https://9uile.github.io/mimic/graph/)を用意します。グラフで概念を探し、関係の根拠と本文・出典・例へ進めます。

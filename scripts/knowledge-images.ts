@@ -3,6 +3,7 @@ import path from 'node:path';
 export const figureFiles = Object.freeze([
   'knowledge/alignment-and-grids/examples/alignment.svg',
   'knowledge/color-context/examples/surrounding-colors.svg',
+  'knowledge/interaction-design/examples/recording-app-layout.svg',
 ]);
 const imageFiles = new Set(figureFiles);
 const escape = (value: string) => value.replace(/[&<>"']/g,
