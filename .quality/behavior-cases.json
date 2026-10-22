@@ -34,14 +34,14 @@
     },
     {
       "id": "knowledge-accepted-status",
-      "requirement": "人が正式採用を承認した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
+      "requirement": "採用した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/README.md",
         "section": "下書きと採用状態",
-        "quotation": "人が正式採用を承認した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "quotation": "採用した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
         "relatedSource": "guideline/development.md#生成の規則",
-        "reasoning": "採用状態の値と表示は実装出力ではなく、人が承認した運用方針の定義から固定する。"
+        "reasoning": "採用状態の値と表示は実装出力ではなく、運用方針の定義から固定する。"
       },
       "input": {
         "status": "accepted",
@@ -53,9 +53,9 @@
         "aiFrontmatterStatus": "accepted"
       },
       "assumptions": [
-        "acceptedという値と正式採用済みという表示は運用方針の定義であり、各知識の採用は人が判断する。",
+        "acceptedという値と正式採用済みという表示は運用方針の定義であり、各知識の内容は依頼の範囲で根拠を確認する。",
         "この表示テストは架空文書を入力とし、実際の知識本文の状態を変更しない。",
-        "表示とメタデータ保持を検査する。知識の意味や人による採用承認の有無を機械で判定しない。"
+        "表示とメタデータ保持を検査する。知識の意味や採用判断の妥当性を機械で判定しない。"
       ],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/knowledge-output.test.ts",
@@ -113,7 +113,7 @@
         "section": "確認すること",
         "quotation": "生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度を確認します。",
         "relatedSource": "guideline/README.md#下書きと採用状態",
-        "reasoning": "正本Markdownのバイト一致と、人が承認したacceptedの定義を根拠に、配信時の採用状態保持を期待する。実装の出力へ期待値を合わせていない。"
+        "reasoning": "正本Markdownのバイト一致と、運用方針が定めるacceptedの表示を根拠に、配信時の採用状態保持を期待する。実装の出力へ期待値を合わせていない。"
       },
       "input": {
         "copiedFile": "topics/decision-material-selection.md",
@@ -125,7 +125,7 @@
         "htmlRawStatus": "accepted"
       },
       "assumptions": [
-        "実際の正式採用判断は人の承認に基づく。Pagesの配信処理やそのテストが採用の可否を決めるものではない。",
+        "採用状態は依頼の範囲と知識の内容に基づいて判断する。Pagesの配信処理やそのテストが採用の可否を決めるものではない。",
         "知識本文の意味や原典への忠実さは、このコピーと状態表示の検査では保証しない。"
       ],
       "implementation": "scripts/build-pages.ts",
@@ -355,7 +355,7 @@
         "status": "confirmed",
         "source": "guideline/README.md",
         "section": "下書きと採用状態",
-        "quotation": "人が正式採用を承認した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "quotation": "採用した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
         "relatedSource": "knowledge/README.md#参照する前に",
         "reasoning": "正式採用の表示規約と、採用対象10本文の正本メタデータに基づき件数と版を固定する。生成結果から期待値を作らない。"
       },
@@ -441,7 +441,7 @@
         "relatedHref": "../visual-hierarchy/index.html"
       },
       "assumptions": [
-        "全文ブロック保持と表示・リンクを機械で検査する。知識の妥当性、採用承認、利用者への効果の検証ではない。"
+        "全文ブロック保持と表示・リンクを機械で検査する。知識の妥当性、採用判断、利用者への効果の検証ではない。"
       ],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/pages-output.test.ts",
