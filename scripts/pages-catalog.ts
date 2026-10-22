@@ -4,7 +4,7 @@ import { pageFontHead } from './pages-fonts.ts';
 export const conceptIds = Object.freeze([
   'ecological-interface-design', 'external-representations', 'conceptual-models', 'grouping', 'visual-hierarchy',
   'lightness-and-luminance', 'color-contrast', 'design-tokens', 'ai-slop', 'aesthetic-and-minimalist-design',
-  'typography', 'layout-spacing', 'alignment-and-grids', 'color-context',
+  'typography', 'layout-spacing', 'alignment-and-grids', 'color-context', 'ui-layering',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -19,6 +19,8 @@ export const exampleFiles = Object.freeze([
   'knowledge/layout-spacing/examples/component-spacing.md',
   'knowledge/alignment-and-grids/examples/alignment.md',
   'knowledge/color-context/examples/surrounding-colors.md',
+  'knowledge/ui-layering/examples/overlap.md',
+  'knowledge/ui-layering/examples/layer-order.md',
 ]);
 export const additionalSources = Object.freeze(['knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md']);
 export const readerViews: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries([

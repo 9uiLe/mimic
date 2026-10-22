@@ -107,7 +107,13 @@
         "knowledge/color-context/KNOWLEDGE.md",
         "knowledge/color-context/examples/surrounding-colors.md",
         "knowledge/color-context/examples/surrounding-colors.svg",
-        "knowledge/color-context/references/sources.md"
+        "knowledge/color-context/references/sources.md",
+        "knowledge/ui-layering/KNOWLEDGE.md",
+        "knowledge/ui-layering/references/sources.md",
+        "knowledge/ui-layering/examples/overlap.md",
+        "knowledge/ui-layering/examples/layer-order.md",
+        "knowledge/ui-layering/examples/layer-comparison.svg",
+        "knowledge/ui-layering/examples/layer-order.svg"
       ],
       "testName": "knowledge reader preserves version and provenance while AI output preserves canonical metadata",
       "mutation": {
@@ -223,7 +229,13 @@
         "knowledge/color-context/KNOWLEDGE.md",
         "knowledge/color-context/examples/surrounding-colors.md",
         "knowledge/color-context/examples/surrounding-colors.svg",
-        "knowledge/color-context/references/sources.md"
+        "knowledge/color-context/references/sources.md",
+        "knowledge/ui-layering/KNOWLEDGE.md",
+        "knowledge/ui-layering/references/sources.md",
+        "knowledge/ui-layering/examples/overlap.md",
+        "knowledge/ui-layering/examples/layer-order.md",
+        "knowledge/ui-layering/examples/layer-comparison.svg",
+        "knowledge/ui-layering/examples/layer-order.svg"
       ],
       "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
       "mutation": {
@@ -263,20 +275,20 @@
     },
     {
       "id": "pages-catalog-completeness",
-      "requirement": "Pagesの入口から全14概念の本文を選べる。",
+      "requirement": "Pagesの入口から全15概念の本文を選べる。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
-        "quotation": "一覧の対象は明示した14概念と照合し、ファイルを追加しただけでは掲載しません。",
-        "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき14件を固定する。実装配列の長さから期待値を作らない。"
+        "quotation": "一覧の対象は明示した15概念と照合し、ファイルを追加しただけでは掲載しません。",
+        "reasoning": "既存14概念にUIのレイヤー構造を一件追加する依頼と表示規約に基づき15件を固定する。実装配列の長さから期待値を作らない。"
       },
       "input": {
         "index": "knowledge/README.md",
-        "conceptCount": 14
+        "conceptCount": 15
       },
       "expected": {
-        "readerLinks": 14,
+        "readerLinks": 15,
         "redirect": false
       },
       "assumptions": ["索引掲載数と選択経路を機械検査する。本文の意味や使いやすさの実証ではない。"],
@@ -288,33 +300,34 @@
         "description": "配信ファイルは残すが、一覧から最後の概念だけ落とす。",
         "find": "const items = rows.map(row => {",
         "replace": "const items = rows.slice(0, -1).map(row => {",
-        "assertionMessage": "catalog must expose all fourteen reviewed concepts"
+        "assertionMessage": "catalog must expose all fifteen reviewed concepts"
       },
       "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "pages-catalog-version",
-      "requirement": "Pages入口の全14概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。",
+      "requirement": "Pages入口の全15概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
         "quotation": "一覧の説明は `knowledge/README.md` の表から読み、題名・版は各本文から読みます。",
         "relatedSource": "knowledge/README.md#参照する前に",
-        "reasoning": "14本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
+        "reasoning": "15本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
       },
       "input": {
         "index": "knowledge/README.md",
-        "concepts": 14
+        "concepts": 15
       },
       "expected": {
         "conceptVersions": {
-          "design-tokens": "1.1.0",
-          "other13Concepts": "1.0.0"
+          "design-tokens": "1.1.1",
+          "other13Concepts": "1.0.1",
+          "ui-layering": "1.0.0"
         },
-        "count": 14
+        "count": 15
       },
-      "assumptions": ["14概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
+      "assumptions": ["15概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
       "implementation": "scripts/pages-catalog.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [],
@@ -338,11 +351,11 @@
         "reasoning": "概念の独立性と関連資料を辿る読書経路は表示規約と利用者の改善依頼に基づく。期待hrefは固定した入出力パスから記載し、実装を呼んで計算しない。"
       },
       "input": {
-        "concepts": 14,
-        "supplements": 23
+        "concepts": 15,
+        "supplements": 26
       },
       "expected": {
-        "htmlReaders": 37,
+        "htmlReaders": 41,
         "sourcesHref": "references/sources.html",
         "relatedHref": "../visual-hierarchy/index.html"
       },
@@ -472,7 +485,7 @@
       },
       "expected": {
         "publishedFontFiles": 259,
-        "allPublishedFiles": 359,
+        "allPublishedFiles": 369,
         "stylesheetLinks": 2
       },
       "assumptions": ["CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"],
@@ -660,7 +673,7 @@
         "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
       },
       "input": {
-        "figures": ["alignment.svg", "surrounding-colors.svg"]
+        "figures": ["alignment.svg", "surrounding-colors.svg", "layer-comparison.svg", "layer-order.svg"]
       },
       "expected": "公開SVGは正本のバイト列を保持する。",
       "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
@@ -686,7 +699,7 @@
         "quotation": "公開一覧で明示した図だけを、Markdownの `![代替テキスト](相対パス)` から画像として表示します。"
       },
       "input": {
-        "figures": ["alignment.svg", "surrounding-colors.svg"]
+        "figures": ["alignment.svg", "surrounding-colors.svg", "layer-comparison.svg", "layer-order.svg"]
       },
       "expected": "不正な説明図では既存成果物を更新する前に生成を止める。",
       "assumptions": ["明示した静的SVGと生成経路だけを検査し、説明内容や使いやすさの実証とは区別する。"],
