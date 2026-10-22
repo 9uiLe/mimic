@@ -136,7 +136,7 @@ test('artifact copies match their generated or canonical sources and retain repo
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
   const provenanceCases: [string, string, string][] = [
-    ['prototypes/decision-material-selection/index.html', 'topics/decision-material-selection.md', 'proposed'],
+    ['prototypes/decision-material-selection/index.html', 'topics/decision-material-selection.md', 'accepted'],
     ['prototypes/decision-material-selection/research/index.html', 'prototypes/decision-material-selection/draft.md', 'draft'],
   ];
   for (const [htmlFile, sourceFile, status] of provenanceCases) {

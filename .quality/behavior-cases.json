@@ -31,6 +31,125 @@
         "replace": "path.relative(targetPath, fromDirectory)",
         "assertionMessage": "generated knowledge link must preserve the documented concept destination"
       }
+    },
+    {
+      "id": "knowledge-accepted-status",
+      "requirement": "人が正式採用を承認した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/README.md",
+        "section": "下書きと採用状態",
+        "quotation": "人が正式採用を承認した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "relatedSource": "guideline/development.md#生成の規則",
+        "reasoning": "採用状態の値と表示は実装出力ではなく、人が承認した運用方針の定義から固定する。"
+      },
+      "input": {
+        "status": "accepted",
+        "related": []
+      },
+      "expected": {
+        "htmlBadge": "正式採用済み",
+        "htmlRawStatus": "accepted",
+        "aiFrontmatterStatus": "accepted"
+      },
+      "assumptions": [
+        "acceptedという値と正式採用済みという表示は運用方針の定義であり、各知識の採用は人が判断する。",
+        "この表示テストは架空文書を入力とし、実際の知識本文の状態を変更しない。",
+        "表示とメタデータ保持を検査する。知識の意味や人による採用承認の有無を機械で判定しない。"
+      ],
+      "implementation": "scripts/build-knowledge.ts",
+      "test": "tests/knowledge-output.test.ts",
+      "supportingFiles": [
+        "scripts/knowledge-paths.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "prototypes/decision-material-selection/draft.md",
+        "topics/decision-material-selection.md",
+        "knowledge/README.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "knowledge/visual-hierarchy/references/sources.md"
+      ],
+      "testName": "accepted knowledge displays its adopted label while preserving the raw status for humans and AI",
+      "mutation": {
+        "description": "acceptedの表示だけを採用前に誤変更し、正式採用済みの文書を誤った状態として表示する。",
+        "find": "accepted: '正式採用済み'",
+        "replace": "accepted: '採用前の文書'",
+        "assertionMessage": "accepted status must display the formally adopted label"
+      }
+    },
+    {
+      "id": "pages-accepted-status",
+      "requirement": "Pagesへコピーする正式採用済みの案内は、生成済みの原文と同じバイト列とacceptedの採用状態を保持する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/development.md",
+        "section": "確認すること",
+        "quotation": "生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度を確認します。",
+        "relatedSource": "guideline/README.md#下書きと採用状態",
+        "reasoning": "配信対象の原文対応と、人が承認したacceptedの定義を根拠に、コピー対象のバイト一致と採用状態の保持を期待する。実装の出力へ期待値を合わせていない。"
+      },
+      "input": {
+        "copiedFile": "prototypes/decision-material-selection/index.html",
+        "source": "topics/decision-material-selection.md",
+        "sourceStatus": "accepted"
+      },
+      "expected": {
+        "copiedBytes": "生成済みのprototypes/decision-material-selection/index.htmlと一致する。",
+        "htmlRawStatus": "accepted",
+        "researchRawStatus": "draft"
+      },
+      "assumptions": [
+        "実際の正式採用判断は人の承認に基づく。Pagesのコピー処理やそのテストが採用の可否を決めるものではない。",
+        "知識本文の意味や原典への忠実さは、このバイト一致の検査では保証しない。"
+      ],
+      "implementation": "scripts/build-pages.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "prototypes/decision-material-selection/index.html",
+        "prototypes/decision-material-selection/ai.md",
+        "prototypes/decision-material-selection/draft.md",
+        "prototypes/decision-material-selection/research/index.html",
+        "prototypes/decision-material-selection/research/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md"
+      ],
+      "testName": "artifact copies match their generated or canonical sources and retain repository-relative provenance",
+      "mutation": {
+        "description": "コピーするHTMLのaccepted原値だけをproposedへ誤変換し、配信物を生成済み原文と異なる採用状態にする。",
+        "find": "for (const file of copiedFiles) outputs.set(file, await readSource(file));",
+        "replace": "for (const file of copiedFiles) outputs.set(file, Buffer.from((await readSource(file)).toString().replace('status</dt><dd>accepted', 'status</dt><dd>proposed')));",
+        "assertionMessage": "prototypes/decision-material-selection/index.html"
+      }
     }
   ]
 }

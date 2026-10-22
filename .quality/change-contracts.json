@@ -18,6 +18,15 @@
       "basis": ["guideline/development.md#生成の規則", ".quality/behavior-cases.json"],
       "validation": ["bun scripts/quality/verify-behavior.ts --case knowledge-relative-link", "bun run verify"],
       "unresolved": ["この具体例は概念の意味やWindows対応の保証ではない。"]
+    },
+    {
+      "id": "knowledge-adoption-status",
+      "paths": ["scripts/build-knowledge.ts", "tests/knowledge-output.test.ts", "tests/pages-output.test.ts"],
+      "purpose": "正式採用後の accepted を、採用前の表示や意味未確認の表示と混同せず出力する。",
+      "basis_status": "confirmed",
+      "basis": ["guideline/README.md#下書きと採用状態", "guideline/development.md#生成の規則", ".quality/behavior-cases.json"],
+      "validation": ["bun scripts/quality/verify-behavior.ts --case knowledge-accepted-status", "bun scripts/quality/verify-behavior.ts --case pages-accepted-status", "bun run verify"],
+      "unresolved": ["知識の原典への忠実さと採用承認は、この表示・配信テストの保証範囲に含めない。"]
     }
   ]
 }

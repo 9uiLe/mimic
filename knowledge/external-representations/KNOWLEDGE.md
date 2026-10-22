@@ -1,9 +1,9 @@
 ---
 id: external-representations
 title: 外的表象
-status: proposed
-version: "0.1.0"
-scope: cognitive-tasks
+status: accepted
+version: "1.0.0"
+scope: distributed-cognitive-tasks
 related:
   - conceptual-models
   - ecological-interface-design
@@ -13,7 +13,9 @@ related:
 
 ## 概念
 
-ZhangとNormanは、認知的な課題を、頭の中の情報と外部環境の情報の相互作用として捉えます。図や物の配置などの外的表象は、記憶を助けるだけでなく、直接知覚できる情報や可能な操作を変え、課題の進め方にも関わるという立場です。
+ZhangとNormanは、頭の中と外部環境に情報が分散する認知課題を、内部と外部の表象を一つの系として捉えて分析します。外的表象とは、外部にある文字などの記号や、物の配置に組み込まれた関係・制約です。
+
+外的表象は、記憶を助けるだけでなく、直接知覚できる情報や可能な操作を変え、課題の進め方にも関わるという立場です。
 
 ## 背景と対象範囲
 

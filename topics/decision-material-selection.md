@@ -1,8 +1,8 @@
 ---
 id: decision-material-selection
 title: 判断材料の選定
-status: proposed
-version: "0.2.0"
+status: accepted
+version: "1.0.0"
 scope: general-digital-ui
 related:
   - ecological-interface-design
@@ -24,7 +24,7 @@ related:
 
 ## 外部の情報と、その意味の理解
 
-[外的表象](../knowledge/external-representations/KNOWLEDGE.md)は、図や配置など外部環境にある情報と、認知的な課題との関係を説明します。[概念モデル](../knowledge/conceptual-models/KNOWLEDGE.md)は、構成要素を結び、仕組みと動作の理由を理解する枠組みを説明します。外に情報があることと、その意味を理解できることを区別して読みます。
+[外的表象](../knowledge/external-representations/KNOWLEDGE.md)は、図や配置など外部環境にある情報と、内部と外部に情報が分散する認知課題との関係を説明します。[概念モデル](../knowledge/conceptual-models/KNOWLEDGE.md)は、構成要素を結び、仕組みと動作の理由を理解する枠組みを説明します。外に情報があることと、その意味を理解できることを区別して読みます。
 
 ## まとまりと強調
 
