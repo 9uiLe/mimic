@@ -1,7 +1,6 @@
 ---
 id: visual-hierarchy
 title: 視覚的な優先順位
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:

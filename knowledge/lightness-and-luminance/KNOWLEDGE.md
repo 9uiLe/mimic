@@ -1,7 +1,6 @@
 ---
 id: lightness-and-luminance
 title: 明度と相対輝度
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:

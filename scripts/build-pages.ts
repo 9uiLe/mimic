@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { renderDocument } from './build-guideline.ts';
 import { renderKnowledge } from './build-knowledge.ts';
 import { additionalSources, conceptFiles, conceptIds, exampleFiles, readerViews, renderCatalog } from './pages-catalog.ts';
+import { pagesFontFiles, readPagesFontAssets } from './pages-fonts.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const copiedFiles = Object.freeze([
@@ -20,7 +21,7 @@ const movedKnowledge = Object.freeze({
 export const publishedFiles = Object.freeze([...new Set([
   'index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html',
   'prototypes/decision-material-selection/index.html',
-  ...copiedFiles, ...Object.values(readerViews), ...Object.keys(movedKnowledge),
+  ...copiedFiles, ...Object.values(readerViews), ...Object.keys(movedKnowledge), ...pagesFontFiles,
 ])].sort());
 const allowedFiles = new Set(publishedFiles);
 const allowedDirectories = new Set(publishedFiles.flatMap(file => {
@@ -72,13 +73,13 @@ export async function buildPages(outDir = path.join(root, '_site')) {
 </body></html>\n`));
   const stylesheet = await readSource('scripts/knowledge-view.css');
   const entries = new Map(conceptIds.map(id => [id, outputs.get(`knowledge/${id}/KNOWLEDGE.md`)!.toString('utf8')]));
-  outputs.set('index.html', Buffer.from(renderCatalog(outputs.get('knowledge/README.md')!.toString('utf8'), entries, stylesheet.toString('utf8'))));
+  outputs.set('index.html', Buffer.from(renderCatalog(outputs.get('knowledge/README.md')!.toString('utf8'), entries, stylesheet.toString('utf8'), true)));
   for (const [sourceFile, outFile] of Object.entries(readerViews)) {
     if (sourceFile === 'knowledge/README.md') continue;
     const source = outputs.get(sourceFile)!;
     if (sourceFile.endsWith('/KNOWLEDGE.md') || sourceFile === 'topics/color.md'
       || sourceFile === 'topics/decision-material-selection.md') {
-      outputs.set(outFile, await renderKnowledge(source, sourceFile, stylesheet, readerViews));
+      outputs.set(outFile, await renderKnowledge(source, sourceFile, stylesheet, readerViews, true));
       continue;
     }
     const id = sourceFile.startsWith('knowledge/') ? sourceFile.split('/')[1] : undefined;
@@ -86,8 +87,9 @@ export async function buildPages(outDir = path.join(root, '_site')) {
     const context = id && title ? {
       title, href: path.posix.relative(path.posix.dirname(outFile), `knowledge/${id}/index.html`),
     } : undefined;
-    outputs.set(outFile, await renderDocument(source, stylesheet, { sourceFile, outFile, views: readerViews, context }));
+    outputs.set(outFile, await renderDocument(source, stylesheet, { sourceFile, outFile, views: readerViews, context, pagesAssets: true }));
   }
+  for (const [file, bytes] of await readPagesFontAssets(root, readSource)) outputs.set(file, bytes);
   // Preflight all inputs and existing output before updating any artifact file.
   for (const [file, bytes] of outputs) {
     const destination = path.join(outDir, file);

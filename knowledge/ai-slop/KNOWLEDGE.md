@@ -1,7 +1,6 @@
 ---
 id: ai-slop
 title: AI Slop
-status: accepted
 version: "1.0.0"
 scope: ai-generated-digital-ui-criticism
 related:

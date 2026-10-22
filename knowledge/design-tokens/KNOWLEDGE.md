@@ -1,12 +1,12 @@
 ---
 id: design-tokens
 title: Design Token
-status: accepted
-version: "1.0.0"
+version: "1.1.0"
 scope: general-digital-ui
 related:
   - lightness-and-luminance
   - color-contrast
+  - typography
 ---
 
 # Design Token
@@ -30,7 +30,7 @@ DTCG Formatは、異なるツール間でTokenを交換するファイル形式�
 
 参照する2025.10版はFinal Community Group Reportです。
 W3C Standardではなく、W3C Standards Track上の仕様でもありません。
-仕様の公開状態と、Mimicにおける本説明文の採用状態も別です。
+仕様の公開版と、Mimicにおける本説明文の版も別です。
 
 ## 名前・型・値・alias
 
@@ -60,6 +60,12 @@ aliasは、値の重複を減らすとともに、Token同士の意味の関係�
 同じ16pxでも、余白の変更に合わせて本文の文字サイズも変える、という判断は含めていません。
 名前は説明用のドット区切りのパス表記であり、DTCG JSONの単一Token名の構文ではありません。
 表の16pxも寸法を読むための表記で、交換ファイルの値の構文を示してはいません。
+
+## Typographyへの適用
+
+文字サイズ一つもTokenにできますが、具体的なUIの本文・見出しを共有するには、書体、文字サイズ、太さ、行高、字間を役割ごとの組で扱えます。DTCG Format 2025.10の`typography`複合Tokenでは、この五つのsub-valueがすべて必須です。`fontFamily`は書体名または優先順の配列、`fontSize`と`letterSpacing`は`dimension`、`fontWeight`は`fontWeight`、`lineHeight`は単位なしの`number`で表します。`dimension`の単位は`px`か`rem`です。基礎Tokenの値を各sub-valueからaliasで参照できます。
+
+この形式は交換用JSONの型を定めますが、本文・見出しという役割名、基礎値と役割の分け方、対象言語や表示環境に適した値までは定めません。Mimicで具体的なTypographyを示すときは、役割の組を中心に、既存Tokenと基礎値の参照関係、書体とfallback、言語、幅、文字設定の変更条件を添えます。[Typographyの本文](../typography/KNOWLEDGE.md)と[和欧混植UIの説明例](../typography/examples/mixed-ui-copy.md)に適用範囲を示します。
 
 ## 基礎値・用途・部品ごとの割り当て
 

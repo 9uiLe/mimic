@@ -112,25 +112,26 @@ test('AI preserves all metadata and knowledge with working related links in both
   assert.match(html, /href="\.\.\/\.\.\/knowledge\/visual-hierarchy\/KNOWLEDGE\.md"/);
   assert.match(html, /href="\.\.\/\.\.\/topics\/decision-material-selection\.md"/);
   assert.match(html, /href="ai\.md"/);
-  assert.match(html, /<span class="badge">確認中の文書<\/span>/);
-  assert.match(html, /<dt>status<\/dt><dd>proposed<\/dd>/);
+  assert.match(html, /<p class="meta">v0\.1\.0<\/p>/);
+  assert.match(html, /<dt>version<\/dt><dd>0\.1\.0<\/dd>/);
+  assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/);
   assert.match(html, /source SHA-256/);
   assert.match(html, /stylesheet SHA-256/);
   assert.doesNotMatch(html, /<(?:script|iframe|img)\b|<link[^>]+href=|@import|url\(|<!-- mimic:|example-phase/i);
   assert.equal(run([...args, '--check']).status, 0);
   assert.equal(run(args).status, 0);
   assert.equal(await readFile(path.join(out, 'index.html'), 'utf8'), html, 'Generation must be deterministic');
-  const draftSource = path.join(out, 'draft.md');
-  const draft = original.toString().replace('status: proposed', 'status: draft').replaceAll('](../knowledge/', '](../../knowledge/').replace('](decision-material-selection.md)', '](../../topics/decision-material-selection.md)');
-  const researchOut = path.join(out, 'research');
-  await writeFile(draftSource, draft);
-  const result = run(['--source', draftSource, '--out-dir', researchOut]);
+  const nestedSource = path.join(out, 'nested.md');
+  const nested = original.toString().replaceAll('](../knowledge/', '](../../knowledge/').replace('](decision-material-selection.md)', '](../../topics/decision-material-selection.md)');
+  const nestedOut = path.join(out, 'nested');
+  await writeFile(nestedSource, nested);
+  const result = run(['--source', nestedSource, '--out-dir', nestedOut]);
   assert.equal(result.status, 0, result.stderr);
-  const researchAiPath = path.join(researchOut, 'ai.md');
-  const researchAi = await readFile(researchAiPath);
-  assertAiContent(researchAi, draft, researchAiPath, draftSource);
-  assert.match(researchAi.toString(), /\[グルーピング\]\(\.\.\/\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md\)/);
-  await assertRelatedFiles(researchAi, researchAiPath);
+  const nestedAiPath = path.join(nestedOut, 'ai.md');
+  const nestedAi = await readFile(nestedAiPath);
+  assertAiContent(nestedAi, nested, nestedAiPath, nestedSource);
+  assert.match(nestedAi.toString(), /\[グルーピング\]\(\.\.\/\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md\)/);
+  await assertRelatedFiles(nestedAi, nestedAiPath);
 });
 
 test('conceptual knowledge keeps its original chapters and all source content without adding procedure roles', async () => {
@@ -170,42 +171,47 @@ test('conceptual knowledge keeps its original chapters and all source content wi
   }
 });
 
-test('accepted knowledge has no adoption badge while preserving the raw status for humans and AI', async () => {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-adopted-knowledge-'));
+test('knowledge reader preserves version and provenance while AI output preserves canonical metadata', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-knowledge-metadata-'));
   temporaryDirectories.push(directory);
-  const source = path.join(directory, 'knowledge/adoption-fixture/KNOWLEDGE.md');
-  const out = path.join(directory, 'accepted-preview');
-  const acceptedSource = `---
-id: adoption-fixture
-title: 採用状態の表示例
-status: accepted
+  const source = path.join(directory, 'knowledge/metadata-fixture/KNOWLEDGE.md');
+  const out = path.join(directory, 'preview');
+  const canonicalSource = `---
+id: metadata-fixture
+title: 版と出典の表示例
 version: "1.0.0"
-scope: adoption-display
+scope: metadata-display
 related:
 ---
 
-# 採用状態の表示例
+# 版と出典の表示例
 
 ## 説明
 
-採用状態の表示を確認するための架空の文書です。
+版と編集元の対応を確認するための架空の文書です。
 `;
   await mkdir(path.dirname(source), { recursive: true });
-  await writeFile(source, acceptedSource);
+  await writeFile(source, canonicalSource);
   const result = run(['--source', source, '--out-dir', out]);
   assert.equal(result.status, 0, result.stderr);
   const html = await readFile(path.join(out, 'index.html'), 'utf8');
-  assert.doesNotMatch(html, /<span class="badge">/, 'accepted status must have no adoption badge');
-  assert.match(html, /<p class="meta">v1\.0\.0<\/p>/, 'accepted version must remain visible');
-  assert.match(html, /<dt>status<\/dt><dd>accepted<\/dd>/, 'human output must preserve the raw accepted status');
-  assert.equal(await readFile(path.join(out, 'ai.md'), 'utf8'), acceptedSource, 'AI output must preserve the accepted source exactly');
+  assert.match(html, /<p class="meta">v1\.0\.0<\/p>/, 'reader must show the source version');
+  assert.match(html, /<dt>version<\/dt><dd>1\.0\.0<\/dd>/, 'human output must preserve source version');
+  assert.match(html, /<dt>scope<\/dt><dd>metadata-display<\/dd>/, 'human output must preserve source scope');
+  assert.match(html, /<dt>source<\/dt><dd>/, 'human output must identify the source');
+  assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/);
+  assert.equal(await readFile(path.join(out, 'ai.md'), 'utf8'), canonicalSource, 'AI output must preserve the canonical source exactly');
+  await writeFile(source, canonicalSource.replace('version: "1.0.0"', 'status: accepted\nversion: "1.0.0"'));
+  const unsupported = run(['--source', source, '--out-dir', out]);
+  assert.notEqual(unsupported.status, 0);
+  assert.match(unsupported.stderr, /unsupported or duplicate frontmatter: status: accepted/, 'the removed field must be rejected');
 });
 
 test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
   const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
   assert.deepEqual(concepts, [
     'aesthetic-and-minimalist-design', 'ai-slop', 'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
-    'external-representations', 'grouping', 'lightness-and-luminance', 'visual-hierarchy',
+    'external-representations', 'grouping', 'layout-spacing', 'lightness-and-luminance', 'typography', 'visual-hierarchy',
   ]);
   for (const id of concepts) {
     const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;
@@ -239,8 +245,24 @@ test('content, headings, candidate names, section order, and extra steps/example
     .replace('### 別の表示', '### 変更した表示')
     .replaceAll('項目 B', '項目 C')
     .replace('<!-- mimic:note limitation -->', '7. 追加の手順は太字を必須にしない。\n\n<!-- mimic:note limitation -->')
-    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\n\n### 別の場面で使う例\n\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\n\n| 候補 | 採否 | 理由 |\n| --- | --- | --- |\n| 新しい候補 | 保留 | 条件未確認 |\n\n\`\`\`md\n[コードの参照](grouping.md)\n\`\`\`\n\n\`[コードの参照](grouping.md)\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md "補足")、**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。\n\n<!-- mimic:section sources -->`)
-    .replace('status: proposed', 'status: draft');
+    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->
+
+### 別の場面で使う例
+
+${'利用条件と不確かさを残した長い説明。'.repeat(80)}
+
+| 候補 | 採否 | 理由 |
+| --- | --- | --- |
+| 新しい候補 | 保留 | 条件未確認 |
+
+\`\`\`md
+[コードの参照](grouping.md)
+\`\`\`
+
+\`[コードの参照](grouping.md)\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md "補足")、
+**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。
+
+<!-- mimic:section sources -->`);
   const relatedMatch = changed.match(/<!-- mimic:section related -->[\s\S]*?(?=<!-- mimic:section example -->)/);
   assert.ok(relatedMatch, 'Fixture must contain the related section');
   const related = relatedMatch[0];
@@ -256,17 +278,12 @@ test('content, headings, candidate names, section order, and extra steps/example
   assert.match(after, /<h3 id="example-alternatives">変更した表示<\/h3>/);
   assert.match(after, /<h3 id="another-example">別の場面で使う例<\/h3>/);
   assert.match(after, /追加の手順は太字を必須にしない。/);
-  assert.match(after, /下書き/);
-  assert.match(after, /研究資料の原文を読む/);
+  assert.match(after, /案内の原文を読む/);
   const ai = await readFile(path.join(out, 'ai.md'));
   assertAiContent(ai, changed, path.join(out, 'ai.md'), source);
   assert.match(ai.toString(), /```md\n\[コードの参照\]\(grouping\.md\)\n```/);
   assert.ok(ai.toString().includes('`[コードの参照](grouping.md)`'));
   assert.match(ai.toString(), /\[実際の参照\]\(\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md "補足"\)/);
-  await writeFile(source, changed.replace('status: draft', 'status: awaiting_research'));
-  result = run(args);
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(await readFile(path.join(out, 'index.html'), 'utf8'), /状態の意味は未確認（原値: awaiting_research）/);
 });
 
 test('check rejects source changes with an unchanged version and edits to either output', async () => {
@@ -319,6 +336,7 @@ test('stylesheet and renderer/rule changes make the human output stale independe
   await writeFile(script, generator);
   await writeFile(linkModulePath, linkModule);
   await writeFile(path.join(directory, 'scripts/pages-catalog.ts'), await readFile(path.join(root, 'scripts/pages-catalog.ts')));
+  await writeFile(path.join(directory, 'scripts/pages-fonts.ts'), await readFile(path.join(root, 'scripts/pages-fonts.ts')));
   await writeFile(cssPath, stylesheet);
   const args = [script, '--source', source, '--out-dir', out, '--marked-module', fileURLToPath(markedModule)];
   const execute = (extra: string[]) => spawnSync(process.execPath, [...args, ...extra], { encoding: 'utf8' });

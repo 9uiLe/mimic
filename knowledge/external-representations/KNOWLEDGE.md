@@ -1,7 +1,6 @@
 ---
 id: external-representations
 title: 外的表象
-status: accepted
 version: "1.0.0"
 scope: distributed-cognitive-tasks
 related:

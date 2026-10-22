@@ -1,7 +1,6 @@
 ---
 id: ecological-interface-design
 title: Ecological Interface Design
-status: accepted
 version: "1.0.0"
 scope: complex-human-machine-systems
 related:

@@ -6,12 +6,13 @@ import { parseArgs } from 'node:util';
 import type { Token, Tokens } from 'marked';
 import { relativeLink } from './knowledge-paths.ts';
 import { readerHref } from './pages-catalog.ts';
+import { pageFontHead } from './pages-fonts.ts';
 
 const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
 const markedVersion = '17.0.5';
 const stylesheetPath = path.join(path.dirname(generatorPath), 'knowledge-view.css');
-const design = { id: 'mimic-knowledge-view', version: '3.1.0' };
+const design = { id: 'mimic-knowledge-view', version: '3.2.0' };
 const sectionLabels = {
   purpose: '目的と使う場面',
   inputs: '使う前に確かめること',
@@ -25,7 +26,6 @@ const sectionLabels = {
 type SectionRole = keyof typeof sectionLabels;
 const sectionRoles = Object.keys(sectionLabels) as SectionRole[];
 const noteLabels = { proposal: '提案', assumption: '仮定', limitation: '限界・未確認', 'evidence-scope': '根拠の範囲' };
-const statusLabels = { proposed: '確認中の文書', draft: '下書き' };
 type NoteType = keyof typeof noteLabels;
 type Marked = typeof import('marked')['marked'];
 type MimicToken = Token & { mimicId?: string; mimicNote?: NoteType; mimicSteps?: boolean };
@@ -33,7 +33,7 @@ type MimicHeading = Tokens.Heading & { mimicId?: string };
 type MimicParagraph = Tokens.Paragraph & { mimicNote?: NoteType };
 type MimicList = Tokens.List & { mimicSteps?: boolean };
 type Directive = { kind: 'section'; value: SectionRole } | { kind: 'heading'; value: string } | { kind: 'note'; value: NoteType };
-interface Metadata { id: string; title: string; status: string; version: string; scope: string; related: string[] }
+interface Metadata { id: string; title: string; version: string; scope: string; related: string[] }
 interface Group { heading: MimicHeading; tokens: MimicToken[] }
 interface Section extends Group { id: string; role?: SectionRole }
 interface Provenance { source: string; stylesheet: string; generator: string; renderer: string }
@@ -151,7 +151,7 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
       fields.related.push(line.slice(4));
       continue;
     }
-    const field = line.match(/^(id|title|status|version|scope|related):(?: (.*))?$/);
+    const field = line.match(/^(id|title|version|scope|related):(?: (.*))?$/);
     assert(field && !Object.hasOwn(fields, field[1]!), `unsupported or duplicate frontmatter: ${line}`);
     fields[field[1]!] = field[1] === 'related' ? [] : (field[2] || '').replace(/^"(.*)"$/, '$1');
   }
@@ -160,7 +160,7 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
     assert(typeof value === 'string' && value, `missing ${key}`);
     return value;
   };
-  const metadata: Metadata = { id: requiredField('id'), title: requiredField('title'), status: requiredField('status'), version: requiredField('version'), scope: requiredField('scope'), related: [] };
+  const metadata: Metadata = { id: requiredField('id'), title: requiredField('title'), version: requiredField('version'), scope: requiredField('scope'), related: [] };
   assert(Array.isArray(fields.related), 'missing related');
   metadata.related = fields.related;
   const validId = (id: string) => /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(id);
@@ -237,7 +237,7 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
 
 function makeHtml(
   source: Buffer, marked: Marked, provenance: Provenance, sourcePath: string, outDir: string, stylesheet: string,
-  views?: Readonly<Record<string, string>>,
+  views?: Readonly<Record<string, string>>, pagesAssets = false,
 ) {
   const { metadata, sections } = parseSource(source.toString('utf8'), marked, sourcePath);
   const renderer = new marked.Renderer();
@@ -276,18 +276,24 @@ function makeHtml(
     return `<section id="${escape(id)}" class="knowledge-section"${role ? ` data-section-role="${role}"` : ''}><div class="section-heading"><h2>${headingHtml}</h2><a class="permalink" href="#${escape(id)}" aria-label="${escape(title)}のリンク">#</a></div>${links}${body}${actions}</section>`;
   };
   const navigation = sections.map(({ id, role, heading }) => `<li><a href="#${escape(id)}">${escape(role ? sectionLabels[role] : heading.text)}</a></li>`).join('');
-  const statusLabel = metadata.status === 'accepted' ? ''
-    : hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
   const topic = path.basename(path.dirname(sourcePath)) === 'topics';
-  const sourceLabel = metadata.status === 'draft' ? '研究資料の原文を読む' : topic ? '案内の原文を読む' : '知識本文を読む';
-  const markdownLabel = metadata.status === 'draft' ? '研究資料のMarkdown' : topic ? '案内のMarkdown' : '本文のMarkdown';
+  const sourceLabel = topic ? '案内の原文を読む' : '知識本文を読む';
+  const markdownLabel = topic ? '案内のMarkdown' : '本文のMarkdown';
   const home = views ? relativeLink(outDir, path.join(root, 'index.html')) : 'https://9uile.github.io/mimic/';
   const guidelineHref = views ? relativeLink(outDir, path.join(root, 'guideline/index.html')) : 'https://9uile.github.io/mimic/guideline/';
   const sourceLinks = views ? `<a href="${escape(path.basename(sourcePath))}">Markdown原文</a>`
     : `<a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">${markdownLabel}</a>`;
+  const provenanceEntries = {
+    id: metadata.id, version: metadata.version, scope: metadata.scope,
+    related: metadata.related.join(', '), source: relativeLink(root, sourcePath),
+    'source SHA-256': provenance.source, 'design ID': design.id,
+    'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet,
+    'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`,
+    'renderer SHA-256': provenance.renderer,
+  };
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+${pageFontHead(views?.[relativeLink(root, sourcePath)] || 'index.html', pagesAssets)}
 <meta name="knowledge-id" content="${escape(metadata.id)}"><meta name="knowledge-version" content="${escape(metadata.version)}"><meta name="source-sha256" content="${provenance.source}">
 <meta name="design-id" content="${design.id}"><meta name="design-version" content="${design.version}"><meta name="stylesheet-sha256" content="${provenance.stylesheet}">
 <title>${escape(metadata.title)} — Mimic</title>
@@ -296,18 +302,19 @@ ${stylesheet}
 </style></head><body>
 <a class="skip" href="#${escape(sections[0]!.id)}">本文へ</a>
 <header><div class="topline"><a class="brand" href="${escape(home)}">Mimic</a><div class="toplinks"><a href="${escape(guidelineHref)}">利用ガイド</a></div></div>
-<div class="hero"><h1 id="title">${escape(metadata.title)}</h1><p class="meta">${statusLabel ? `<span class="badge">${escape(statusLabel)}</span>` : ''}v${escape(metadata.version)}</p></div></header>
+<div class="hero"><h1 id="title">${escape(metadata.title)}</h1><p class="meta">v${escape(metadata.version)}</p></div></header>
 <main class="layout"><nav aria-label="目次"><details><summary>目次</summary><ol>${navigation}</ol></details></nav><article>
 ${sections.map(section).join('\n')}
 </article></main>
 <footer><div><p>${sourceLinks} · <a href="#top">ページ上部へ</a></p>
 <details id="source-provenance"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
-${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}
+${Object.entries(provenanceEntries).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}
 </dl></details></div></footer></body></html>\n`;
 }
 
 export async function renderKnowledge(
   source: Buffer, sourceFile: string, stylesheet: Buffer, views: Readonly<Record<string, string>>,
+  pagesAssets = false,
 ): Promise<Buffer> {
   const markedUrl = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
   const { marked }: typeof import('marked') = await import(markedUrl);
@@ -316,10 +323,10 @@ export async function renderKnowledge(
   const provenance = {
     source: hash(source), stylesheet: hash(stylesheet),
     generator: hash(Buffer.concat([await readFile(generatorPath), await readFile(path.join(root, 'scripts/knowledge-paths.ts')),
-      await readFile(path.join(root, 'scripts/pages-catalog.ts'))])),
+      await readFile(path.join(root, 'scripts/pages-catalog.ts')), await readFile(path.join(root, 'scripts/pages-fonts.ts'))])),
     renderer: hash(await readFile(fileURLToPath(markedUrl))),
   };
-  return Buffer.from(makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet.toString('utf8'), views));
+  return Buffer.from(makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet.toString('utf8'), views, pagesAssets));
 }
 
 async function main() {
@@ -340,6 +347,7 @@ async function main() {
     await readFile(generatorPath),
     await readFile(path.join(path.dirname(generatorPath), 'knowledge-paths.ts')),
     await readFile(path.join(path.dirname(generatorPath), 'pages-catalog.ts')),
+    await readFile(path.join(path.dirname(generatorPath), 'pages-fonts.ts')),
   ]);
   const provenance = {
     source: hash(source),

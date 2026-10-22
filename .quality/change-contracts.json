@@ -49,26 +49,26 @@
       ]
     },
     {
-      "id": "knowledge-adoption-status",
+      "id": "knowledge-source-metadata",
       "paths": [
         "scripts/build-knowledge.ts",
         "tests/knowledge-output.test.ts",
         "tests/pages-output.test.ts"
       ],
-      "purpose": "acceptedの通常表示から採用バッジを除き、版と内部状態を保持する。確認中・下書き・未知の注意は示す。",
+      "purpose": "知識の状態項目を廃止し、正本の版・対象範囲・出典と生成物の原文対応を保持する。",
       "basis_status": "confirmed",
       "basis": [
-        "guideline/README.md#下書きと採用状態",
-        "guideline/development.md#生成の規則",
+        "guideline/knowledge-structure.md#メタデータ",
+        "guideline/knowledge-view.md#編集元と生成",
         ".quality/behavior-cases.json"
       ],
       "validation": [
-        "bun scripts/quality/verify-behavior.ts --case knowledge-accepted-status",
-        "bun scripts/quality/verify-behavior.ts --case pages-accepted-status",
+        "bun scripts/quality/verify-behavior.ts --case knowledge-source-metadata",
+        "bun scripts/quality/verify-behavior.ts --case pages-source-provenance",
         "bun run verify"
       ],
       "unresolved": [
-        "知識の原典への忠実さと採用判断の妥当性は、この表示・配信テストの保証範囲に含めない。"
+        "知識の原典への忠実さは、この表示・配信テストの保証範囲に含めない。"
       ]
     },
     {
@@ -82,7 +82,7 @@
         "tests/pages-catalog.test.ts",
         "tests/guideline-output.test.ts"
       ],
-      "purpose": "全10概念への入口と、正本の内容・内部状態を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
+      "purpose": "全12概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
       "basis_status": "confirmed",
       "basis": [
         "guideline/knowledge-view.md#Pagesの読書経路",
@@ -97,6 +97,36 @@
       ],
       "unresolved": [
         "使いやすさや知識の原典への忠実さ、画面全体のアクセシビリティ適合を機械検査だけでは保証しない。",
+        "公開は許可後のmain反映まで実施しない。"
+      ]
+    },
+    {
+      "id": "pages-pinned-font-assets",
+      "paths": [
+        "assets/fonts/gen-interface-jp/0.8.0/*",
+        "package.json",
+        "bun.lock",
+        "scripts/pages-fonts.ts",
+        "scripts/build-pages.ts",
+        "scripts/build-guideline.ts",
+        "scripts/build-knowledge.ts",
+        "scripts/pages-catalog.ts",
+        "tests/pages-output.test.ts"
+      ],
+      "purpose": "Pagesの読書HTMLだけで固定版のGen Interface JP本文400・見出し600を同一成果物から読み、配布ファイルをハッシュで照合する。",
+      "basis_status": "confirmed",
+      "basis": [
+        "guideline/knowledge-view.md#編集元と生成",
+        ".quality/behavior-cases.json"
+      ],
+      "validation": [
+        "bun run build:pages",
+        "bun run verify",
+        "bun scripts/quality/verify-behavior.ts --case pages-pinned-fonts",
+        "bun scripts/quality/verify-behavior.ts --case pages-font-corruption"
+      ],
+      "unresolved": [
+        "実ブラウザの字形・折返し・拡大表示と実転送量は別に確認する。",
         "公開は許可後のmain反映まで実施しない。"
       ]
     }

@@ -16,12 +16,16 @@
 | `design-tokens` | [Design Token](design-tokens/KNOWLEDGE.md) | 設計上の意図と値を、名前・参照・役割で共有する仕組み |
 | `ai-slop` | [AI Slop](ai-slop/KNOWLEDGE.md) | 批評語の用法、UIへの射程、不要要素と画一化の違い |
 | `aesthetic-and-minimalist-design` | [Aesthetic and Minimalist Design](aesthetic-and-minimalist-design/KNOWLEDGE.md) | 必要情報を保ち、不要な要素との競合を減らすUXヒューリスティック |
+| `typography` | [Typography](typography/KNOWLEDGE.md) | 日本語と英数字を含む文字の形・組み方、役割、拡大への対応 |
+| `layout-spacing` | [レイアウトの余白](layout-spacing/KNOWLEDGE.md) | コンポーネント・グループ・セクション間の間隔と、尺度・情報密度の関係 |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
 ## 参照する前に
 
-`KNOWLEDGE.md` 先頭の `id`・`title`・`status`・`version`・`scope`・`related` を確認します。採用状態は概念そのものの確実性を表しません。
+`KNOWLEDGE.md` 先頭の `id`・`title`・`version`・`scope`・`related` を確認し、本文と必要な出典・補足を読みます。
+
+具体的なUIの文字スタイルを示すときは、[利用ガイドのTypographyの提示方針](../guideline/README.md#uiのtypographyを具体的に示すとき)を参照します。
 
 使う概念の定義、背景、対象範囲、関連概念との違いを本文で読みます。出典の主張に触れるときは、本文から `references/sources.md` と原典の該当箇所へ進みます。`examples/` は説明用の例として読み、出典による効果の実証や案件への採用案と区別します。必要な知識がない場合は、その不足を明記します。
 

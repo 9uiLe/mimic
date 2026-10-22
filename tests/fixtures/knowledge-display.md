@@ -1,7 +1,6 @@
 ---
 id: display-fixture
 title: 表示検査用の架空資料
-status: proposed
 version: "0.1.0"
 scope: test-only
 related:

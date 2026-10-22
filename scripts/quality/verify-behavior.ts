@@ -17,6 +17,7 @@ interface BehaviorCase {
   implementation: string;
   test: string;
   supportingFiles: string[];
+  supportingFileSets?: string[];
   testName: string;
   mutation: { description: string; find: string; replace: string; assertionMessage: string };
 }
@@ -50,7 +51,24 @@ function confinedPath(directory: string, relativePath: string): string {
   return absolutePath;
 }
 
-function parseCases(registryValue: unknown): BehaviorCase[] {
+function parseSupportingFileSets(value: unknown): Record<string, string[]> {
+  assert.ok(recordValue(value) && value.schemaVersion === 1 && recordValue(value.sets),
+    'unsupported supporting-file-set schema');
+  const sets: Record<string, string[]> = {};
+  for (const [name, paths] of Object.entries(value.sets)) {
+    requiredText(name, 'supporting set name');
+    assert.ok(Array.isArray(paths) && paths.length, `supporting set is empty: ${name}`);
+    for (const relativePath of paths) {
+      requiredText(relativePath, 'supporting set path');
+      confinedPath(repositoryRoot, relativePath);
+    }
+    assert.equal(new Set(paths).size, paths.length, `supporting set repeats paths: ${name}`);
+    sets[name] = paths;
+  }
+  return sets;
+}
+
+function parseCases(registryValue: unknown, supportingFileSets: Record<string, string[]>): BehaviorCase[] {
   assert.ok(recordValue(registryValue) && registryValue.schemaVersion === 1, 'unsupported behavior-case schema');
   assert.ok(Array.isArray(registryValue.cases) && registryValue.cases.length, 'behavior cases must not be empty');
   const registeredIds = new Set<string>();
@@ -67,6 +85,13 @@ function parseCases(registryValue: unknown): BehaviorCase[] {
     assert.ok(candidateCase.assumptions.every((assumption: unknown) => typeof assumption === 'string'), 'invalid assumption');
     assert.ok(Array.isArray(candidateCase.supportingFiles), 'behavior case requires supportingFiles');
     for (const supportPath of candidateCase.supportingFiles) requiredText(supportPath, 'supporting file');
+    if (candidateCase.supportingFileSets !== undefined) {
+      assert.ok(Array.isArray(candidateCase.supportingFileSets), 'supportingFileSets must be an array');
+      for (const name of candidateCase.supportingFileSets) {
+        requiredText(name, 'supporting set reference');
+        assert.ok(supportingFileSets[name], `unknown supporting file set: ${name}`);
+      }
+    }
     assert.ok(recordValue(candidateCase.mutation), 'behavior case requires a mutation');
     for (const field of ['description', 'find', 'replace', 'assertionMessage']) {
       requiredText(candidateCase.mutation[field], `mutation ${field}`);
@@ -112,7 +137,7 @@ async function executeTest(
   return { phase, exitCode: execution.status!, testSha256: sha256(fixedTest), transcript };
 }
 
-async function verifyCase(behaviorCase: BehaviorCase) {
+async function verifyCase(behaviorCase: BehaviorCase, supportingFileSets: Record<string, string[]>) {
   const oracleText = await readFile(confinedPath(repositoryRoot, behaviorCase.oracle.source), 'utf8');
   assert.ok(oracleText.includes(`## ${behaviorCase.oracle.section}`), 'registered oracle section is missing');
   assert.ok(oracleText.includes(behaviorCase.oracle.quotation), 'registered oracle statement is missing');
@@ -125,7 +150,8 @@ async function verifyCase(behaviorCase: BehaviorCase) {
   const mutatedImplementation = implementationText.replace(behaviorCase.mutation.find, behaviorCase.mutation.replace);
   const isolatedDirectory = await mkdtemp(path.join(os.tmpdir(), 'mimic-behavior-proof-'));
   try {
-    const snapshotPaths = new Set([behaviorCase.implementation, behaviorCase.test, ...behaviorCase.supportingFiles]);
+    const sharedFiles = (behaviorCase.supportingFileSets || []).flatMap(name => supportingFileSets[name]!);
+    const snapshotPaths = new Set([behaviorCase.implementation, behaviorCase.test, ...behaviorCase.supportingFiles, ...sharedFiles]);
     for (const relativePath of snapshotPaths) {
       const snapshotPath = confinedPath(isolatedDirectory, relativePath);
       await mkdir(path.dirname(snapshotPath), { recursive: true });
@@ -161,17 +187,20 @@ async function main() {
   const { values } = parseArgs({ options: { case: { type: 'string' }, report: { type: 'string' } }, strict: true });
   const registryPath = path.join(repositoryRoot, '.quality/behavior-cases.json');
   const registryBytes = await readFile(registryPath);
-  const allCases = parseCases(JSON.parse(registryBytes.toString('utf8')));
+  const supportingSetsBytes = await readFile(path.join(repositoryRoot, '.quality/behavior-supporting-files.json'));
+  const supportingFileSets = parseSupportingFileSets(JSON.parse(supportingSetsBytes.toString('utf8')));
+  const allCases = parseCases(JSON.parse(registryBytes.toString('utf8')), supportingFileSets);
   const selectedCases = values.case ? allCases.filter(behaviorCase => behaviorCase.id === values.case) : allCases;
   assert.ok(selectedCases.length, `unknown or empty behavior case selection: ${values.case || 'all'}`);
   const caseResults = [];
-  for (const behaviorCase of selectedCases) caseResults.push(await verifyCase(behaviorCase));
+  for (const behaviorCase of selectedCases) caseResults.push(await verifyCase(behaviorCase, supportingFileSets));
   const reportPath = path.resolve(repositoryRoot, values.report || 'output/quality/behavior-proof.json');
   await mkdir(path.dirname(reportPath), { recursive: true });
   await writeFile(reportPath, `${JSON.stringify({
     schemaVersion: 1,
     executedAt: new Date().toISOString(),
     registrySha256: sha256(registryBytes),
+    supportingSetsSha256: sha256(supportingSetsBytes),
     cases: caseResults,
   }, null, 2)}\n`);
   for (const result of caseResults) {

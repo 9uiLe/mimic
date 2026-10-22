@@ -1,7 +1,6 @@
 ---
 id: decision-material-selection
 title: 判断材料の選定
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:

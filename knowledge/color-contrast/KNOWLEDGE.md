@@ -1,7 +1,6 @@
 ---
 id: color-contrast
 title: 色コントラスト
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:
