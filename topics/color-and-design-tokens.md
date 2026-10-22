@@ -18,4 +18,4 @@ related:
 - 値を共有する仕組みを読む：[Design Tokenの本文](../knowledge/design-tokens/KNOWLEDGE.md)。色に限らない独立した概念として読めます。
 - Mimicで具体的なUI色を提示する：[利用ガイドの色の提示方針](../guideline/README.md#uiの色を具体的に示すとき)と[色への適用例](../knowledge/design-tokens/examples/color-presentation.md)を参照します。
 
-この移動案内は正式採用済み（`accepted`）です。参照する本文の版と採用状態は、それぞれの先頭で確認してください。
+参照する本文の版は、それぞれの先頭で確認してください。

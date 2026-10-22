@@ -55,7 +55,7 @@
         "tests/knowledge-output.test.ts",
         "tests/pages-output.test.ts"
       ],
-      "purpose": "正式採用後の accepted を、採用前の表示や意味未確認の表示と混同せず出力する。",
+      "purpose": "acceptedの通常表示から採用バッジを除き、版と内部状態を保持する。確認中・下書き・未知の注意は示す。",
       "basis_status": "confirmed",
       "basis": [
         "guideline/README.md#下書きと採用状態",
@@ -82,7 +82,7 @@
         "tests/pages-catalog.test.ts",
         "tests/guideline-output.test.ts"
       ],
-      "purpose": "全10概念への入口と、正本の内容・採用状態を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
+      "purpose": "全10概念への入口と、正本の内容・内部状態を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
       "basis_status": "confirmed",
       "basis": [
         "guideline/knowledge-view.md#Pagesの読書経路",

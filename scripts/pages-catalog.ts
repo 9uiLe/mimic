@@ -49,10 +49,10 @@ export function renderCatalog(index: string, entries: ReadonlyMap<string, string
     const status = source.match(/^status: (.+)$/m)?.[1];
     const version = source.match(/^version: "?([^"\n]+)"?$/m)?.[1];
     if (!title || !version || !status) throw new Error(`Catalog metadata missing: ${id}`);
-    const label = status === 'accepted' ? '正式採用済み' : status === 'proposed' ? '採用前の文書'
-      : status === 'draft' ? '研究資料（未採用）' : `状態の意味は未確認（原値: ${status}）`;
+    const label = status === 'accepted' ? '' : status === 'proposed' ? '確認中の文書'
+      : status === 'draft' ? '下書き' : `状態の意味は未確認（原値: ${status}）`;
     return `<li><h3><a href="knowledge/${id}/">${escapeHtml(title)}</a></h3>`
-      + `<p>${escapeHtml(columns[2]!)}</p><p class="meta">${escapeHtml(label)} · v${escapeHtml(version)}</p></li>`;
+      + `<p>${escapeHtml(columns[2]!)}</p><p class="meta">${label ? `${escapeHtml(label)} · ` : ''}v${escapeHtml(version)}</p></li>`;
   }).join('\n');
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
