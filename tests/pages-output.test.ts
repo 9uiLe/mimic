@@ -113,7 +113,8 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 10, 'catalog must expose all ten reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
-  assert.match(entry, /採用前の文書 · v0.1.0/);
+  assert.equal([...entry.matchAll(/正式採用済み · v1\.0\.0/g)].length, 10,
+    'catalog must show ten formally adopted v1.0.0 concepts');
   assert.doesNotMatch(entry, /research\//);
   assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|(?:^|\/)logs?(?:\/|$)|\.log$/i.test(file)));
 });

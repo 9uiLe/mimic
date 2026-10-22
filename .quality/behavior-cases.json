@@ -349,6 +349,79 @@
       }
     },
     {
+      "id": "pages-adopted-catalog",
+      "requirement": "正式採用された10概念をPagesの入口でも正式採用済み・v1.0.0として表示する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/README.md",
+        "section": "下書きと採用状態",
+        "quotation": "人が正式採用を承認した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "relatedSource": "knowledge/README.md#参照する前に",
+        "reasoning": "正式採用の表示規約と、採用対象10本文の正本メタデータに基づき件数と版を固定する。生成結果から期待値を作らない。"
+      },
+      "input": {
+        "index": "knowledge/README.md",
+        "adoptedConcepts": 10
+      },
+      "expected": {
+        "catalogLabel": "正式採用済み · v1.0.0",
+        "count": 10
+      },
+      "assumptions": [
+        "10概念の表示状態と版を検査する。本文の意味や採用判断の妥当性を自動判定しない。"
+      ],
+      "implementation": "knowledge/ai-slop/KNOWLEDGE.md",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/build-knowledge.ts",
+        "scripts/knowledge-paths.ts",
+        "scripts/build-pages.ts",
+        "scripts/pages-catalog.ts"
+      ],
+      "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",
+      "mutation": {
+        "description": "採用対象のAI Slopだけをproposedへ戻し、Pages一覧の採用表示が誤る状態を作る。",
+        "find": "status: accepted\nversion: \"1.0.0\"",
+        "replace": "status: proposed\nversion: \"1.0.0\"",
+        "assertionMessage": "catalog must show ten formally adopted v1.0.0 concepts"
+      }
+    },
+    {
       "id": "pages-reader-source-paths",
       "requirement": "各本文・例・出典の内容と採用状態を保ち、関連資料をHTMLで読める。",
       "oracle": {
