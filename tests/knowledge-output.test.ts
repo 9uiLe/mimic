@@ -210,8 +210,10 @@ related:
 test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
   const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
   assert.deepEqual(concepts, [
-    'aesthetic-and-minimalist-design', 'ai-slop', 'alignment-and-grids', 'color-context', 'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
-    'external-representations', 'grouping', 'layout-spacing', 'lightness-and-luminance', 'typography', 'ui-layering', 'visual-hierarchy',
+    'aesthetic-and-minimalist-design', 'ai-slop', 'alignment-and-grids', 'color-context', 'color-contrast',
+    'conceptual-models', 'design-systems', 'design-tokens', 'ecological-interface-design', 'external-representations',
+    'grouping', 'human-centered-design', 'information-architecture', 'interaction-design', 'layout-spacing',
+    'lightness-and-luminance', 'typography', 'ui-layering', 'usability-testing', 'user-journeys', 'visual-hierarchy',
   ]);
   for (const id of concepts) {
     const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;

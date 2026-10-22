@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "coverage": {
-    "nodes": "knowledge/以下に存在する全15概念。ノードは概念本文単位。",
-    "edges": "既存relatedと本文の概念リンクが明示する関係を根拠節から編集して移行。概念間の全関係を網羅するものではない。",
+    "nodes": "knowledge/以下に存在する全21概念。ノードは概念本文単位。",
+    "edges": "既存relatedと本文の概念リンクが明示する関係を根拠節から編集して移行。概念間の全関係を網羅するものではない。UI全体設計の6概念は本文の関係説明とリンクを保持し、型付きの辺は未登録。",
     "absence": "辺が未記載であることは、無関係・独立・前提不要・関係の不存在を意味しない。",
     "authority": "概念説明はknowledge本文、型付き関係の定義はrelationsの正本。本文引用は根拠の追跡用であり、原典の正式分類ではない。",
     "reading": "読む量・順序・方法は消費AIや読者が選ぶ。辺は読む義務・因果・実行契約を表さない。",
@@ -53,6 +53,13 @@
       "version": "1.0.1"
     },
     {
+      "id": "design-systems",
+      "path": "knowledge/design-systems/KNOWLEDGE.md",
+      "sha256": "ef35691469ace73ed56e12e0aec3f0967ad47ab24e6cd160fd3b1c57226c78bd",
+      "title": "デザインシステム",
+      "version": "1.0.0"
+    },
+    {
       "id": "design-tokens",
       "path": "knowledge/design-tokens/KNOWLEDGE.md",
       "sha256": "7f418302a2804917f9268e66e032311ba5071b4e72c4f704beb4e664aaa936c3",
@@ -81,6 +88,27 @@
       "version": "1.0.1"
     },
     {
+      "id": "human-centered-design",
+      "path": "knowledge/human-centered-design/KNOWLEDGE.md",
+      "sha256": "5b1d3c310507bc6b119f856fac94fd45b472810673a2743e96aacf5cc6be08d1",
+      "title": "人間中心設計",
+      "version": "1.0.0"
+    },
+    {
+      "id": "information-architecture",
+      "path": "knowledge/information-architecture/KNOWLEDGE.md",
+      "sha256": "f84f88dc80ce06ba430dbae0fc8c6212da2d335341fa7fbcf5aca089b43276d9",
+      "title": "情報アーキテクチャ",
+      "version": "1.0.0"
+    },
+    {
+      "id": "interaction-design",
+      "path": "knowledge/interaction-design/KNOWLEDGE.md",
+      "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9",
+      "title": "インタラクションデザイン",
+      "version": "1.0.0"
+    },
+    {
       "id": "layout-spacing",
       "path": "knowledge/layout-spacing/KNOWLEDGE.md",
       "sha256": "37372a03fdefcfd0505defa59e4a645c0ad1d61c3c726465fbe20db9eb09a5c8",
@@ -102,10 +130,17 @@
       "version": "1.0.1"
     },
     {
-      "id": "ui-layering",
-      "path": "knowledge/ui-layering/KNOWLEDGE.md",
-      "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95",
-      "title": "UIのレイヤー構造",
+      "id": "usability-testing",
+      "path": "knowledge/usability-testing/KNOWLEDGE.md",
+      "sha256": "a5baa55a51baca43cd5b95411b83a6b57f29a44ded5cc70d148bf005a41ae515",
+      "title": "ユーザビリティテスト",
+      "version": "1.0.0"
+    },
+    {
+      "id": "user-journeys",
+      "path": "knowledge/user-journeys/KNOWLEDGE.md",
+      "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32",
+      "title": "ユーザージャーニー",
       "version": "1.0.0"
     },
     {
@@ -114,6 +149,13 @@
       "sha256": "7b76c28342abcfcb3fc5d32395ad7cfdbe1ca7c0026321da215323613d166019",
       "title": "視覚的な優先順位",
       "version": "1.0.1"
+    },
+    {
+      "id": "ui-layering",
+      "path": "knowledge/ui-layering/KNOWLEDGE.md",
+      "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95",
+      "title": "UIのレイヤー構造",
+      "version": "1.0.0"
     }
   ],
   "edges": [

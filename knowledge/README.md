@@ -25,6 +25,12 @@
 | `alignment-and-grids` | [整列とグリッド](alignment-and-grids/KNOWLEDGE.md) | 列・行・共通の基準線による配置と、余白の量との違い |
 | `color-context` | [色の文脈と相互作用](color-context/KNOWLEDGE.md) | 周囲との関係で色を見る考え方と、色の値や計算比との違い |
 | `ui-layering` | [UIのレイヤー構造](ui-layering/KNOWLEDGE.md) | 重なり順・不透明度・影による見え方と、視覚的な強調との違い |
+| `human-centered-design` | [人間中心設計](human-centered-design/KNOWLEDGE.md) | 利用者の目的と文脈を理解し、評価と反復を通じて設計する立場 |
+| `user-journeys` | [ユーザージャーニー](user-journeys/KNOWLEDGE.md) | 利用前後の出来事、接点、関係者を通して体験を捉えること |
+| `information-architecture` | [情報アーキテクチャ](information-architecture/KNOWLEDGE.md) | 情報や機能の定義・関係・分類・命名と、ナビゲーションとの違い |
+| `interaction-design` | [インタラクションデザイン](interaction-design/KNOWLEDGE.md) | 利用者の行為とシステムの応答、画面の役割、状態と遷移の関係 |
+| `design-systems` | [デザインシステム](design-systems/KNOWLEDGE.md) | 原則・パターン・部品・指針を共有し、適用と更新を扱う仕組み |
+| `usability-testing` | [ユーザビリティテスト](usability-testing/KNOWLEDGE.md) | 利用者が課題を試す際の観察と、設計上の仮定を確かめること |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
@@ -40,6 +46,6 @@
 
 ## 複数の概念から読む
 
-横断的な案内は[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
+横断的な案内は[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
 
 具体的なUI色を提示するときは、色とは独立した[Design Tokenの本文](design-tokens/KNOWLEDGE.md)と[色への適用例](design-tokens/examples/color-presentation.md)を読み、[利用ガイドの色の提示方針](../guideline/README.md#uiの色を具体的に示すとき)に従います。

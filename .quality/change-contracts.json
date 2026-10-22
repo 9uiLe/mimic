@@ -78,11 +78,12 @@
         "scripts/build-guideline.ts",
         "scripts/pages-catalog.ts",
         "scripts/knowledge-view.css",
+        "knowledge/interaction-design/examples/recording-app-layout.svg",
         "tests/pages-output.test.ts",
         "tests/pages-catalog.test.ts",
         "tests/guideline-output.test.ts"
       ],
-      "purpose": "全15概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
+      "purpose": "全21概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路、原文のバイト列を保つ静的画面図への参照を用意する。",
       "basis_status": "confirmed",
       "basis": [
         "guideline/knowledge-view.md#Pagesの読書経路",
@@ -138,7 +139,8 @@
         "tests/knowledge-images.test.ts",
         "knowledge/alignment-and-grids/examples/*.svg",
         "knowledge/color-context/examples/*.svg",
-        "knowledge/ui-layering/examples/*.svg"
+        "knowledge/ui-layering/examples/*.svg",
+        "knowledge/interaction-design/examples/*.svg"
       ],
       "purpose": "正本MarkdownとPagesから、説明文と代替テキストを伴う明示した自己完結SVGへ到達できるようにする。",
       "basis_status": "confirmed",
