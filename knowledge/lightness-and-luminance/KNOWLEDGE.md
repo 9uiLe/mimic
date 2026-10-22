@@ -1,8 +1,8 @@
 ---
 id: lightness-and-luminance
 title: 明度と相対輝度
-status: proposed
-version: "0.1.1"
+status: accepted
+version: "1.0.0"
 scope: general-digital-ui
 related:
   - color-contrast

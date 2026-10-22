@@ -1,8 +1,8 @@
 ---
 id: design-tokens
 title: Design Token
-status: proposed
-version: "0.1.1"
+status: accepted
+version: "1.0.0"
 scope: general-digital-ui
 related:
   - lightness-and-luminance

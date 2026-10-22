@@ -9,8 +9,8 @@ title: AI Slopに関する知識の案内
 
 | 確かめたいこと | 読む本文 | 採用状態・版 |
 | --- | --- | --- |
-| 批評語の意味、UIへの射程、企業の指針と研究の範囲 | [AI Slop](../knowledge/ai-slop/KNOWLEDGE.md) | proposed / 0.1.0 |
-| 必要な情報を守り、競合する不要な要素を減らす考え方 | [Aesthetic and Minimalist Design](../knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md) | proposed / 0.1.0 |
+| 批評語の意味、UIへの射程、企業の指針と研究の範囲 | [AI Slop](../knowledge/ai-slop/KNOWLEDGE.md) | accepted / 1.0.0 |
+| 必要な情報を守り、競合する不要な要素を減らす考え方 | [Aesthetic and Minimalist Design](../knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md) | accepted / 1.0.0 |
 | 意味上の分類と、配置によるまとまり・名称の違い | [グルーピング](../knowledge/grouping/KNOWLEDGE.md) | accepted / 1.0.0 |
 | 強調、内容の階層、業務上の優先度の違い | [視覚的な優先順位](../knowledge/visual-hierarchy/KNOWLEDGE.md) | accepted / 1.0.0 |
 | 構成要素や動作を理解するための文脈 | [概念モデル](../knowledge/conceptual-models/KNOWLEDGE.md) | accepted / 1.0.0 |

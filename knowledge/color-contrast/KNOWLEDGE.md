@@ -1,8 +1,8 @@
 ---
 id: color-contrast
 title: 色コントラスト
-status: proposed
-version: "0.1.1"
+status: accepted
+version: "1.0.0"
 scope: general-digital-ui
 related:
   - lightness-and-luminance

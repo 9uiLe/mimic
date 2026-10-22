@@ -34,14 +34,14 @@
     },
     {
       "id": "knowledge-accepted-status",
-      "requirement": "人が正式採用を承認した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
+      "requirement": "採用した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/README.md",
         "section": "下書きと採用状態",
-        "quotation": "人が正式採用を承認した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "quotation": "採用した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
         "relatedSource": "guideline/development.md#生成の規則",
-        "reasoning": "採用状態の値と表示は実装出力ではなく、人が承認した運用方針の定義から固定する。"
+        "reasoning": "採用状態の値と表示は実装出力ではなく、運用方針の定義から固定する。"
       },
       "input": {
         "status": "accepted",
@@ -53,9 +53,9 @@
         "aiFrontmatterStatus": "accepted"
       },
       "assumptions": [
-        "acceptedという値と正式採用済みという表示は運用方針の定義であり、各知識の採用は人が判断する。",
+        "acceptedという値と正式採用済みという表示は運用方針の定義であり、各知識の内容は依頼の範囲で根拠を確認する。",
         "この表示テストは架空文書を入力とし、実際の知識本文の状態を変更しない。",
-        "表示とメタデータ保持を検査する。知識の意味や人による採用承認の有無を機械で判定しない。"
+        "表示とメタデータ保持を検査する。知識の意味や採用判断の妥当性を機械で判定しない。"
       ],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/knowledge-output.test.ts",
@@ -113,7 +113,7 @@
         "section": "確認すること",
         "quotation": "生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度を確認します。",
         "relatedSource": "guideline/README.md#下書きと採用状態",
-        "reasoning": "正本Markdownのバイト一致と、人が承認したacceptedの定義を根拠に、配信時の採用状態保持を期待する。実装の出力へ期待値を合わせていない。"
+        "reasoning": "正本Markdownのバイト一致と、運用方針が定めるacceptedの表示を根拠に、配信時の採用状態保持を期待する。実装の出力へ期待値を合わせていない。"
       },
       "input": {
         "copiedFile": "topics/decision-material-selection.md",
@@ -125,7 +125,7 @@
         "htmlRawStatus": "accepted"
       },
       "assumptions": [
-        "実際の正式採用判断は人の承認に基づく。Pagesの配信処理やそのテストが採用の可否を決めるものではない。",
+        "採用状態は依頼の範囲と知識の内容に基づいて判断する。Pagesの配信処理やそのテストが採用の可否を決めるものではない。",
         "知識本文の意味や原典への忠実さは、このコピーと状態表示の検査では保証しない。"
       ],
       "implementation": "scripts/build-pages.ts",
@@ -349,6 +349,79 @@
       }
     },
     {
+      "id": "pages-adopted-catalog",
+      "requirement": "正式採用された10概念をPagesの入口でも正式採用済み・v1.0.0として表示する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/README.md",
+        "section": "下書きと採用状態",
+        "quotation": "採用した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "relatedSource": "knowledge/README.md#参照する前に",
+        "reasoning": "正式採用の表示規約と、採用対象10本文の正本メタデータに基づき件数と版を固定する。生成結果から期待値を作らない。"
+      },
+      "input": {
+        "index": "knowledge/README.md",
+        "adoptedConcepts": 10
+      },
+      "expected": {
+        "catalogLabel": "正式採用済み · v1.0.0",
+        "count": 10
+      },
+      "assumptions": [
+        "10概念の表示状態と版を検査する。本文の意味や採用判断の妥当性を自動判定しない。"
+      ],
+      "implementation": "knowledge/ai-slop/KNOWLEDGE.md",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/build-knowledge.ts",
+        "scripts/knowledge-paths.ts",
+        "scripts/build-pages.ts",
+        "scripts/pages-catalog.ts"
+      ],
+      "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",
+      "mutation": {
+        "description": "採用対象のAI Slopだけをproposedへ戻し、Pages一覧の採用表示が誤る状態を作る。",
+        "find": "status: accepted\nversion: \"1.0.0\"",
+        "replace": "status: proposed\nversion: \"1.0.0\"",
+        "assertionMessage": "catalog must show ten formally adopted v1.0.0 concepts"
+      }
+    },
+    {
       "id": "pages-reader-source-paths",
       "requirement": "各本文・例・出典の内容と採用状態を保ち、関連資料をHTMLで読める。",
       "oracle": {
@@ -368,7 +441,7 @@
         "relatedHref": "../visual-hierarchy/index.html"
       },
       "assumptions": [
-        "全文ブロック保持と表示・リンクを機械で検査する。知識の妥当性、採用承認、利用者への効果の検証ではない。"
+        "全文ブロック保持と表示・リンクを機械で検査する。知識の妥当性、採用判断、利用者への効果の検証ではない。"
       ],
       "implementation": "scripts/build-knowledge.ts",
       "test": "tests/pages-output.test.ts",
