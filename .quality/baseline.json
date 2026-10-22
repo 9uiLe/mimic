@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "anchor_commit": "85f3962e0c17680782574403785121a4b2f194f6",
+  "initial": {
+    "length_caps": {},
+    "long_lines": [
+      {
+        "path": ".agents/skills/moletta/scripts/policy.py",
+        "line": 254,
+        "codepoints": 214,
+        "text": "            pending.append({\"observation_id\": item.started.id, \"code\": \"NEGATIVE_EVIDENCE\", \"message\": \"Resolve the failed or inconclusive capability with an explicitly linked later separate passing observation.\"})"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 35,
+        "codepoints": 208,
+        "text": "  assert(typeof dependency === 'object' && dependency !== null && 'name' in dependency && dependency.name === 'marked' && 'version' in dependency && dependency.version === '17.0.5', 'expected marked 17.0.5');"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 79,
+        "codepoints": 219,
+        "text": "  const body = render(introduction) + groups.map(group => `<section class=\"knowledge-section\" aria-labelledby=\"${escape(headings.get(group.heading)!)}\">${render([group.heading, ...group.tokens])}</section>`).join('\\n');"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 90,
+        "codepoints": 365,
+        "text": ".guideline article{overflow-wrap:anywhere}.guideline pre{overflow-x:auto;padding:18px;background:var(--wash);border:1px solid var(--line);border-radius:4px;font-size:.85rem;line-height:1.7}.guideline code{font-size:.9em}.guideline pre code{font-size:inherit}.guideline blockquote{margin:24px 0;padding-left:22px;border-left:3px solid var(--line);color:var(--muted)}"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 97,
+        "codepoints": 248,
+        "text": "<details id=\"source-provenance\"><summary>生成情報・原文との対応</summary><p>このページはMarkdown原文から生成しています。内容の変更は原文に反映してください。</p><dl class=\"metadata\"><dt>source</dt><dd>${sourceFile}</dd><dt>source SHA-256</dt><dd>${hash(source)}</dd></dl></details></div></footer>"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 89,
+        "codepoints": 206,
+        "text": "          failUnless(token.raw.slice(destinationOffset, destinationEnd) === token.href && /[\\s)]/.test(token.raw[destinationEnd] || ''), `escaped or angle-bracket destination is unsupported: ${token.raw}`);"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 266,
+        "codepoints": 215,
+        "text": "    const links = subheadings.length ? `<ul class=\"section-links\">${subheadings.map(token => `<li><a href=\"#${token.mimicId}\">${marked.Parser.parseInline(token.tokens, { renderer })}</a></li>`).join('')}</ul>` : '';"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 270,
+        "codepoints": 288,
+        "text": "    return `<section id=\"${escape(id)}\" class=\"knowledge-section\"${role ? ` data-section-role=\"${role}\"` : ''}><div class=\"section-heading\"><h2>${headingHtml}</h2><a class=\"permalink\" href=\"#${escape(id)}\" aria-label=\"${escape(title)}のリンク\">#</a></div>${links}${body}${actions}</section>`;"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 287,
+        "codepoints": 261,
+        "text": "<header><div class=\"topline\"><div class=\"brand\">Mimic</div><div class=\"toplinks\"><a href=\"https://9uile.github.io/mimic/guideline/\">利用ガイド</a><a href=\"${escape(relativeLink(outDir, sourcePath))}\">${sourceLabel}</a><a href=\"ai.md\">${markdownLabel}</a></div></div>"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 288,
+        "codepoints": 263,
+        "text": "<div class=\"hero\"><div class=\"eyebrow\"><span class=\"badge\">${escape(statusLabel)}</span>${topic ? 'TOPIC' : 'KNOWLEDGE'}</div><h1 id=\"title\">${escape(metadata.title)}</h1><div class=\"meta\">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 293,
+        "codepoints": 204,
+        "text": "<details id=\"source-provenance\"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class=\"metadata\">"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 294,
+        "codepoints": 546,
+        "text": "${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}"
+      },
+      {
+        "path": "scripts/knowledge-view.css",
+        "line": 42,
+        "codepoints": 223,
+        "text": ".steps>li{counter-increment:step;position:relative;background:var(--wash);border:1px solid #d4ddd1;border-radius:6px;padding:22px 20px 20px 58px;margin:0;font-size:.87rem;line-height:1.85;min-width:0;overflow-wrap:anywhere}"
+      },
+      {
+        "path": "tests/knowledge-output.test.ts",
+        "line": 125,
+        "codepoints": 228,
+        "text": "  const draft = original.toString().replace('status: proposed', 'status: draft').replaceAll('](../knowledge/', '](../../knowledge/').replace('](decision-material-selection.md)', '](../../topics/decision-material-selection.md)');"
+      },
+      {
+        "path": "tests/knowledge-output.test.ts",
+        "line": 209,
+        "codepoints": 414,
+        "text": "    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\\n\\n### 別の場面で使う例\\n\\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\\n\\n| 候補 | 採否 | 理由 |\\n| --- | --- | --- |\\n| 新しい候補 | 保留 | 条件未確認 |\\n\\n\\`\\`\\`md\\n[コードの参照](grouping.md)\\n\\`\\`\\`\\n\\n\\`[コードの参照](grouping.md)\\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md \"補足\")、**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。\\n\\n<!-- mimic:section sources -->`)"
+      }
+    ],
+    "naming": [
+      {
+        "path": ".agents/skills/moletta/scripts/devices.py",
+        "line": 333,
+        "name": "data",
+        "kind": "variable",
+        "declaration_text": "Assign(targets=[Tuple(elts=[Name(id='avd_home', ctx=Store()), Name(id='data', ctx=Store())], ctx=Store())], value=Tuple(elts=[BinOp(left=Name(id='resource', ctx=Load()), op=Div(), right=Constant(value='avd')), BinOp(left=Name(id='resource', ctx=Load()), op=Div(), right=Constant(value='data.avd'))], ctx=Load()))",
+        "scope": "allocate"
+      }
+    ]
+  },
+  "allowances": {
+    "length_caps": {},
+    "long_lines": [
+      {
+        "path": ".agents/skills/moletta/scripts/policy.py",
+        "line": 254,
+        "codepoints": 214,
+        "text": "            pending.append({\"observation_id\": item.started.id, \"code\": \"NEGATIVE_EVIDENCE\", \"message\": \"Resolve the failed or inconclusive capability with an explicitly linked later separate passing observation.\"})"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 35,
+        "codepoints": 208,
+        "text": "  assert(typeof dependency === 'object' && dependency !== null && 'name' in dependency && dependency.name === 'marked' && 'version' in dependency && dependency.version === '17.0.5', 'expected marked 17.0.5');"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 79,
+        "codepoints": 219,
+        "text": "  const body = render(introduction) + groups.map(group => `<section class=\"knowledge-section\" aria-labelledby=\"${escape(headings.get(group.heading)!)}\">${render([group.heading, ...group.tokens])}</section>`).join('\\n');"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 90,
+        "codepoints": 365,
+        "text": ".guideline article{overflow-wrap:anywhere}.guideline pre{overflow-x:auto;padding:18px;background:var(--wash);border:1px solid var(--line);border-radius:4px;font-size:.85rem;line-height:1.7}.guideline code{font-size:.9em}.guideline pre code{font-size:inherit}.guideline blockquote{margin:24px 0;padding-left:22px;border-left:3px solid var(--line);color:var(--muted)}"
+      },
+      {
+        "path": "scripts/build-guideline.ts",
+        "line": 97,
+        "codepoints": 248,
+        "text": "<details id=\"source-provenance\"><summary>生成情報・原文との対応</summary><p>このページはMarkdown原文から生成しています。内容の変更は原文に反映してください。</p><dl class=\"metadata\"><dt>source</dt><dd>${sourceFile}</dd><dt>source SHA-256</dt><dd>${hash(source)}</dd></dl></details></div></footer>"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 89,
+        "codepoints": 206,
+        "text": "          failUnless(token.raw.slice(destinationOffset, destinationEnd) === token.href && /[\\s)]/.test(token.raw[destinationEnd] || ''), `escaped or angle-bracket destination is unsupported: ${token.raw}`);"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 266,
+        "codepoints": 215,
+        "text": "    const links = subheadings.length ? `<ul class=\"section-links\">${subheadings.map(token => `<li><a href=\"#${token.mimicId}\">${marked.Parser.parseInline(token.tokens, { renderer })}</a></li>`).join('')}</ul>` : '';"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 270,
+        "codepoints": 288,
+        "text": "    return `<section id=\"${escape(id)}\" class=\"knowledge-section\"${role ? ` data-section-role=\"${role}\"` : ''}><div class=\"section-heading\"><h2>${headingHtml}</h2><a class=\"permalink\" href=\"#${escape(id)}\" aria-label=\"${escape(title)}のリンク\">#</a></div>${links}${body}${actions}</section>`;"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 287,
+        "codepoints": 261,
+        "text": "<header><div class=\"topline\"><div class=\"brand\">Mimic</div><div class=\"toplinks\"><a href=\"https://9uile.github.io/mimic/guideline/\">利用ガイド</a><a href=\"${escape(relativeLink(outDir, sourcePath))}\">${sourceLabel}</a><a href=\"ai.md\">${markdownLabel}</a></div></div>"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 288,
+        "codepoints": 263,
+        "text": "<div class=\"hero\"><div class=\"eyebrow\"><span class=\"badge\">${escape(statusLabel)}</span>${topic ? 'TOPIC' : 'KNOWLEDGE'}</div><h1 id=\"title\">${escape(metadata.title)}</h1><div class=\"meta\">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 293,
+        "codepoints": 204,
+        "text": "<details id=\"source-provenance\"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class=\"metadata\">"
+      },
+      {
+        "path": "scripts/build-knowledge.ts",
+        "line": 294,
+        "codepoints": 546,
+        "text": "${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}"
+      },
+      {
+        "path": "scripts/knowledge-view.css",
+        "line": 42,
+        "codepoints": 223,
+        "text": ".steps>li{counter-increment:step;position:relative;background:var(--wash);border:1px solid #d4ddd1;border-radius:6px;padding:22px 20px 20px 58px;margin:0;font-size:.87rem;line-height:1.85;min-width:0;overflow-wrap:anywhere}"
+      },
+      {
+        "path": "tests/knowledge-output.test.ts",
+        "line": 125,
+        "codepoints": 228,
+        "text": "  const draft = original.toString().replace('status: proposed', 'status: draft').replaceAll('](../knowledge/', '](../../knowledge/').replace('](decision-material-selection.md)', '](../../topics/decision-material-selection.md)');"
+      },
+      {
+        "path": "tests/knowledge-output.test.ts",
+        "line": 209,
+        "codepoints": 414,
+        "text": "    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\\n\\n### 別の場面で使う例\\n\\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\\n\\n| 候補 | 採否 | 理由 |\\n| --- | --- | --- |\\n| 新しい候補 | 保留 | 条件未確認 |\\n\\n\\`\\`\\`md\\n[コードの参照](grouping.md)\\n\\`\\`\\`\\n\\n\\`[コードの参照](grouping.md)\\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md \"補足\")、**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。\\n\\n<!-- mimic:section sources -->`)"
+      }
+    ],
+    "naming": [
+      {
+        "path": ".agents/skills/moletta/scripts/devices.py",
+        "line": 333,
+        "name": "data",
+        "kind": "variable",
+        "declaration_text": "Assign(targets=[Tuple(elts=[Name(id='avd_home', ctx=Store()), Name(id='data', ctx=Store())], ctx=Store())], value=Tuple(elts=[BinOp(left=Name(id='resource', ctx=Load()), op=Div(), right=Constant(value='avd')), BinOp(left=Name(id='resource', ctx=Load()), op=Div(), right=Constant(value='data.avd'))], ctx=Load()))",
+        "scope": "allocate"
+      }
+    ],
+    "origins": {
+      ".agents/skills/moletta/scripts/devices.py": ".agents/skills/moletta/scripts/devices.py"
+    }
+  }
+}

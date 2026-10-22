@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "anchor_commit": "85f3962e0c17680782574403785121a4b2f194f6",
+  "limits": {
+    "file_lines": 800,
+    "line_codepoints": 200
+  },
+  "code_extensions": [
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".css", ".scss",
+    ".sass", ".less", ".nix", ".sh", ".bash", ".zsh", ".json", ".yaml",
+    ".yml", ".toml", ".rs", ".go", ".swift", ".c", ".h", ".cpp", ".hpp", ".html"
+  ],
+  "included_paths": [".githooks/*", "Makefile", "Dockerfile"],
+  "non_code_paths": [
+    {
+      "pattern": ".gitignore",
+      "reason": "Git ignore patterns are repository metadata, not executable source."
+    },
+    {
+      "pattern": "LICENSE",
+      "reason": "The repository license is legal prose, not executable source."
+    }
+  ],
+  "excluded_paths": [
+    {
+      "pattern": "*.md",
+      "reason": "Knowledge and prose documentation are outside the requested handwritten code scope."
+    },
+    {
+      "pattern": "prototypes/decision-material-selection/index.html",
+      "reason": "Generated from the knowledge Markdown by scripts/build-knowledge.ts."
+    },
+    {
+      "pattern": "prototypes/decision-material-selection/research/index.html",
+      "reason": "Generated from the research draft Markdown by scripts/build-knowledge.ts."
+    },
+    {
+      "pattern": "*.lock",
+      "reason": "Dependency lock files are generated dependency resolution records."
+    },
+    {
+      "pattern": ".quality/baseline.json",
+      "reason": "Generated inventory of the fixed initial commit; its immutable provenance is checked separately."
+    }
+  ],
+  "banned_file_stems": ["utils", "types", "config"],
+  "file_name_exceptions": [],
+  "banned_identifier_patterns": ["data", "tmp[0-9]*", "a[0-9]+"],
+  "identifier_exceptions": [],
+  "typescript_version": "7.0.2"
+}

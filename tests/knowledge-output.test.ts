@@ -277,11 +277,14 @@ test('unsupported metadata, HTML, or relative-link forms fail instead of losing 
 test('stylesheet and renderer/rule changes make the human output stale independently of unchanged knowledge bytes', async () => {
   const { directory, source, out } = await fixture();
   const script = path.join(directory, 'scripts/build-knowledge.ts');
+  const linkModulePath = path.join(directory, 'scripts/knowledge-paths.ts');
   const cssPath = path.join(directory, 'scripts/knowledge-view.css');
   await mkdir(path.dirname(script), { recursive: true });
   const generator = await readFile(path.join(root, 'scripts/build-knowledge.ts'), 'utf8');
+  const linkModule = await readFile(path.join(root, 'scripts/knowledge-paths.ts'), 'utf8');
   const stylesheet = await readFile(path.join(root, 'scripts/knowledge-view.css'), 'utf8');
   await writeFile(script, generator);
+  await writeFile(linkModulePath, linkModule);
   await writeFile(cssPath, stylesheet);
   const args = [script, '--source', source, '--out-dir', out, '--marked-module', fileURLToPath(markedModule)];
   const execute = (extra: string[]) => spawnSync(process.execPath, [...args, ...extra], { encoding: 'utf8' });
@@ -292,6 +295,7 @@ test('stylesheet and renderer/rule changes make the human output stale independe
   const changedInputs: [string, string][] = [
     [cssPath, stylesheet.replace('--paper:#f6f5ef', '--paper:#ffffff')],
     [script, generator.replace("outputs: '判断案と選定理由'", "outputs: '判断案と理由'")],
+    [linkModulePath, linkModule.replace('path.relative(fromDirectory, targetPath)', 'path.posix.relative(fromDirectory, targetPath)')],
   ];
   for (const [file, changed] of changedInputs) {
     await writeFile(file, changed);
