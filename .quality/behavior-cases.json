@@ -79,7 +79,14 @@
         "knowledge/grouping/references/sources.md",
         "knowledge/visual-hierarchy/KNOWLEDGE.md",
         "knowledge/visual-hierarchy/examples/schedule.md",
-        "knowledge/visual-hierarchy/references/sources.md"
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/color-contrast/references/sources.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/references/sources.md"
       ],
       "testName": "accepted knowledge displays its adopted label while preserving the raw status for humans and AI",
       "mutation": {
@@ -149,6 +156,67 @@
         "find": "for (const file of copiedFiles) outputs.set(file, await readSource(file));",
         "replace": "for (const file of copiedFiles) outputs.set(file, Buffer.from((await readSource(file)).toString().replace('status</dt><dd>accepted', 'status</dt><dd>proposed')));",
         "assertionMessage": "prototypes/decision-material-selection/index.html"
+      }
+    },
+    {
+      "id": "color-knowledge-entry",
+      "requirement": "概念ディレクトリ名と固定入口KNOWLEDGE.mdのidは一致する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-structure.md",
+        "section": "固定の入口と補足",
+        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "reasoning": "入口idとディレクトリ名の一致は構造ガイドで定められている。追加が依頼されたlightness-and-luminanceの入口idを、生成された出力からではなく概念ディレクトリ名から固定する。"
+      },
+      "input": {
+        "conceptDirectory": "knowledge/lightness-and-luminance",
+        "entry": "knowledge/lightness-and-luminance/KNOWLEDGE.md"
+      },
+      "expected": {
+        "id": "lightness-and-luminance"
+      },
+      "assumptions": [
+        "新たに依頼された３概念を含む８概念の固定一覧を検査する。",
+        "入口idの一致とリンク・メタデータ保持に関するテストであり、知識本文の原典への忠実さや正式採用を保証しない。"
+      ],
+      "implementation": "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+      "test": "tests/knowledge-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-knowledge.ts",
+        "scripts/knowledge-paths.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "prototypes/decision-material-selection/draft.md",
+        "topics/decision-material-selection.md",
+        "knowledge/README.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/color-contrast/references/sources.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/references/sources.md"
+      ],
+      "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
+      "mutation": {
+        "description": "明度と相対輝度の入口idだけを誤変更し、概念ディレクトリ名と不一致にする。",
+        "find": "id: lightness-and-luminance",
+        "replace": "id: mismatched-lightness",
+        "assertionMessage": "lightness-and-luminance: entry id must match concept directory"
       }
     }
   ]
