@@ -1,8 +1,8 @@
 ---
 id: decision-material-selection
 title: 判断材料の選定
-status: proposed
-version: "0.2.1"
+status: accepted
+version: "1.0.0"
 scope: general-digital-ui
 related:
   - ecological-interface-design

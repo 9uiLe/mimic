@@ -1,8 +1,8 @@
 ---
 id: grouping
 title: グルーピング
-status: proposed
-version: "0.2.1"
+status: accepted
+version: "1.0.0"
 scope: general-digital-ui
 related:
   - visual-hierarchy
