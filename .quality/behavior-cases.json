@@ -86,7 +86,15 @@
         "knowledge/design-tokens/examples/color-presentation.md",
         "knowledge/design-tokens/references/sources.md",
         "knowledge/lightness-and-luminance/KNOWLEDGE.md",
-        "knowledge/lightness-and-luminance/references/sources.md"
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "scripts/pages-catalog.ts",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md"
       ],
       "testName": "accepted knowledge displays its adopted label while preserving the raw status for humans and AI",
       "mutation": {
@@ -148,7 +156,25 @@
         "knowledge/grouping/examples/schedule.md",
         "knowledge/visual-hierarchy/KNOWLEDGE.md",
         "knowledge/visual-hierarchy/references/sources.md",
-        "knowledge/visual-hierarchy/examples/schedule.md"
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "scripts/pages-catalog.ts",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/build-knowledge.ts",
+        "scripts/knowledge-paths.ts"
       ],
       "testName": "artifact copies match their generated or canonical sources and retain repository-relative provenance",
       "mutation": {
@@ -176,7 +202,7 @@
         "id": "lightness-and-luminance"
       },
       "assumptions": [
-        "新たに依頼された３概念を含む８概念の固定一覧を検査する。",
+        "新たに依頼されたAI SlopとAesthetic and Minimalist Designを含む10概念の固定一覧を検査する。",
         "入口idの一致とリンク・メタデータ保持に関するテストであり、知識本文の原典への忠実さや正式採用を保証しない。"
       ],
       "implementation": "knowledge/lightness-and-luminance/KNOWLEDGE.md",
@@ -209,7 +235,15 @@
         "knowledge/design-tokens/examples/color-presentation.md",
         "knowledge/design-tokens/references/sources.md",
         "knowledge/lightness-and-luminance/KNOWLEDGE.md",
-        "knowledge/lightness-and-luminance/references/sources.md"
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "scripts/pages-catalog.ts",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md"
       ],
       "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
       "mutation": {
@@ -217,6 +251,343 @@
         "find": "id: lightness-and-luminance",
         "replace": "id: mismatched-lightness",
         "assertionMessage": "lightness-and-luminance: entry id must match concept directory"
+      }
+    },
+    {
+      "id": "pages-reader-link",
+      "requirement": "HTMLの関連概念リンクは対応する閲覧先へ進み、原文の章リンクを保持する。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "prototypes/knowledge-view.md",
+        "section": "Pagesの読書経路",
+        "quotation": "本文を一つのページへ取り込まず、概念・関連概念・例・出典をそれぞれのページで読みます。",
+        "reasoning": "概念の独立性と関連資料を辿る読書経路は表示規約と利用者の改善依頼に基づく。期待hrefは固定した入出力パスから記載し、実装を呼んで計算しない。"
+      },
+      "input": {
+        "href": "../grouping/KNOWLEDGE.md#概念",
+        "source": "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "out": "knowledge/visual-hierarchy/index.html"
+      },
+      "expected": "../grouping/index.html#概念",
+      "assumptions": [
+        "対応表で明示された配信先だけを置換する。本文の意味、使いやすさ、外部サイトの可用性は保証しない。"
+      ],
+      "implementation": "scripts/pages-catalog.ts",
+      "test": "tests/pages-catalog.test.ts",
+      "supportingFiles": [],
+      "testName": "reader navigation maps a canonical concept to its HTML view and preserves the section fragment",
+      "mutation": {
+        "description": "閲覧先への対応を無視し、正本Markdownに留まる誤実装にする。",
+        "find": "const destination = views[target] ?? target;",
+        "replace": "const destination = target;",
+        "assertionMessage": "reader link must reach the reviewed HTML concept and original section"
+      }
+    },
+    {
+      "id": "pages-catalog-completeness",
+      "requirement": "Pagesの入口から全10概念の本文を選べる。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "prototypes/knowledge-view.md",
+        "section": "Pagesの読書経路",
+        "quotation": "一覧の対象は明示した10概念と照合し、ファイルを追加しただけでは掲載しません。",
+        "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき10件を固定する。実装配列の長さから期待値を作らない。"
+      },
+      "input": {
+        "index": "knowledge/README.md",
+        "conceptCount": 10
+      },
+      "expected": {
+        "readerLinks": 10,
+        "redirect": false
+      },
+      "assumptions": [
+        "索引掲載数と選択経路の機械検査であり、概念の採用判断や使いやすさの実証ではない。"
+      ],
+      "implementation": "scripts/pages-catalog.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "prototypes/decision-material-selection/index.html",
+        "prototypes/decision-material-selection/ai.md",
+        "prototypes/decision-material-selection/draft.md",
+        "prototypes/decision-material-selection/research/index.html",
+        "prototypes/decision-material-selection/research/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/build-knowledge.ts",
+        "scripts/knowledge-paths.ts",
+        "scripts/build-pages.ts"
+      ],
+      "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",
+      "mutation": {
+        "description": "配信ファイルは残すが、一覧から最後の概念だけ落とす。",
+        "find": "const items = rows.map(row => {",
+        "replace": "const items = rows.slice(0, -1).map(row => {",
+        "assertionMessage": "catalog must expose all ten reviewed concepts"
+      }
+    },
+    {
+      "id": "pages-reader-source-paths",
+      "requirement": "各本文・例・出典の内容と採用状態を保ち、関連資料をHTMLで読める。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "prototypes/knowledge-view.md",
+        "section": "Pagesの読書経路",
+        "quotation": "本文を一つのページへ取り込まず、概念・関連概念・例・出典をそれぞれのページで読みます。",
+        "reasoning": "概念の独立性と関連資料を辿る読書経路は表示規約と利用者の改善依頼に基づく。期待hrefは固定した入出力パスから記載し、実装を呼んで計算しない。"
+      },
+      "input": {
+        "concepts": 10,
+        "supplements": 15
+      },
+      "expected": {
+        "htmlReaders": 25,
+        "sourcesHref": "references/sources.html",
+        "relatedHref": "../visual-hierarchy/index.html"
+      },
+      "assumptions": [
+        "全文ブロック保持と表示・リンクを機械で検査する。知識の妥当性、採用承認、利用者への効果の検証ではない。"
+      ],
+      "implementation": "scripts/build-knowledge.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "prototypes/decision-material-selection/index.html",
+        "prototypes/decision-material-selection/ai.md",
+        "prototypes/decision-material-selection/draft.md",
+        "prototypes/decision-material-selection/research/index.html",
+        "prototypes/decision-material-selection/research/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "scripts/pages-catalog.ts",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/knowledge-paths.ts",
+        "scripts/build-pages.ts"
+      ],
+      "testName": "HTML readers retain every source block, concept status, and paths to related knowledge and supplements",
+      "mutation": {
+        "description": "Pagesの概念HTMLだけ対応表の利用を止め、出典・例・関連概念をMarkdownへ戻す。",
+        "find": "const target = views ? readerHref",
+        "replace": "const target = views && false ? readerHref",
+        "assertionMessage": "sources must open in the reader"
+      }
+    },
+    {
+      "id": "pages-reader-safe-links",
+      "requirement": "危険なprotocolを持つ概念リンクはPages生成前に拒否し既存成果物を変更しない。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "prototypes/knowledge-view.md",
+        "section": "編集元と生成",
+        "quotation": "HTTP・HTTPS以外の外部リンクを拒否します。",
+        "reasoning": "閲覧先への変換を追加しても、既存の埋め込み・外部protocol制約を維持する。拒否を確認してから成果物の全バイトが不変であることを確認する。"
+      },
+      "input": {
+        "concept": "knowledge/grouping/KNOWLEDGE.md",
+        "href": "javascript:alert(1)"
+      },
+      "expected": {
+        "rejection": "unsupported link protocol",
+        "existingOutput": "unchanged"
+      },
+      "assumptions": [
+        "ローカル生成器のprotocol拒否と出力保全を確認する。Web全体の安全性を証明するものではない。"
+      ],
+      "implementation": "scripts/build-knowledge.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "prototypes/decision-material-selection/index.html",
+        "prototypes/decision-material-selection/ai.md",
+        "prototypes/decision-material-selection/draft.md",
+        "prototypes/decision-material-selection/research/index.html",
+        "prototypes/decision-material-selection/research/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "scripts/pages-catalog.ts",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/knowledge-paths.ts",
+        "scripts/build-pages.ts"
+      ],
+      "testName": "unsafe concept links fail before existing Pages output is changed",
+      "mutation": {
+        "description": "概念リンクのprotocol検証を迂回し、危険なリンクをHTMLへ通す。",
+        "find": "const canonicalTarget = resolveLink(href, sourcePath, outDir);",
+        "replace": "const canonicalTarget = href;",
+        "assertionMessage": "unsafe concept links must reject before Pages output changes"
+      }
+    },
+    {
+      "id": "pages-decision-topic-reader",
+      "requirement": "Pages一覧の「判断材料の選定」から案内の全文を読み、関連する5概念のHTMLへ進める。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "prototypes/knowledge-view.md",
+        "section": "Pagesの読書経路",
+        "quotation": "題目別案内も専用HTMLから関連する5概念のHTMLへ進めます。",
+        "reasoning": "題目別案内と概念を同じPages読書経路で結ぶ表示規約。5件は案内のrelatedメタデータと本文のリンクを照合し、期待hrefは入出力パスから固定する。"
+      },
+      "input": {
+        "source": "topics/decision-material-selection.md",
+        "relatedConcepts": 5
+      },
+      "expected": {
+        "reader": "topics/decision-material-selection.html",
+        "firstConceptHref": "../knowledge/ecological-interface-design/index.html",
+        "status": "accepted"
+      },
+      "assumptions": [
+        "元の試作HTMLとAI向けMarkdownのコピー契約は維持する。案内本文の内容や知識の妥当性は、この閲覧テストでは保証しない。"
+      ],
+      "implementation": "scripts/pages-catalog.ts",
+      "test": "tests/pages-output.test.ts",
+      "supportingFiles": [
+        "scripts/build-guideline.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "guideline/README.md",
+        "guideline/ai.md",
+        "prototypes/decision-material-selection/index.html",
+        "prototypes/decision-material-selection/ai.md",
+        "prototypes/decision-material-selection/draft.md",
+        "prototypes/decision-material-selection/research/index.html",
+        "prototypes/decision-material-selection/research/ai.md",
+        "topics/decision-material-selection.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/references/sources.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "scripts/pages-catalog.ts",
+        "knowledge/README.md",
+        "knowledge/color-contrast/KNOWLEDGE.md",
+        "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+        "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+        "knowledge/design-tokens/KNOWLEDGE.md",
+        "knowledge/ai-slop/KNOWLEDGE.md",
+        "knowledge/ai-slop/references/sources.md",
+        "knowledge/ai-slop/examples/ui-decisions.md",
+        "knowledge/design-tokens/references/sources.md",
+        "knowledge/design-tokens/examples/color-presentation.md",
+        "knowledge/lightness-and-luminance/references/sources.md",
+        "knowledge/aesthetic-and-minimalist-design/references/sources.md",
+        "knowledge/color-contrast/references/sources.md",
+        "topics/color.md",
+        "topics/ai-slop.md",
+        "scripts/knowledge-paths.ts",
+        "scripts/build-pages.ts",
+        "scripts/build-knowledge.ts"
+      ],
+      "testName": "the decision topic retains its text and opens all five related concept readers",
+      "mutation": {
+        "description": "題目別案内だけHTML変換を省き、関連する概念へのリンクを正本Markdownへ戻す。",
+        "find": "const destination = views[target] ?? target;",
+        "replace": "const destination = sourceFile === 'topics/decision-material-selection.md' ? target : views[target] ?? target;",
+        "assertionMessage": "topic must open the concept reader"
       }
     }
   ]

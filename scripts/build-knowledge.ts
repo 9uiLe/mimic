@@ -5,12 +5,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import type { Token, Tokens } from 'marked';
 import { relativeLink } from './knowledge-paths.ts';
+import { readerHref } from './pages-catalog.ts';
 
 const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
 const markedVersion = '17.0.5';
 const stylesheetPath = path.join(path.dirname(generatorPath), 'knowledge-view.css');
-const design = { id: 'mimic-knowledge-view', version: '2.0.0' };
+const design = { id: 'mimic-knowledge-view', version: '3.0.0' };
 const sectionLabels = {
   purpose: '目的と使う場面',
   inputs: '使う前に確かめること',
@@ -234,12 +235,17 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
   return { metadata, sections: sectionRoles.map(role => ({ ...groups.get(role)!, id: role, role })) };
 }
 
-function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, sourcePath: string, outDir: string, stylesheet: string) {
+function makeHtml(
+  source: Buffer, marked: Marked, provenance: Provenance, sourcePath: string, outDir: string, stylesheet: string,
+  views?: Readonly<Record<string, string>>,
+) {
   const { metadata, sections } = parseSource(source.toString('utf8'), marked, sourcePath);
   const renderer = new marked.Renderer();
   let tableLabel: string | undefined;
   renderer.link = ({ href, title, tokens }) => {
-    const target = resolveLink(href, sourcePath, outDir);
+    const canonicalTarget = resolveLink(href, sourcePath, outDir);
+    const target = views ? readerHref(href, relativeLink(root, sourcePath), relativeLink(root, path.join(outDir, 'index.html')), views)
+      : canonicalTarget;
     return `<a href="${escape(target)}"${title ? ` title="${escape(title)}"` : ''}>${marked.Parser.parseInline(tokens, { renderer })}</a>`;
   };
   renderer.table = token => `<div class="table-scroll" tabindex="0" role="region" aria-label="${escape(tableLabel)}の表">${marked.Renderer.prototype.table.call(renderer, token)}</div>`;
@@ -274,6 +280,10 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
   const topic = path.basename(path.dirname(sourcePath)) === 'topics';
   const sourceLabel = metadata.status === 'draft' ? '研究資料の原文を読む' : topic ? '案内の原文を読む' : '知識本文を読む';
   const markdownLabel = metadata.status === 'draft' ? '研究資料のMarkdown' : topic ? '案内のMarkdown' : '本文のMarkdown';
+  const home = relativeLink(outDir, path.join(root, 'index.html'));
+  const guidelineHref = views ? relativeLink(outDir, path.join(root, 'guideline/index.html')) : 'https://9uile.github.io/mimic/guideline/';
+  const sourceLinks = views ? `<a href="${escape(path.basename(sourcePath))}">Markdown原文</a>`
+    : `<a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">${markdownLabel}</a>`;
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
@@ -284,15 +294,31 @@ function makeHtml(source: Buffer, marked: Marked, provenance: Provenance, source
 ${stylesheet}
 </style></head><body>
 <a class="skip" href="#${escape(sections[0]!.id)}">本文へ</a>
-<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a><a href="ai.md">${markdownLabel}</a></div></div>
-<div class="hero"><div class="eyebrow"><span class="badge">${escape(statusLabel)}</span>${topic ? 'TOPIC' : 'KNOWLEDGE'}</div><h1 id="title">${escape(metadata.title)}</h1><div class="meta">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>
-<main class="layout"><nav aria-label="目次"><p>${topic ? 'この案内の全体像' : 'この知識の全体像'}</p><ol>${navigation}</ol></nav><article>
+<header><div class="topline"><a class="brand" href="${escape(home)}">Mimic</a><div class="toplinks"><a href="${escape(guidelineHref)}">利用ガイド</a></div></div>
+<div class="hero"><h1 id="title">${escape(metadata.title)}</h1><p class="meta"><span class="badge">${escape(statusLabel)}</span>v${escape(metadata.version)}</p></div></header>
+<main class="layout"><nav aria-label="目次"><details><summary>目次</summary><ol>${navigation}</ol></details></nav><article>
 ${sections.map(section).join('\n')}
 </article></main>
-<footer><div><p><a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">${markdownLabel}</a> · <a href="#top">ページ上部へ</a></p>
+<footer><div><p>${sourceLinks} · <a href="#top">ページ上部へ</a></p>
 <details id="source-provenance"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
 ${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}
 </dl></details></div></footer></body></html>\n`;
+}
+
+export async function renderKnowledge(
+  source: Buffer, sourceFile: string, stylesheet: Buffer, views: Readonly<Record<string, string>>,
+): Promise<Buffer> {
+  const markedUrl = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
+  const { marked }: typeof import('marked') = await import(markedUrl);
+  const sourcePath = path.join(root, sourceFile);
+  const outDir = path.dirname(path.join(root, views[sourceFile]!));
+  const provenance = {
+    source: hash(source), stylesheet: hash(stylesheet),
+    generator: hash(Buffer.concat([await readFile(generatorPath), await readFile(path.join(root, 'scripts/knowledge-paths.ts')),
+      await readFile(path.join(root, 'scripts/pages-catalog.ts'))])),
+    renderer: hash(await readFile(fileURLToPath(markedUrl))),
+  };
+  return Buffer.from(makeHtml(source, marked, provenance, sourcePath, outDir, stylesheet.toString('utf8'), views));
 }
 
 async function main() {
@@ -312,6 +338,7 @@ async function main() {
   const generatorSources = Buffer.concat([
     await readFile(generatorPath),
     await readFile(path.join(path.dirname(generatorPath), 'knowledge-paths.ts')),
+    await readFile(path.join(path.dirname(generatorPath), 'pages-catalog.ts')),
   ]);
   const provenance = {
     source: hash(source),

@@ -9,7 +9,7 @@
 - Repositoryの運用方針は[利用ガイド](README.md)、AIの作業指示は[AI向けガイド](ai.md)を編集します。
 - 閲覧ページと参照用Markdownは生成物です。Markdownの編集元を変更し、再生成します。
 
-「判断材料の選定」の案内は、`topics/decision-material-selection.md` から `prototypes/decision-material-selection/index.html` と `ai.md` を生成します。個別概念の本文・出典・例を自動的に取り込むものではありません。各概念には個別のHTMLを生成せず、Markdownへリンクします。
+「判断材料の選定」の案内は、`topics/decision-material-selection.md` から `prototypes/decision-material-selection/index.html` と `ai.md` を生成します。Pagesでは同じ正本から `topics/decision-material-selection.html` も生成し、関連する5概念のHTMLへ案内します。個別概念の本文・出典・例を案内へ取り込むものではありません。Pagesでは別途、明示した10概念と補足資料を個別のHTMLとして生成します。Markdown原文も配信し、編集元を保ちます。
 
 `prototypes/decision-material-selection/draft.md` は旧版 `0.1.1` を基にした別の研究資料です。研究資料から生成する `research/` の出力を、現在の正本の更新案や採用済みの共通知識として扱いません。
 
@@ -51,9 +51,9 @@ bun run verify
 
 ## GitHub Pagesへの公開
 
-公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口は「判断材料の選定」の横断的な案内から生成したページです。公開されたことから、文書が正式採用済みだとは判断しません。
+公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口は全10概念の一覧です。各概念のHTMLから関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。色の知識とAI Slopに関する案内も別の読書経路として表示します。公開されたことから、文書が正式採用済みだとは判断しません。
 
-[公開ファイルの一覧](../scripts/build-pages.ts)にあるファイルだけを `_site/` に組み立てます。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
+[公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
 
 出力先に一覧外のファイル、シンボリックリンク、想定外の構造があれば生成を止め、自動削除せず内容を確認します。作業ログ、PDF、Moletta、Git履歴は配信しません。`_site/` とローカル出力の `output/` はGit管理対象外です。Public Repositoryへコミットしたファイルは、Pagesの対象外でもGitHub上で閲覧できます。
 

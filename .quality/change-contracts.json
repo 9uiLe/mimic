@@ -3,30 +3,101 @@
   "contracts": [
     {
       "id": "repository-quality-policy",
-      "paths": ["scripts/quality/*", "tests/quality_*", ".githooks/*", ".quality/*", ".github/workflows/*", "package.json", "flake.nix"],
+      "paths": [
+        "scripts/quality/*",
+        "tests/quality_*",
+        ".githooks/*",
+        ".quality/*",
+        ".github/workflows/*",
+        "package.json",
+        "flake.nix"
+      ],
       "purpose": "変更候補の長さ・限定した禁止名・基準の緩和を、確定済みの版と比較して検査する。",
       "basis_status": "confirmed",
-      "basis": ["guideline/quality-checks.md#確定した検査条件"],
-      "validation": ["bun run quality:test", "bun run quality:check", "bun run quality:staged"],
-      "unresolved": ["名前の意味、仕様の妥当性、検査コード自体の変更の妥当性は人のレビューが必要。"]
+      "basis": [
+        "guideline/quality-checks.md#確定した検査条件"
+      ],
+      "validation": [
+        "bun run quality:test",
+        "bun run quality:check",
+        "bun run quality:staged"
+      ],
+      "unresolved": [
+        "名前の意味、仕様の妥当性、検査コード自体の変更の妥当性は人のレビューが必要。"
+      ]
     },
     {
       "id": "knowledge-link-destination",
-      "paths": ["scripts/knowledge-paths.ts", "scripts/build-knowledge.ts", "tests/knowledge-paths.test.ts", "tests/knowledge-output.test.ts"],
+      "paths": [
+        "scripts/knowledge-paths.ts",
+        "scripts/build-knowledge.ts",
+        "tests/knowledge-paths.test.ts",
+        "tests/knowledge-output.test.ts"
+      ],
       "purpose": "出力先から編集元と同じ概念の入口へ届く相対リンクを保つ。",
       "basis_status": "confirmed",
-      "basis": ["guideline/development.md#生成の規則", ".quality/behavior-cases.json"],
-      "validation": ["bun scripts/quality/verify-behavior.ts --case knowledge-relative-link", "bun run verify"],
-      "unresolved": ["この具体例は概念の意味やWindows対応の保証ではない。"]
+      "basis": [
+        "guideline/development.md#生成の規則",
+        ".quality/behavior-cases.json"
+      ],
+      "validation": [
+        "bun scripts/quality/verify-behavior.ts --case knowledge-relative-link",
+        "bun run verify"
+      ],
+      "unresolved": [
+        "この具体例は概念の意味やWindows対応の保証ではない。"
+      ]
     },
     {
       "id": "knowledge-adoption-status",
-      "paths": ["scripts/build-knowledge.ts", "tests/knowledge-output.test.ts", "tests/pages-output.test.ts"],
+      "paths": [
+        "scripts/build-knowledge.ts",
+        "tests/knowledge-output.test.ts",
+        "tests/pages-output.test.ts"
+      ],
       "purpose": "正式採用後の accepted を、採用前の表示や意味未確認の表示と混同せず出力する。",
       "basis_status": "confirmed",
-      "basis": ["guideline/README.md#下書きと採用状態", "guideline/development.md#生成の規則", ".quality/behavior-cases.json"],
-      "validation": ["bun scripts/quality/verify-behavior.ts --case knowledge-accepted-status", "bun scripts/quality/verify-behavior.ts --case pages-accepted-status", "bun run verify"],
-      "unresolved": ["知識の原典への忠実さと採用承認は、この表示・配信テストの保証範囲に含めない。"]
+      "basis": [
+        "guideline/README.md#下書きと採用状態",
+        "guideline/development.md#生成の規則",
+        ".quality/behavior-cases.json"
+      ],
+      "validation": [
+        "bun scripts/quality/verify-behavior.ts --case knowledge-accepted-status",
+        "bun scripts/quality/verify-behavior.ts --case pages-accepted-status",
+        "bun run verify"
+      ],
+      "unresolved": [
+        "知識の原典への忠実さと採用承認は、この表示・配信テストの保証範囲に含めない。"
+      ]
+    },
+    {
+      "id": "pages-knowledge-reader",
+      "paths": [
+        "scripts/build-pages.ts",
+        "scripts/build-guideline.ts",
+        "scripts/pages-catalog.ts",
+        "scripts/knowledge-view.css",
+        "tests/pages-output.test.ts",
+        "tests/pages-catalog.test.ts"
+      ],
+      "purpose": "全10概念への入口と、正本の内容・採用状態を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
+      "basis_status": "confirmed",
+      "basis": [
+        "prototypes/knowledge-view.md#Pagesの読書経路",
+        "guideline/development.md#GitHub Pagesへの公開",
+        ".quality/behavior-cases.json"
+      ],
+      "validation": [
+        "bun run build:pages",
+        "bun run verify",
+        "bun run test:effectiveness",
+        "実ブラウザで一覧・本文・関連・例・出典と狭幅・キーボード操作を確認する。"
+      ],
+      "unresolved": [
+        "使いやすさや知識の原典への忠実さ、画面全体のアクセシビリティ適合を機械検査だけでは保証しない。",
+        "公開は許可後のmain反映まで実施しない。"
+      ]
     }
   ]
 }

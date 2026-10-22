@@ -54,7 +54,7 @@ knowledge/
 
 ## 生成と公開
 
-個別概念の本文や補足資料はMarkdownを正本として編集します。現在は各概念の個別HTMLを生成せず、横断的な案内からMarkdownへリンクします。
+個別概念の本文や補足資料はMarkdownを正本として編集します。Pagesでは明示した概念の本文と出典・例のHTMLも生成し、元のMarkdownとともに配信します。一覧や本文から、対応する閲覧先へ進めます。
 
 「判断材料の選定」の閲覧ページと参照用Markdownは、`topics/decision-material-selection.md` から生成します。出力先は `prototypes/decision-material-selection/` です。リンク先の概念や補足資料を自動的に取り込んだ全文ではありません。
 
