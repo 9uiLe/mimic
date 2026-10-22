@@ -80,6 +80,14 @@ bun run relations:check
 
 PRでは[検査処理](../.github/workflows/ci.yml)が同じ生成・検査を行います。[公開処理](../.github/workflows/pages.yml)は `main` へのpushをきっかけに実行し、検査に成功した `_site/` を配信します。**`main` への反映は公開操作を伴います。** 公開対象と操作の許可を確認し、既に明示的に許可された範囲では同じ許可を聞き直しません。
 
+pushに対応する公開実行を確認できない場合は、公開対象と操作の許可を確認したうえで `main` を指定して手動実行できます。手動実行に対応したworkflowがdefault branchに反映されている必要があり、build・deployはpushと手動実行のいずれも `main` に限定します。
+
+```sh
+gh workflow run pages.yml --ref main
+```
+
+実行対象の `main` のSHAを確認し、そのSHAに一致する公開runのbuild・deployの成功と、配信された内容を確認します。起動要求の成功だけでは公開完了と扱いません。[GitHub公式の手動実行手順](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)
+
 GitHub側の設定ではPagesのSourceをGitHub Actionsに、`github-pages` 環境を `main` からの公開に限定します。設定を変更する場合も、対象と操作の許可を確認します。[GitHub公式の設定手順](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
 ## 確認すること
