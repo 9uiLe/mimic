@@ -210,7 +210,7 @@ related:
 test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
   const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
   assert.deepEqual(concepts, [
-    'aesthetic-and-minimalist-design', 'ai-slop', 'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
+    'aesthetic-and-minimalist-design', 'ai-slop', 'alignment-and-grids', 'color-context', 'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
     'external-representations', 'grouping', 'layout-spacing', 'lightness-and-luminance', 'typography', 'visual-hierarchy',
   ]);
   for (const id of concepts) {
@@ -337,6 +337,7 @@ test('stylesheet and renderer/rule changes make the human output stale independe
   await writeFile(linkModulePath, linkModule);
   await writeFile(path.join(directory, 'scripts/pages-catalog.ts'), await readFile(path.join(root, 'scripts/pages-catalog.ts')));
   await writeFile(path.join(directory, 'scripts/pages-fonts.ts'), await readFile(path.join(root, 'scripts/pages-fonts.ts')));
+  await writeFile(path.join(directory, 'scripts/knowledge-images.ts'), await readFile(path.join(root, 'scripts/knowledge-images.ts')));
   await writeFile(cssPath, stylesheet);
   const args = [script, '--source', source, '--out-dir', out, '--marked-module', fileURLToPath(markedModule)];
   const execute = (extra: string[]) => spawnSync(process.execPath, [...args, ...extra], { encoding: 'utf8' });

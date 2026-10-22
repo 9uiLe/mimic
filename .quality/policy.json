@@ -8,7 +8,7 @@
   "code_extensions": [
     ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".css", ".scss",
     ".sass", ".less", ".nix", ".sh", ".bash", ".zsh", ".json", ".yaml",
-    ".yml", ".toml", ".rs", ".go", ".swift", ".c", ".h", ".cpp", ".hpp", ".html"
+    ".yml", ".toml", ".rs", ".go", ".swift", ".c", ".h", ".cpp", ".hpp", ".html", ".svg"
   ],
   "included_paths": [".githooks/*", "Makefile", "Dockerfile"],
   "non_code_paths": [

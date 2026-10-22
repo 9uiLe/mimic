@@ -67,6 +67,14 @@ const expectedFiles = [
   'knowledge/layout-spacing/KNOWLEDGE.md', 'knowledge/layout-spacing/index.html',
   'knowledge/layout-spacing/references/sources.md', 'knowledge/layout-spacing/references/sources.html',
   'knowledge/layout-spacing/examples/component-spacing.md', 'knowledge/layout-spacing/examples/component-spacing.html',
+  'knowledge/alignment-and-grids/KNOWLEDGE.md', 'knowledge/alignment-and-grids/index.html',
+  'knowledge/alignment-and-grids/references/sources.md', 'knowledge/alignment-and-grids/references/sources.html',
+  'knowledge/alignment-and-grids/examples/alignment.md', 'knowledge/alignment-and-grids/examples/alignment.html',
+  'knowledge/alignment-and-grids/examples/alignment.svg',
+  'knowledge/color-context/KNOWLEDGE.md', 'knowledge/color-context/index.html',
+  'knowledge/color-context/references/sources.md', 'knowledge/color-context/references/sources.html',
+  'knowledge/color-context/examples/surrounding-colors.md', 'knowledge/color-context/examples/surrounding-colors.html',
+  'knowledge/color-context/examples/surrounding-colors.svg',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -86,7 +94,7 @@ async function fixture() {
 
 async function isolatedBuilder(directory: string) {
   const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/build-knowledge.ts', 'scripts/pages-catalog.ts',
-    'scripts/pages-fonts.ts', 'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css',
+    'scripts/pages-fonts.ts', 'scripts/knowledge-images.ts', 'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css',
     `${fontRoot}/integrity.json`, ...expectedFiles.filter(file => !generatedPages.includes(file) && !expectedFontFiles.includes(file))];
   for (const file of inputs) {
     const destination = path.join(directory, file);
@@ -119,7 +127,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 338);
+  assert.equal(expectedFiles.length, 352);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -130,7 +138,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1>デザインの知識<\/h1>/);
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 12, 'catalog must expose all twelve reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 14, 'catalog must expose all fourteen reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
   assert.doesNotMatch(entry, /正式採用|採用済み|掲載済み/, 'catalog must not show adoption labels');
@@ -143,9 +151,10 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'lightness-and-luminance': '1.0.0', 'color-contrast': '1.0.0',
     'design-tokens': '1.1.0', 'ai-slop': '1.0.0',
     'aesthetic-and-minimalist-design': '1.0.0', typography: '1.0.0', 'layout-spacing': '1.0.0',
+    'alignment-and-grids': '1.0.0', 'color-context': '1.0.0',
   }, 'catalog must map each concept to its source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 11,
-    'catalog must show eleven v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 13,
+    'catalog must show thirteen v1.0.0 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.0 source version');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
@@ -187,7 +196,7 @@ test('Pages uses only pinned same-origin font subsets and keeps their license', 
     const prefix = path.posix.relative(path.posix.dirname(file), fontRoot);
     assert.ok(html.includes(`href="${prefix}/400.css"`), `${file}: body font CSS`);
     assert.ok(html.includes(`href="${prefix}/600.css"`), `${file}: heading font CSS`);
-    assert.ok(html.includes('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+    assert.ok(html.includes('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src \'self\'; '
       + 'style-src \'self\' \'unsafe-inline\'; font-src \'self\'; base-uri \'none\'; form-action \'none\'">'),
     `${file}: only same-origin CSS and fonts are allowed`);
     assert.doesNotMatch(html, /cdn\.jsdelivr\.net|@import/);
@@ -218,13 +227,13 @@ test('every local HTML and Markdown link resolves inside the artifact at the Git
     const text = await readFile(path.join(out, file), 'utf8');
     const links: string[] = [];
     if (file.endsWith('.html')) {
-      links.push(...[...text.matchAll(/href="([^"]*)"/g)].map(match => {
+      links.push(...[...text.matchAll(/(?:href|src)="([^"]*)"/g)].map(match => {
         assert.ok(match[1] !== undefined);
         return match[1];
       }));
     } else {
       marked.walkTokens(marked.lexer(text.replace(/^---\n[\s\S]*?\n---\n/, '')), token => {
-        if (token.type === 'link') links.push(token.href);
+        if (token.type === 'link' || token.type === 'image') links.push(token.href);
       });
     }
     for (const href of links) {
@@ -362,7 +371,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 31);
+  assert.equal(readers.length, 37);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
@@ -423,4 +432,29 @@ test('unsafe concept links fail before existing Pages output is changed', async 
   await assert.rejects(isolated.buildPages(out), /Source schema: unsupported link protocol/,
     'unsafe concept links must reject before Pages output changes');
   assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);
+});
+
+test('reviewed figure bytes and responsive reader images publish together and bad figure inputs preserve existing output', async () => {
+  const { directory, out } = await fixture();
+  const isolated = await isolatedBuilder(directory);
+  await isolated.buildPages(out);
+  for (const [id, name] of [['alignment-and-grids', 'alignment'], ['color-context', 'surrounding-colors']]) {
+    const file = `knowledge/${id}/examples/${name}.svg`;
+    assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), 'published figure must retain reviewed bytes');
+    const html = await readFile(path.join(out, `knowledge/${id}/examples/${name}.html`), 'utf8');
+    assert.ok(html.includes(`<img src="${name}.svg" alt="`), 'reader image must refer to the published figure');
+    assert.ok(html.includes(`href="${name}.svg"`), 'reader must retain a full-size figure link');
+    assert.ok(html.includes('article img { max-width: 100%; height: auto; }'), 'reader figures must fit a narrow viewport');
+  }
+  const file = path.join(directory, 'knowledge/alignment-and-grids/examples/alignment.svg');
+  const before = await Promise.all(expectedFiles.map(name => readFile(path.join(out, name))));
+  await writeFile(file, '<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="450"><script>alert(1)</script></svg>');
+  await assert.rejects(isolated.buildPages(out), /static SVG/, 'bad figure inputs must reject before any output mutation');
+  assert.deepEqual(await Promise.all(expectedFiles.map(name => readFile(path.join(out, name)))), before);
+  await rm(file);
+  await assert.rejects(isolated.buildPages(out), { code: 'ENOENT' });
+  assert.deepEqual(await Promise.all(expectedFiles.map(name => readFile(path.join(out, name)))), before);
+  await symlink(path.join(root, 'knowledge/alignment-and-grids/examples/alignment.svg'), file);
+  await assert.rejects(isolated.buildPages(out), /regular file/);
+  assert.deepEqual(await Promise.all(expectedFiles.map(name => readFile(path.join(out, name)))), before);
 });

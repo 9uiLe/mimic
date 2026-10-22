@@ -18,6 +18,8 @@
 | `aesthetic-and-minimalist-design` | [Aesthetic and Minimalist Design](aesthetic-and-minimalist-design/KNOWLEDGE.md) | 必要情報を保ち、不要な要素との競合を減らすUXヒューリスティック |
 | `typography` | [Typography](typography/KNOWLEDGE.md) | 日本語と英数字を含む文字の形・組み方、役割、拡大への対応 |
 | `layout-spacing` | [レイアウトの余白](layout-spacing/KNOWLEDGE.md) | コンポーネント・グループ・セクション間の間隔と、尺度・情報密度の関係 |
+| `alignment-and-grids` | [整列とグリッド](alignment-and-grids/KNOWLEDGE.md) | 列・行・共通の基準線による配置と、余白の量との違い |
+| `color-context` | [色の文脈と相互作用](color-context/KNOWLEDGE.md) | 周囲との関係で色を見る考え方と、色の値や計算比との違い |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
