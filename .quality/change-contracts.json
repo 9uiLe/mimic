@@ -79,12 +79,13 @@
         "scripts/pages-catalog.ts",
         "scripts/knowledge-view.css",
         "tests/pages-output.test.ts",
-        "tests/pages-catalog.test.ts"
+        "tests/pages-catalog.test.ts",
+        "tests/guideline-output.test.ts"
       ],
       "purpose": "全10概念への入口と、正本の内容・採用状態を保つ本文／関連概念／出典／例のHTML読書経路を用意する。",
       "basis_status": "confirmed",
       "basis": [
-        "prototypes/knowledge-view.md#Pagesの読書経路",
+        "guideline/knowledge-view.md#Pagesの読書経路",
         "guideline/development.md#GitHub Pagesへの公開",
         ".quality/behavior-cases.json"
       ],

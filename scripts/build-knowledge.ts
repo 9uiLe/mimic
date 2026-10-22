@@ -280,7 +280,7 @@ function makeHtml(
   const topic = path.basename(path.dirname(sourcePath)) === 'topics';
   const sourceLabel = metadata.status === 'draft' ? '研究資料の原文を読む' : topic ? '案内の原文を読む' : '知識本文を読む';
   const markdownLabel = metadata.status === 'draft' ? '研究資料のMarkdown' : topic ? '案内のMarkdown' : '本文のMarkdown';
-  const home = relativeLink(outDir, path.join(root, 'index.html'));
+  const home = views ? relativeLink(outDir, path.join(root, 'index.html')) : 'https://9uile.github.io/mimic/';
   const guidelineHref = views ? relativeLink(outDir, path.join(root, 'guideline/index.html')) : 'https://9uile.github.io/mimic/guideline/';
   const sourceLinks = views ? `<a href="${escape(path.basename(sourcePath))}">Markdown原文</a>`
     : `<a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">${markdownLabel}</a>`;
@@ -324,7 +324,7 @@ export async function renderKnowledge(
 async function main() {
   const { values } = parseArgs({ options: { check: { type: 'boolean', default: false }, source: { type: 'string' }, 'out-dir': { type: 'string' }, 'marked-module': { type: 'string' } } });
   const sourcePath = path.resolve(values.source || path.join(root, 'topics/decision-material-selection.md'));
-  const outDir = path.resolve(values['out-dir'] || path.join(root, 'prototypes/decision-material-selection'));
+  const outDir = path.resolve(values['out-dir'] || path.join(root, 'output/knowledge-preview'));
   const modulePath = values['marked-module'] || process.env.MARKED_MODULE;
   const markedUrl = modulePath ? pathToFileURL(path.resolve(modulePath)).href : import.meta.resolve('marked');
   const packagePath = path.resolve(path.dirname(fileURLToPath(markedUrl)), '../package.json');

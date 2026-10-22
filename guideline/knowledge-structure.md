@@ -2,7 +2,7 @@
 
 `knowledge/` は、一つの概念・思想・哲学につき一つのディレクトリを用意します。固定の入口から定義や背景を読み、必要に応じて出典、説明例、補助資料へ進める構成です。ClaudeやCodexのスキルに似た資料の配置を用いますが、スキルとして呼び出したり実行したりするためのものではありません。
 
-掲載する内容や採用判断は[Repositoryの方針と利用ガイド](README.md)、AIの参照・編集は[AI向けの作業ガイド](ai.md)に従います。
+掲載する内容や採用判断は[Repositoryの方針と利用ガイド](README.md)に従います。知識の参照は[知識の索引](../knowledge/README.md)から始め、Repositoryの変更・点検では[AI向けの作業ガイド](ai.md)に従います。
 
 ## 固定の入口と補足
 
@@ -56,6 +56,6 @@ knowledge/
 
 個別概念の本文や補足資料はMarkdownを正本として編集します。Pagesでは明示した概念の本文と出典・例のHTMLも生成し、元のMarkdownとともに配信します。一覧や本文から、対応する閲覧先へ進めます。
 
-「判断材料の選定」の閲覧ページと参照用Markdownは、`topics/decision-material-selection.md` から生成します。出力先は `prototypes/decision-material-selection/` です。リンク先の概念や補足資料を自動的に取り込んだ全文ではありません。
+「判断材料の選定」の閲覧ページは、`topics/decision-material-selection.md` からPages用HTMLとして生成します。任意のローカルプレビューは `output/knowledge-preview/` に生成します。案内はリンク先の概念や補足資料を自動的に取り込んだ全文ではありません。
 
 Pagesの公開対象は[公開ファイルの一覧](../scripts/build-pages.ts)に明示します。知識ディレクトリにファイルを置いたことだけでは、Pagesへの公開やスクリプトの実行は行いません。生成・検査・公開の操作は[開発・公開ガイド](development.md)を参照します。

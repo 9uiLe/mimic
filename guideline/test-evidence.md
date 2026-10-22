@@ -8,7 +8,7 @@
 
 実演ケースは[ケース定義](../.quality/behavior-cases.json)に置きます。`confirmed` は記載した要件の確認を表し、対象全体や知識の意味の正しさを表しません。根拠の引用と所在が存在するかは実行時に検査しますが、引用の解釈が妥当かはレビューします。
 
-`knowledge-relative-link` は[開発・公開ガイドの生成の規則](development.md#生成の規則)にある、出力位置から同じ参照先へ届くという要件を扱います。出力先 `/repo/prototypes/decision-material-selection` から `/repo/knowledge/grouping/KNOWLEDGE.md` へ届く期待値を、`../../knowledge/grouping/KNOWLEDGE.md` として固定しています。[知識の構造ガイド](knowledge-structure.md#固定の入口と補足)が定める入口への具体例です。
+`knowledge-relative-link` は[開発・公開ガイドの生成の規則](development.md#生成の規則)にある、出力位置から同じ参照先へ届くという要件を扱います。テスト用の出力先 `/repo/prototypes/decision-material-selection` から `/repo/knowledge/grouping/KNOWLEDGE.md` へ届く期待値を、`../../knowledge/grouping/KNOWLEDGE.md` として固定しています。このパスは相対リンクの検査用例であり、現行の生成先を表しません。[知識の構造ガイド](knowledge-structure.md#固定の入口と補足)が定める入口への具体例です。
 
 相対パスを求める対象処理を呼んで期待値を計算せず、期待値をテストへ直接記載します。説明用パスは実在を必要とせず、macOS/Linuxのパスを使います。このケースは知識本文の内容、採用判断、Windowsへの対応を保証しません。
 
