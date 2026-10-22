@@ -9,11 +9,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const copiedFiles = Object.freeze([
   'guideline/README.md',
   'guideline/ai.md',
-  'prototypes/decision-material-selection/index.html',
-  'prototypes/decision-material-selection/ai.md',
-  'prototypes/decision-material-selection/draft.md',
-  'prototypes/decision-material-selection/research/index.html',
-  'prototypes/decision-material-selection/research/ai.md',
   'topics/decision-material-selection.md',
   ...conceptFiles, ...exampleFiles, ...additionalSources,
 ]);
@@ -24,6 +19,7 @@ const movedKnowledge = Object.freeze({
 });
 export const publishedFiles = Object.freeze([...new Set([
   'index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html',
+  'prototypes/decision-material-selection/index.html',
   ...copiedFiles, ...Object.values(readerViews), ...Object.keys(movedKnowledge),
 ])].sort());
 const allowedFiles = new Set(publishedFiles);
@@ -68,6 +64,12 @@ export async function buildPages(outDir = path.join(root, '_site')) {
   for (const [file, { title, target }] of Object.entries(movedKnowledge)) {
     outputs.set(file, Buffer.from(`# ${title}の参照先\n\nこのURLは移動案内です。知識本文の正本ではありません。\n\n[${title}を読む](${target})。\n`));
   }
+  outputs.set('prototypes/decision-material-selection/index.html', Buffer.from(`<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="0;url=../../topics/decision-material-selection.html">
+<title>判断材料の選定 — 移動案内</title></head><body>
+<p>閲覧ページは<a href="../../topics/decision-material-selection.html">判断材料の選定</a>へ移動しました。</p>
+</body></html>\n`));
   const stylesheet = await readSource('scripts/knowledge-view.css');
   const entries = new Map(conceptIds.map(id => [id, outputs.get(`knowledge/${id}/KNOWLEDGE.md`)!.toString('utf8')]));
   outputs.set('index.html', Buffer.from(renderCatalog(outputs.get('knowledge/README.md')!.toString('utf8'), entries, stylesheet.toString('utf8'))));

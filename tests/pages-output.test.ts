@@ -32,11 +32,7 @@ const expectedFiles = [
   'knowledge/visual-hierarchy/KNOWLEDGE.md',
   'knowledge/visual-hierarchy/examples/schedule.md',
   'knowledge/visual-hierarchy/references/sources.md',
-  'prototypes/decision-material-selection/ai.md',
-  'prototypes/decision-material-selection/draft.md',
   'prototypes/decision-material-selection/index.html',
-  'prototypes/decision-material-selection/research/ai.md',
-  'prototypes/decision-material-selection/research/index.html',
   'topics/decision-material-selection.md',
   'topics/decision-material-selection.html',
   'knowledge/README.md',
@@ -63,7 +59,7 @@ const expectedFiles = [
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
 const generatedPages = ['index.html', '.nojekyll', ...movedPages,
-  ...expectedFiles.filter(file => file.endsWith('.html') && !file.startsWith('prototypes/'))];
+  ...expectedFiles.filter(file => file.endsWith('.html'))];
 
 const temporaryDirectories: string[] = [];
 afterEach(async () => {
@@ -156,22 +152,24 @@ test('every local HTML and Markdown link resolves inside the artifact at the Git
   }
 });
 
-test('artifact copies match their generated or canonical sources and retain repository-relative provenance', async () => {
+test('canonical Markdown copies and generated readers retain source provenance and status', async () => {
   const { out } = await fixture();
   await buildPages(out);
   for (const file of expectedFiles.filter(file => !generatedPages.includes(file))) {
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
+  const topicMarkdown = await readFile(path.join(out, 'topics/decision-material-selection.md'), 'utf8');
+  assert.match(topicMarkdown, /^status: accepted$/m, 'canonical topic status must remain accepted');
+  assert.doesNotMatch(topicMarkdown, /status: draft/);
   const provenanceCases: [string, string, string][] = [
-    ['prototypes/decision-material-selection/index.html', 'topics/decision-material-selection.md', 'accepted'],
-    ['prototypes/decision-material-selection/research/index.html', 'prototypes/decision-material-selection/draft.md', 'draft'],
+    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md', 'accepted'],
   ];
   for (const [htmlFile, sourceFile, status] of provenanceCases) {
     const html = await readFile(path.join(out, htmlFile), 'utf8');
     const source = await readFile(path.join(root, sourceFile));
+    assert.ok(html.includes(`<dt>status</dt><dd>${status}</dd>`), 'canonical topic reader must show accepted');
     assert.ok(html.includes(`<dt>source</dt><dd>${sourceFile}</dd>`));
     assert.ok(html.includes(`<meta name="source-sha256" content="${hash(source)}">`));
-    assert.ok(html.includes(`<dt>status</dt><dd>${status}</dd>`));
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\/|KNOWLEDGE \/ LOCAL VIEW/);
   }
 });
@@ -215,10 +213,11 @@ test('old Markdown URLs become generated navigation while concept scripts remain
 test('readers can reach both guideline pages, their original Markdown, and the current knowledge page', async () => {
   const { out } = await fixture();
   await buildPages(out);
-  for (const file of ['prototypes/decision-material-selection/index.html', 'prototypes/decision-material-selection/research/index.html']) {
-    const html = await readFile(path.join(out, file), 'utf8');
-    assert.ok(html.includes('href="https://9uile.github.io/mimic/guideline/"'), `${file}: missing guideline link`);
-  }
+  const topic = await readFile(path.join(out, 'topics/decision-material-selection.html'), 'utf8');
+  assert.ok(topic.includes('href="../guideline/index.html"'), 'topic reader must open the guideline');
+  const formerEntry = await readFile(path.join(out, 'prototypes/decision-material-selection/index.html'), 'utf8');
+  assert.ok(formerEntry.includes('url=../../topics/decision-material-selection.html'));
+  assert.doesNotMatch(formerEntry, /<dt>status<\/dt>|<article>/);
   for (const [htmlFile, sourceFile, otherFile] of [
     ['guideline/index.html', 'guideline/README.md', 'ai.html'],
     ['guideline/ai.html', 'guideline/ai.md', 'index.html'],

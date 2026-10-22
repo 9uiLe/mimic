@@ -8,8 +8,7 @@ import { afterEach, test } from 'bun:test';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const canonical = await readFile(path.join(root, 'topics/decision-material-selection.md'));
-const original = (await readFile(path.join(root, 'prototypes/decision-material-selection/draft.md'), 'utf8'))
-  .replace('status: draft', 'status: proposed').replaceAll('](../../knowledge/', '](../knowledge/').replaceAll('](../../topics/', '](');
+const original = await readFile(path.join(root, 'tests/fixtures/knowledge-display.md'), 'utf8');
 const markedModule = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
 const { marked } = await import(markedModule) as typeof import('marked');
 const run = (args: string[]) => spawnSync(process.execPath, [path.join(root, 'scripts/build-knowledge.ts'), ...args], { encoding: 'utf8' });
@@ -106,7 +105,7 @@ test('AI preserves all metadata and knowledge with working related links in both
   assertAllContent(html, original);
   assert.deepEqual(sectionIds(html), ['purpose', 'inputs', 'procedure', 'outputs', 'related', 'example', 'sources', 'unverified']);
   for (const note of ['proposal', 'assumption', 'limitation', 'evidence-scope']) assert.ok(html.includes(`class="note note-${note}"`));
-  assert.equal(html.split('この規則とデータなら仕事 A を選びます。').length - 1, 1);
+  assert.equal(html.split('この文書は生成器の表示とリンクを検査するためだけの架空資料です。').length - 1, 1);
   assert.match(html, /href="#outputs">判断案と選定理由へ/);
   assert.match(html, /href="#unverified">未検証事項を確認する/);
   assert.match(html, /href="\.\.\/\.\.\/knowledge\/grouping\/KNOWLEDGE\.md"/);
@@ -235,9 +234,9 @@ test('content, headings, candidate names, section order, and extra steps/example
   const { source, out, args } = await fixture();
   const before = await readFile(path.join(out, 'index.html'), 'utf8');
   let changed = original.toString()
-    .replace('## 何を、なぜ提示するかを説明する', '## 目的に応じて情報を選ぶ')
-    .replace('### 成立条件で比較する', '### 提示候補を比べる')
-    .replaceAll('仕事名', 'タスク名')
+    .replace('## 表示の目的', '## 変更した目的')
+    .replace('### 別の表示', '### 変更した表示')
+    .replaceAll('項目 B', '項目 C')
     .replace('<!-- mimic:note limitation -->', '7. 追加の手順は太字を必須にしない。\n\n<!-- mimic:note limitation -->')
     .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\n\n### 別の場面で使う例\n\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\n\n| 候補 | 採否 | 理由 |\n| --- | --- | --- |\n| 新しい候補 | 保留 | 条件未確認 |\n\n\`\`\`md\n[コードの参照](grouping.md)\n\`\`\`\n\n\`[コードの参照](grouping.md)\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md "補足")、**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。\n\n<!-- mimic:section sources -->`)
     .replace('status: proposed', 'status: draft');
@@ -253,7 +252,7 @@ test('content, headings, candidate names, section order, and extra steps/example
   assert.deepEqual(sectionIds(after), sectionIds(before));
   for (const name of ['design-id', 'design-version', 'stylesheet-sha256']) assert.equal(meta(after, name), meta(before, name));
   assert.notEqual(meta(after, 'source-sha256'), meta(before, 'source-sha256'));
-  assert.match(after, /<h3 id="example-alternatives">提示候補を比べる<\/h3>/);
+  assert.match(after, /<h3 id="example-alternatives">変更した表示<\/h3>/);
   assert.match(after, /<h3 id="another-example">別の場面で使う例<\/h3>/);
   assert.match(after, /追加の手順は太字を必須にしない。/);
   assert.match(after, /研究資料（未採用）/);
@@ -271,7 +270,7 @@ test('content, headings, candidate names, section order, and extra steps/example
 
 test('check rejects source changes with an unchanged version and edits to either output', async () => {
   const { source, out, args } = await fixture();
-  await writeFile(source, original.toString().replace('表示項目の少なさを目的にしません。', '表示項目の少なさを目的にしません。正本変更の検出。'));
+  await writeFile(source, original.toString().replace('架空資料です。', '架空資料です。変更検出用の文です。'));
   let result = run([...args, '--check']);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /ai\.md, index\.html/);
