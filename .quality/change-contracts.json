@@ -155,6 +155,36 @@
       "unresolved": [
         "画像の理解しやすさ、知識の正しさ、全体のアクセシビリティ適合は生成と配信の検査では保証しない。"
       ]
+    },
+    {
+      "id": "knowledge-semantic-relations",
+      "paths": [
+        "relations/*.json",
+        "scripts/relations.ts",
+        "scripts/build-relation-graph.ts",
+        "web/graph.js",
+        "web/graph.css",
+        "tests/relations.test.ts",
+        "tests/relation-graph-output.test.ts"
+      ],
+      "purpose": "根拠付きの意味関係を本文から独立して索引し、Pagesで方向・範囲を保ってグラフと文章で読む。",
+      "basis_status": "confirmed",
+      "basis": [
+        "relations/README.md#正本と役割",
+        "relations/README.md#更新する",
+        "guideline/knowledge-view.md#関係グラフの表示"
+      ],
+      "validation": [
+        "bun run relations:check",
+        "bun run verify",
+        "bun run quality:check",
+        "bun run quality:test",
+        "bun run test:effectiveness",
+        "ブラウザで選択・検索・種類・根拠遷移・狭幅・キーボードを確認する。"
+      ],
+      "unresolved": [
+        "関係の原典妥当性とAIの理解改善は、構造・生成検査の成功だけでは保証しない。"
+      ]
     }
   ]
 }

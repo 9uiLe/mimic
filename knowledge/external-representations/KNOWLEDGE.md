@@ -1,11 +1,8 @@
 ---
 id: external-representations
 title: 外的表象
-version: "1.0.0"
+version: "1.0.1"
 scope: distributed-cognitive-tasks
-related:
-  - conceptual-models
-  - ecological-interface-design
 ---
 
 # 外的表象

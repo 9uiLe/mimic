@@ -13,8 +13,9 @@ export const pagesFontFiles = Object.freeze(relativeFiles.map(file => `${fontDir
 const standalonePolicy = "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
 const pagesPolicy = "default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'";
 
-export function pageFontHead(outFile: string, pagesAssets = false) {
-  const policy = pagesAssets ? pagesPolicy : standalonePolicy;
+export function pageFontHead(outFile: string, pagesAssets = false, allowScripts = false) {
+  const policy = (pagesAssets ? pagesPolicy : standalonePolicy)
+    + (pagesAssets && allowScripts ? "; script-src 'self'" : '');
   const csp = `<meta http-equiv="Content-Security-Policy" content="${policy}">`;
   if (!pagesAssets) return csp;
   const links = weights.map(weight => {

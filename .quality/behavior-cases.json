@@ -124,7 +124,7 @@
         "status": "confirmed",
         "source": "guideline/development.md",
         "section": "確認すること",
-        "quotation": "生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度を確認します。",
+        "quotation": "生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度、関係データと本文の対応を確認します。",
         "relatedSource": "guideline/knowledge-view.md#編集元と生成",
         "reasoning": "原文との対応と生成物の鮮度を確かめる公開ガイド、および版と原文の指紋を記録する表示規約から期待値を固定する。"
       },
@@ -472,7 +472,7 @@
       },
       "expected": {
         "publishedFontFiles": 259,
-        "allPublishedFiles": 352,
+        "allPublishedFiles": 359,
         "stylesheetLinks": 2
       },
       "assumptions": ["CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"],
@@ -753,6 +753,28 @@
         "replace": "const relative = '../../../../private.svg';",
         "assertionMessage": "link escapes /mimic/"
       }
-    }
+    },
+    {"id":"relations-source-freshness","requirement":"本文のバイトが変われば旧関係データを拒否する。","oracle":{"status":"confirmed","source":"relations/README.md","section":"更新する",
+    "quotation":"本文の全文ハッシュが変われば鮮度の再確認が必要です。"},"input":{"fixture":"three concepts with scoped relation evidence"},"expected":"本文のバイトが変われば旧関係データを拒否する。","assumptions":["関係の真実性とAIの理解改善は保証しない。"],
+    "implementation":"scripts/relations.ts","test":"tests/relations.test.ts","supportingFiles":[],"testName":"relations reject stale body bytes even when the version remains unchanged",
+    "mutation":{"description":"本文のバイトが変われば旧関係データを拒否する。を故障させる。","find":"if (createHash('sha256').update(markdown).digest('hex') !== node.sha256) {","replace":"if (false) {",
+    "assertionMessage":"changed body bytes must invalidate relation evidence"}},
+    {"id":"relations-evidence-section","requirement":"根拠引用は指定した本文見出しの節内に存在する。","oracle":{"status":"confirmed","source":"relations/README.md","section":"更新する",
+    "quotation":"本文や根拠を変更したら、辺の意味・型・方向・範囲と引用を再照合します。"},"input":{"fixture":"three concepts with scoped relation evidence"},"expected":"根拠引用は指定した本文見出しの節内に存在する。",
+    "assumptions":["関係の真実性とAIの理解改善は保証しない。"],"implementation":"scripts/relations.ts","test":"tests/relations.test.ts","supportingFiles":[],
+    "testName":"relations reject evidence quoted from a different section","mutation":{"description":"根拠引用は指定した本文見出しの節内に存在する。を故障させる。",
+    "find":"if (!markdown || !sectionContains(markdown, source.heading, source.quotation)) {","replace":"if (!markdown) {",
+    "assertionMessage":"a quotation elsewhere in the body must not validate the named evidence section"}},
+    {"id":"relations-sync-unknown-field","requirement":"同期は未対応注釈を黙って消さず拒否する。","oracle":{"status":"confirmed","source":"relations/README.md","section":"更新する",
+    "quotation":"未対応のフィールドは同期前に拒否し、元のグラフを変更しません。"},"input":{"fixture":"three concepts with scoped relation evidence"},"expected":"同期は未対応注釈を黙って消さず拒否する。","assumptions":["関係の真実性とAIの理解改善は保証しない。"],
+    "implementation":"scripts/relations.ts","test":"tests/relations.test.ts","supportingFiles":[],"testName":"relations sync rejects unknown edge fields without losing annotations",
+    "mutation":{"description":"同期は未対応注釈を黙って消さず拒否する。を故障させる。","find":"if (unknownKey) throw new Error(`${location}: unknown field ${unknownKey}`);",
+    "replace":"if (false) throw new Error(`${location}: unknown field ${unknownKey}`);","assertionMessage":"unknown fields must reject before annotations can be dropped"}},
+    {"id":"graph-relation-direction","requirement":"グラフの静的一覧でも有向関係の向きを保つ。","oracle":{"status":"confirmed","source":"guideline/knowledge-view.md","section":"関係グラフの表示",
+    "quotation":"矢印の向きと関係名を併記し、色や位置だけに意味を委ねません。"},"input":{"fixture":"two typed endpoints with explicit evidence"},"expected":"グラフの静的一覧でも有向関係の向きを保つ。","assumptions":["関係の真実性とAIの理解改善は保証しない。"],
+    "implementation":"scripts/build-relation-graph.ts","test":"tests/relation-graph-output.test.ts","supportingFiles":["scripts/pages-catalog.ts","scripts/pages-fonts.ts"],
+    "testName":"graph reader preserves relation direction, meaning, scope, and evidence destinations without JavaScript","mutation":{"description":"グラフの静的一覧でも有向関係の向きを保つ。を故障させる。",
+    "find":"const direction = type.directed ? '→' : '↔';","replace":"const direction = type.directed ? '←' : '↔';",
+    "assertionMessage":"directed relation must start at alpha and point toward beta"}}
   ]
 }

@@ -1,13 +1,8 @@
 ---
 id: layout-spacing
 title: レイアウトの余白
-version: "1.0.0"
+version: "1.0.1"
 scope: general-digital-ui-layout-spacing
-related:
-  - typography
-  - grouping
-  - visual-hierarchy
-  - design-tokens
 ---
 
 # レイアウトの余白

@@ -1,11 +1,8 @@
 ---
 id: color-context
 title: 色の文脈と相互作用
-version: "1.0.0"
+version: "1.0.1"
 scope: color-context-through-albers-teaching
-related:
-  - lightness-and-luminance
-  - color-contrast
 ---
 
 # 色の文脈と相互作用

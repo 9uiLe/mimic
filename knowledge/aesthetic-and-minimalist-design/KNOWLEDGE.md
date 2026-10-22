@@ -1,13 +1,8 @@
 ---
 id: aesthetic-and-minimalist-design
 title: Aesthetic and Minimalist Design
-version: "1.0.0"
+version: "1.0.1"
 scope: general-digital-ui
-related:
-  - ai-slop
-  - grouping
-  - visual-hierarchy
-  - conceptual-models
 ---
 
 # Aesthetic and Minimalist Design
