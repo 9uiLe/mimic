@@ -2,7 +2,7 @@
 id: visual-hierarchy
 title: 視覚的な優先順位
 status: proposed
-version: "0.2.0"
+version: "0.2.1"
 scope: general-digital-ui
 related:
   - grouping

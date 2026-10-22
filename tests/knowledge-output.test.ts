@@ -171,6 +171,36 @@ test('conceptual knowledge keeps its original chapters and all source content wi
   }
 });
 
+test('accepted knowledge displays its adopted label while preserving the raw status for humans and AI', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-adopted-knowledge-'));
+  temporaryDirectories.push(directory);
+  const source = path.join(directory, 'knowledge/adoption-fixture/KNOWLEDGE.md');
+  const out = path.join(directory, 'accepted-preview');
+  const acceptedSource = `---
+id: adoption-fixture
+title: 採用状態の表示例
+status: accepted
+version: "1.0.0"
+scope: adoption-display
+related:
+---
+
+# 採用状態の表示例
+
+## 説明
+
+採用状態の表示を確認するための架空の文書です。
+`;
+  await mkdir(path.dirname(source), { recursive: true });
+  await writeFile(source, acceptedSource);
+  const result = run(['--source', source, '--out-dir', out]);
+  assert.equal(result.status, 0, result.stderr);
+  const html = await readFile(path.join(out, 'index.html'), 'utf8');
+  assert.match(html, /<span class="badge">正式採用済み<\/span>/, 'accepted status must display the formally adopted label');
+  assert.match(html, /<dt>status<\/dt><dd>accepted<\/dd>/, 'human output must preserve the raw accepted status');
+  assert.equal(await readFile(path.join(out, 'ai.md'), 'utf8'), acceptedSource, 'AI output must preserve the accepted source exactly');
+});
+
 test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
   const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
   assert.deepEqual(concepts, ['conceptual-models', 'ecological-interface-design', 'external-representations', 'grouping', 'visual-hierarchy']);

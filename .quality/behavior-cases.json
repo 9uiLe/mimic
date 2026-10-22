@@ -31,6 +31,63 @@
         "replace": "path.relative(targetPath, fromDirectory)",
         "assertionMessage": "generated knowledge link must preserve the documented concept destination"
       }
+    },
+    {
+      "id": "knowledge-accepted-status",
+      "requirement": "人が正式採用を承認した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
+      "oracle": {
+        "status": "assumption",
+        "source": "guideline/README.md",
+        "section": "下書きと採用状態",
+        "quotation": "人が正式採用を承認した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "relatedSource": "guideline/development.md#生成の規則",
+        "reasoning": "採用状態の値と表示は実装出力ではなく、採用に向けて用意した具体的な運用仕様案から固定する。"
+      },
+      "input": {
+        "status": "accepted",
+        "related": []
+      },
+      "expected": {
+        "htmlBadge": "正式採用済み",
+        "htmlRawStatus": "accepted",
+        "aiFrontmatterStatus": "accepted"
+      },
+      "assumptions": [
+        "acceptedという値と正式採用済みという表示は今回の採用準備案であり、最終承認は人が行う。",
+        "テスト用の架空文書だけをacceptedとし、実際の知識本文の状態は変更しない。",
+        "表示とメタデータ保持を検査する。知識の意味や人による採用承認の有無を機械で判定しない。"
+      ],
+      "implementation": "scripts/build-knowledge.ts",
+      "test": "tests/knowledge-output.test.ts",
+      "supportingFiles": [
+        "scripts/knowledge-paths.ts",
+        "scripts/knowledge-view.css",
+        "node_modules/marked/lib/marked.esm.js",
+        "node_modules/marked/package.json",
+        "prototypes/decision-material-selection/draft.md",
+        "topics/decision-material-selection.md",
+        "knowledge/README.md",
+        "knowledge/conceptual-models/KNOWLEDGE.md",
+        "knowledge/conceptual-models/references/sources.md",
+        "knowledge/ecological-interface-design/KNOWLEDGE.md",
+        "knowledge/ecological-interface-design/references/sources.md",
+        "knowledge/external-representations/KNOWLEDGE.md",
+        "knowledge/external-representations/examples/temperature.md",
+        "knowledge/external-representations/references/sources.md",
+        "knowledge/grouping/KNOWLEDGE.md",
+        "knowledge/grouping/examples/schedule.md",
+        "knowledge/grouping/references/sources.md",
+        "knowledge/visual-hierarchy/KNOWLEDGE.md",
+        "knowledge/visual-hierarchy/examples/schedule.md",
+        "knowledge/visual-hierarchy/references/sources.md"
+      ],
+      "testName": "accepted knowledge displays its adopted label while preserving the raw status for humans and AI",
+      "mutation": {
+        "description": "acceptedの表示だけを採用前に誤変更し、正式採用済みの文書を誤った状態として表示する。",
+        "find": "accepted: '正式採用済み'",
+        "replace": "accepted: '採用前の文書'",
+        "assertionMessage": "accepted status must display the formally adopted label"
+      }
     }
   ]
 }

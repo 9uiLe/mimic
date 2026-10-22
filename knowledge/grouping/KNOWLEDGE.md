@@ -2,7 +2,7 @@
 id: grouping
 title: グルーピング
 status: proposed
-version: "0.2.0"
+version: "0.2.1"
 scope: general-digital-ui
 related:
   - visual-hierarchy
