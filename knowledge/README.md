@@ -11,12 +11,15 @@
 | `conceptual-models` | [概念モデル](conceptual-models/KNOWLEDGE.md) | 構成要素を結び、仕組みや動作を理解する枠組み |
 | `grouping` | [グルーピング](grouping/KNOWLEDGE.md) | 意味上の分類、近接によるまとまり、名称や見出しの役割 |
 | `visual-hierarchy` | [視覚的な優先順位](visual-hierarchy/KNOWLEDGE.md) | 相対的な強調、内容の階層、業務上の優先度の違い |
+| `lightness-and-luminance` | [明度と相対輝度](lightness-and-luminance/KNOWLEDGE.md) | 色の明るさに関する表現と、コントラスト計算に使う量の違い |
+| `color-contrast` | [色コントラスト](color-contrast/KNOWLEDGE.md) | 前景・背景の組み合わせと、文字・UIの識別に関する条件 |
+| `design-tokens` | [Design Token](design-tokens/KNOWLEDGE.md) | 設計上の意図と値を、名前・参照・役割で共有する仕組み |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。入口では定義、背景、関連概念との違い、対象範囲を説明し、出典との対応は各ディレクトリの `references/sources.md` で確認できます。[RepositoryのREADME](../README.md)やこの索引は、本文を参照した代わりにはなりません。
 
 ## 参照する前に
 
-`KNOWLEDGE.md` 先頭の `id`・`title`・`status`・`version`・`scope`・`related` を確認します。収録している５件の説明文は正式採用済み（`status: accepted`）です。版と採用状態は各入口の先頭、対象範囲は各概念の `scope` と本文で確認します。
+`KNOWLEDGE.md` 先頭の `id`・`title`・`status`・`version`・`scope`・`related` を確認します。既存５件は正式採用済み（`status: accepted`）です。「明度と相対輝度」「色コントラスト」「Design Token」の３件は採用前（`status: proposed`）で、方向の確認と説明文の正式採用を区別しています。版と採用状態は各入口の先頭、対象範囲は各概念の `scope` と本文で確認します。
 
 使う概念の定義だけでなく、出典の立場と対象範囲、関連概念との違い、説明用の整理や例の位置づけまで読みます。入口から参照する `references/` や `examples/` の内容が説明に必要な場合は、それも確認します。利用者や案件の条件に適用するときは、本文が説明する知識と、案件固有の仮定・提案を区別します。必要な知識がない場合は、その不足を明記します。
 
@@ -25,6 +28,8 @@
 ## 閲覧・編集の案内
 
 複数の概念を読む道筋は、`knowledge/` の外にある[「判断材料の選定」の案内](../topics/decision-material-selection.md)に置きます。この案内の[人向け閲覧ページ](../prototypes/decision-material-selection/index.html)と[案内のMarkdown](../prototypes/decision-material-selection/ai.md)は、案内の正本から生成します。個別概念の本文や補足を取り込んだ全文ではないため、概念を使うときはリンク先の `KNOWLEDGE.md` を読みます。
+
+[「色の知識」の案内](../topics/color.md)からは、明るさ・コントラスト・視覚的な強調に関する本文を読めます。[Design Token](design-tokens/KNOWLEDGE.md)は、色に限らず設計上の値を共有する仕組みとして独立して読めます。具体的なUI色へ適用・共有するときは[色への適用例](design-tokens/examples/color-presentation.md)を参照し、[利用ガイドの提示方針](../guideline/README.md#uiの色を具体的に示すとき)を適用します。
 
 ディレクトリの構成と補足資料の役割は[知識の構造ガイド](../guideline/knowledge-structure.md)を参照します。これは資料の配置を揃える構造であり、ClaudeやCodexのスキルとしての呼び出しや実行は定義しません。
 

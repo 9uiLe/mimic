@@ -4,19 +4,24 @@
 
 ## 収録している知識
 
-| 本文 | 説明すること |
-| --- | --- |
-| [Ecological Interface Design](knowledge/ecological-interface-design/KNOWLEDGE.md) | 作業領域の制約をインターフェースに表す設計枠組み |
-| [外的表象](knowledge/external-representations/KNOWLEDGE.md) | 外部環境に表された情報と、頭の中の処理との関係 |
-| [概念モデル](knowledge/conceptual-models/KNOWLEDGE.md) | 構成要素を結び、仕組みや動作を理解する枠組み |
-| [グルーピング](knowledge/grouping/KNOWLEDGE.md) | 意味上の分類、近接によるまとまり、名称や見出しの役割 |
-| [視覚的な優先順位](knowledge/visual-hierarchy/KNOWLEDGE.md) | 相対的な強調、内容の階層、業務上の優先度の違い |
+| 本文 | 説明すること | 採用状態 |
+| --- | --- | --- |
+| [Ecological Interface Design](knowledge/ecological-interface-design/KNOWLEDGE.md) | 作業領域の制約をインターフェースに表す設計枠組み | 正式採用済み（`accepted`） |
+| [外的表象](knowledge/external-representations/KNOWLEDGE.md) | 外部環境に表された情報と、頭の中の処理との関係 | 正式採用済み（`accepted`） |
+| [概念モデル](knowledge/conceptual-models/KNOWLEDGE.md) | 構成要素を結び、仕組みや動作を理解する枠組み | 正式採用済み（`accepted`） |
+| [グルーピング](knowledge/grouping/KNOWLEDGE.md) | 意味上の分類、近接によるまとまり、名称や見出しの役割 | 正式採用済み（`accepted`） |
+| [視覚的な優先順位](knowledge/visual-hierarchy/KNOWLEDGE.md) | 相対的な強調、内容の階層、業務上の優先度の違い | 正式採用済み（`accepted`） |
+| [明度と相対輝度](knowledge/lightness-and-luminance/KNOWLEDGE.md) | 色の明るさに関する表現と、コントラスト計算に使う量の違い | 採用前（`proposed`） |
+| [色コントラスト](knowledge/color-contrast/KNOWLEDGE.md) | 前景・背景の組み合わせと、文字・UIの識別に関する条件 | 採用前（`proposed`） |
+| [Design Token](knowledge/design-tokens/KNOWLEDGE.md) | 設計上の意図と値を、名前・参照・役割で共有する仕組み | 採用前（`proposed`） |
 
-一つの概念・思想・哲学ごとにディレクトリを用意し、`KNOWLEDGE.md` を入口としています。出典や説明例は、同じディレクトリ内の必要な補足へリンクします。これらが知識の正本です。収録している５件の説明文は正式採用済み（`accepted`）です。版と採用状態は、各 `KNOWLEDGE.md` の先頭で確認できます。
+一つの概念・思想・哲学ごとにディレクトリを用意し、`KNOWLEDGE.md` を入口としています。出典や説明例は、同じディレクトリ内の必要な補足へリンクします。これらが知識の正本です。既存５件は正式採用済み（`accepted`）、「明度と相対輝度」「色コントラスト」「Design Token」の３件は採用前（`proposed`）です。版と採用状態は、各 `KNOWLEDGE.md` の先頭で確認できます。
 
 ## 読み方・使い方
 
 人は上の一覧から関心のある概念の入口を読みます。複数の概念を横断して読むための[「判断材料の選定」の案内](topics/decision-material-selection.md)もあります。この案内は[閲覧ページ](prototypes/decision-material-selection/index.html)でも読めます。[GitHub Pages](https://9uile.github.io/mimic/)では、同じ案内から生成したページを公開します。個別の概念はMarkdownで参照します。
+
+色については[「色の知識」の案内](topics/color.md)から、明るさ・コントラスト・視覚的な強調に関する本文を読めます。[Design Token](knowledge/design-tokens/KNOWLEDGE.md)は、色に限らず設計上の値を名前や参照で共有する独立した概念として読めます。具体的なUI色を適用・共有するときは[色への適用例](knowledge/design-tokens/examples/color-presentation.md)を参照し、[利用ガイドの提示方針](guideline/README.md#uiの色を具体的に示すとき)に従います。
 
 AIは[知識の入口](knowledge/README.md)から必要な本文を読み、版・採用状態・出典の対象範囲を確認します。索引や要約だけを読んで、本文を参照済みとは扱いません。
 

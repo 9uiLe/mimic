@@ -203,11 +203,14 @@ related:
 
 test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
   const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
-  assert.deepEqual(concepts, ['conceptual-models', 'ecological-interface-design', 'external-representations', 'grouping', 'visual-hierarchy']);
+  assert.deepEqual(concepts, [
+    'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
+    'external-representations', 'grouping', 'lightness-and-luminance', 'visual-hierarchy',
+  ]);
   for (const id of concepts) {
     const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;
     const entry = await readFile(path.join(root, relativeSource));
-    assert.match(entry.toString(), new RegExp(`^id: ${id}$`, 'm'));
+    assert.match(entry.toString(), new RegExp(`^id: ${id}$`, 'm'), `${id}: entry id must match concept directory`);
     const related = frontmatter(entry).match(/^  - (.+)$/gm)?.map(line => line.slice(4)) || [];
     for (const relatedId of related) assert.ok(concepts.includes(relatedId), `${id}: missing related concept ${relatedId}`);
     const { source, out, args } = await fixture(entry, relativeSource);
