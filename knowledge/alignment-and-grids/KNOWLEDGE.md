@@ -1,12 +1,8 @@
 ---
 id: alignment-and-grids
 title: 整列とグリッド
-version: "1.0.0"
+version: "1.0.1"
 scope: general-digital-ui-alignment-and-grids
-related:
-  - layout-spacing
-  - typography
-  - visual-hierarchy
 ---
 
 # 整列とグリッド

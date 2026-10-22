@@ -1,10 +1,8 @@
 ---
 id: visual-hierarchy
 title: 視覚的な優先順位
-version: "1.0.0"
+version: "1.0.1"
 scope: general-digital-ui
-related:
-  - grouping
 ---
 
 # 視覚的な優先順位

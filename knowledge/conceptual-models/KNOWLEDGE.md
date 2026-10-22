@@ -1,10 +1,8 @@
 ---
 id: conceptual-models
 title: 概念モデル
-version: "1.0.0"
+version: "1.0.1"
 scope: design-communication
-related:
-  - external-representations
 ---
 
 # 概念モデル

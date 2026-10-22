@@ -6,12 +6,16 @@ import { renderKnowledge } from './build-knowledge.ts';
 import { additionalSources, conceptFiles, conceptIds, exampleFiles, readerViews, renderCatalog } from './pages-catalog.ts';
 import { figureFiles, validateFigure } from './knowledge-images.ts';
 import { pagesFontFiles, readPagesFontAssets } from './pages-fonts.ts';
+import { loadRelationBundle } from './relations.ts';
+import { renderRelationGraph } from './build-relation-graph.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const copiedFiles = Object.freeze([
   'guideline/README.md',
   'guideline/ai.md',
   'topics/decision-material-selection.md',
+  'relations/README.md', 'relations/graph.json', 'relations/vocabulary.json',
+  'web/graph.js', 'web/graph.css',
   ...conceptFiles, ...exampleFiles, ...additionalSources, ...figureFiles,
 ]);
 const movedKnowledge = Object.freeze({
@@ -21,6 +25,7 @@ const movedKnowledge = Object.freeze({
 });
 export const publishedFiles = Object.freeze([...new Set([
   'index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html',
+  'graph/index.html',
   'prototypes/decision-material-selection/index.html',
   ...copiedFiles, ...Object.values(readerViews), ...Object.keys(movedKnowledge), ...pagesFontFiles,
 ])].sort());
@@ -61,6 +66,7 @@ async function readSource(file: string) {
 export async function buildPages(outDir = path.join(root, '_site')) {
   outDir = path.resolve(outDir);
   await inspectOutput(outDir);
+  const relations = await loadRelationBundle(root);
   const outputs = new Map<string, Buffer>([['.nojekyll', Buffer.alloc(0)]]);
   for (const file of copiedFiles) {
     const bytes = await readSource(file);
@@ -77,6 +83,7 @@ export async function buildPages(outDir = path.join(root, '_site')) {
 <p>閲覧ページは<a href="../../topics/decision-material-selection.html">判断材料の選定</a>へ移動しました。</p>
 </body></html>\n`));
   const stylesheet = await readSource('scripts/knowledge-view.css');
+  outputs.set('graph/index.html', Buffer.from(renderRelationGraph(relations, stylesheet.toString('utf8'), true)));
   const entries = new Map(conceptIds.map(id => [id, outputs.get(`knowledge/${id}/KNOWLEDGE.md`)!.toString('utf8')]));
   outputs.set('index.html', Buffer.from(renderCatalog(outputs.get('knowledge/README.md')!.toString('utf8'), entries, stylesheet.toString('utf8'), true)));
   for (const [sourceFile, outFile] of Object.entries(readerViews)) {

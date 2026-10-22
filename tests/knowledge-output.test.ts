@@ -217,8 +217,7 @@ test('each concept has a matching fixed entry, resolvable support links, and met
     const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;
     const entry = await readFile(path.join(root, relativeSource));
     assert.match(entry.toString(), new RegExp(`^id: ${id}$`, 'm'), `${id}: entry id must match concept directory`);
-    const related = frontmatter(entry).match(/^  - (.+)$/gm)?.map(line => line.slice(4)) || [];
-    for (const relatedId of related) assert.ok(concepts.includes(relatedId), `${id}: missing related concept ${relatedId}`);
+    assert.doesNotMatch(frontmatter(entry), /^related:/m, `${id}: concept relations belong to the graph`);
     const { source, out, args } = await fixture(entry, relativeSource);
     const html = await readFile(path.join(out, 'index.html'), 'utf8');
     assertAllContent(html, entry);
@@ -226,8 +225,6 @@ test('each concept has a matching fixed entry, resolvable support links, and met
     const aiPath = path.join(out, 'ai.md');
     assertAiContent(await readFile(aiPath), entry, aiPath, source);
     await assertRelatedFiles(await readFile(aiPath), aiPath);
-    await writeFile(source, entry.toString().replace(/^related:\n(?:  - .*\n)*/m, 'related:\n'));
-    assert.equal(run(args).status, 0, `${id}: a concept may have no related concepts`);
     for (const [metadataId, message] of [['another-concept', /directory and id must match/], ['../escape', /invalid knowledge id/]] as const) {
       await writeFile(source, entry.toString().replace(`id: ${id}`, `id: ${metadataId}`));
       const result = run(args);

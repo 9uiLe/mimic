@@ -1,0 +1,48 @@
+.relation-page header,.relation-page main,.relation-page footer{max-width:80rem}
+.relation-page .hero{max-width:48rem}
+.graph-controls{display:flex;align-items:end;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}
+.graph-controls label{display:grid;gap:.25rem;font-size:var(--type-supporting-size);flex:1;min-width:12rem}
+.graph-controls input,.graph-controls select,.graph-controls button{
+font:inherit;color:var(--color-text-primary);background:var(--color-surface-canvas);
+border:1px solid var(--color-text-secondary);border-radius:3px;padding:.65rem .75rem;min-height:2.75rem;max-width:100%
+}
+.graph-controls button{cursor:pointer;font-size:var(--type-supporting-size)}
+.graph-controls :focus-visible{outline:3px solid var(--color-focus);outline-offset:3px}
+.graph-scroll{overflow:auto;border:1px solid var(--color-border-subtle);background:var(--color-surface-subtle);margin-bottom:2rem}
+#relation-graph{display:block;width:100%;min-width:58rem;height:auto}
+.graph-edge{fill:none;stroke:var(--color-text-secondary);stroke-width:1.5;opacity:.32}
+.graph-edge.is-near{stroke:var(--color-link);stroke-width:2.5;opacity:1}
+.graph-edge.is-muted{opacity:.08}
+.graph-arrow{fill:var(--color-text-secondary)}
+.graph-node{cursor:pointer;outline:none}
+.graph-node rect{fill:var(--color-surface-canvas);stroke:var(--color-text-secondary);stroke-width:1.5}
+.graph-node text{fill:var(--color-text-primary);font-family:var(--type-body-family);font-size:16px;font-weight:600;pointer-events:none}
+.graph-node .graph-node-count{fill:var(--color-text-secondary);font-size:13px;font-weight:400}
+.graph-node.is-muted rect{stroke-dasharray:4 4;stroke:var(--color-border-subtle)}
+.graph-node.is-muted text{fill:var(--color-text-secondary)}
+.graph-node.is-selected rect{fill:var(--color-note-surface);stroke:var(--color-focus);stroke-width:3}
+.graph-node:hover rect,.graph-node:focus-visible rect{stroke:var(--color-focus);stroke-width:3}
+.graph-selection{border-left:3px solid var(--color-link);padding-left:1.25rem;max-width:48rem;scroll-margin-top:1.5rem}
+.graph-selection h3{margin-top:1.5rem}
+.graph-selection .selection-directions{font-size:var(--type-supporting-size);font-weight:600}
+.graph-reading{margin-top:var(--space-section-gap);max-width:48rem}
+.graph-concepts{columns:2;column-gap:2rem}
+.graph-concepts li{break-inside:avoid;margin-bottom:.65rem}
+.graph-concepts .meta{display:block}
+.graph-reading>details{margin-top:1rem}
+.relation-entry{padding:1.5rem 0;border-bottom:1px solid var(--color-border-subtle)}
+.relation-entry h3{margin:0 0 .75rem}
+.relation-kind,.relation-scope,.relation-evidence{font-size:var(--type-supporting-size)}
+.relation-kind{color:var(--color-text-secondary)}
+.relation-evidence{margin:1rem 0 0}
+.relation-evidence blockquote{margin:.5rem 0 1rem;padding-left:1rem}
+@media(max-width:42.5rem){
+.graph-controls label{min-width:100%}
+.graph-controls button{width:100%}
+.graph-concepts{columns:1}
+.graph-selection{padding-left:.875rem}
+}
+@media print{
+.graph-explorer{display:none}
+#graph-fallback{display:block}
+}

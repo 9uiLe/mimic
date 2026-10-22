@@ -1,13 +1,8 @@
 ---
 id: ai-slop
 title: AI Slop
-version: "1.0.0"
+version: "1.0.1"
 scope: ai-generated-digital-ui-criticism
-related:
-  - aesthetic-and-minimalist-design
-  - grouping
-  - visual-hierarchy
-  - conceptual-models
 ---
 
 # AI Slop

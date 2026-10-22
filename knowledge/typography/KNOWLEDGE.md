@@ -1,13 +1,8 @@
 ---
 id: typography
 title: Typography
-version: "1.0.0"
+version: "1.0.1"
 scope: japanese-latin-mixed-horizontal-digital-ui
-related:
-  - layout-spacing
-  - visual-hierarchy
-  - grouping
-  - design-tokens
 ---
 
 # Typography

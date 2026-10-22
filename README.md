@@ -4,13 +4,30 @@
 
 ## 知識を読む
 
-AI は[知識の入口](knowledge/README.md)から必要な概念の `KNOWLEDGE.md` を読み、版・対象範囲と出典を確認します。
+[知識の入口](knowledge/README.md)には概念の一覧と、本文から独立した[意味付き関係グラフ](relations/README.md)があります。AIは関係の型・向き・根拠を使って索引し、目的に応じて読む順序と範囲を決めます。
 
-必要に応じて本文から出典や説明例へ進みます。索引だけを本文の代わりにしません。
+概念の説明は `knowledge/<概念ID>/KNOWLEDGE.md`、構造化した関係は `relations/graph.json`、関係型の意味は `relations/vocabulary.json` が正本です。説明に使う本文の版・対象範囲と必要な出典・例を確認します。索引やグラフだけを本文の代わりにしません。
 
 ## 人向けの閲覧
 
-[GitHub Pages](https://9uile.github.io/mimic/) では、収録した概念の一覧から本文・関連概念・出典・例をHTMLで読めます。
+[GitHub Pages](https://9uile.github.io/mimic/) 向けの閲覧ページには、概念一覧と[関係グラフ](https://9uile.github.io/mimic/graph/)を用意します。グラフで概念を探し、関係の根拠と本文・出典・例へ進めます。
+
+## Repositoryの構成
+
+| 場所 | 役割 |
+| --- | --- |
+| `knowledge/` | 概念ごとの本文・出典対応表・説明例 |
+| `relations/` | 意味付き関係グラフ・関係型の語彙と利用案内 |
+| `topics/` | 目的や題目に応じた横断的な案内 |
+| `guideline/` | 利用・編集・表示・開発・品質検査の方針 |
+| `scripts/` | 正本からの生成と検査。本文表示の既存CSSも保持 |
+| `web/` | 人向け関係グラフのブラウザ用JavaScriptとCSS |
+| `assets/` | Pagesで配布するフォント資産とライセンス |
+| `tests/`・`.quality/` | 振る舞いの検査と、その条件・根拠 |
+| `.github/` | GitHub Actionsの検査・公開処理 |
+| `output/`・`_site/` | Git管理外の下書き・作業出力とPages生成物 |
+
+概念のIDと本文の配置を保ち、知識の説明・関係の構造・閲覧表示をそれぞれの正本で管理します。詳しい境界は[知識の構造ガイド](guideline/knowledge-structure.md)に記載します。
 
 ## Repositoryの保守
 

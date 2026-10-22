@@ -13,7 +13,7 @@ const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
 const markedVersion = '17.0.5';
 const stylesheetPath = path.join(path.dirname(generatorPath), 'knowledge-view.css');
-const design = { id: 'mimic-knowledge-view', version: '3.3.0' };
+const design = { id: 'mimic-knowledge-view', version: '3.4.0' };
 const sectionLabels = {
   purpose: '目的と使う場面',
   inputs: '使う前に確かめること',
@@ -166,8 +166,8 @@ function parseSource(text: string, marked: Marked, sourcePath: string) {
     return value;
   };
   const metadata: Metadata = { id: requiredField('id'), title: requiredField('title'), version: requiredField('version'), scope: requiredField('scope'), related: [] };
-  assert(Array.isArray(fields.related), 'missing related');
-  metadata.related = fields.related;
+  assert(fields.related === undefined || Array.isArray(fields.related), 'invalid related');
+  metadata.related = fields.related ?? [];
   const validId = (id: string) => /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(id);
   assert(validId(metadata.id), 'invalid knowledge id');
   assert(metadata.related.every(validId), 'invalid related id');
@@ -292,11 +292,13 @@ function makeHtml(
   const markdownLabel = topic ? '案内のMarkdown' : '本文のMarkdown';
   const home = views ? relativeLink(outDir, path.join(root, 'index.html')) : 'https://9uile.github.io/mimic/';
   const guidelineHref = views ? relativeLink(outDir, path.join(root, 'guideline/index.html')) : 'https://9uile.github.io/mimic/guideline/';
+  const graphBase = views ? relativeLink(outDir, path.join(root, 'graph/index.html')) : 'https://9uile.github.io/mimic/graph/';
+  const graphHref = graphBase + (path.basename(sourcePath) === 'KNOWLEDGE.md' ? `?concept=${encodeURIComponent(metadata.id)}` : '');
   const sourceLinks = views ? `<a href="${escape(path.basename(sourcePath))}">Markdown原文</a>`
     : `<a href="${escape(relativeLink(outDir, sourcePath))}">${sourceLabel}</a> · <a href="ai.md">${markdownLabel}</a>`;
   const provenanceEntries = {
     id: metadata.id, version: metadata.version, scope: metadata.scope,
-    related: metadata.related.join(', '), source: relativeLink(root, sourcePath),
+    ...(metadata.related.length ? { related: metadata.related.join(', ') } : {}), source: relativeLink(root, sourcePath),
     'source SHA-256': provenance.source, 'design ID': design.id,
     'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet,
     'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`,
@@ -312,7 +314,8 @@ ${pageFontHead(views?.[relativeLink(root, sourcePath)] || 'index.html', pagesAss
 ${stylesheet}
 </style></head><body>
 <a class="skip" href="#${escape(sections[0]!.id)}">本文へ</a>
-<header><div class="topline"><a class="brand" href="${escape(home)}">Mimic</a><div class="toplinks"><a href="${escape(guidelineHref)}">利用ガイド</a></div></div>
+<header><div class="topline"><a class="brand" href="${escape(home)}">Mimic</a><div class="toplinks">
+<a href="${escape(graphHref)}">関係グラフ</a><a href="${escape(guidelineHref)}">利用ガイド</a></div></div>
 <div class="hero"><h1 id="title">${escape(metadata.title)}</h1><p class="meta">v${escape(metadata.version)}</p></div></header>
 <main class="layout"><nav aria-label="目次"><details><summary>目次</summary><ol>${navigation}</ol></details></nav><article>
 ${sections.map(section).join('\n')}

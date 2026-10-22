@@ -22,6 +22,8 @@ const expectedFiles = [
   'guideline/ai.md',
   'guideline/index.html',
   'index.html',
+  'graph/index.html', 'relations/index.html', 'relations/README.md', 'relations/graph.json', 'relations/vocabulary.json',
+  'web/graph.js', 'web/graph.css',
   'knowledge/conceptual-models/KNOWLEDGE.md',
   'knowledge/conceptual-models/references/sources.md',
   'knowledge/decision-material-selection.md',
@@ -94,6 +96,7 @@ async function fixture() {
 
 async function isolatedBuilder(directory: string) {
   const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/build-knowledge.ts', 'scripts/pages-catalog.ts',
+    'scripts/relations.ts', 'scripts/build-relation-graph.ts',
     'scripts/pages-fonts.ts', 'scripts/knowledge-images.ts', 'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css',
     `${fontRoot}/integrity.json`, ...expectedFiles.filter(file => !generatedPages.includes(file) && !expectedFontFiles.includes(file))];
   for (const file of inputs) {
@@ -127,7 +130,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 352);
+  assert.equal(expectedFiles.length, 359);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -146,17 +149,17 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     /<li><h3><a href="knowledge\/([^/]+)\/">[^<]+<\/a><\/h3>[\s\S]*?<p class="meta">v([^<]+)<\/p><\/li>/g,
   )].map(([, id, version]) => [id, version]));
   assert.deepEqual(catalogVersions, {
-    'ecological-interface-design': '1.0.0', 'external-representations': '1.0.0',
-    'conceptual-models': '1.0.0', grouping: '1.0.0', 'visual-hierarchy': '1.0.0',
-    'lightness-and-luminance': '1.0.0', 'color-contrast': '1.0.0',
-    'design-tokens': '1.1.0', 'ai-slop': '1.0.0',
-    'aesthetic-and-minimalist-design': '1.0.0', typography: '1.0.0', 'layout-spacing': '1.0.0',
-    'alignment-and-grids': '1.0.0', 'color-context': '1.0.0',
+    'ecological-interface-design': '1.0.1', 'external-representations': '1.0.1',
+    'conceptual-models': '1.0.1', grouping: '1.0.1', 'visual-hierarchy': '1.0.1',
+    'lightness-and-luminance': '1.0.1', 'color-contrast': '1.0.1',
+    'design-tokens': '1.1.1', 'ai-slop': '1.0.1',
+    'aesthetic-and-minimalist-design': '1.0.1', typography: '1.0.1', 'layout-spacing': '1.0.1',
+    'alignment-and-grids': '1.0.1', 'color-context': '1.0.1',
   }, 'catalog must map each concept to its source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 13,
-    'catalog must show thirteen v1.0.0 source concept versions');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 1,
-    'catalog must show the Design Token v1.1.0 source version');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 13,
+    'catalog must show thirteen v1.0.1 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
+    'catalog must show the Design Token v1.1.1 source version');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
     'topics/color.md', 'topics/ai-slop.md']) {
     const content = await readFile(path.join(out, file), 'utf8');
@@ -197,8 +200,9 @@ test('Pages uses only pinned same-origin font subsets and keeps their license', 
     assert.ok(html.includes(`href="${prefix}/400.css"`), `${file}: body font CSS`);
     assert.ok(html.includes(`href="${prefix}/600.css"`), `${file}: heading font CSS`);
     assert.ok(html.includes('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src \'self\'; '
-      + 'style-src \'self\' \'unsafe-inline\'; font-src \'self\'; base-uri \'none\'; form-action \'none\'">'),
-    `${file}: only same-origin CSS and fonts are allowed`);
+      + 'style-src \'self\' \'unsafe-inline\'; font-src \'self\'; base-uri \'none\'; form-action \'none\''
+      + (file === 'graph/index.html' ? "; script-src 'self'" : '') + '">'),
+    `${file}: only the graph may execute same-origin scripts`);
     assert.doesNotMatch(html, /cdn\.jsdelivr\.net|@import/);
   }
   assert.ok(!expectedFiles.some(file => file.startsWith(fontRoot)
@@ -428,7 +432,12 @@ test('unsafe concept links fail before existing Pages output is changed', async 
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
   const sourceFile = path.join(directory, 'knowledge/grouping/KNOWLEDGE.md');
   const source = await readFile(sourceFile, 'utf8');
-  await writeFile(sourceFile, source.replace('## 概念', '## 概念\n\n[外部コード](javascript:alert(1))'));
+  const changed = source.replace('## 概念', '## 概念\n\n[外部コード](javascript:alert(1))');
+  await writeFile(sourceFile, changed);
+  const graphPath = path.join(directory, 'relations/graph.json');
+  const graph = JSON.parse(await readFile(graphPath, 'utf8')) as { nodes: Array<{ id: string; sha256: string }> };
+  graph.nodes.find(node => node.id === 'grouping')!.sha256 = hash(Buffer.from(changed));
+  await writeFile(graphPath, JSON.stringify(graph));
   await assert.rejects(isolated.buildPages(out), /Source schema: unsupported link protocol/,
     'unsafe concept links must reject before Pages output changes');
   assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);

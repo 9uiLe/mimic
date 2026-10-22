@@ -25,6 +25,7 @@ export const readerViews: Readonly<Record<string, string>> = Object.freeze(Objec
   ['knowledge/README.md', 'index.html'],
   ['guideline/README.md', 'guideline/index.html'],
   ['guideline/ai.md', 'guideline/ai.html'],
+  ['relations/README.md', 'relations/index.html'],
   ['topics/decision-material-selection.md', 'topics/decision-material-selection.html'],
   ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md'].map(file => [
     file, file.endsWith('/KNOWLEDGE.md') ? file.replace(/KNOWLEDGE\.md$/, 'index.html') : file.replace(/\.md$/, '.html'),
@@ -62,7 +63,8 @@ export function renderCatalog(index: string, entries: ReadonlyMap<string, string
 ${pageFontHead('index.html', pagesAssets)}
 <title>Mimic — デザインの知識</title><style>\n${stylesheet}\n</style></head><body>
 <a class="skip" href="#content">本文へ</a>
-<header><div class="topline"><a class="brand" href="index.html">Mimic</a><a href="guideline/">利用ガイド</a></div>
+<header><div class="topline"><a class="brand" href="index.html">Mimic</a><div class="toplinks">
+<a href="graph/">関係グラフ</a><a href="guideline/">利用ガイド</a></div></div>
 <div class="hero"><h1>デザインの知識</h1><p>デジタルUIの概念・思想・哲学を、定義と背景、関連する考え方、出典から読む。</p></div></header>
 <main id="content" class="catalog" tabindex="-1"><section aria-labelledby="concepts"><h2 id="concepts">概念から読む</h2>
 <ul class="concept-list">${items}</ul></section>

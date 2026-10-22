@@ -1,12 +1,8 @@
 ---
 id: color-contrast
 title: 色コントラスト
-version: "1.0.0"
+version: "1.0.1"
 scope: general-digital-ui
-related:
-  - lightness-and-luminance
-  - design-tokens
-  - visual-hierarchy
 ---
 
 # 色コントラスト

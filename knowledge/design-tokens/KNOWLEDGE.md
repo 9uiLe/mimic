@@ -1,12 +1,8 @@
 ---
 id: design-tokens
 title: Design Token
-version: "1.1.0"
+version: "1.1.1"
 scope: general-digital-ui
-related:
-  - lightness-and-luminance
-  - color-contrast
-  - typography
 ---
 
 # Design Token

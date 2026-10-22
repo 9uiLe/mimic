@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "interpretation": {
+    "origin": "関係型・関係文はMimicの編集上の整理。原典に共通する分類や新たなデザイン理論ではない。",
+    "direction": "有向型のfromとtoはdescriptionの役割を表す。逆参照は同じ辺の検索であり、逆向きの主張を追加しない。",
+    "transitive_false": "falseは推移規則を採用しない意味で、反推移ではない。A→BとB→CからA→Cは導けず、A→Cが無い・偽とも主張しない。独立の根拠があれば記載できる。",
+    "distinctions": "話題カテゴリへの所属、種類is-a、部分part-of、定義・理解・計算上の依存は異なる。関連・補完・相違からこれらを推論しない。",
+    "absence": "未記載は関係の不存在を示さない。",
+    "reading": "辺の存在から全辺や接続先の必読義務は導けない。",
+    "strength": "関係強度・問いへの必要性・検索スコア・確度の数値は定義していない。"
+  },
+  "types": [
+    {
+      "id": "distinguished_from",
+      "label": "相違・区別",
+      "description": "statementの対象・役割・範囲が異なる。主張の対立や相互排他、階層を意味しない。",
+      "directed": false,
+      "transitive": false,
+      "inverse_description": "対称関係。同じ相違を両側から索引できる。",
+      "cycle_policy": "許容。逆向きの重複辺は保存しない。"
+    },
+    {
+      "id": "complemented_by",
+      "label": "説明の補完",
+      "description": "fromが扱う対象の説明に対して、toがstatementの別の観点を補う。必要前提や必読指示ではない。",
+      "directed": true,
+      "transitive": false,
+      "inverse_description": "toを補完先とするfromの説明を検索できる。逆向きの補完は独立の根拠が必要。",
+      "cycle_policy": "許容。相互補完を依存循環と扱わない。"
+    },
+    {
+      "id": "depends_on_computation",
+      "label": "計算上の依存",
+      "description": "辺のscopeで限定したfrom側の計算が、to側の計算量を入力に使う。概念全体の定義・理解の依存へ広げない。",
+      "directed": true,
+      "transitive": false,
+      "inverse_description": "toの計算量を使うfromを検索できる。toがfromへ依存するとはいえない。",
+      "cycle_policy": "閉路を見つけたら、根拠と計算範囲を再点検する。型だけで一律禁止しない。"
+    },
+    {
+      "id": "associated_with",
+      "label": "関連（型未分類）",
+      "description": "本文が具体的な接点を明示するが、階層・依存・補完・相違のいずれかは確定していない。statementとscopeの範囲に限定する。",
+      "directed": false,
+      "transitive": false,
+      "inverse_description": "対称の索引関係。両側から同じ関連づけを発見できる。",
+      "cycle_policy": "許容。型の未確定を新たな依存や階層へ変換しない。"
+    }
+  ]
+}

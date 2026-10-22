@@ -11,6 +11,8 @@
     "build:prototype": "bun scripts/build-knowledge.ts",
     "check:prototype": "bun scripts/build-knowledge.ts --check",
     "build:pages": "bun scripts/build-pages.ts",
+    "relations:check": "bun scripts/relations.ts",
+    "relations:sync": "bun scripts/relations.ts --sync",
     "typecheck": "bun run --bun tsc --noEmit",
     "test": "bun test ./tests/*.test.ts",
     "verify": "bun run typecheck && bun run test",
