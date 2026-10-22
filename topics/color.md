@@ -1,7 +1,6 @@
 ---
 id: color
 title: 色の知識
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:

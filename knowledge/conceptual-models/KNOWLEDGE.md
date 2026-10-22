@@ -1,7 +1,6 @@
 ---
 id: conceptual-models
 title: 概念モデル
-status: accepted
 version: "1.0.0"
 scope: design-communication
 related:

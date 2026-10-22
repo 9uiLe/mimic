@@ -1,8 +1,10 @@
 import path from 'node:path';
+import { pageFontHead } from './pages-fonts.ts';
 
 export const conceptIds = Object.freeze([
   'ecological-interface-design', 'external-representations', 'conceptual-models', 'grouping', 'visual-hierarchy',
   'lightness-and-luminance', 'color-contrast', 'design-tokens', 'ai-slop', 'aesthetic-and-minimalist-design',
+  'typography', 'layout-spacing',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -13,6 +15,8 @@ export const exampleFiles = Object.freeze([
   'knowledge/visual-hierarchy/examples/schedule.md',
   'knowledge/design-tokens/examples/color-presentation.md',
   'knowledge/ai-slop/examples/ui-decisions.md',
+  'knowledge/typography/examples/mixed-ui-copy.md',
+  'knowledge/layout-spacing/examples/component-spacing.md',
 ]);
 export const additionalSources = Object.freeze(['knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md']);
 export const readerViews: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries([
@@ -36,7 +40,7 @@ export function readerHref(href: string, sourceFile: string, outFile: string, vi
   return relative + (pathname.endsWith('/') && !views[target] ? '/' : '') + suffix;
 }
 
-export function renderCatalog(index: string, entries: ReadonlyMap<string, string>, stylesheet: string) {
+export function renderCatalog(index: string, entries: ReadonlyMap<string, string>, stylesheet: string, pagesAssets = false) {
   const rows = index.split('\n').filter(line => /^\| `[^`]+` \|/.test(line));
   const listedIds = rows.map(row => row.split('|')[1]!.trim().replaceAll('`', ''));
   if (JSON.stringify(listedIds) !== JSON.stringify(conceptIds)) throw new Error('Catalog must describe every reviewed concept, in index order');
@@ -46,17 +50,14 @@ export function renderCatalog(index: string, entries: ReadonlyMap<string, string
     const source = entries.get(id);
     if (!source) throw new Error(`Catalog source missing: ${id}`);
     const title = source.match(/^title: (.+)$/m)?.[1];
-    const status = source.match(/^status: (.+)$/m)?.[1];
     const version = source.match(/^version: "?([^"\n]+)"?$/m)?.[1];
-    if (!title || !version || !status) throw new Error(`Catalog metadata missing: ${id}`);
-    const label = status === 'accepted' ? '' : status === 'proposed' ? '確認中の文書'
-      : status === 'draft' ? '下書き' : `状態の意味は未確認（原値: ${status}）`;
+    if (!title || !version) throw new Error(`Catalog metadata missing: ${id}`);
     return `<li><h3><a href="knowledge/${id}/">${escapeHtml(title)}</a></h3>`
-      + `<p>${escapeHtml(columns[2]!)}</p><p class="meta">${label ? `${escapeHtml(label)} · ` : ''}v${escapeHtml(version)}</p></li>`;
+      + `<p>${escapeHtml(columns[2]!)}</p><p class="meta">v${escapeHtml(version)}</p></li>`;
   }).join('\n');
   return `<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+${pageFontHead('index.html', pagesAssets)}
 <title>Mimic — デザインの知識</title><style>\n${stylesheet}\n</style></head><body>
 <a class="skip" href="#content">本文へ</a>
 <header><div class="topline"><a class="brand" href="index.html">Mimic</a><a href="guideline/">利用ガイド</a></div>

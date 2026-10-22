@@ -9,8 +9,14 @@ import { buildPages } from '../scripts/build-pages.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { marked } = await import(process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : 'marked') as typeof import('marked');
+const fontRoot = 'assets/fonts/gen-interface-jp/0.8.0';
+const expectedFontFiles = ['400.css', '600.css', 'OFL.txt',
+  ...['400', '600'].flatMap(weight => Array.from({ length: 128 }, (_, index) =>
+    `w/normal/${weight}/${String(index).padStart(3, '0')}.woff2`)),
+].map(file => `${fontRoot}/${file}`);
 const expectedFiles = [
   '.nojekyll',
+  ...expectedFontFiles,
   'guideline/README.md',
   'guideline/ai.html',
   'guideline/ai.md',
@@ -55,6 +61,12 @@ const expectedFiles = [
   'knowledge/grouping/index.html', 'knowledge/grouping/references/sources.html', 'knowledge/grouping/examples/schedule.html',
   'knowledge/visual-hierarchy/index.html', 'knowledge/visual-hierarchy/references/sources.html', 'knowledge/visual-hierarchy/examples/schedule.html',
   'topics/color.md', 'topics/color.html', 'topics/ai-slop.md', 'topics/ai-slop.html',
+  'knowledge/typography/KNOWLEDGE.md', 'knowledge/typography/index.html',
+  'knowledge/typography/references/sources.md', 'knowledge/typography/references/sources.html',
+  'knowledge/typography/examples/mixed-ui-copy.md', 'knowledge/typography/examples/mixed-ui-copy.html',
+  'knowledge/layout-spacing/KNOWLEDGE.md', 'knowledge/layout-spacing/index.html',
+  'knowledge/layout-spacing/references/sources.md', 'knowledge/layout-spacing/references/sources.html',
+  'knowledge/layout-spacing/examples/component-spacing.md', 'knowledge/layout-spacing/examples/component-spacing.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -74,14 +86,21 @@ async function fixture() {
 
 async function isolatedBuilder(directory: string) {
   const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/build-knowledge.ts', 'scripts/pages-catalog.ts',
-    'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css', ...expectedFiles.filter(file => !generatedPages.includes(file))];
+    'scripts/pages-fonts.ts', 'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css',
+    `${fontRoot}/integrity.json`, ...expectedFiles.filter(file => !generatedPages.includes(file) && !expectedFontFiles.includes(file))];
   for (const file of inputs) {
     const destination = path.join(directory, file);
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, await readFile(path.join(root, file)));
   }
+  const packageDirectory = path.join(directory, 'node_modules/gen-interface-jp');
+  await mkdir(packageDirectory, { recursive: true });
+  for (const relative of ['package.json', ...expectedFontFiles.map(file => file.slice(fontRoot.length + 1))]) {
+    const destination = path.join(packageDirectory, relative);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, await readFile(path.join(root, 'node_modules/gen-interface-jp', relative)));
+  }
   const markedUrl = process.env.MARKED_MODULE ? pathToFileURL(path.resolve(process.env.MARKED_MODULE)).href : import.meta.resolve('marked');
-  await mkdir(path.join(directory, 'node_modules'));
   await symlink(path.resolve(path.dirname(fileURLToPath(markedUrl)), '..'), path.join(directory, 'node_modules/marked'));
   return import(pathToFileURL(path.join(directory, 'scripts/build-pages.ts')).href) as Promise<typeof import('../scripts/build-pages.ts')>;
 }
@@ -100,6 +119,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
+  assert.equal(expectedFiles.length, 338);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -110,12 +130,24 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1>デザインの知識<\/h1>/);
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 10, 'catalog must expose all ten reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 12, 'catalog must expose all twelve reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
   assert.doesNotMatch(entry, /正式採用|採用済み|掲載済み/, 'catalog must not show adoption labels');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 10,
-    'catalog must show all ten v1.0.0 concept versions');
+  const catalogVersions = Object.fromEntries([...entry.matchAll(
+    /<li><h3><a href="knowledge\/([^/]+)\/">[^<]+<\/a><\/h3>[\s\S]*?<p class="meta">v([^<]+)<\/p><\/li>/g,
+  )].map(([, id, version]) => [id, version]));
+  assert.deepEqual(catalogVersions, {
+    'ecological-interface-design': '1.0.0', 'external-representations': '1.0.0',
+    'conceptual-models': '1.0.0', grouping: '1.0.0', 'visual-hierarchy': '1.0.0',
+    'lightness-and-luminance': '1.0.0', 'color-contrast': '1.0.0',
+    'design-tokens': '1.1.0', 'ai-slop': '1.0.0',
+    'aesthetic-and-minimalist-design': '1.0.0', typography: '1.0.0', 'layout-spacing': '1.0.0',
+  }, 'catalog must map each concept to its source version');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 11,
+    'catalog must show eleven v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 1,
+    'catalog must show the Design Token v1.1.0 source version');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
     'topics/color.md', 'topics/ai-slop.md']) {
     const content = await readFile(path.join(out, file), 'utf8');
@@ -123,6 +155,59 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   }
   assert.doesNotMatch(entry, /research\//);
   assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|(?:^|\/)logs?(?:\/|$)|\.log$/i.test(file)));
+});
+
+test('Pages uses only pinned same-origin font subsets and keeps their license', async () => {
+  const { out } = await fixture();
+  await buildPages(out);
+  const manifest: Record<string, { size: number; sha256: string }> = JSON.parse(
+    await readFile(path.join(root, fontRoot, 'integrity.json'), 'utf8'));
+  assert.deepEqual(Object.keys(manifest).sort(), expectedFontFiles.map(file => file.slice(fontRoot.length + 1)).sort(),
+    'every published font asset must be pinned');
+  for (const file of expectedFontFiles) {
+    const relative = file.slice(fontRoot.length + 1);
+    const bytes = await readFile(path.join(out, file));
+    assert.deepEqual(bytes, await readFile(path.join(root, 'node_modules/gen-interface-jp', relative)),
+      `${file}: copied from the pinned npm dependency`);
+    assert.equal(bytes.length, manifest[relative]?.size, `${file}: pinned byte length`);
+    assert.equal(hash(bytes), manifest[relative]?.sha256, `${file}: pinned SHA-256`);
+    if (file.endsWith('.woff2')) assert.equal(bytes.toString('ascii', 0, 4), 'wOF2', `${file}: WOFF2 signature`);
+  }
+  const ofl = await readFile(path.join(out, fontRoot, 'OFL.txt'), 'utf8');
+  assert.match(ofl, /SIL OPEN FONT LICENSE Version 1\.1/);
+  for (const weight of ['400', '600']) {
+    const css = await readFile(path.join(out, fontRoot, `${weight}.css`), 'utf8');
+    const references = [...css.matchAll(/url\("([^"]+)"\)/g)].map(match => match[1]);
+    assert.deepEqual(references, Array.from({ length: 128 }, (_, index) =>
+      `./w/normal/${weight}/${String(index).padStart(3, '0')}.woff2`));
+    assert.doesNotMatch(css, /@import|https?:/i);
+  }
+  for (const file of expectedFiles.filter(file => file.endsWith('.html') && !file.startsWith('prototypes/'))) {
+    const html = await readFile(path.join(out, file), 'utf8');
+    const prefix = path.posix.relative(path.posix.dirname(file), fontRoot);
+    assert.ok(html.includes(`href="${prefix}/400.css"`), `${file}: body font CSS`);
+    assert.ok(html.includes(`href="${prefix}/600.css"`), `${file}: heading font CSS`);
+    assert.ok(html.includes('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+      + 'style-src \'self\' \'unsafe-inline\'; font-src \'self\'; base-uri \'none\'; form-action \'none\'">'),
+    `${file}: only same-origin CSS and fonts are allowed`);
+    assert.doesNotMatch(html, /cdn\.jsdelivr\.net|@import/);
+  }
+  assert.ok(!expectedFiles.some(file => file.startsWith(fontRoot)
+    && /integrity\.json|\/README\.md$/.test(file)));
+});
+
+test('altered font bytes fail before Pages output is updated', async () => {
+  const { directory, out } = await fixture();
+  const isolated = await isolatedBuilder(directory);
+  await isolated.buildPages(out);
+  const entry = path.join(out, 'index.html');
+  await writeFile(entry, 'keep the previous output');
+  const subset = path.join(directory, 'node_modules/gen-interface-jp/w/normal/400/127.woff2');
+  const bytes = await readFile(subset);
+  bytes[8] = bytes[8]! ^ 1;
+  await writeFile(subset, bytes);
+  await assert.rejects(isolated.buildPages(out), /Font asset differs from pinned v0\.8\.0/);
+  assert.equal(await readFile(entry, 'utf8'), 'keep the previous output');
 });
 
 test('every local HTML and Markdown link resolves inside the artifact at the GitHub project prefix', async () => {
@@ -159,24 +244,26 @@ test('every local HTML and Markdown link resolves inside the artifact at the Git
   }
 });
 
-test('canonical Markdown copies and generated readers retain source provenance and status', async () => {
+test('canonical Markdown copies and generated readers retain source metadata and provenance', async () => {
   const { out } = await fixture();
   await buildPages(out);
-  for (const file of expectedFiles.filter(file => !generatedPages.includes(file))) {
+  for (const file of expectedFiles.filter(file => !generatedPages.includes(file) && !expectedFontFiles.includes(file))) {
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
   const topicMarkdown = await readFile(path.join(out, 'topics/decision-material-selection.md'), 'utf8');
-  assert.match(topicMarkdown, /^status: accepted$/m, 'canonical topic status must remain accepted');
-  assert.doesNotMatch(topicMarkdown, /status: draft/);
-  const provenanceCases: [string, string, string][] = [
-    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md', 'accepted'],
+  assert.match(topicMarkdown, /^version: "1\.0\.0"$/m, 'canonical topic version must remain intact');
+  assert.doesNotMatch(topicMarkdown, /^status:/m);
+  const provenanceCases: [string, string][] = [
+    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md'],
   ];
-  for (const [htmlFile, sourceFile, status] of provenanceCases) {
+  for (const [htmlFile, sourceFile] of provenanceCases) {
     const html = await readFile(path.join(out, htmlFile), 'utf8');
     const source = await readFile(path.join(root, sourceFile));
-    assert.ok(html.includes(`<dt>status</dt><dd>${status}</dd>`), 'canonical topic reader must show accepted');
+    assert.ok(html.includes('<dt>version</dt><dd>1.0.0</dd>'), 'canonical topic reader must show source version');
+    assert.ok(html.includes('<dt>scope</dt><dd>'), 'canonical topic reader must show source scope');
+    assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/);
     assert.ok(html.includes(`<dt>source</dt><dd>${sourceFile}</dd>`));
-    assert.ok(html.includes(`<meta name="source-sha256" content="${hash(source)}">`));
+    assert.ok(html.includes(`<meta name="source-sha256" content="${hash(source)}">`), 'canonical topic reader must match source SHA-256');
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\/|KNOWLEDGE \/ LOCAL VIEW/);
   }
 });
@@ -271,11 +358,11 @@ const plainText = (html: string) => html.replace(/<[^>]*>/g, ' ')
     ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'" })[entity]!)
   .replace(/\s+/g, ' ').trim();
 
-test('HTML readers retain every source block, concept status, and paths to related knowledge and supplements', async () => {
+test('HTML readers retain every source block, concept version, and paths to related knowledge and supplements', async () => {
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 25);
+  assert.equal(readers.length, 31);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
@@ -288,14 +375,14 @@ test('HTML readers retain every source block, concept status, and paths to relat
     assert.ok(html.includes(`<meta name="source-sha256" content="${hash(Buffer.from(source))}">`), htmlFile);
     assert.ok(html.includes('<a class="brand" href="'), htmlFile);
     if (sourceFile.endsWith('/KNOWLEDGE.md')) {
-      const status = source.match(/^status: (.+)$/m)![1]!;
-      assert.ok(html.includes(`<dt>status</dt><dd>${status}</dd>`), htmlFile);
-      assert.ok(html.includes(status === 'accepted' ? '<p class="meta">v1.0.0</p>' : '<span class="badge">確認中の文書</span>'), htmlFile);
-      if (status === 'accepted') assert.doesNotMatch(html, /<span class="badge">/, `${htmlFile}: accepted must have no badge`);
+      const version = source.match(/^version: "?([^"\n]+)"?$/m)![1]!;
+      assert.ok(html.includes(`<dt>version</dt><dd>${version}</dd>`), htmlFile);
+      assert.ok(html.includes(`<p class="meta">v${version}</p>`), htmlFile);
+      assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/, `${htmlFile}: removed metadata must not appear`);
       assert.ok(html.includes('href="references/sources.html"'), `${htmlFile}: sources must open in the reader`);
     } else {
       assert.ok(html.includes('href="../index.html"'), `${htmlFile}: supplement must return to its concept`);
-      assert.doesNotMatch(html, /<span class="badge">/, `${htmlFile}: supplement must not imply an independent adoption state`);
+      assert.doesNotMatch(html, /<span class="badge">/, `${htmlFile}: supplement must not show a state badge`);
     }
   }
   const grouping = await readFile(path.join(out, 'knowledge/grouping/index.html'), 'utf8');
@@ -317,7 +404,7 @@ test('the decision topic retains its text and opens all five related concept rea
     assert.ok(visible.includes(plainText(marked.Parser.parse([token]))), 'topic source block must remain readable');
   }
   assert.ok(html.includes(`<meta name="source-sha256" content="${hash(Buffer.from(source))}">`));
-  assert.ok(html.includes('<dt>status</dt><dd>accepted</dd>'));
+  assert.ok(html.includes('<dt>version</dt><dd>1.0.0</dd>'));
   assert.ok(html.includes('href="decision-material-selection.md"'), 'canonical topic Markdown must remain available');
   for (const id of ['ecological-interface-design', 'external-representations', 'conceptual-models',
     'grouping', 'visual-hierarchy']) {

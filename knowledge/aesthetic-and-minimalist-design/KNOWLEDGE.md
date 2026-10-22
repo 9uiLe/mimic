@@ -1,7 +1,6 @@
 ---
 id: aesthetic-and-minimalist-design
 title: Aesthetic and Minimalist Design
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:

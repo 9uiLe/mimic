@@ -4,8 +4,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Token, Tokens } from 'marked';
 import { readerHref } from './pages-catalog.ts';
+import { pageFontHead } from './pages-fonts.ts';
 
-export interface DocumentView { sourceFile: string; outFile: string; views: Readonly<Record<string, string>>; context?: { title: string; href: string } }
+export interface DocumentView { sourceFile: string; outFile: string; views: Readonly<Record<string, string>>; context?: { title: string; href: string }; pagesAssets?: boolean }
 type GuidelineSource = 'guideline/README.md' | 'guideline/ai.md';
 const isHeading = (token: Token): token is Tokens.Heading => token.type === 'heading';
 const htmlFiles = { 'guideline/README.md': 'guideline/index.html', 'guideline/ai.md': 'guideline/ai.html' };
@@ -41,7 +42,7 @@ export async function renderGuideline(source: Buffer, sourceFile: GuidelineSourc
 }
 
 export async function renderDocument(source: Buffer, stylesheet: Buffer, options: DocumentView): Promise<Buffer> {
-  const { sourceFile, outFile, views, context } = options;
+  const { sourceFile, outFile, views, context, pagesAssets = false } = options;
   const marked = await loadMarked();
   const css = stylesheet.toString('utf8');
   assert(!/@import|url\(|<\/?style\b/i.test(css), 'stylesheet must be self-contained CSS');
@@ -90,7 +91,7 @@ export async function renderDocument(source: Buffer, stylesheet: Buffer, options
   const toc = sections.length ? `<nav aria-label="目次"><details><summary>目次</summary><ol>${navigation}</ol></details></nav>` : '';
   return Buffer.from(`<!doctype html>
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+${pageFontHead(outFile, pagesAssets)}
 <meta name="source-sha256" content="${hash(source)}"><meta name="stylesheet-sha256" content="${hash(stylesheet)}">
 <title>${escape(title.text)} — Mimic</title><style>
 ${css}

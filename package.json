@@ -23,6 +23,7 @@
     "setup:hooks": "python3 scripts/quality/install_hook.py"
   },
   "dependencies": {
+    "gen-interface-jp": "0.8.0",
     "marked": "17.0.5"
   },
   "devDependencies": {

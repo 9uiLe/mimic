@@ -156,24 +156,6 @@
         "line": 293,
         "codepoints": 204,
         "text": "<details id=\"source-provenance\"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class=\"metadata\">"
-      },
-      {
-        "path": "scripts/build-knowledge.ts",
-        "line": 294,
-        "codepoints": 546,
-        "text": "${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}"
-      },
-      {
-        "path": "tests/knowledge-output.test.ts",
-        "line": 125,
-        "codepoints": 228,
-        "text": "  const draft = original.toString().replace('status: proposed', 'status: draft').replaceAll('](../knowledge/', '](../../knowledge/').replace('](decision-material-selection.md)', '](../../topics/decision-material-selection.md)');"
-      },
-      {
-        "path": "tests/knowledge-output.test.ts",
-        "line": 209,
-        "codepoints": 414,
-        "text": "    .replace('<!-- mimic:section sources -->', `<!-- mimic:heading another-example -->\\n\\n### 別の場面で使う例\\n\\n${'利用条件と不確かさを残した長い説明。'.repeat(80)}\\n\\n| 候補 | 採否 | 理由 |\\n| --- | --- | --- |\\n| 新しい候補 | 保留 | 条件未確認 |\\n\\n\\`\\`\\`md\\n[コードの参照](grouping.md)\\n\\`\\`\\`\\n\\n\\`[コードの参照](grouping.md)\\` と [実際の参照](../knowledge/grouping/KNOWLEDGE.md \"補足\")、**[強調内の参照](../knowledge/grouping/KNOWLEDGE.md)**。\\n\\n<!-- mimic:section sources -->`)"
       }
     ],
     "naming": [

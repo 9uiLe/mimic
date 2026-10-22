@@ -1,7 +1,6 @@
 ---
 id: color-and-design-tokens
 title: 色の知識とDesign Token
-status: accepted
 version: "1.0.0"
 scope: general-digital-ui
 related:
