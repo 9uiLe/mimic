@@ -113,8 +113,14 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 10, 'catalog must expose all ten reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
-  assert.equal([...entry.matchAll(/正式採用済み · v1\.0\.0/g)].length, 10,
-    'catalog must show ten formally adopted v1.0.0 concepts');
+  assert.doesNotMatch(entry, /正式採用|採用済み|掲載済み/, 'catalog must not show adoption labels');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 10,
+    'catalog must show all ten v1.0.0 concept versions');
+  for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
+    'topics/color.md', 'topics/ai-slop.md']) {
+    const content = await readFile(path.join(out, file), 'utf8');
+    assert.doesNotMatch(content, /正式採用|採用済み|掲載済み/, `${file}: reader must not show adoption labels`);
+  }
   assert.doesNotMatch(entry, /research\//);
   assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|(?:^|\/)logs?(?:\/|$)|\.log$/i.test(file)));
 });
@@ -284,7 +290,8 @@ test('HTML readers retain every source block, concept status, and paths to relat
     if (sourceFile.endsWith('/KNOWLEDGE.md')) {
       const status = source.match(/^status: (.+)$/m)![1]!;
       assert.ok(html.includes(`<dt>status</dt><dd>${status}</dd>`), htmlFile);
-      assert.ok(html.includes(status === 'accepted' ? '<span class="badge">正式採用済み</span>' : '<span class="badge">採用前の文書</span>'), htmlFile);
+      assert.ok(html.includes(status === 'accepted' ? '<p class="meta">v1.0.0</p>' : '<span class="badge">確認中の文書</span>'), htmlFile);
+      if (status === 'accepted') assert.doesNotMatch(html, /<span class="badge">/, `${htmlFile}: accepted must have no badge`);
       assert.ok(html.includes('href="references/sources.html"'), `${htmlFile}: sources must open in the reader`);
     } else {
       assert.ok(html.includes('href="../index.html"'), `${htmlFile}: supplement must return to its concept`);

@@ -11,7 +11,7 @@ const generatorPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(generatorPath), '..');
 const markedVersion = '17.0.5';
 const stylesheetPath = path.join(path.dirname(generatorPath), 'knowledge-view.css');
-const design = { id: 'mimic-knowledge-view', version: '3.0.0' };
+const design = { id: 'mimic-knowledge-view', version: '3.1.0' };
 const sectionLabels = {
   purpose: '目的と使う場面',
   inputs: '使う前に確かめること',
@@ -25,7 +25,7 @@ const sectionLabels = {
 type SectionRole = keyof typeof sectionLabels;
 const sectionRoles = Object.keys(sectionLabels) as SectionRole[];
 const noteLabels = { proposal: '提案', assumption: '仮定', limitation: '限界・未確認', 'evidence-scope': '根拠の範囲' };
-const statusLabels = { proposed: '採用前の文書', draft: '研究資料（未採用）', accepted: '正式採用済み' };
+const statusLabels = { proposed: '確認中の文書', draft: '下書き' };
 type NoteType = keyof typeof noteLabels;
 type Marked = typeof import('marked')['marked'];
 type MimicToken = Token & { mimicId?: string; mimicNote?: NoteType; mimicSteps?: boolean };
@@ -276,7 +276,8 @@ function makeHtml(
     return `<section id="${escape(id)}" class="knowledge-section"${role ? ` data-section-role="${role}"` : ''}><div class="section-heading"><h2>${headingHtml}</h2><a class="permalink" href="#${escape(id)}" aria-label="${escape(title)}のリンク">#</a></div>${links}${body}${actions}</section>`;
   };
   const navigation = sections.map(({ id, role, heading }) => `<li><a href="#${escape(id)}">${escape(role ? sectionLabels[role] : heading.text)}</a></li>`).join('');
-  const statusLabel = hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
+  const statusLabel = metadata.status === 'accepted' ? ''
+    : hasOwn(statusLabels, metadata.status) ? statusLabels[metadata.status] : `状態の意味は未確認（原値: ${metadata.status}）`;
   const topic = path.basename(path.dirname(sourcePath)) === 'topics';
   const sourceLabel = metadata.status === 'draft' ? '研究資料の原文を読む' : topic ? '案内の原文を読む' : '知識本文を読む';
   const markdownLabel = metadata.status === 'draft' ? '研究資料のMarkdown' : topic ? '案内のMarkdown' : '本文のMarkdown';
@@ -295,7 +296,7 @@ ${stylesheet}
 </style></head><body>
 <a class="skip" href="#${escape(sections[0]!.id)}">本文へ</a>
 <header><div class="topline"><a class="brand" href="${escape(home)}">Mimic</a><div class="toplinks"><a href="${escape(guidelineHref)}">利用ガイド</a></div></div>
-<div class="hero"><h1 id="title">${escape(metadata.title)}</h1><p class="meta"><span class="badge">${escape(statusLabel)}</span>v${escape(metadata.version)}</p></div></header>
+<div class="hero"><h1 id="title">${escape(metadata.title)}</h1><p class="meta">${statusLabel ? `<span class="badge">${escape(statusLabel)}</span>` : ''}v${escape(metadata.version)}</p></div></header>
 <main class="layout"><nav aria-label="目次"><details><summary>目次</summary><ol>${navigation}</ol></details></nav><article>
 ${sections.map(section).join('\n')}
 </article></main>

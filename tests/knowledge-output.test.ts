@@ -112,7 +112,7 @@ test('AI preserves all metadata and knowledge with working related links in both
   assert.match(html, /href="\.\.\/\.\.\/knowledge\/visual-hierarchy\/KNOWLEDGE\.md"/);
   assert.match(html, /href="\.\.\/\.\.\/topics\/decision-material-selection\.md"/);
   assert.match(html, /href="ai\.md"/);
-  assert.match(html, /<span class="badge">採用前の文書<\/span>/);
+  assert.match(html, /<span class="badge">確認中の文書<\/span>/);
   assert.match(html, /<dt>status<\/dt><dd>proposed<\/dd>/);
   assert.match(html, /source SHA-256/);
   assert.match(html, /stylesheet SHA-256/);
@@ -170,7 +170,7 @@ test('conceptual knowledge keeps its original chapters and all source content wi
   }
 });
 
-test('accepted knowledge displays its adopted label while preserving the raw status for humans and AI', async () => {
+test('accepted knowledge has no adoption badge while preserving the raw status for humans and AI', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'mimic-adopted-knowledge-'));
   temporaryDirectories.push(directory);
   const source = path.join(directory, 'knowledge/adoption-fixture/KNOWLEDGE.md');
@@ -195,7 +195,8 @@ related:
   const result = run(['--source', source, '--out-dir', out]);
   assert.equal(result.status, 0, result.stderr);
   const html = await readFile(path.join(out, 'index.html'), 'utf8');
-  assert.match(html, /<span class="badge">正式採用済み<\/span>/, 'accepted status must display the formally adopted label');
+  assert.doesNotMatch(html, /<span class="badge">/, 'accepted status must have no adoption badge');
+  assert.match(html, /<p class="meta">v1\.0\.0<\/p>/, 'accepted version must remain visible');
   assert.match(html, /<dt>status<\/dt><dd>accepted<\/dd>/, 'human output must preserve the raw accepted status');
   assert.equal(await readFile(path.join(out, 'ai.md'), 'utf8'), acceptedSource, 'AI output must preserve the accepted source exactly');
 });
@@ -255,7 +256,7 @@ test('content, headings, candidate names, section order, and extra steps/example
   assert.match(after, /<h3 id="example-alternatives">変更した表示<\/h3>/);
   assert.match(after, /<h3 id="another-example">別の場面で使う例<\/h3>/);
   assert.match(after, /追加の手順は太字を必須にしない。/);
-  assert.match(after, /研究資料（未採用）/);
+  assert.match(after, /下書き/);
   assert.match(after, /研究資料の原文を読む/);
   const ai = await readFile(path.join(out, 'ai.md'));
   assertAiContent(ai, changed, path.join(out, 'ai.md'), source);

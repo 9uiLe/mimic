@@ -34,26 +34,27 @@
     },
     {
       "id": "knowledge-accepted-status",
-      "requirement": "採用した説明文のaccepted状態は、正式採用済みと表示し、原値をHTMLとAI Markdownに保持する。",
+      "requirement": "acceptedの通常閲覧表示に採用バッジを付けず、版と原値をHTML・AI Markdownに保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/README.md",
         "section": "下書きと採用状態",
-        "quotation": "採用した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "quotation": "通常の閲覧表示には採用済みのラベルを付けず、状態は正本のメタデータに保持します。",
         "relatedSource": "guideline/development.md#生成の規則",
-        "reasoning": "採用状態の値と表示は実装出力ではなく、運用方針の定義から固定する。"
+        "reasoning": "内部状態は保持し、通常表示では採用判断を繰り返し強調しないという方針から期待値を固定する。"
       },
       "input": {
         "status": "accepted",
         "related": []
       },
       "expected": {
-        "htmlBadge": "正式採用済み",
+        "htmlBadge": "なし",
+        "htmlVersion": "v1.0.0",
         "htmlRawStatus": "accepted",
         "aiFrontmatterStatus": "accepted"
       },
       "assumptions": [
-        "acceptedという値と正式採用済みという表示は運用方針の定義であり、各知識の内容は依頼の範囲で根拠を確認する。",
+        "acceptedは正本メタデータとして保持する。個別知識の内容は依頼の範囲で根拠を確認する。",
         "この表示テストは架空文書を入力とし、実際の知識本文の状態を変更しない。",
         "表示とメタデータ保持を検査する。知識の意味や採用判断の妥当性を機械で判定しない。"
       ],
@@ -96,24 +97,24 @@
         "topics/ai-slop.md",
         "tests/fixtures/knowledge-display.md"
       ],
-      "testName": "accepted knowledge displays its adopted label while preserving the raw status for humans and AI",
+      "testName": "accepted knowledge has no adoption badge while preserving the raw status for humans and AI",
       "mutation": {
-        "description": "acceptedの表示だけを採用前に誤変更し、正式採用済みの文書を誤った状態として表示する。",
-        "find": "accepted: '正式採用済み'",
-        "replace": "accepted: '採用前の文書'",
-        "assertionMessage": "accepted status must display the formally adopted label"
+        "description": "acceptedの通常表示に採用バッジを誤って復活させる。",
+        "find": "metadata.status === 'accepted' ? ''",
+        "replace": "metadata.status === 'accepted' ? '正式採用済み'",
+        "assertionMessage": "accepted status must have no adoption badge"
       }
     },
     {
       "id": "pages-accepted-status",
-      "requirement": "Pagesへ配信する案内の正本Markdownを同じバイト列で保持し、生成した閲覧HTMLにもacceptedの採用状態を表示する。",
+      "requirement": "Pagesへ配信する案内の正本Markdownを同じバイト列で保持し、生成した閲覧HTMLの生成情報にacceptedの原値を保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/development.md",
         "section": "確認すること",
         "quotation": "生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度を確認します。",
         "relatedSource": "guideline/README.md#下書きと採用状態",
-        "reasoning": "正本Markdownのバイト一致と、運用方針が定めるacceptedの表示を根拠に、配信時の採用状態保持を期待する。実装の出力へ期待値を合わせていない。"
+        "reasoning": "正本Markdownのバイト一致と、内部状態を正本のメタデータに保持する運用方針から期待する。実装の出力へ期待値を合わせていない。"
       },
       "input": {
         "copiedFile": "topics/decision-material-selection.md",
@@ -350,27 +351,28 @@
     },
     {
       "id": "pages-adopted-catalog",
-      "requirement": "正式採用された10概念をPagesの入口でも正式採用済み・v1.0.0として表示する。",
+      "requirement": "Pages入口の10概念に版を示し、採用ラベルを表示せず、各本文へのリンクを保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/README.md",
         "section": "下書きと採用状態",
-        "quotation": "採用した説明文は `status: accepted` とし、表示は「正式採用済み」とします。",
+        "quotation": "通常の閲覧表示には採用済みのラベルを付けず、状態は正本のメタデータに保持します。",
         "relatedSource": "knowledge/README.md#参照する前に",
-        "reasoning": "正式採用の表示規約と、採用対象10本文の正本メタデータに基づき件数と版を固定する。生成結果から期待値を作らない。"
+        "reasoning": "通常表示に採用ラベルを付けない方針と、10本文の正本メタデータに基づき件数と版を固定する。"
       },
       "input": {
         "index": "knowledge/README.md",
-        "adoptedConcepts": 10
+        "concepts": 10
       },
       "expected": {
-        "catalogLabel": "正式採用済み · v1.0.0",
+        "catalogLabel": "v1.0.0",
+        "adoptionLabel": "なし",
         "count": 10
       },
       "assumptions": [
-        "10概念の表示状態と版を検査する。本文の意味や採用判断の妥当性を自動判定しない。"
+        "10概念の入口・版・採用ラベル不在を検査する。本文の意味や採用判断の妥当性を自動判定しない。"
       ],
-      "implementation": "knowledge/ai-slop/KNOWLEDGE.md",
+      "implementation": "scripts/pages-catalog.ts",
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [
         "scripts/build-guideline.ts",
@@ -415,10 +417,10 @@
       ],
       "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",
       "mutation": {
-        "description": "採用対象のAI Slopだけをproposedへ戻し、Pages一覧の採用表示が誤る状態を作る。",
-        "find": "status: accepted\nversion: \"1.0.0\"",
-        "replace": "status: proposed\nversion: \"1.0.0\"",
-        "assertionMessage": "catalog must show ten formally adopted v1.0.0 concepts"
+        "description": "Pages一覧に採用ラベルを誤って復活させる。",
+        "find": "status === 'accepted' ? ''",
+        "replace": "status === 'accepted' ? '正式採用済み'",
+        "assertionMessage": "catalog must not show adoption labels"
       }
     },
     {
