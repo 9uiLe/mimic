@@ -204,7 +204,7 @@ related:
 test('each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation', async () => {
   const concepts = (await readdir(path.join(root, 'knowledge'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
   assert.deepEqual(concepts, [
-    'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
+    'aesthetic-and-minimalist-design', 'ai-slop', 'color-contrast', 'conceptual-models', 'design-tokens', 'ecological-interface-design',
     'external-representations', 'grouping', 'lightness-and-luminance', 'visual-hierarchy',
   ]);
   for (const id of concepts) {
@@ -318,6 +318,7 @@ test('stylesheet and renderer/rule changes make the human output stale independe
   const stylesheet = await readFile(path.join(root, 'scripts/knowledge-view.css'), 'utf8');
   await writeFile(script, generator);
   await writeFile(linkModulePath, linkModule);
+  await writeFile(path.join(directory, 'scripts/pages-catalog.ts'), await readFile(path.join(root, 'scripts/pages-catalog.ts')));
   await writeFile(cssPath, stylesheet);
   const args = [script, '--source', source, '--out-dir', out, '--marked-module', fileURLToPath(markedModule)];
   const execute = (extra: string[]) => spawnSync(process.execPath, [...args, ...extra], { encoding: 'utf8' });
@@ -326,7 +327,7 @@ test('stylesheet and renderer/rule changes make the human output stale independe
   assert.equal(execute(['--check']).status, 0);
   const originalAi = await readFile(path.join(out, 'ai.md'));
   const changedInputs: [string, string][] = [
-    [cssPath, stylesheet.replace('--paper:#f6f5ef', '--paper:#ffffff')],
+    [cssPath, stylesheet.replace('--palette-neutral-0:#ffffff', '--palette-neutral-0:#fefefe')],
     [script, generator.replace("outputs: '判断案と選定理由'", "outputs: '判断案と理由'")],
     [linkModulePath, linkModule.replace('path.relative(fromDirectory, targetPath)', 'path.posix.relative(fromDirectory, targetPath)')],
   ];

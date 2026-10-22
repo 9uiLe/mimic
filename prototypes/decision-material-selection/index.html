@@ -2,105 +2,118 @@
 <html lang="ja" id="top"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <meta name="knowledge-id" content="decision-material-selection"><meta name="knowledge-version" content="1.0.0"><meta name="source-sha256" content="87c2360811e8c038766ddb1aeb45a8fa013a2423a9722059e6c61eac1844b9d8">
-<meta name="design-id" content="mimic-knowledge-view"><meta name="design-version" content="2.0.0"><meta name="stylesheet-sha256" content="8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b">
+<meta name="design-id" content="mimic-knowledge-view"><meta name="design-version" content="3.0.0"><meta name="stylesheet-sha256" content="6a68b11960bfdcd30f0b6aeaf41f691ffeba3fae0586b3077d6cc54df401d262">
 <title>判断材料の選定 — Mimic</title>
 <style>
-:root{color-scheme:light;--paper:#f6f5ef;--ink:#243630;--muted:#586960;--line:#cdd6cc;--accent:#285e4d;--wash:#e8eee6;--warm:#f5ecdb}
+:root{
+color-scheme:light;
+--palette-neutral-0:#ffffff;--palette-neutral-50:#f6f7f5;--palette-neutral-200:#ccd3ce;
+--palette-neutral-600:#536258;--palette-neutral-900:#243630;
+--palette-green-800:#285e4d;--palette-green-950:#113a2b;
+--palette-amber-50:#f5ecdb;--palette-amber-700:#78511b;
+--color-surface-canvas:var(--palette-neutral-0);--color-surface-subtle:var(--palette-neutral-50);
+--color-text-primary:var(--palette-neutral-900);--color-text-secondary:var(--palette-neutral-600);
+--color-link:var(--palette-green-800);--color-link-hover:var(--palette-green-950);
+--color-border-subtle:var(--palette-neutral-200);--color-focus:var(--palette-amber-700);
+--color-note-surface:var(--palette-amber-50);--color-note-border:var(--palette-amber-700)
+}
 *{box-sizing:border-box}
 html{scroll-padding-top:1.5rem}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;line-height:1.95;letter-spacing:.025em}
-a{color:var(--accent);text-underline-offset:.22em}
-a:hover{color:#113a2b}
-a:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid #9c681b;outline-offset:5px}
-header,main,footer{max-width:1220px;margin:auto;padding:0 48px}
-.topline{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:28px 0;border-bottom:1px solid var(--line)}
-.brand{font-family:Georgia,serif;font-size:1.4rem;letter-spacing:.08em}
-.toplinks{display:flex;gap:24px;flex-wrap:wrap;font-size:.85rem}
-.hero{padding:52px 0 30px}
-.eyebrow{font-size:.8rem;color:var(--muted);letter-spacing:.12em}
-.badge{display:inline-block;margin-right:12px;border:1px solid #b29d72;background:var(--warm);color:#6a4e23;padding:1px 10px;border-radius:3px;letter-spacing:.04em;overflow-wrap:anywhere}
-h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:650;line-height:1.4;letter-spacing:.055em;margin:18px 0 8px}
-.meta{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
-.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px;align-items:start}
-nav{position:sticky;top:28px;font-size:.84rem;padding:18px 0}
-nav p{margin:0 0 14px;font-weight:700;color:var(--muted)}
-nav ol{margin:0;padding:0;list-style:none}
-nav a{display:block;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none}
-article{min-width:0}
-.knowledge-section{padding:30px 0 38px;border-top:1px solid var(--line)}
+body{margin:0;background:var(--color-surface-canvas);color:var(--color-text-primary);line-height:1.9;
+font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif}
+a{color:var(--color-link);text-underline-offset:.22em}
+a:hover{color:var(--color-link-hover)}
+a:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--color-focus);outline-offset:4px}
+header,main,footer{max-width:880px;margin:auto;padding:0 36px}
+.topline{display:flex;justify-content:space-between;gap:20px;align-items:center;padding:20px 0;border-bottom:1px solid var(--color-border-subtle)}
+.brand{font-family:Georgia,serif;font-size:1.35rem;letter-spacing:.03em;color:var(--color-text-primary);text-decoration:none}
+.toplinks{display:flex;gap:20px;flex-wrap:wrap;font-size:.875rem}
+.hero{padding:28px 0 24px}
+h1{font-size:clamp(1.8rem,4vw,2.4rem);font-weight:650;line-height:1.45;margin:0 0 12px;letter-spacing:.01em}
+.hero p:last-child{margin-bottom:0}
+.meta,.context{font-size:.875rem;color:var(--color-text-secondary);overflow-wrap:anywhere}
+.context{margin-bottom:12px}
+.badge{display:inline-block;margin-right:12px;font-weight:600}
+.layout{display:block}
+nav{font-size:.9rem;margin-bottom:28px}
+nav details{padding:10px 0;border:0;border-top:1px solid var(--color-border-subtle);border-bottom:1px solid var(--color-border-subtle);border-radius:0}
+nav ol{margin:12px 0 0;padding-left:1.4em}
+nav li{margin-bottom:6px}
+nav a{display:inline-block;padding:3px 0}
+article{min-width:0;overflow-wrap:anywhere}
+.knowledge-section{padding:28px 0 12px}
+.knowledge-section+.knowledge-section{border-top:1px solid var(--color-border-subtle)}
 .section-heading{display:flex;align-items:baseline;gap:15px}
 .section-heading h2{min-width:0;flex:1}
 h1,h2,h3,h4,h5,h6{overflow-wrap:anywhere}
-h2{font-size:1.5rem;line-height:1.6;margin:0 0 22px;font-weight:650}
-h3{font-size:1.12rem;margin:34px 0 16px;padding-left:15px;border-left:3px solid var(--accent);line-height:1.6}
-h4,h5,h6{font-size:1rem;line-height:1.6;margin:26px 0 14px}
-.permalink{font-size:.85rem;color:var(--muted);text-decoration:none;flex-shrink:0}
-.section-links{font-size:.85rem;display:flex;gap:8px 24px;flex-wrap:wrap;padding:0;list-style:none;margin:0 0 26px}
+h2{font-size:1.4rem;line-height:1.6;margin:0 0 20px;font-weight:650}
+h3{font-size:1.1rem;margin:30px 0 14px;line-height:1.6}
+h4,h5,h6{font-size:1rem;line-height:1.6;margin:24px 0 12px}
+.permalink{font-size:.85rem;color:var(--color-text-secondary);text-decoration:none;flex-shrink:0}
+.section-links{font-size:.875rem;display:flex;gap:8px 24px;flex-wrap:wrap;padding:0;list-style:none;margin:0 0 24px}
 .section-links li{margin:0}
-.reading-links{display:flex;flex-wrap:wrap;gap:8px 24px;padding-top:8px;font-size:.85rem}
-p{margin:0 0 22px}
-li{margin-bottom:10px}
+.reading-links{display:flex;flex-wrap:wrap;gap:8px 20px;padding-top:8px;font-size:.875rem}
+p{margin:0 0 20px}
+li{margin-bottom:8px}
 strong{font-weight:650}
-.note{background:var(--warm);border-left:3px solid #b18d4e;padding:20px 24px;margin:24px 0;font-size:.88rem}
-.note-proposal,.note-assumption{background:var(--wash);border-left-color:var(--accent)}
-.note .note-label{font-size:.8rem;font-weight:650;margin:0 0 8px;color:var(--muted)}
+.note{background:var(--color-note-surface);border-left:3px solid var(--color-note-border);padding:18px 20px;margin:24px 0;font-size:.9rem}
+.note-proposal,.note-assumption{background:var(--color-surface-subtle);border-left-color:var(--color-link)}
+.note .note-label{font-size:.875rem;font-weight:650;margin:0 0 8px;color:var(--color-text-secondary)}
 .note p:last-child{margin-bottom:0}
-.steps{counter-reset:step;list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:6px 0 26px}
-.steps>li{counter-increment:step;position:relative;background:var(--wash);border:1px solid #d4ddd1;border-radius:6px;padding:22px 20px 20px 58px;margin:0;font-size:.87rem;line-height:1.85;min-width:0;overflow-wrap:anywhere}
-.steps>li:before{content:counter(step,decimal-leading-zero);position:absolute;left:17px;top:23px;font-family:Georgia,serif;color:var(--accent);font-size:1.2rem}
+.steps{padding-left:1.5em;margin:6px 0 24px}
+.steps>li{padding-left:8px;margin-bottom:16px}
 .steps>li>p:last-child{margin-bottom:0}
-.table-scroll{overflow-x:auto;margin:24px 0;max-width:100%;border:1px solid var(--line);border-radius:4px}
-table{border-collapse:collapse;width:100%;font-size:.83rem;line-height:1.85;text-align:left}
-th,td{padding:14px 16px;vertical-align:top;min-width:100px;border-bottom:1px solid var(--line)}
-th{background:var(--wash);font-weight:650}
-td{background:#ffffff80}
+.table-scroll{overflow-x:auto;margin:24px 0;max-width:100%;border:1px solid var(--color-border-subtle)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;line-height:1.8;text-align:left}
+th,td{padding:12px 14px;vertical-align:top;min-width:110px;border-bottom:1px solid var(--color-border-subtle)}
+th{background:var(--color-surface-subtle);font-weight:650}
+td{background:var(--color-surface-canvas)}
 tr:last-child td{border-bottom:0}
 .knowledge-section>ul:not(.section-links){padding-left:1.4em}
-.metadata{font-size:.78rem;overflow-wrap:anywhere}
+pre{overflow-x:auto;padding:16px;background:var(--color-surface-subtle);font-size:.875rem;line-height:1.7}
+code{font-size:.9em}
+pre code{font-size:inherit}
+blockquote{margin:24px 0;padding-left:20px;border-left:3px solid var(--color-border-subtle);color:var(--color-text-secondary)}
+.metadata{font-size:.8rem;overflow-wrap:anywhere}
 .metadata dt{font-weight:650;margin-top:14px}
-.metadata dd{margin:0;color:var(--muted)}
-footer{margin-top:30px;padding-bottom:35px;color:var(--muted);font-size:.78rem}
-footer>div{border-top:1px solid var(--line);padding-top:24px}
-details{border:1px solid var(--line);padding:15px 20px;border-radius:5px}
+.metadata dd{margin:0;color:var(--color-text-secondary)}
+footer{margin-top:32px;padding-bottom:32px;color:var(--color-text-secondary);font-size:.875rem}
+footer>div{border-top:1px solid var(--color-border-subtle);padding-top:20px}
+details{border:1px solid var(--color-border-subtle);padding:12px 16px;border-radius:3px}
 summary{cursor:pointer;font-weight:600}
 .skip{position:absolute;left:-10000px}
-.skip:focus{left:16px;top:16px;background:white;padding:10px;z-index:2}
-@media(max-width:960px){header,main,footer{padding-left:28px;padding-right:28px}
-.layout{grid-template-columns:175px minmax(0,1fr);gap:28px}
-.steps{grid-template-columns:1fr}
+.skip:focus{left:16px;top:16px;background:var(--color-surface-canvas);padding:10px;z-index:2}
+.catalog h2{margin-bottom:12px}
+.concept-list{list-style:none;margin:0;padding:0}
+.concept-list li{padding:18px 0;margin:0;border-bottom:1px solid var(--color-border-subtle)}
+.concept-list h3{margin:0 0 5px;font-size:1.1rem}
+.concept-list p{margin:0 0 4px}
+.concept-list .meta{margin:0}
+.topic-list{margin-top:36px}
+.topic-list ul{padding-left:1.4em}
+@media(max-width:680px){
+header,main,footer{padding-left:20px;padding-right:20px}
+.topline{align-items:flex-start;gap:16px;padding:16px 0}
+.toplinks{gap:8px 16px;font-size:.875rem}
+.hero{padding:24px 0 20px}
+h2{font-size:1.25rem}
+.knowledge-section{padding-top:24px}
+.note{padding:16px}
+th,td{padding:10px 12px}
 }
-@media(max-width:680px){header,main,footer{padding-left:20px;padding-right:20px}
-.topline{align-items:flex-start;gap:16px}
-.toplinks{gap:8px 16px;font-size:.77rem}
-.hero{padding:36px 0 24px}
-.layout{display:block}
-nav{position:static;padding:0 0 28px}
-nav ol{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
-nav a{height:100%}
-nav p{margin-bottom:6px}
-.note{padding:18px}
-.knowledge-section{padding-top:26px}
-h2{font-size:1.3rem}
-.steps>li{padding:20px 18px 20px 56px}
-.table-scroll{margin-left:0;margin-right:0}
-th,td{padding:11px 13px;min-width:110px}
-body{font-size:.95rem}
-}
-@media print{nav,.toplinks,.permalink,.skip{display:none}
-.layout{display:block}
+@media print{
+nav,.toplinks,.permalink,.skip{display:none}
 header,main,footer{max-width:none;padding:0}
-.steps{grid-template-columns:1fr 1fr}
 .note,.steps>li{break-inside:avoid}
 details{display:block}
 details>*{display:block}
 }
 
-
 </style></head><body>
 <a class="skip" href="#この案内について">本文へ</a>
-<header><div class="topline"><div class="brand">Mimic</div><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a><a href="../../topics/decision-material-selection.md">案内の原文を読む</a><a href="ai.md">案内のMarkdown</a></div></div>
-<div class="hero"><div class="eyebrow"><span class="badge">正式採用済み</span>TOPIC</div><h1 id="title">判断材料の選定</h1><div class="meta">decision-material-selection · v1.0.0</div></div></header>
-<main class="layout"><nav aria-label="目次"><p>この案内の全体像</p><ol><li><a href="#この案内について">この案内について</a></li><li><a href="#情報の内容と表現">情報の内容と表現</a></li><li><a href="#外部の情報とその意味の理解">外部の情報と、その意味の理解</a></li><li><a href="#まとまりと強調">まとまりと強調</a></li><li><a href="#部品に応じて情報を段階的に示す">部品に応じて情報を段階的に示す</a></li><li><a href="#出典とこの案内の範囲">出典とこの案内の範囲</a></li></ol></nav><article>
+<header><div class="topline"><a class="brand" href="../../index.html">Mimic</a><div class="toplinks"><a href="https://9uile.github.io/mimic/guideline/">利用ガイド</a></div></div>
+<div class="hero"><h1 id="title">判断材料の選定</h1><p class="meta"><span class="badge">正式採用済み</span>v1.0.0</p></div></header>
+<main class="layout"><nav aria-label="目次"><details><summary>目次</summary><ol><li><a href="#この案内について">この案内について</a></li><li><a href="#情報の内容と表現">情報の内容と表現</a></li><li><a href="#外部の情報とその意味の理解">外部の情報と、その意味の理解</a></li><li><a href="#まとまりと強調">まとまりと強調</a></li><li><a href="#部品に応じて情報を段階的に示す">部品に応じて情報を段階的に示す</a></li><li><a href="#出典とこの案内の範囲">出典とこの案内の範囲</a></li></ol></details></nav><article>
 <section id="この案内について" class="knowledge-section"><div class="section-heading"><h2>この案内について</h2><a class="permalink" href="#この案内について" aria-label="この案内についてのリンク">#</a></div><p>利用者が判断に使う情報の内容と提示の仕方を考えるために、関連する知識へ進む案内です。「判断材料の選定」は複数の考え方を扱う題目であり、一つの理論の名称ではありません。各概念の定義・背景・対象範囲は、リンク先の <code>KNOWLEDGE.md</code> と、そこから参照する出典・説明例で読みます。この案内が、それらの本文をまとめて置き換えるものではありません。</p>
 </section>
 <section id="情報の内容と表現" class="knowledge-section"><div class="section-heading"><h2>情報の内容と表現</h2><a class="permalink" href="#情報の内容と表現" aria-label="情報の内容と表現のリンク">#</a></div><p><a href="../../knowledge/ecological-interface-design/KNOWLEDGE.md">Ecological Interface Design（EID）</a>は、複雑な人間機械システムで情報の内容・構造と表現を考える枠組みを説明します。一般のUIで表示項目を減らす手順や、適切な項目数の理論としては扱いません。</p>
@@ -119,5 +132,5 @@ details>*{display:block}
 </article></main>
 <footer><div><p><a href="../../topics/decision-material-selection.md">案内の原文を読む</a> · <a href="ai.md">案内のMarkdown</a> · <a href="#top">ページ上部へ</a></p>
 <details id="source-provenance"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class="metadata">
-<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>1.0.0</dd><dt>status</dt><dd>accepted</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>ecological-interface-design, external-representations, conceptual-models, grouping, visual-hierarchy</dd><dt>source</dt><dd>topics/decision-material-selection.md</dd><dt>source SHA-256</dt><dd>87c2360811e8c038766ddb1aeb45a8fa013a2423a9722059e6c61eac1844b9d8</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>2.0.0</dd><dt>stylesheet SHA-256</dt><dd>8efde8a8a6328e58b86e5563589dce1e849c4480b4e2bdfd4015040539ce072b</dd><dt>generator + template SHA-256</dt><dd>09f3365c32a85e44d5f9d6e256b117d1f9dd3bb6a9e4138bcc875419ab855954</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
+<dt>id</dt><dd>decision-material-selection</dd><dt>version</dt><dd>1.0.0</dd><dt>status</dt><dd>accepted</dd><dt>scope</dt><dd>general-digital-ui</dd><dt>related</dt><dd>ecological-interface-design, external-representations, conceptual-models, grouping, visual-hierarchy</dd><dt>source</dt><dd>topics/decision-material-selection.md</dd><dt>source SHA-256</dt><dd>87c2360811e8c038766ddb1aeb45a8fa013a2423a9722059e6c61eac1844b9d8</dd><dt>design ID</dt><dd>mimic-knowledge-view</dd><dt>design version</dt><dd>3.0.0</dd><dt>stylesheet SHA-256</dt><dd>6a68b11960bfdcd30f0b6aeaf41f691ffeba3fae0586b3077d6cc54df401d262</dd><dt>generator + template SHA-256</dt><dd>840ade88ed7dd4ae30cc8e46c8845b3ad2283136f09a38571fe7346272fbf190</dd><dt>renderer</dt><dd>marked 17.0.5</dd><dt>renderer SHA-256</dt><dd>0b4487359ce6b85108708e7a532e1242a27f4718241e7b2de109ac6cd307d2dc</dd>
 </dl></details></div></footer></body></html>

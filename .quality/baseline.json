@@ -129,12 +129,6 @@
       },
       {
         "path": "scripts/build-guideline.ts",
-        "line": 90,
-        "codepoints": 365,
-        "text": ".guideline article{overflow-wrap:anywhere}.guideline pre{overflow-x:auto;padding:18px;background:var(--wash);border:1px solid var(--line);border-radius:4px;font-size:.85rem;line-height:1.7}.guideline code{font-size:.9em}.guideline pre code{font-size:inherit}.guideline blockquote{margin:24px 0;padding-left:22px;border-left:3px solid var(--line);color:var(--muted)}"
-      },
-      {
-        "path": "scripts/build-guideline.ts",
         "line": 97,
         "codepoints": 248,
         "text": "<details id=\"source-provenance\"><summary>生成情報・原文との対応</summary><p>このページはMarkdown原文から生成しています。内容の変更は原文に反映してください。</p><dl class=\"metadata\"><dt>source</dt><dd>${sourceFile}</dd><dt>source SHA-256</dt><dd>${hash(source)}</dd></dl></details></div></footer>"
@@ -159,18 +153,6 @@
       },
       {
         "path": "scripts/build-knowledge.ts",
-        "line": 287,
-        "codepoints": 261,
-        "text": "<header><div class=\"topline\"><div class=\"brand\">Mimic</div><div class=\"toplinks\"><a href=\"https://9uile.github.io/mimic/guideline/\">利用ガイド</a><a href=\"${escape(relativeLink(outDir, sourcePath))}\">${sourceLabel}</a><a href=\"ai.md\">${markdownLabel}</a></div></div>"
-      },
-      {
-        "path": "scripts/build-knowledge.ts",
-        "line": 288,
-        "codepoints": 263,
-        "text": "<div class=\"hero\"><div class=\"eyebrow\"><span class=\"badge\">${escape(statusLabel)}</span>${topic ? 'TOPIC' : 'KNOWLEDGE'}</div><h1 id=\"title\">${escape(metadata.title)}</h1><div class=\"meta\">${escape(metadata.id)} · v${escape(metadata.version)}</div></div></header>"
-      },
-      {
-        "path": "scripts/build-knowledge.ts",
         "line": 293,
         "codepoints": 204,
         "text": "<details id=\"source-provenance\"><summary>生成情報・編集元との対応</summary><p>このページとMarkdownは、表示している編集元の内容だけから生成しています。リンク先の概念・出典・例は取り込まないため、必要な参照先も読んでください。生成物を直接編集せず、編集元または表示方法を更新して再生成してください。</p><dl class=\"metadata\">"
@@ -180,12 +162,6 @@
         "line": 294,
         "codepoints": 546,
         "text": "${Object.entries({ id: metadata.id, version: metadata.version, status: metadata.status, scope: metadata.scope, related: metadata.related.join(', '), source: relativeLink(root, sourcePath), 'source SHA-256': provenance.source, 'design ID': design.id, 'design version': design.version, 'stylesheet SHA-256': provenance.stylesheet, 'generator + template SHA-256': provenance.generator, renderer: `marked ${markedVersion}`, 'renderer SHA-256': provenance.renderer }).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join('')}"
-      },
-      {
-        "path": "scripts/knowledge-view.css",
-        "line": 42,
-        "codepoints": 223,
-        "text": ".steps>li{counter-increment:step;position:relative;background:var(--wash);border:1px solid #d4ddd1;border-radius:6px;padding:22px 20px 20px 58px;margin:0;font-size:.87rem;line-height:1.85;min-width:0;overflow-wrap:anywhere}"
       },
       {
         "path": "tests/knowledge-output.test.ts",
