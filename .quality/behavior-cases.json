@@ -235,7 +235,7 @@
         "reasoning": "24本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
       },
       "input": {"index": "knowledge/README.md", "concepts": 24},
-      "expected": {"conceptVersions": {"design-tokens": "1.1.1", "existing17Concepts": "1.0.1", "new6Concepts": "1.0.0"}, "count": 24},
+      "expected": {"conceptVersions": {"design-tokens": "1.1.1", "ai-slop": "1.1.0", "other16Concepts": "1.0.1", "new6Concepts": "1.0.0"}, "count": 24},
       "assumptions": ["24概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
       "implementation": "scripts/pages-catalog.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": [], "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",

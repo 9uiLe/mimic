@@ -186,7 +186,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'ecological-interface-design': '1.0.1', 'external-representations': '1.0.1',
     'conceptual-models': '1.0.1', grouping: '1.0.1', 'visual-hierarchy': '1.0.1',
     'lightness-and-luminance': '1.0.1', 'color-contrast': '1.0.1',
-    'design-tokens': '1.1.1', 'ai-slop': '1.0.1',
+    'design-tokens': '1.1.1', 'ai-slop': '1.1.0',
     'aesthetic-and-minimalist-design': '1.0.1', typography: '1.0.1', 'layout-spacing': '1.0.1',
     'alignment-and-grids': '1.0.1', 'color-context': '1.0.1',
     'human-centered-design': '1.0.0', 'user-journeys': '1.0.0', 'information-architecture': '1.0.0',
@@ -194,8 +194,8 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'scenario-based-design': '1.0.1', 'goal-directed-design': '1.0.1',
     'reflective-conversation': '1.0.1', 'sketches-and-prototypes': '1.0.1',
   }, 'catalog must map each concept to its source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 17,
-    'catalog must show seventeen v1.0.1 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 16,
+    'catalog must show sixteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 6,
