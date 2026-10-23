@@ -2,6 +2,42 @@
   "schemaVersion": 1,
   "cases": [
     {
+      "id": "visual-style-knowledge-entry",
+      "requirement": "新しい視覚的なスタイルの知識も、概念ディレクトリと固定入口のidを一致させる。",
+      "oracle": {
+        "status": "confirmed",
+        "source": "guideline/knowledge-structure.md",
+        "section": "固定の入口と補足",
+        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "reasoning": "追加するvisual-styleの入口を構造ガイドと照合する。期待idを生成結果から導かない。"
+      },
+      "input": {
+        "conceptDirectory": "knowledge/visual-style",
+        "entry": "knowledge/visual-style/KNOWLEDGE.md"
+      },
+      "expected": {
+        "id": "visual-style"
+      },
+      "assumptions": [
+        "新概念の入口idの一致を検査する。視覚表現の知識の意味や原典への忠実さは保証しない。"
+      ],
+      "implementation": "knowledge/visual-style/KNOWLEDGE.md",
+      "test": "tests/knowledge-output.test.ts",
+      "supportingFiles": [
+        "tests/fixtures/knowledge-display.md"
+      ],
+      "supportingFileSets": [
+        "pages-build-inputs"
+      ],
+      "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
+      "mutation": {
+        "description": "追加した視覚的なスタイルの入口idだけを誤変更し、概念ディレクトリと不一致にする。",
+        "find": "id: visual-style",
+        "replace": "id: mismatched-style",
+        "assertionMessage": "visual-style: entry id must match concept directory"
+      }
+    },
+    {
       "id": "knowledge-relative-link", "requirement": "出力位置が変わっても、相対リンクは編集元と同じ概念の入口へ到達する。", "oracle": {
         "status": "confirmed", "source": "guideline/development.md", "section": "生成の規則", "quotation": "相対リンクだけを出力位置から同じ参照先へ届く形に補正します。",
         "relatedSource": "guideline/knowledge-structure.md#固定の入口と補足", "reasoning": "出力先から2階層上へ進み、knowledge/grouping/KNOWLEDGE.mdへ到達する具体例。実装の戻り値から期待値を導いていない。"
@@ -20,36 +56,8 @@
       }, "input": {"id": "metadata-fixture", "version": "1.0.0", "scope": "metadata-display", "related": []},
       "expected": {"htmlVersion": "v1.0.0", "htmlProvenanceVersion": "1.0.0", "htmlScope": "metadata-display", "aiSource": "正本と同一", "legacyStatus": "拒否"},
       "assumptions": ["架空の正本を入力し、実際の知識の意味や原典への忠実さは判定しない。", "状態項目を廃止しても版と編集元の対応を保持する。"], "implementation": "scripts/build-knowledge.ts", "test": "tests/knowledge-output.test.ts",
-      "supportingFiles": [
-        "scripts/knowledge-paths.ts", "scripts/knowledge-view.css", "node_modules/marked/lib/marked.esm.js", "node_modules/marked/package.json", "topics/decision-material-selection.md",
-        "knowledge/README.md", "knowledge/conceptual-models/KNOWLEDGE.md", "knowledge/conceptual-models/references/sources.md", "knowledge/ecological-interface-design/KNOWLEDGE.md",
-        "knowledge/ecological-interface-design/references/sources.md", "knowledge/external-representations/KNOWLEDGE.md", "knowledge/external-representations/examples/temperature.md",
-        "knowledge/external-representations/references/sources.md", "knowledge/grouping/KNOWLEDGE.md", "knowledge/grouping/examples/schedule.md", "knowledge/grouping/references/sources.md",
-        "knowledge/visual-hierarchy/KNOWLEDGE.md", "knowledge/visual-hierarchy/examples/schedule.md", "knowledge/visual-hierarchy/references/sources.md",
-        "knowledge/color-contrast/KNOWLEDGE.md", "knowledge/color-contrast/references/sources.md", "knowledge/design-tokens/KNOWLEDGE.md",
-        "knowledge/design-tokens/examples/color-presentation.md", "knowledge/design-tokens/references/sources.md", "knowledge/lightness-and-luminance/KNOWLEDGE.md",
-        "knowledge/lightness-and-luminance/references/sources.md", "scripts/pages-catalog.ts", "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md", "knowledge/ai-slop/KNOWLEDGE.md",
-        "knowledge/ai-slop/references/sources.md", "knowledge/ai-slop/examples/ui-decisions.md", "knowledge/aesthetic-and-minimalist-design/references/sources.md", "topics/color.md",
-        "topics/ai-slop.md", "tests/fixtures/knowledge-display.md", "knowledge/typography/KNOWLEDGE.md", "knowledge/typography/references/sources.md",
-        "knowledge/typography/examples/mixed-ui-copy.md", "knowledge/layout-spacing/KNOWLEDGE.md", "knowledge/layout-spacing/references/sources.md",
-        "knowledge/layout-spacing/examples/component-spacing.md", "scripts/pages-fonts.ts", "scripts/knowledge-images.ts", "knowledge/alignment-and-grids/KNOWLEDGE.md",
-        "knowledge/alignment-and-grids/examples/alignment.md", "knowledge/alignment-and-grids/examples/alignment.svg", "knowledge/alignment-and-grids/references/sources.md",
-        "knowledge/color-context/KNOWLEDGE.md", "knowledge/color-context/examples/surrounding-colors.md", "knowledge/color-context/examples/surrounding-colors.svg",
-        "knowledge/color-context/references/sources.md", "knowledge/design-systems/KNOWLEDGE.md", "knowledge/design-systems/references/sources.md",
-        "knowledge/human-centered-design/KNOWLEDGE.md", "knowledge/human-centered-design/references/sources.md", "knowledge/information-architecture/KNOWLEDGE.md",
-        "knowledge/information-architecture/references/sources.md", "knowledge/interaction-design/KNOWLEDGE.md", "knowledge/interaction-design/examples/recording-app.md",
-        "knowledge/interaction-design/references/sources.md", "knowledge/usability-testing/KNOWLEDGE.md", "knowledge/usability-testing/references/sources.md",
-        "knowledge/user-journeys/KNOWLEDGE.md", "knowledge/user-journeys/references/sources.md", "topics/product-ui-design.md",
-        "knowledge/scenario-based-design/KNOWLEDGE.md", "knowledge/scenario-based-design/references/sources.md",
-        "knowledge/goal-directed-design/KNOWLEDGE.md", "knowledge/goal-directed-design/references/sources.md",
-        "knowledge/reflective-conversation/KNOWLEDGE.md", "knowledge/reflective-conversation/references/sources.md",
-        "knowledge/sketches-and-prototypes/KNOWLEDGE.md", "knowledge/sketches-and-prototypes/references/sources.md",
-        "knowledge/goal-directed-design/examples/reading-notes.md",
-        "topics/scenario-to-screen.md",
-        "knowledge/ui-layering/KNOWLEDGE.md", "knowledge/ui-layering/references/sources.md",
-        "knowledge/ui-layering/examples/overlap.md", "knowledge/ui-layering/examples/layer-order.md",
-        "knowledge/ui-layering/examples/layer-comparison.svg", "knowledge/ui-layering/examples/layer-order.svg"
-      ], "testName": "knowledge reader preserves version and provenance while AI output preserves canonical metadata", "mutation": {
+      "supportingFiles": ["tests/fixtures/knowledge-display.md"],
+      "supportingFileSets": ["pages-build-inputs"], "testName": "knowledge reader preserves version and provenance while AI output preserves canonical metadata", "mutation": {
         "description": "閲覧HTMLの生成情報に記録する正本の版を誤変更する。", "find": "version: metadata.version, scope: metadata.scope", "replace": "version: '0.0.0', scope: metadata.scope",
         "assertionMessage": "human output must preserve source version"
       }
@@ -121,36 +129,8 @@
       "expected": {"id": "lightness-and-luminance"},
       "assumptions": ["入口idの一致とリンク・メタデータ保持に関するテストであり、知識本文の原典への忠実さを保証しない。"],
       "implementation": "knowledge/lightness-and-luminance/KNOWLEDGE.md", "test": "tests/knowledge-output.test.ts",
-      "supportingFiles": [
-        "scripts/build-knowledge.ts", "scripts/knowledge-paths.ts", "scripts/knowledge-view.css", "node_modules/marked/lib/marked.esm.js", "node_modules/marked/package.json",
-        "topics/decision-material-selection.md", "knowledge/README.md", "knowledge/conceptual-models/KNOWLEDGE.md", "knowledge/conceptual-models/references/sources.md",
-        "knowledge/ecological-interface-design/KNOWLEDGE.md", "knowledge/ecological-interface-design/references/sources.md", "knowledge/external-representations/KNOWLEDGE.md",
-        "knowledge/external-representations/examples/temperature.md", "knowledge/external-representations/references/sources.md", "knowledge/grouping/KNOWLEDGE.md",
-        "knowledge/grouping/examples/schedule.md", "knowledge/grouping/references/sources.md", "knowledge/visual-hierarchy/KNOWLEDGE.md", "knowledge/visual-hierarchy/examples/schedule.md",
-        "knowledge/visual-hierarchy/references/sources.md", "knowledge/color-contrast/KNOWLEDGE.md", "knowledge/color-contrast/references/sources.md", "knowledge/design-tokens/KNOWLEDGE.md",
-        "knowledge/design-tokens/examples/color-presentation.md", "knowledge/design-tokens/references/sources.md", "knowledge/lightness-and-luminance/KNOWLEDGE.md",
-        "knowledge/lightness-and-luminance/references/sources.md", "scripts/pages-catalog.ts", "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md", "knowledge/ai-slop/KNOWLEDGE.md",
-        "knowledge/ai-slop/references/sources.md", "knowledge/ai-slop/examples/ui-decisions.md", "knowledge/aesthetic-and-minimalist-design/references/sources.md", "topics/color.md",
-        "topics/ai-slop.md", "tests/fixtures/knowledge-display.md", "knowledge/typography/KNOWLEDGE.md", "knowledge/typography/references/sources.md",
-        "knowledge/typography/examples/mixed-ui-copy.md", "knowledge/layout-spacing/KNOWLEDGE.md", "knowledge/layout-spacing/references/sources.md",
-        "knowledge/layout-spacing/examples/component-spacing.md", "scripts/pages-fonts.ts", "scripts/knowledge-images.ts", "knowledge/alignment-and-grids/KNOWLEDGE.md",
-        "knowledge/alignment-and-grids/examples/alignment.md", "knowledge/alignment-and-grids/examples/alignment.svg", "knowledge/alignment-and-grids/references/sources.md",
-        "knowledge/color-context/KNOWLEDGE.md", "knowledge/color-context/examples/surrounding-colors.md", "knowledge/color-context/examples/surrounding-colors.svg",
-        "knowledge/color-context/references/sources.md", "knowledge/design-systems/KNOWLEDGE.md", "knowledge/design-systems/references/sources.md",
-        "knowledge/human-centered-design/KNOWLEDGE.md", "knowledge/human-centered-design/references/sources.md", "knowledge/information-architecture/KNOWLEDGE.md",
-        "knowledge/information-architecture/references/sources.md", "knowledge/interaction-design/KNOWLEDGE.md", "knowledge/interaction-design/examples/recording-app.md",
-        "knowledge/interaction-design/references/sources.md", "knowledge/usability-testing/KNOWLEDGE.md", "knowledge/usability-testing/references/sources.md",
-        "knowledge/user-journeys/KNOWLEDGE.md", "knowledge/user-journeys/references/sources.md", "topics/product-ui-design.md",
-        "knowledge/scenario-based-design/KNOWLEDGE.md", "knowledge/scenario-based-design/references/sources.md",
-        "knowledge/goal-directed-design/KNOWLEDGE.md", "knowledge/goal-directed-design/references/sources.md",
-        "knowledge/reflective-conversation/KNOWLEDGE.md", "knowledge/reflective-conversation/references/sources.md",
-        "knowledge/sketches-and-prototypes/KNOWLEDGE.md", "knowledge/sketches-and-prototypes/references/sources.md",
-        "knowledge/goal-directed-design/examples/reading-notes.md",
-        "topics/scenario-to-screen.md",
-        "knowledge/ui-layering/KNOWLEDGE.md", "knowledge/ui-layering/references/sources.md",
-        "knowledge/ui-layering/examples/overlap.md", "knowledge/ui-layering/examples/layer-order.md",
-        "knowledge/ui-layering/examples/layer-comparison.svg", "knowledge/ui-layering/examples/layer-order.svg"
-      ],
+      "supportingFiles": ["tests/fixtures/knowledge-display.md"],
+      "supportingFileSets": ["pages-build-inputs"],
       "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
       "mutation": {
         "description": "明度と相対輝度の入口idだけを誤変更し、概念ディレクトリ名と不一致にする。",
@@ -208,16 +188,16 @@
     },
     {
       "id": "pages-catalog-completeness",
-      "requirement": "Pagesの入口から全25概念の本文を選べる。",
+      "requirement": "Pagesの入口から全26概念の本文を選べる。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
-        "quotation": "一覧の対象は明示した25概念と照合し、ファイルを追加しただけでは掲載しません。",
-        "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき25件を固定する。実装配列の長さから期待値を作らない。"
+        "quotation": "一覧の対象は明示した26概念と照合し、ファイルを追加しただけでは掲載しません。",
+        "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき26件を固定する。実装配列の長さから期待値を作らない。"
       },
-      "input": {"index": "knowledge/README.md", "conceptCount": 25},
-      "expected": {"readerLinks": 25, "redirect": false},
+      "input": {"index": "knowledge/README.md", "conceptCount": 26},
+      "expected": {"readerLinks": 26, "redirect": false},
       "assumptions": ["索引掲載数と選択経路を機械検査する。本文の意味や使いやすさの実証ではない。"],
       "implementation": "scripts/pages-catalog.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": [], "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",
@@ -225,26 +205,26 @@
         "description": "配信ファイルは残すが、一覧から最後の概念だけ落とす。",
         "find": "const items = rows.map(row => {",
         "replace": "const items = rows.slice(0, -1).map(row => {",
-        "assertionMessage": "catalog must expose all twenty-five reviewed concepts"
+        "assertionMessage": "catalog must expose all twenty-six reviewed concepts"
       },
       "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
     },
     {
       "id": "pages-catalog-version",
-      "requirement": "Pages入口の全25概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。",
+      "requirement": "Pages入口の全26概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。",
       "oracle": {
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
         "quotation": "一覧の説明は `knowledge/README.md` の表から読み、題名・版は各本文から読みます。",
         "relatedSource": "knowledge/README.md#参照する前に",
-        "reasoning": "25本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
+        "reasoning": "26本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
       },
-      "input": {"index": "knowledge/README.md", "concepts": 25},
+      "input": {"index": "knowledge/README.md", "concepts": 26},
       "expected": {"conceptVersions": {"design-tokens": "1.1.1", "ai-slop": "1.1.0",
           "aesthetic-and-minimalist-design": "1.1.0", "visual-hierarchy": "1.1.0", "other14Concepts": "1.0.1", "new6Concepts": "1.0.0",
-          "ui-layering": "1.0.0"}, "count": 25},
-      "assumptions": ["25概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
+          "ui-layering": "1.0.0", "visual-style": "1.0.0"}, "count": 26},
+      "assumptions": ["26概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
       "implementation": "scripts/pages-catalog.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": [], "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes",
       "mutation": {
@@ -292,8 +272,8 @@
         "quotation": "本文を一つのページへ取り込まず、概念・関連概念・例・出典をそれぞれのページで読みます。",
         "reasoning": "概念の独立性と関連資料を辿る読書経路は表示規約と利用者の改善依頼に基づく。期待hrefは固定した入出力パスから記載し、実装を呼んで計算しない。"
       },
-      "input": {"concepts": 25, "supplements": 38},
-      "expected": {"htmlReaders": 63, "sourcesHref": "references/sources.html", "relatedHref": "../visual-hierarchy/index.html"},
+      "input": {"concepts": 26, "supplements": 40},
+      "expected": {"htmlReaders": 66, "sourcesHref": "references/sources.html", "relatedHref": "../visual-hierarchy/index.html"},
       "assumptions": ["全文ブロック保持と版・リンクを機械で検査する。知識の妥当性や利用者への効果の検証ではない。"],
       "implementation": "scripts/build-knowledge.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": ["scripts/knowledge-images.ts"],
@@ -398,7 +378,7 @@
         "quotation": "PagesのHTMLだけは、同じPages成果物に同梱したGen Interface JP 0.8.0の400・600ウェイト別CSSを読み、必要なWOFF2サブセットを同一オリジンから取得します。"
       },
       "input": {"fontVersion": "0.8.0", "weights": [400, 600], "subsetsPerWeight": 128},
-      "expected": {"publishedFontFiles": 259, "allPublishedFiles": 424, "stylesheetLinks": 2},
+      "expected": {"publishedFontFiles": 259, "allPublishedFiles": 430, "stylesheetLinks": 2},
       "assumptions": ["CSSとfontの同梱、参照パス、配布元のバイト一致を検査する。実ブラウザでの読みやすさやfont転送量の保証ではない。"],
       "implementation": "scripts/pages-fonts.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": [], "supportingFileSets": ["pages-build-inputs", "pages-font-assets"],

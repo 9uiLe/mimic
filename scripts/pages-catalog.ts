@@ -7,7 +7,7 @@ export const conceptIds = Object.freeze([
   'typography', 'layout-spacing', 'alignment-and-grids', 'color-context', 'ui-layering',
   'human-centered-design', 'user-journeys', 'information-architecture',
   'interaction-design', 'design-systems', 'usability-testing',
-  'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes',
+  'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes', 'visual-style',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -26,6 +26,7 @@ export const exampleFiles = Object.freeze([
   'knowledge/ui-layering/examples/layer-order.md',
   'knowledge/interaction-design/examples/recording-app.md',
   'knowledge/goal-directed-design/examples/reading-notes.md',
+  'knowledge/visual-style/examples/style-rationale.md',
 ]);
 export const additionalSources = Object.freeze([
   'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md',
