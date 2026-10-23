@@ -12,7 +12,7 @@
 - 表示構造とToken変換は`scripts/`、Pages共通CSSは`web/reading.css`、共通操作は`web/reading.js`、関係探索は`web/graph.js`を編集します。`scripts/knowledge-view.css`は単体ローカルプレビュー用に保持します。配布フォントは`assets/`に保持します。
 - 閲覧ページは生成物です。Markdown・JSONの正本と表示実装を変更してから再生成します。
 
-「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。「プロダクト全体のUI設計」の案内は `topics/product-ui-design.md` を正本とし、Pagesでは `topics/product-ui-design.html` を生成して関連する概念のHTMLへ案内します。「シナリオから機能と画面構成を考える」は `topics/scenario-to-screen.md` から専用HTMLを生成し、関連4概念と架空の読書メモ例へ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した25概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
+「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する7概念のHTMLへ案内します。「プロダクト全体のUI設計」の案内は `topics/product-ui-design.md` を正本とし、Pagesでは `topics/product-ui-design.html` を生成して関連する概念のHTMLへ案内します。「シナリオから機能と画面構成を考える」は `topics/scenario-to-screen.md` から専用HTMLを生成し、関連4概念と架空の読書メモ例へ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した25概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
 
 旧 `prototypes/decision-material-selection/index.html` の人向けURLには短い移動案内を生成します。旧研究資料の全文はPagesへ配信しません。
 

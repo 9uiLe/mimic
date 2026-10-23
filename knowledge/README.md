@@ -52,4 +52,6 @@
 
 横断的な案内は[「シナリオから機能と画面構成を考える」](../topics/scenario-to-screen.md)、[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
 
+「判断材料の選定」からは、UIの文字・画像・ボタンの情報の多さ、必要性、重要度、目立ち方の関係を説明する知識へ進めます。
+
 具体的なUI色を提示するときは、色とは独立した[Design Tokenの本文](design-tokens/KNOWLEDGE.md)と[色への適用例](design-tokens/examples/color-presentation.md)を読み、[利用ガイドの色の提示方針](../guideline/README.md#uiの色を具体的に示すとき)に従います。

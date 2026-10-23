@@ -94,15 +94,15 @@
         "relatedSource": "guideline/knowledge-view.md#編集元と生成",
         "reasoning": "原文との対応と生成物の鮮度を確かめる公開ガイド、および版と原文の指紋を記録する表示規約から期待値を固定する。"
       },
-      "input": {"copiedFile": "topics/decision-material-selection.md", "source": "topics/decision-material-selection.md", "version": "1.0.0"},
-      "expected": {"copiedBytes": "正本topics/decision-material-selection.mdと一致する。", "htmlVersion": "1.0.0", "htmlSourceSha256": "正本のSHA-256と一致する。"},
+      "input": {"copiedFile": "topics/decision-material-selection.md", "source": "topics/decision-material-selection.md", "version": "1.1.0"},
+      "expected": {"copiedBytes": "正本topics/decision-material-selection.mdと一致する。", "htmlVersion": "1.1.0", "htmlSourceSha256": "正本のSHA-256と一致する。"},
       "assumptions": ["コピーと生成HTMLの正本対応を検査する。知識本文の意味や原典への忠実さは判定しない。"],
       "implementation": "scripts/build-pages.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": [], "testName": "canonical Markdown copies and generated readers retain source metadata and provenance",
       "mutation": {
         "description": "Pagesの閲覧HTMLに渡す案内Markdownの版だけを誤変更する。",
         "find": "const source = outputs.get(sourceFile)!;",
-        "replace": "const source = Buffer.from(outputs.get(sourceFile)!.toString().replace('1.0.0', '0.0.0'));",
+        "replace": "const source = Buffer.from(outputs.get(sourceFile)!.toString().replace(/^version: \"[^\"\\n]+\"$/m, 'version: \"0.0.0\"'));",
         "assertionMessage": "canonical topic reader must show source version"
       },
       "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]
@@ -241,7 +241,8 @@
         "reasoning": "25本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。"
       },
       "input": {"index": "knowledge/README.md", "concepts": 25},
-      "expected": {"conceptVersions": {"design-tokens": "1.1.1", "ai-slop": "1.1.0", "other16Concepts": "1.0.1", "new6Concepts": "1.0.0",
+      "expected": {"conceptVersions": {"design-tokens": "1.1.1", "ai-slop": "1.1.0",
+          "aesthetic-and-minimalist-design": "1.1.0", "visual-hierarchy": "1.1.0", "other14Concepts": "1.0.1", "new6Concepts": "1.0.0",
           "ui-layering": "1.0.0"}, "count": 25},
       "assumptions": ["25概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。"],
       "implementation": "scripts/pages-catalog.ts", "test": "tests/pages-output.test.ts",
@@ -337,12 +338,12 @@
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
         "quotation": "題目別案内も専用HTMLから、それぞれに関連する概念のHTMLへ進めます。",
-        "reasoning": "題目別案内と概念を同じPages読書経路で結ぶ表示規約。5件と4件は案内のrelatedメタデータと本文のリンクを照合し、期待hrefは入出力パスから固定する。"
+        "reasoning": "題目別案内と概念を同じPages読書経路で結ぶ表示規約。7件と4件は案内のrelatedメタデータと本文のリンクを照合し、期待hrefは入出力パスから固定する。"
       },
       "input": {
         "sources": ["topics/decision-material-selection.md", "topics/scenario-to-screen.md"],
         "relatedConcepts": [
-          5,
+          7,
           4
         ]
       },
@@ -355,9 +356,9 @@
       "test": "tests/pages-output.test.ts",
       "supportingFiles": [], "testName": "topics retain their text and open every explicitly related concept reader",
       "mutation": {
-        "description": "追加した題目別案内だけHTML変換を省き、関連する概念へのリンクを正本Markdownへ戻す。",
+        "description": "判断材料の案内の追加2概念とシナリオ案内のHTML変換を省き、リンクを正本Markdownへ戻す。",
         "find": "const destination = views[target] ?? target;",
-        "replace": "const destination = sourceFile === 'topics/scenario-to-screen.md' ? target : views[target] ?? target;",
+        "replace": "const destination = /aesthetic-and-minimalist-design|layout-spacing|scenario-to-screen/.test(sourceFile + target) ? target : views[target] ?? target;",
         "assertionMessage": "topic must open the concept reader"
       },
       "supportingFileSets": ["pages-build-inputs", "pages-font-assets"]

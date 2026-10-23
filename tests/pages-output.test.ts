@@ -189,22 +189,24 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   )].map(([, id, version]) => [id, version]));
   assert.deepEqual(catalogVersions, {
     'ecological-interface-design': '1.0.1', 'external-representations': '1.0.1',
-    'conceptual-models': '1.0.1', grouping: '1.0.1', 'visual-hierarchy': '1.0.1',
+    'conceptual-models': '1.0.1', grouping: '1.0.1', 'visual-hierarchy': '1.1.0',
     'lightness-and-luminance': '1.0.1', 'color-contrast': '1.0.1',
     'design-tokens': '1.1.1', 'ai-slop': '1.1.0',
-    'aesthetic-and-minimalist-design': '1.0.1', typography: '1.0.1', 'layout-spacing': '1.0.1',
+    'aesthetic-and-minimalist-design': '1.1.0', typography: '1.0.1', 'layout-spacing': '1.0.1',
     'alignment-and-grids': '1.0.1', 'color-context': '1.0.1', 'ui-layering': '1.0.0',
     'human-centered-design': '1.0.0', 'user-journeys': '1.0.0', 'information-architecture': '1.0.0',
     'interaction-design': '1.0.0', 'design-systems': '1.0.0', 'usability-testing': '1.0.0',
     'scenario-based-design': '1.0.1', 'goal-directed-design': '1.0.1',
     'reflective-conversation': '1.0.1', 'sketches-and-prototypes': '1.0.1',
   }, 'catalog must map each concept to its source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 16,
-    'catalog must show sixteen v1.0.1 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 14,
+    'catalog must show fourteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 7,
     'catalog must show seven v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 3,
+    'catalog must show three v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
     'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/product-ui-design.html']) {
     const content = await readFile(path.join(out, file), 'utf8');
@@ -309,17 +311,17 @@ test('canonical Markdown copies and generated readers retain source metadata and
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
   const topicMarkdown = await readFile(path.join(out, 'topics/decision-material-selection.md'), 'utf8');
-  assert.match(topicMarkdown, /^version: "1\.0\.0"$/m, 'canonical topic version must remain intact');
+  assert.match(topicMarkdown, /^version: "1\.1\.0"$/m, 'canonical topic version must remain intact');
   assert.doesNotMatch(topicMarkdown, /^status:/m);
-  const provenanceCases: [string, string][] = [
-    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md'],
-    ['topics/product-ui-design.html', 'topics/product-ui-design.md'],
-    ['topics/scenario-to-screen.html', 'topics/scenario-to-screen.md'],
+  const provenanceCases: [string, string, string][] = [
+    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md', '1.1.0'],
+    ['topics/product-ui-design.html', 'topics/product-ui-design.md', '1.0.0'],
+    ['topics/scenario-to-screen.html', 'topics/scenario-to-screen.md', '1.0.0'],
   ];
-  for (const [htmlFile, sourceFile] of provenanceCases) {
+  for (const [htmlFile, sourceFile, expectedVersion] of provenanceCases) {
     const html = await readFile(path.join(out, htmlFile), 'utf8');
     const source = await readFile(path.join(root, sourceFile));
-    assert.ok(html.includes('<dt>version</dt><dd>1.0.0</dd>'), 'canonical topic reader must show source version');
+    assert.ok(html.includes(`<dt>version</dt><dd>${expectedVersion}</dd>`), 'canonical topic reader must show source version');
     assert.ok(html.includes('<dt>scope</dt><dd>'), 'canonical topic reader must show source scope');
     assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/);
     assert.ok(html.includes(`<dt>source</dt><dd>${sourceFile}</dd>`));
@@ -496,10 +498,10 @@ test('topics retain their text and open every explicitly related concept reader'
   await buildPages(out);
   const topics = [
     ['decision-material-selection', ['ecological-interface-design', 'external-representations', 'conceptual-models',
-      'grouping', 'visual-hierarchy']],
-    ['scenario-to-screen', ['scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes']],
+      'grouping', 'visual-hierarchy', 'aesthetic-and-minimalist-design', 'layout-spacing'], '1.1.0'],
+    ['scenario-to-screen', ['scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes'], '1.0.0'],
   ] as const;
-  for (const [topic, ids] of topics) {
+  for (const [topic, ids, expectedVersion] of topics) {
     const source = await readFile(path.join(root, `topics/${topic}.md`), 'utf8');
     const html = await readFile(path.join(out, `topics/${topic}.html`), 'utf8');
     const visible = plainText(html.slice(html.indexOf('</style>')));
@@ -508,7 +510,7 @@ test('topics retain their text and open every explicitly related concept reader'
       assert.ok(visible.includes(plainText(marked.Parser.parse([token]))), 'topic source block must remain readable');
     }
     assert.ok(html.includes(`<meta name="source-sha256" content="${hash(Buffer.from(source))}">`));
-    assert.ok(html.includes('<dt>version</dt><dd>1.0.0</dd>'));
+    assert.ok(html.includes(`<dt>version</dt><dd>${expectedVersion}</dd>`));
     assert.ok(html.includes(`href="${topic}.md"`), 'canonical topic Markdown must remain available');
     for (const id of ids) {
       assert.ok(html.includes(`href="../knowledge/${id}/index.html"`), `${id}: topic must open the concept reader`);
