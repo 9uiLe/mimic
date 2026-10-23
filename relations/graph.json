@@ -21,8 +21,8 @@
       "id": "ai-slop",
       "title": "AI Slop",
       "path": "knowledge/ai-slop/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "bae23d658087f7c789ed34d0b5cdca9bada619ce96c0597b356b35bbd50304b6"
+      "version": "1.1.0",
+      "sha256": "735e759040df8333e00141b4772debbd8721137271cfdd8a894377fa499924e1"
     },
     {
       "id": "alignment-and-grids",
