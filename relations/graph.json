@@ -14,8 +14,8 @@
       "id": "aesthetic-and-minimalist-design",
       "title": "Aesthetic and Minimalist Design",
       "path": "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "570a70236a2e1e984264573d0cadc25ba4a1c587b0d4111d2aaa6ab49925731e"
+      "version": "1.1.0",
+      "sha256": "85f6d1dced33ace32d6453e09fe2a4168b072dbfb90019964543ab428c6f053e"
     },
     {
       "id": "ai-slop",
@@ -154,8 +154,8 @@
       "id": "visual-hierarchy",
       "title": "視覚的な優先順位",
       "path": "knowledge/visual-hierarchy/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "7b76c28342abcfcb3fc5d32395ad7cfdbe1ca7c0026321da215323613d166019"
+      "version": "1.1.0",
+      "sha256": "8bc1694eadb833d82e7b6f08ad5a35b2494dbf0254eefaa62bbba0f0c7c9be60"
     },
     { "id": "goal-directed-design", "path": "knowledge/goal-directed-design/KNOWLEDGE.md", "sha256": "2e1ed5dc4a841a56287b193f66b393e77973484d12ca9cc04eaa4e69754840b7",
     "title": "Goal-Directed Design", "version": "1.0.1" },
