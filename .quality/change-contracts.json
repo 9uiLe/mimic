@@ -83,7 +83,7 @@
         "tests/pages-catalog.test.ts",
         "tests/guideline-output.test.ts"
       ],
-      "purpose": "全20概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路、原文のバイト列を保つ静的画面図への参照を用意する。",
+      "purpose": "全24概念への入口と、正本の内容・版を保つ本文／関連概念／出典／例のHTML読書経路、原文のバイト列を保つ静的画面図への参照を用意する。",
       "basis_status": "confirmed",
       "basis": [
         "guideline/knowledge-view.md#Pagesの読書経路",

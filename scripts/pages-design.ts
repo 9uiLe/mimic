@@ -83,7 +83,7 @@ export function renderHome(catalogHtml: string, paths: ReadingPath[], entries: R
 <p class="type-supporting">疑問を開くと、関連する知識を比べられます。</p></div>
 <div class="questions">${questions}<p class="editorial-note type-supporting">本文をもとに組み合わせた案内です。読む順序は決まっていません。</p></div></section>
 <section class="home-section catalog-section" id="all-concepts" aria-labelledby="catalog-title"><div class="section-intro">
-<h2 class="type-section" id="catalog-title">知識の一覧</h2><p class="type-supporting">収録している20件から、名前で探せます。</p></div>
+<h2 class="type-section" id="catalog-title">知識の一覧</h2><p class="type-supporting">収録している24件から、名前で探せます。</p></div>
 <ul class="catalog-list">${catalog}</ul></section>
 <section class="home-section guides-section" aria-labelledby="guides-title"><div class="section-intro">
 <h2 class="type-section" id="guides-title">複数の知識をつなぐ</h2></div><ul class="guide-list">

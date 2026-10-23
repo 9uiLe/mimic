@@ -212,8 +212,8 @@ test('each concept has a matching fixed entry, resolvable support links, and met
   assert.deepEqual(concepts, [
     'aesthetic-and-minimalist-design', 'ai-slop', 'alignment-and-grids', 'color-context', 'color-contrast',
     'conceptual-models', 'design-systems', 'design-tokens', 'ecological-interface-design', 'external-representations',
-    'grouping', 'human-centered-design', 'information-architecture', 'interaction-design', 'layout-spacing',
-    'lightness-and-luminance', 'typography', 'usability-testing', 'user-journeys', 'visual-hierarchy',
+    'goal-directed-design', 'grouping', 'human-centered-design', 'information-architecture', 'interaction-design', 'layout-spacing',
+    'lightness-and-luminance', 'reflective-conversation', 'scenario-based-design', 'sketches-and-prototypes', 'typography', 'usability-testing', 'user-journeys', 'visual-hierarchy',
   ]);
   for (const id of concepts) {
     const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;

@@ -12,7 +12,7 @@
 - 表示構造とToken変換は`scripts/`、Pages共通CSSは`web/reading.css`、共通操作は`web/reading.js`、関係探索は`web/graph.js`を編集します。`scripts/knowledge-view.css`は単体ローカルプレビュー用に保持します。配布フォントは`assets/`に保持します。
 - 閲覧ページは生成物です。Markdown・JSONの正本と表示実装を変更してから再生成します。
 
-「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。「プロダクト全体のUI設計」の案内は `topics/product-ui-design.md` を正本とし、Pagesでは `topics/product-ui-design.html` を生成して関連する概念のHTMLへ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した20概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
+「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。「プロダクト全体のUI設計」の案内は `topics/product-ui-design.md` を正本とし、Pagesでは `topics/product-ui-design.html` を生成して関連する概念のHTMLへ案内します。「シナリオから機能と画面構成を考える」は `topics/scenario-to-screen.md` から専用HTMLを生成し、関連4概念と架空の読書メモ例へ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した24概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
 
 旧 `prototypes/decision-material-selection/index.html` の人向けURLには短い移動案内を生成します。旧研究資料の全文はPagesへ配信しません。
 
@@ -65,7 +65,7 @@ bun run relations:check
 
 ## 生成の規則
 
-人向けページの表示構造は[表示規約](knowledge-view.md)、実装は[知識の生成器](../scripts/build-knowledge.ts)、[Pagesの共通枠](../scripts/pages-design.ts)、[Pages共通CSS](../web/reading.css)で管理します。Pages共通枠は`mimic-pages-reader` `1.0.0`としてID・版・指紋を記録し、Markdown生成器の生成情報を保持します。単体ローカルプレビューは`mimic-knowledge-view` `3.4.0`、CSSは`scripts/knowledge-view.css`です。色・Typography・余白・部品の判断は[デザインシステム](design-system.md)に従います。Tokenの参照をCSSへ変換し、生成後の変数やHTMLを直接編集しません。必要な構造の変更は表示規約・デザインシステム・生成器へ整合して反映します。
+人向けページの表示構造は[表示規約](knowledge-view.md)、実装は[知識の生成器](../scripts/build-knowledge.ts)、[Pagesの共通枠](../scripts/pages-design.ts)、[Pages共通CSS](../web/reading.css)で管理します。Pages共通枠は`mimic-pages-reader` `1.0.0`としてID・版・指紋を記録し、Markdown生成器の生成情報を保持します。単体ローカルプレビューは`mimic-knowledge-view` `3.4.1`、CSSは`scripts/knowledge-view.css`です。色・Typography・余白・部品の判断は[デザインシステム](design-system.md)に従います。Tokenの参照をCSSへ変換し、生成後の変数やHTMLを直接編集しません。必要な構造の変更は表示規約・デザインシステム・生成器へ整合して反映します。
 
 横断的な案内のページは通常のMarkdownから生成し、H2見出しと本文の順序を保持します。生成器がリンク先の概念を読み込んだり、独自の判断手順を知識へ追加したりすることはありません。閲覧表示には正本の版を示します。8役割を指定するMarkdownの生成契約は表示規約とテストで確認します。
 
@@ -75,7 +75,7 @@ bun run relations:check
 
 ## GitHub Pagesへの公開
 
-公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口では5つの仕事中の疑問から知識の候補を比較でき、全20件の知識の一覧と関係探索も使えます。疑問は概念の分類や必読順序ではありません。`graph/index.html`では関係を見たい知識を選び、つながる辺の型・方向・根拠から本文へ進めます。JavaScriptを使わない場合も静的一覧から概念・関係・根拠を読めます。各概念のHTMLから関係グラフ・関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。UI全体の設計、色の知識、AI Slopに関する案内も別の読書経路として表示します。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
+公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口では7つの仕事中の疑問から知識の候補を比較でき、全24件の知識の一覧と関係探索も使えます。疑問は概念の分類や必読順序ではありません。`graph/index.html`では関係を見たい知識を選び、つながる辺の型・方向・根拠から本文へ進めます。JavaScriptを使わない場合も静的一覧から概念・関係・根拠を読めます。各概念のHTMLから関係グラフ・関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。UI全体の設計、色の知識、AI Slopに関する案内も別の読書経路として表示します。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
 
 [公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。関係データの配布対象は `relations/graph.json`・`relations/vocabulary.json`・`relations/README.md`、関係探索と共通操作の表示対象は`graph/index.html`、`web/reading.js`・`web/graph.js`・`web/reading.css`、Tokenから生成する`web/tokens.css`です。Token編集元の`design/tokens.json`とデザインシステムのMarkdown・`guideline/design-system.html`も明示して配信します。`design/reading-paths.json`は配信せず、生成した案内文として表示します。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
 

@@ -99,7 +99,8 @@ export async function buildPages(outDir = path.join(root, '_site')) {
     if (sourceFile === 'knowledge/README.md') continue;
     const source = outputs.get(sourceFile)!;
     if (sourceFile.endsWith('/KNOWLEDGE.md') || sourceFile === 'topics/color.md'
-      || sourceFile === 'topics/decision-material-selection.md' || sourceFile === 'topics/product-ui-design.md') {
+      || sourceFile === 'topics/decision-material-selection.md' || sourceFile === 'topics/product-ui-design.md'
+      || sourceFile === 'topics/scenario-to-screen.md') {
       const rendered = await renderKnowledge(source, sourceFile, stylesheet, readerViews, true);
       outputs.set(outFile, Buffer.from(renderReader(rendered.toString('utf8'), outFile, sourceFile)));
       continue;
