@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="790" viewBox="0 0 900 790" role="img" aria-labelledby="comparison-title comparison-desc">
+  <title id="comparison-title">重なる二つの面：不透明・半透明・影あり</title>
+  <desc id="comparison-desc">
+    各段で面Aが手前、面Bが奥。同じ位置と大きさで比較します。Aの斜線と塗りだけを半透明にし、輪郭と文字は残します。
+    不透明では奥のBの格子が重なり部分で隠れ、半透明では透けます。影ありでは同じ前後関係に影だけを加えます。
+    色の役割名と値は説明用の仮名です。sample-groundとsample-fillは白 #FFFFFF、sample-inkは #222222、
+    sample-patternは #BBBBBB、sample-shadowは黒 #000000 の不透明度17%。白い台紙上の説明図で、製品の推奨配色ではありません。
+    文字は日本語と英字のsans-serif、見出し26px・500、面名24px・500、説明24px・400、注記20px・400、字間0、行間34pxです。
+    これらも説明図用の設定で、製品のTypographyの推奨値ではありません。
+  </desc>
+  <rect width="900" height="790" fill="#FFFFFF" />
+  <g fill="#222222" font-family="sans-serif" font-weight="400">
+    <g transform="translate(34 0)">
+      <text x="0" y="38" font-size="26" font-weight="500">不透明</text>
+      <g transform="translate(0 60)">
+        <g>
+          <g>
+            <rect x="142" y="52" width="270" height="138" fill="#FFFFFF" />
+            <g>
+              <path d="M144 52L144 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M168 52L168 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M192 52L192 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M216 52L216 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M240 52L240 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M264 52L264 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M288 52L288 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M312 52L312 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M336 52L336 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M360 52L360 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M384 52L384 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M408 52L408 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 72L412 72" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 96L412 96" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 120L412 120" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 144L412 144" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 168L412 168" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <rect x="142" y="52" width="270" height="138" fill="none" stroke="#222222" stroke-width="1.5" />
+            </g>
+            <rect x="322" y="148" width="70" height="32" fill="#FFFFFF" />
+            <text x="330" y="173" font-size="24" font-weight="500">面 B</text>
+          </g>
+        </g>
+        <g>
+          <g>
+            <rect width="270" height="138" fill="#FFFFFF" />
+            <g>
+              <path d="M0 24L24 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 48L48 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 72L72 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 96L96 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 120L120 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M6 138L144 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M30 138L168 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M54 138L192 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M78 138L216 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M102 138L240 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M126 138L264 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M150 138L270 18" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M174 138L270 42" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M198 138L270 66" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M222 138L270 90" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M246 138L270 114" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M270 138L270 138" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <rect width="270" height="138" fill="none" />
+            </g>
+          </g>
+        </g>
+        <g>
+          <g>
+            <rect width="270" height="138" fill="none" stroke="#222222" stroke-width="1.5" />
+            <rect x="14" y="10" width="72" height="34" fill="#FFFFFF" />
+            <text x="22" y="37" font-size="24" font-weight="500">面 A</text>
+          </g>
+        </g>
+      </g>
+      <text x="476" y="120" font-size="24">手前 A / 奥 B</text>
+      <text x="476" y="154" font-size="24">Aの塗り：不透明度100%</text>
+      <text x="476" y="202" font-size="24">奥の格子が隠れる</text>
+    </g>
+    <g transform="translate(34 250)">
+      <text x="0" y="38" font-size="26" font-weight="500">半透明</text>
+      <g transform="translate(0 60)">
+        <g>
+          <g>
+            <rect x="142" y="52" width="270" height="138" fill="#FFFFFF" />
+            <g>
+              <path d="M144 52L144 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M168 52L168 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M192 52L192 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M216 52L216 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M240 52L240 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M264 52L264 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M288 52L288 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M312 52L312 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M336 52L336 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M360 52L360 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M384 52L384 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M408 52L408 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 72L412 72" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 96L412 96" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 120L412 120" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 144L412 144" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 168L412 168" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <rect x="142" y="52" width="270" height="138" fill="none" stroke="#222222" stroke-width="1.5" />
+            </g>
+            <rect x="322" y="148" width="70" height="32" fill="#FFFFFF" />
+            <text x="330" y="173" font-size="24" font-weight="500">面 B</text>
+          </g>
+        </g>
+        <g opacity="0.5">
+          <g>
+            <rect width="270" height="138" fill="#FFFFFF" />
+            <g>
+              <path d="M0 24L24 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 48L48 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 72L72 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 96L96 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 120L120 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M6 138L144 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M30 138L168 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M54 138L192 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M78 138L216 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M102 138L240 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M126 138L264 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M150 138L270 18" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M174 138L270 42" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M198 138L270 66" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M222 138L270 90" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M246 138L270 114" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M270 138L270 138" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <rect width="270" height="138" fill="none" />
+            </g>
+          </g>
+        </g>
+        <g>
+          <g>
+            <rect width="270" height="138" fill="none" stroke="#222222" stroke-width="1.5" />
+            <rect x="14" y="10" width="72" height="34" fill="#FFFFFF" />
+            <text x="22" y="37" font-size="24" font-weight="500">面 A</text>
+          </g>
+        </g>
+      </g>
+      <text x="476" y="120" font-size="24">手前 A / 奥 B</text>
+      <text x="476" y="154" font-size="24">Aの塗り：不透明度50%</text>
+      <text x="476" y="202" font-size="24">奥の格子が透ける</text>
+    </g>
+    <g transform="translate(34 500)">
+      <text x="0" y="38" font-size="26" font-weight="500">影あり</text>
+      <g transform="translate(0 60)">
+        <g>
+          <g>
+            <rect x="142" y="52" width="270" height="138" fill="#FFFFFF" />
+            <g>
+              <path d="M144 52L144 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M168 52L168 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M192 52L192 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M216 52L216 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M240 52L240 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M264 52L264 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M288 52L288 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M312 52L312 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M336 52L336 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M360 52L360 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M384 52L384 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M408 52L408 190" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 72L412 72" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 96L412 96" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 120L412 120" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 144L412 144" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M142 168L412 168" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <rect x="142" y="52" width="270" height="138" fill="none" stroke="#222222" stroke-width="1.5" />
+            </g>
+            <rect x="322" y="148" width="70" height="32" fill="#FFFFFF" />
+            <text x="330" y="173" font-size="24" font-weight="500">面 B</text>
+          </g>
+        </g>
+        <rect x="7" y="7" width="270" height="138" fill="#000000" opacity="0.17" />
+        <g>
+          <g>
+            <rect width="270" height="138" fill="#FFFFFF" />
+            <g>
+              <path d="M0 24L24 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 48L48 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 72L72 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 96L96 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M0 120L120 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M6 138L144 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M30 138L168 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M54 138L192 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M78 138L216 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M102 138L240 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M126 138L264 0" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M150 138L270 18" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M174 138L270 42" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M198 138L270 66" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M222 138L270 90" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M246 138L270 114" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <path d="M270 138L270 138" fill="none" stroke="#BBBBBB" stroke-width="1.5" />
+              <rect width="270" height="138" fill="none" />
+            </g>
+          </g>
+        </g>
+        <g>
+          <g>
+            <rect width="270" height="138" fill="none" stroke="#222222" stroke-width="1.5" />
+            <rect x="14" y="10" width="72" height="34" fill="#FFFFFF" />
+            <text x="22" y="37" font-size="24" font-weight="500">面 A</text>
+          </g>
+        </g>
+      </g>
+      <text x="476" y="120" font-size="24">手前 A / 奥 B</text>
+      <text x="476" y="154" font-size="24">Aの塗り：不透明度100%</text>
+      <text x="476" y="202" font-size="24">順序は同じ。輪郭の外に影</text>
+    </g>
+    <text x="34" y="775" font-size="20">不透明度は塗り・模様に適用。輪郭・面名はそのまま。</text>
+  </g>
+</svg>

@@ -24,6 +24,7 @@
 | `layout-spacing` | [レイアウトの余白](layout-spacing/KNOWLEDGE.md) | コンポーネント・グループ・セクション間の間隔と、尺度・情報密度の関係 |
 | `alignment-and-grids` | [整列とグリッド](alignment-and-grids/KNOWLEDGE.md) | 列・行・共通の基準線による配置と、余白の量との違い |
 | `color-context` | [色の文脈と相互作用](color-context/KNOWLEDGE.md) | 周囲との関係で色を見る考え方と、色の値や計算比との違い |
+| `ui-layering` | [UIのレイヤー構造](ui-layering/KNOWLEDGE.md) | 重なり順・不透明度・影による見え方と、視覚的な強調との違い |
 | `human-centered-design` | [人間中心設計](human-centered-design/KNOWLEDGE.md) | 利用者の目的と文脈を理解し、評価と反復を通じて設計する立場 |
 | `user-journeys` | [ユーザージャーニー](user-journeys/KNOWLEDGE.md) | 利用前後の出来事、接点、関係者を通して体験を捉えること |
 | `information-architecture` | [情報アーキテクチャ](information-architecture/KNOWLEDGE.md) | 情報や機能の定義・関係・分類・命名と、ナビゲーションとの違い |

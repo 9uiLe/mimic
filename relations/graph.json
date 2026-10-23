@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "coverage": {
-    "nodes": "knowledge/以下に存在する全24概念。ノードは概念本文単位。",
-    "edges": "既存relatedと本文の概念リンクが明示する関係を根拠節から編集して移行。概念間の全関係を網羅するものではない。UI全体設計の6概念は本文の関係説明とリンクを保持し、型付きの辺は未登録。 シナリオと描く過程の4概念は本文の区別を根拠に3辺を追加。",
+    "nodes": "knowledge/以下に存在する全25概念。ノードは概念本文単位。",
+    "edges": "既存relatedと本文の概念リンクが明示する関係を根拠節から編集して移行。概念間の全関係を網羅するものではない。UI全体設計の6概念は本文の関係説明とリンクを保持し、型付きの辺は未登録。 シナリオと描く過程の4概念は本文の区別を根拠に3辺を追加。 UIのレイヤー構造は視覚的な優先順位との区別を根拠に1辺を追加。",
     "absence": "辺が未記載であることは、無関係・独立・前提不要・関係の不存在を意味しない。",
     "authority": "概念説明はknowledge本文、型付き関係の定義はrelationsの正本。本文引用は根拠の追跡用であり、原典の正式分類ではない。",
     "reading": "読む量・順序・方法は消費AIや読者が選ぶ。辺は読む義務・因果・実行契約を表さない。",
@@ -128,6 +128,13 @@
       "path": "knowledge/typography/KNOWLEDGE.md",
       "version": "1.0.1",
       "sha256": "b68344d1ddf4e8e009fd37cbbbf3498d221a7df166bb57f136442bacaf8e4575"
+    },
+    {
+      "id": "ui-layering",
+      "path": "knowledge/ui-layering/KNOWLEDGE.md",
+      "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95",
+      "title": "UIのレイヤー構造",
+      "version": "1.0.0"
     },
     {
       "id": "usability-testing",
@@ -758,7 +765,32 @@
     "statement": "要求を製品の構成へ具体化する特定の方法と、変更の結果から問題や意図を考え直す認識過程は異なる説明である。" },
     { "id": "reflective-conversation--distinguished_from--sketches-and-prototypes", "evidence": [ { "concept": "sketches-and-prototypes", "heading": "関連する概念",
     "quotation": "その過程と、ここでの表現物の性質・意図の整理は区別します。" } ], "from": "reflective-conversation", "to": "sketches-and-prototypes", "type": "distinguished_from",
-    "statement": "設計者が変更の結果を読み取る認識過程と、表現物の性質・意図の整理を区別する。" }
+    "statement": "設計者が変更の結果を読み取る認識過程と、表現物の性質・意図の整理を区別する。" },
+    {
+      "id": "ui-layering--distinguished_from--visual-hierarchy",
+      "scope": "見え方を説明する対象と役割の区別。階層や理解上の前提を示さない。",
+      "evidence": [
+        {
+          "concept": "ui-layering",
+          "heading": "手前・重要度・操作対象の違い",
+          "quotation": "UIのレイヤー構造は、描画の前後と、その重なりによる見え方を扱います。"
+        },
+        {
+          "concept": "ui-layering",
+          "heading": "手前・重要度・操作対象の違い",
+          "quotation": "描画順がそのまま内容の重要度や業務上の優先度になるわけではありません。"
+        },
+        {
+          "concept": "visual-hierarchy",
+          "heading": "概念",
+          "quotation": "視覚的な優先順位は、配置・余白・文字の大きさや太さなどの違いを通じて、要素の相対的な目立ち方や情報の関係を表す考え方です。"
+        }
+      ],
+      "from": "ui-layering",
+      "to": "visual-hierarchy",
+      "type": "distinguished_from",
+      "statement": "UIのレイヤー構造は描画の前後と重なりによる見え方を扱い、視覚的な優先順位は相対的な目立ち方や情報の関係を扱う。描画順は内容や業務上の優先度と同一ではない。"
+    }
 
   ]
 }

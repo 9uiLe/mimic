@@ -3,6 +3,8 @@ import path from 'node:path';
 export const figureFiles = Object.freeze([
   'knowledge/alignment-and-grids/examples/alignment.svg',
   'knowledge/color-context/examples/surrounding-colors.svg',
+  'knowledge/ui-layering/examples/layer-comparison.svg',
+  'knowledge/ui-layering/examples/layer-order.svg',
   'knowledge/interaction-design/examples/recording-app-layout.svg',
 ]);
 const imageFiles = new Set(figureFiles);

@@ -4,7 +4,7 @@ import { pageFontHead } from './pages-fonts.ts';
 export const conceptIds = Object.freeze([
   'ecological-interface-design', 'external-representations', 'conceptual-models', 'grouping', 'visual-hierarchy',
   'lightness-and-luminance', 'color-contrast', 'design-tokens', 'ai-slop', 'aesthetic-and-minimalist-design',
-  'typography', 'layout-spacing', 'alignment-and-grids', 'color-context',
+  'typography', 'layout-spacing', 'alignment-and-grids', 'color-context', 'ui-layering',
   'human-centered-design', 'user-journeys', 'information-architecture',
   'interaction-design', 'design-systems', 'usability-testing',
   'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes',
@@ -22,6 +22,8 @@ export const exampleFiles = Object.freeze([
   'knowledge/layout-spacing/examples/component-spacing.md',
   'knowledge/alignment-and-grids/examples/alignment.md',
   'knowledge/color-context/examples/surrounding-colors.md',
+  'knowledge/ui-layering/examples/overlap.md',
+  'knowledge/ui-layering/examples/layer-order.md',
   'knowledge/interaction-design/examples/recording-app.md',
   'knowledge/goal-directed-design/examples/reading-notes.md',
 ]);

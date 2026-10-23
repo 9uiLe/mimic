@@ -78,6 +78,11 @@ const expectedFiles = [
   'knowledge/color-context/references/sources.md', 'knowledge/color-context/references/sources.html',
   'knowledge/color-context/examples/surrounding-colors.md', 'knowledge/color-context/examples/surrounding-colors.html',
   'knowledge/color-context/examples/surrounding-colors.svg',
+  'knowledge/ui-layering/KNOWLEDGE.md', 'knowledge/ui-layering/index.html',
+  'knowledge/ui-layering/references/sources.md', 'knowledge/ui-layering/references/sources.html',
+  'knowledge/ui-layering/examples/overlap.md', 'knowledge/ui-layering/examples/overlap.html',
+  'knowledge/ui-layering/examples/layer-order.md', 'knowledge/ui-layering/examples/layer-order.html',
+  'knowledge/ui-layering/examples/layer-comparison.svg', 'knowledge/ui-layering/examples/layer-order.svg',
   'knowledge/human-centered-design/KNOWLEDGE.md', 'knowledge/human-centered-design/index.html',
   'knowledge/human-centered-design/references/sources.md', 'knowledge/human-centered-design/references/sources.html',
   'knowledge/user-journeys/KNOWLEDGE.md', 'knowledge/user-journeys/index.html',
@@ -157,7 +162,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 414);
+  assert.equal(expectedFiles.length, 424);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -173,7 +178,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
     'the home page title must identify the question lookup section');
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 24, 'catalog must expose all twenty-four reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 25, 'catalog must expose all twenty-five reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/scenario-to-screen.html"'), 'catalog must open the scenario topic reader');
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
@@ -188,7 +193,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'lightness-and-luminance': '1.0.1', 'color-contrast': '1.0.1',
     'design-tokens': '1.1.1', 'ai-slop': '1.1.0',
     'aesthetic-and-minimalist-design': '1.0.1', typography: '1.0.1', 'layout-spacing': '1.0.1',
-    'alignment-and-grids': '1.0.1', 'color-context': '1.0.1',
+    'alignment-and-grids': '1.0.1', 'color-context': '1.0.1', 'ui-layering': '1.0.0',
     'human-centered-design': '1.0.0', 'user-journeys': '1.0.0', 'information-architecture': '1.0.0',
     'interaction-design': '1.0.0', 'design-systems': '1.0.0', 'usability-testing': '1.0.0',
     'scenario-based-design': '1.0.1', 'goal-directed-design': '1.0.1',
@@ -198,8 +203,8 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'catalog must show sixteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 6,
-    'catalog must show six v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 7,
+    'catalog must show seven v1.0.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
     'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/product-ui-design.html']) {
     const content = await readFile(path.join(out, file), 'utf8');
@@ -453,7 +458,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 59);
+  assert.equal(readers.length, 63);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
@@ -556,10 +561,14 @@ test('reviewed figure bytes and responsive reader images publish together and ba
   const { directory, out } = await fixture();
   const isolated = await isolatedBuilder(directory);
   await isolated.buildPages(out);
-  for (const [id, name] of [['alignment-and-grids', 'alignment'], ['color-context', 'surrounding-colors']]) {
+  for (const [id, name, reader] of [
+    ['alignment-and-grids', 'alignment', 'alignment'], ['color-context', 'surrounding-colors', 'surrounding-colors'],
+    ['interaction-design', 'recording-app-layout', 'recording-app'],
+    ['ui-layering', 'layer-comparison', 'overlap'], ['ui-layering', 'layer-order', 'layer-order'],
+  ]) {
     const file = `knowledge/${id}/examples/${name}.svg`;
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), 'published figure must retain reviewed bytes');
-    const html = await readFile(path.join(out, `knowledge/${id}/examples/${name}.html`), 'utf8');
+    const html = await readFile(path.join(out, `knowledge/${id}/examples/${reader}.html`), 'utf8');
     assert.ok(html.includes(`<img src="${name}.svg" alt="`), 'reader image must refer to the published figure');
     assert.ok(html.includes(`href="${name}.svg"`), 'reader must retain a full-size figure link');
     assert.ok(html.includes('img { max-width: 100%; height: auto; }'), 'reader figures must fit a narrow viewport');
