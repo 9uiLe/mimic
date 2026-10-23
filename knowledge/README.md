@@ -30,6 +30,10 @@
 | `interaction-design` | [インタラクションデザイン](interaction-design/KNOWLEDGE.md) | 利用者の行為とシステムの応答、画面の役割、状態と遷移の関係 |
 | `design-systems` | [デザインシステム](design-systems/KNOWLEDGE.md) | 原則・パターン・部品・指針を共有し、適用と更新を扱う仕組み |
 | `usability-testing` | [ユーザビリティテスト](usability-testing/KNOWLEDGE.md) | 利用者が課題を試す際の観察と、設計上の仮定を確かめること |
+| `scenario-based-design` | [シナリオに基づくデザイン](scenario-based-design/KNOWLEDGE.md) | 人の活動の物語を設計作業の主要な表現として使う考え方 |
+| `goal-directed-design` | [Goal-Directed Design](goal-directed-design/KNOWLEDGE.md) | 利用者の目標とシナリオから要求・製品の構成を考える方法 |
+| `reflective-conversation` | [設計状況との省察的な対話](reflective-conversation/KNOWLEDGE.md) | 設計の変更と結果の読み取りを通じて問題や意図を考え直す過程 |
+| `sketches-and-prototypes` | [スケッチとプロトタイプ](sketches-and-prototypes/KNOWLEDGE.md) | 表現物の性質と、探索・具体化・検査などの意図による区別 |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
@@ -45,6 +49,6 @@
 
 ## 複数の概念から読む
 
-横断的な案内は[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
+横断的な案内は[「シナリオから機能と画面構成を考える」](../topics/scenario-to-screen.md)、[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
 
 具体的なUI色を提示するときは、色とは独立した[Design Tokenの本文](design-tokens/KNOWLEDGE.md)と[色への適用例](design-tokens/examples/color-presentation.md)を読み、[利用ガイドの色の提示方針](../guideline/README.md#uiの色を具体的に示すとき)に従います。

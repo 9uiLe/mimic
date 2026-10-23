@@ -86,7 +86,17 @@
       "design/reading-paths.json",
       "web/reading.css",
       "web/reading.js",
-      "guideline/design-system.md"
+      "guideline/design-system.md",
+      "knowledge/scenario-based-design/KNOWLEDGE.md",
+      "knowledge/scenario-based-design/references/sources.md",
+      "knowledge/goal-directed-design/KNOWLEDGE.md",
+      "knowledge/goal-directed-design/references/sources.md",
+      "knowledge/reflective-conversation/KNOWLEDGE.md",
+      "knowledge/reflective-conversation/references/sources.md",
+      "knowledge/sketches-and-prototypes/KNOWLEDGE.md",
+      "knowledge/sketches-and-prototypes/references/sources.md",
+      "knowledge/goal-directed-design/examples/reading-notes.md",
+      "topics/scenario-to-screen.md"
     ],
     "pages-font-assets": [
       "assets/fonts/gen-interface-jp/0.8.0/integrity.json",

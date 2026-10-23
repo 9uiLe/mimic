@@ -7,6 +7,7 @@ export const conceptIds = Object.freeze([
   'typography', 'layout-spacing', 'alignment-and-grids', 'color-context',
   'human-centered-design', 'user-journeys', 'information-architecture',
   'interaction-design', 'design-systems', 'usability-testing',
+  'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -22,9 +23,10 @@ export const exampleFiles = Object.freeze([
   'knowledge/alignment-and-grids/examples/alignment.md',
   'knowledge/color-context/examples/surrounding-colors.md',
   'knowledge/interaction-design/examples/recording-app.md',
+  'knowledge/goal-directed-design/examples/reading-notes.md',
 ]);
 export const additionalSources = Object.freeze([
-  'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md',
+  'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md',
 ]);
 export const readerViews: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries([
   ['knowledge/README.md', 'index.html'],
@@ -33,7 +35,7 @@ export const readerViews: Readonly<Record<string, string>> = Object.freeze(Objec
   ['guideline/design-system.md', 'guideline/design-system.html'],
   ['relations/README.md', 'relations/index.html'],
   ['topics/decision-material-selection.md', 'topics/decision-material-selection.html'],
-  ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md'].map(file => [
+  ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md'].map(file => [
     file, file.endsWith('/KNOWLEDGE.md') ? file.replace(/KNOWLEDGE\.md$/, 'index.html') : file.replace(/\.md$/, '.html'),
   ]),
 ]));
@@ -42,6 +44,8 @@ export const escapeHtml = (value: string) => value.replace(/[&<>"']/g,
 
 export function renderTopicGuides() {
   const guides = [
+    ['topics/scenario-to-screen.html', 'シナリオから機能と画面構成を考える',
+      '活動・要求・機能候補・画面構成と、表して考え直す過程を読み分ける。'],
     ['topics/product-ui-design.html', 'プロダクト全体のUI設計',
       '利用者の目的から、情報構造・画面・操作・確かめ方まで読む。'],
     ['topics/decision-material-selection.html', '判断材料の選定',
