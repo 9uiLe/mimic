@@ -182,10 +182,39 @@
         "bun run quality:check",
         "bun run quality:test",
         "bun run test:effectiveness",
-        "ブラウザで選択・検索・種類・根拠遷移・狭幅・キーボードを確認する。"
+        "ブラウザで知識の選択・URLと履歴・根拠と本文の往復・狭幅・キーボードを確認する。"
       ],
       "unresolved": [
         "関係の原典妥当性とAIの理解改善は、構造・生成検査の成功だけでは保証しない。"
+      ]
+    },
+    {
+      "id": "pages-reading-design-system",
+      "paths": [
+        "design/*",
+        "scripts/design-tokens.ts",
+        "scripts/design-specimens.ts",
+        "scripts/pages-design.ts",
+        "web/reading.*",
+        "tests/pages-design.test.ts",
+        "tests/design-specimens.test.ts"
+      ],
+      "purpose": "本文と公開URLを保ちながら、疑問から知識を探す共通UIとTokenの編集・変換・検証を管理する。",
+      "basis_status": "confirmed",
+      "basis": [
+        "guideline/design-system.md",
+        "guideline/knowledge-view.md#Pagesの読書経路",
+        ".quality/behavior-cases.json"
+      ],
+      "validation": [
+        "bun run typecheck",
+        "bun test ./tests/pages-design.test.ts ./tests/design-specimens.test.ts ./tests/pages-output.test.ts",
+        "bun run test:effectiveness",
+        "実ブラウザで疑問・本文・出典・選択関係・根拠・戻り先と狭幅/文字拡大を確認する。"
+      ],
+      "unresolved": [
+        "使いやすさと実際の読み上げ、知識の原典妥当性は自動検査だけでは保証しない。",
+        "公開は利用者の確認と許可後に実施する。"
       ]
     }
   ]

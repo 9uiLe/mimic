@@ -23,7 +23,8 @@ const expectedFiles = [
   'guideline/index.html',
   'index.html',
   'graph/index.html', 'relations/index.html', 'relations/README.md', 'relations/graph.json', 'relations/vocabulary.json',
-  'web/graph.js', 'web/graph.css',
+  'web/graph.js', 'web/graph.css', 'web/reading.js', 'web/reading.css', 'web/tokens.css',
+  'design/tokens.json', 'guideline/design-system.md', 'guideline/design-system.html',
   'knowledge/conceptual-models/KNOWLEDGE.md',
   'knowledge/conceptual-models/references/sources.md',
   'knowledge/decision-material-selection.md',
@@ -95,7 +96,7 @@ const expectedFiles = [
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
-const generatedPages = ['index.html', '.nojekyll', ...movedPages,
+const generatedPages = ['index.html', '.nojekyll', 'web/tokens.css', ...movedPages,
   ...expectedFiles.filter(file => file.endsWith('.html'))];
 
 const temporaryDirectories: string[] = [];
@@ -111,7 +112,8 @@ async function fixture() {
 
 async function isolatedBuilder(directory: string) {
   const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/build-knowledge.ts', 'scripts/pages-catalog.ts',
-    'scripts/relations.ts', 'scripts/build-relation-graph.ts',
+    'scripts/relations.ts', 'scripts/build-relation-graph.ts', 'scripts/design-tokens.ts', 'scripts/pages-design.ts', 'scripts/design-specimens.ts',
+    'design/reading-paths.json',
     'scripts/pages-fonts.ts', 'scripts/knowledge-images.ts', 'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css',
     `${fontRoot}/integrity.json`, ...expectedFiles.filter(file => !generatedPages.includes(file) && !expectedFontFiles.includes(file))];
   for (const file of inputs) {
@@ -145,7 +147,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 388);
+  assert.equal(expectedFiles.length, 394);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -154,8 +156,13 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.deepEqual(after, before);
   assert.equal((await readFile(path.join(out, '.nojekyll'))).length, 0);
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
+  const designGuide = await readFile(path.join(out, 'guideline/design-system.html'), 'utf8');
+  assert.ok(designGuide.includes('</article><div class="design-specimens">'), 'the design guide must include generated sibling specimens');
+  assert.ok(designGuide.includes('href="design-system.html#design-color-specimens"')
+    && designGuide.includes('href="design-system.html#design-type-specimens"'), 'the source sections must link to their Pages specimens');
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
-  assert.match(entry, /<h1>デザインの知識<\/h1>/);
+  assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
+    'the home page title must identify the question lookup section');
   assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 20, 'catalog must expose all twenty reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
@@ -221,8 +228,8 @@ test('Pages uses only pinned same-origin font subsets and keeps their license', 
     assert.ok(html.includes(`href="${prefix}/600.css"`), `${file}: heading font CSS`);
     assert.ok(html.includes('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src \'self\'; '
       + 'style-src \'self\' \'unsafe-inline\'; font-src \'self\'; base-uri \'none\'; form-action \'none\''
-      + (file === 'graph/index.html' ? "; script-src 'self'" : '') + '">'),
-    `${file}: only the graph may execute same-origin scripts`);
+      + "; script-src 'self'" + '">'),
+    `${file}: reading pages may execute only same-origin enhancement scripts`);
     assert.doesNotMatch(html, /cdn\.jsdelivr\.net|@import/);
   }
   assert.ok(!expectedFiles.some(file => file.startsWith(fontRoot)
@@ -330,6 +337,24 @@ test('invalid guideline input leaves all existing Pages output untouched', async
   assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);
 });
 
+test('invalid reading design inputs preserve the previous Pages output', async () => {
+  const { directory, out } = await fixture();
+  const isolated = await isolatedBuilder(directory);
+  await isolated.buildPages(out);
+  const entry = path.join(out, 'index.html');
+  await writeFile(entry, 'keep the previous output');
+  const tokenPath = path.join(directory, 'design/tokens.json');
+  const source = await readFile(tokenPath, 'utf8');
+  await writeFile(tokenPath, source.replace('#171717', 'red; display:none'));
+  await assert.rejects(isolated.buildPages(out), /Invalid color/, 'invalid design tokens must reject before updating output');
+  assert.equal(await readFile(entry, 'utf8'), 'keep the previous output');
+  await writeFile(tokenPath, source);
+  const pathsFile = path.join(directory, 'design/reading-paths.json');
+  await writeFile(pathsFile, (await readFile(pathsFile, 'utf8')).replace('近接は、画面上で関係を感じ取るための表現です。', '根拠のない案内。'));
+  await assert.rejects(isolated.buildPages(out), /basis differs from source/, 'invalid reading evidence must reject before updating output');
+  assert.equal(await readFile(entry, 'utf8'), 'keep the previous output');
+});
+
 test('old Markdown URLs become generated navigation while concept scripts remain unexecuted and unpublished', async () => {
   const { directory, out } = await fixture();
   const isolated = await isolatedBuilder(directory);
@@ -379,7 +404,7 @@ test('readers can reach both guideline pages, their original Markdown, and the c
     assert.equal(originalLinks.length, 2);
     assert.match(html, /class="brand" href="\.\.\/index.html"/);
     assert.match(html, /href="#content"/);
-    assert.match(html, /<nav aria-label="目次">/);
+    assert.match(html, /<nav aria-label="このページの目次">/);
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\//);
   }
 });
@@ -419,6 +444,8 @@ test('HTML readers retain every source block, concept version, and paths to rela
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
     const html = await readFile(path.join(out, htmlFile), 'utf8');
+    const article = html.match(/<article class="prose">([\s\S]*?)<\/article>/)?.[1];
+    assert.ok(article, `${htmlFile}: reader article must remain available`);
     const visible = plainText(html.slice(html.indexOf('</style>')));
     for (const token of marked.lexer(source.replace(/^---\n[\s\S]*?\n---\n/, ''))) {
       if (token.type === 'space') continue;
@@ -429,9 +456,9 @@ test('HTML readers retain every source block, concept version, and paths to rela
     if (sourceFile.endsWith('/KNOWLEDGE.md')) {
       const version = source.match(/^version: "?([^"\n]+)"?$/m)![1]!;
       assert.ok(html.includes(`<dt>version</dt><dd>${version}</dd>`), htmlFile);
-      assert.ok(html.includes(`<p class="meta">v${version}</p>`), htmlFile);
+      assert.ok(html.includes(`<span>v${version}</span>`), htmlFile);
       assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/, `${htmlFile}: removed metadata must not appear`);
-      assert.ok(html.includes('href="references/sources.html"'), `${htmlFile}: sources must open in the reader`);
+      assert.ok(article.includes('href="references/sources.html"'), `${htmlFile}: sources must open in the reader`);
     } else {
       assert.ok(html.includes('href="../index.html"'), `${htmlFile}: supplement must return to its concept`);
       assert.doesNotMatch(html, /<span class="badge">/, `${htmlFile}: supplement must not show a state badge`);
@@ -515,7 +542,7 @@ test('reviewed figure bytes and responsive reader images publish together and ba
     const html = await readFile(path.join(out, `knowledge/${id}/examples/${name}.html`), 'utf8');
     assert.ok(html.includes(`<img src="${name}.svg" alt="`), 'reader image must refer to the published figure');
     assert.ok(html.includes(`href="${name}.svg"`), 'reader must retain a full-size figure link');
-    assert.ok(html.includes('article img { max-width: 100%; height: auto; }'), 'reader figures must fit a narrow viewport');
+    assert.ok(html.includes('img { max-width: 100%; height: auto; }'), 'reader figures must fit a narrow viewport');
   }
   const file = path.join(directory, 'knowledge/alignment-and-grids/examples/alignment.svg');
   const before = await Promise.all(expectedFiles.map(name => readFile(path.join(out, name))));
