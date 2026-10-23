@@ -12,14 +12,19 @@
 | `relations/` | 全概念のノード、根拠付きの意味辺、関係型の語彙 |
 | `topics/` | 目的・題目別の横断的な案内 |
 | `guideline/` | 利用・編集・表示・開発・品質検査の方針 |
-| `scripts/` | 生成・検査。既存の本文用 `knowledge-view.css` も保持 |
-| `web/` | グラフを表示・操作するブラウザ用JavaScriptとCSS |
+| `design/` | 閲覧UIのDesign Tokenと、疑問から知識を探す案内 |
+| `scripts/` | 生成・検査。単体ローカルプレビュー用 `knowledge-view.css` も保持 |
+| `web/` | Pages閲覧UIの共通CSSと、共通操作・関係探索のJavaScript |
 | `assets/` | 配信するフォントとライセンス |
 | `tests/`・`.quality/` | 検査と、検査条件・変更の根拠 |
 | `.github/` | GitHub Actionsの検査・公開処理 |
 | `output/`・`_site/` | Git管理外の下書き・作業出力、Pagesの生成物 |
 
 概念のID・本文URLを保ち、関係の構造や表示の都合だけで本文と補足を移動しません。概念の説明を `relations/` や `web/` に複製せず、関係や表示の変更はそれぞれの正本に反映します。
+
+## 閲覧UIの設計と知識の境界
+
+[閲覧UIのデザインシステム](design-system.md)はMimicへの適用規則、`design/tokens.json`は設計値と参照、`design/reading-paths.json`は仕事中の疑問から知識へ案内する編集元です。7つの疑問は正式な概念分類や必読順序ではありません。これらを知識本文や意味付き関係の正本へ混ぜず、閲覧UIの都合で原題・本文・引用・関係の意味を変えません。
 
 ## 本文と独立した関係グラフ
 

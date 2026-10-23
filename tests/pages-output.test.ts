@@ -23,7 +23,8 @@ const expectedFiles = [
   'guideline/index.html',
   'index.html',
   'graph/index.html', 'relations/index.html', 'relations/README.md', 'relations/graph.json', 'relations/vocabulary.json',
-  'web/graph.js', 'web/graph.css',
+  'web/graph.js', 'web/graph.css', 'web/reading.js', 'web/reading.css', 'web/tokens.css',
+  'design/tokens.json', 'guideline/design-system.md', 'guideline/design-system.html',
   'knowledge/conceptual-models/KNOWLEDGE.md',
   'knowledge/conceptual-models/references/sources.md',
   'knowledge/decision-material-selection.md',
@@ -97,10 +98,20 @@ const expectedFiles = [
   'knowledge/usability-testing/KNOWLEDGE.md', 'knowledge/usability-testing/index.html',
   'knowledge/usability-testing/references/sources.md', 'knowledge/usability-testing/references/sources.html',
   'topics/product-ui-design.md', 'topics/product-ui-design.html',
+  'knowledge/scenario-based-design/KNOWLEDGE.md', 'knowledge/scenario-based-design/index.html',
+  'knowledge/scenario-based-design/references/sources.md', 'knowledge/scenario-based-design/references/sources.html',
+  'knowledge/goal-directed-design/KNOWLEDGE.md', 'knowledge/goal-directed-design/index.html',
+  'knowledge/goal-directed-design/references/sources.md', 'knowledge/goal-directed-design/references/sources.html',
+  'knowledge/reflective-conversation/KNOWLEDGE.md', 'knowledge/reflective-conversation/index.html',
+  'knowledge/reflective-conversation/references/sources.md', 'knowledge/reflective-conversation/references/sources.html',
+  'knowledge/sketches-and-prototypes/KNOWLEDGE.md', 'knowledge/sketches-and-prototypes/index.html',
+  'knowledge/sketches-and-prototypes/references/sources.md', 'knowledge/sketches-and-prototypes/references/sources.html',
+  'knowledge/goal-directed-design/examples/reading-notes.md', 'knowledge/goal-directed-design/examples/reading-notes.html',
+  'topics/scenario-to-screen.md', 'topics/scenario-to-screen.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
-const generatedPages = ['index.html', '.nojekyll', ...movedPages,
+const generatedPages = ['index.html', '.nojekyll', 'web/tokens.css', ...movedPages,
   ...expectedFiles.filter(file => file.endsWith('.html'))];
 
 const temporaryDirectories: string[] = [];
@@ -116,7 +127,8 @@ async function fixture() {
 
 async function isolatedBuilder(directory: string) {
   const inputs = ['scripts/build-pages.ts', 'scripts/build-guideline.ts', 'scripts/build-knowledge.ts', 'scripts/pages-catalog.ts',
-    'scripts/relations.ts', 'scripts/build-relation-graph.ts',
+    'scripts/relations.ts', 'scripts/build-relation-graph.ts', 'scripts/design-tokens.ts', 'scripts/pages-design.ts', 'scripts/design-specimens.ts',
+    'design/reading-paths.json',
     'scripts/pages-fonts.ts', 'scripts/knowledge-images.ts', 'scripts/knowledge-paths.ts', 'scripts/knowledge-view.css',
     `${fontRoot}/integrity.json`, ...expectedFiles.filter(file => !generatedPages.includes(file) && !expectedFontFiles.includes(file))];
   for (const file of inputs) {
@@ -150,7 +162,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 398);
+  assert.equal(expectedFiles.length, 424);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -159,10 +171,16 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.deepEqual(after, before);
   assert.equal((await readFile(path.join(out, '.nojekyll'))).length, 0);
   const entry = await readFile(path.join(out, 'index.html'), 'utf8');
+  const designGuide = await readFile(path.join(out, 'guideline/design-system.html'), 'utf8');
+  assert.ok(designGuide.includes('</article><div class="design-specimens">'), 'the design guide must include generated sibling specimens');
+  assert.ok(designGuide.includes('href="design-system.html#design-color-specimens"')
+    && designGuide.includes('href="design-system.html#design-type-specimens"'), 'the source sections must link to their Pages specimens');
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
-  assert.match(entry, /<h1>デザインの知識<\/h1>/);
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g)].length, 21, 'catalog must expose all twenty-one reviewed concepts');
+  assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
+    'the home page title must identify the question lookup section');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 25, 'catalog must expose all twenty-five reviewed concepts');
   assert.match(entry, /AI Slop/);
+  assert.ok(entry.includes('href="topics/scenario-to-screen.html"'), 'catalog must open the scenario topic reader');
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
   assert.ok(entry.includes('href="topics/product-ui-design.html"'), 'catalog must open the UI design topic reader');
   assert.doesNotMatch(entry, /正式採用|採用済み|掲載済み/, 'catalog must not show adoption labels');
@@ -173,14 +191,16 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'ecological-interface-design': '1.0.1', 'external-representations': '1.0.1',
     'conceptual-models': '1.0.1', grouping: '1.0.1', 'visual-hierarchy': '1.0.1',
     'lightness-and-luminance': '1.0.1', 'color-contrast': '1.0.1',
-    'design-tokens': '1.1.1', 'ai-slop': '1.0.1',
+    'design-tokens': '1.1.1', 'ai-slop': '1.1.0',
     'aesthetic-and-minimalist-design': '1.0.1', typography: '1.0.1', 'layout-spacing': '1.0.1',
     'alignment-and-grids': '1.0.1', 'color-context': '1.0.1', 'ui-layering': '1.0.0',
     'human-centered-design': '1.0.0', 'user-journeys': '1.0.0', 'information-architecture': '1.0.0',
     'interaction-design': '1.0.0', 'design-systems': '1.0.0', 'usability-testing': '1.0.0',
+    'scenario-based-design': '1.0.1', 'goal-directed-design': '1.0.1',
+    'reflective-conversation': '1.0.1', 'sketches-and-prototypes': '1.0.1',
   }, 'catalog must map each concept to its source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 13,
-    'catalog must show thirteen v1.0.1 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 16,
+    'catalog must show sixteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 7,
@@ -226,8 +246,8 @@ test('Pages uses only pinned same-origin font subsets and keeps their license', 
     assert.ok(html.includes(`href="${prefix}/600.css"`), `${file}: heading font CSS`);
     assert.ok(html.includes('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src \'self\'; '
       + 'style-src \'self\' \'unsafe-inline\'; font-src \'self\'; base-uri \'none\'; form-action \'none\''
-      + (file === 'graph/index.html' ? "; script-src 'self'" : '') + '">'),
-    `${file}: only the graph may execute same-origin scripts`);
+      + "; script-src 'self'" + '">'),
+    `${file}: reading pages may execute only same-origin enhancement scripts`);
     assert.doesNotMatch(html, /cdn\.jsdelivr\.net|@import/);
   }
   assert.ok(!expectedFiles.some(file => file.startsWith(fontRoot)
@@ -294,6 +314,7 @@ test('canonical Markdown copies and generated readers retain source metadata and
   const provenanceCases: [string, string][] = [
     ['topics/decision-material-selection.html', 'topics/decision-material-selection.md'],
     ['topics/product-ui-design.html', 'topics/product-ui-design.md'],
+    ['topics/scenario-to-screen.html', 'topics/scenario-to-screen.md'],
   ];
   for (const [htmlFile, sourceFile] of provenanceCases) {
     const html = await readFile(path.join(out, htmlFile), 'utf8');
@@ -333,6 +354,24 @@ test('invalid guideline input leaves all existing Pages output untouched', async
   await writeFile(path.join(directory, 'guideline/ai.md'), '# AI向けガイド\n\n## 本文\n\n<script>外部コード</script>\n');
   await assert.rejects(isolated.buildPages(out), /Guideline source: unsupported html/);
   assert.deepEqual(await Promise.all(expectedFiles.map(file => readFile(path.join(out, file)))), before);
+});
+
+test('invalid reading design inputs preserve the previous Pages output', async () => {
+  const { directory, out } = await fixture();
+  const isolated = await isolatedBuilder(directory);
+  await isolated.buildPages(out);
+  const entry = path.join(out, 'index.html');
+  await writeFile(entry, 'keep the previous output');
+  const tokenPath = path.join(directory, 'design/tokens.json');
+  const source = await readFile(tokenPath, 'utf8');
+  await writeFile(tokenPath, source.replace('#171717', 'red; display:none'));
+  await assert.rejects(isolated.buildPages(out), /Invalid color/, 'invalid design tokens must reject before updating output');
+  assert.equal(await readFile(entry, 'utf8'), 'keep the previous output');
+  await writeFile(tokenPath, source);
+  const pathsFile = path.join(directory, 'design/reading-paths.json');
+  await writeFile(pathsFile, (await readFile(pathsFile, 'utf8')).replace('近接は、画面上で関係を感じ取るための表現です。', '根拠のない案内。'));
+  await assert.rejects(isolated.buildPages(out), /basis differs from source/, 'invalid reading evidence must reject before updating output');
+  assert.equal(await readFile(entry, 'utf8'), 'keep the previous output');
 });
 
 test('old Markdown URLs become generated navigation while concept scripts remain unexecuted and unpublished', async () => {
@@ -384,7 +423,7 @@ test('readers can reach both guideline pages, their original Markdown, and the c
     assert.equal(originalLinks.length, 2);
     assert.match(html, /class="brand" href="\.\.\/index.html"/);
     assert.match(html, /href="#content"/);
-    assert.match(html, /<nav aria-label="目次">/);
+    assert.match(html, /<nav aria-label="このページの目次">/);
     assert.doesNotMatch(html, /\/Users\/|\/home\/runner\//);
   }
 });
@@ -419,11 +458,13 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 54);
+  assert.equal(readers.length, 63);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
     const html = await readFile(path.join(out, htmlFile), 'utf8');
+    const article = html.match(/<article class="prose">([\s\S]*?)<\/article>/)?.[1];
+    assert.ok(article, `${htmlFile}: reader article must remain available`);
     const visible = plainText(html.slice(html.indexOf('</style>')));
     for (const token of marked.lexer(source.replace(/^---\n[\s\S]*?\n---\n/, ''))) {
       if (token.type === 'space') continue;
@@ -434,9 +475,9 @@ test('HTML readers retain every source block, concept version, and paths to rela
     if (sourceFile.endsWith('/KNOWLEDGE.md')) {
       const version = source.match(/^version: "?([^"\n]+)"?$/m)![1]!;
       assert.ok(html.includes(`<dt>version</dt><dd>${version}</dd>`), htmlFile);
-      assert.ok(html.includes(`<p class="meta">v${version}</p>`), htmlFile);
+      assert.ok(html.includes(`<span>v${version}</span>`), htmlFile);
       assert.doesNotMatch(html, /<dt>status<\/dt>|<span class="badge">/, `${htmlFile}: removed metadata must not appear`);
-      assert.ok(html.includes('href="references/sources.html"'), `${htmlFile}: sources must open in the reader`);
+      assert.ok(article.includes('href="references/sources.html"'), `${htmlFile}: sources must open in the reader`);
     } else {
       assert.ok(html.includes('href="../index.html"'), `${htmlFile}: supplement must return to its concept`);
       assert.doesNotMatch(html, /<span class="badge">/, `${htmlFile}: supplement must not show a state badge`);
@@ -450,22 +491,28 @@ test('HTML readers retain every source block, concept version, and paths to rela
     'related topic must open in the reader');
 });
 
-test('the decision topic retains its text and opens all five related concept readers', async () => {
+test('topics retain their text and open every explicitly related concept reader', async () => {
   const { out } = await fixture();
   await buildPages(out);
-  const source = await readFile(path.join(root, 'topics/decision-material-selection.md'), 'utf8');
-  const html = await readFile(path.join(out, 'topics/decision-material-selection.html'), 'utf8');
-  const visible = plainText(html.slice(html.indexOf('</style>')));
-  for (const token of marked.lexer(source.replace(/^---\n[\s\S]*?\n---\n/, ''))) {
-    if (token.type === 'space') continue;
-    assert.ok(visible.includes(plainText(marked.Parser.parse([token]))), 'topic source block must remain readable');
-  }
-  assert.ok(html.includes(`<meta name="source-sha256" content="${hash(Buffer.from(source))}">`));
-  assert.ok(html.includes('<dt>version</dt><dd>1.0.0</dd>'));
-  assert.ok(html.includes('href="decision-material-selection.md"'), 'canonical topic Markdown must remain available');
-  for (const id of ['ecological-interface-design', 'external-representations', 'conceptual-models',
-    'grouping', 'visual-hierarchy']) {
-    assert.ok(html.includes(`href="../knowledge/${id}/index.html"`), `${id}: topic must open the concept reader`);
+  const topics = [
+    ['decision-material-selection', ['ecological-interface-design', 'external-representations', 'conceptual-models',
+      'grouping', 'visual-hierarchy']],
+    ['scenario-to-screen', ['scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes']],
+  ] as const;
+  for (const [topic, ids] of topics) {
+    const source = await readFile(path.join(root, `topics/${topic}.md`), 'utf8');
+    const html = await readFile(path.join(out, `topics/${topic}.html`), 'utf8');
+    const visible = plainText(html.slice(html.indexOf('</style>')));
+    for (const token of marked.lexer(source.replace(/^---\n[\s\S]*?\n---\n/, ''))) {
+      if (token.type === 'space') continue;
+      assert.ok(visible.includes(plainText(marked.Parser.parse([token]))), 'topic source block must remain readable');
+    }
+    assert.ok(html.includes(`<meta name="source-sha256" content="${hash(Buffer.from(source))}">`));
+    assert.ok(html.includes('<dt>version</dt><dd>1.0.0</dd>'));
+    assert.ok(html.includes(`href="${topic}.md"`), 'canonical topic Markdown must remain available');
+    for (const id of ids) {
+      assert.ok(html.includes(`href="../knowledge/${id}/index.html"`), `${id}: topic must open the concept reader`);
+    }
   }
 });
 
@@ -524,7 +571,7 @@ test('reviewed figure bytes and responsive reader images publish together and ba
     const html = await readFile(path.join(out, `knowledge/${id}/examples/${reader}.html`), 'utf8');
     assert.ok(html.includes(`<img src="${name}.svg" alt="`), 'reader image must refer to the published figure');
     assert.ok(html.includes(`href="${name}.svg"`), 'reader must retain a full-size figure link');
-    assert.ok(html.includes('article img { max-width: 100%; height: auto; }'), 'reader figures must fit a narrow viewport');
+    assert.ok(html.includes('img { max-width: 100%; height: auto; }'), 'reader figures must fit a narrow viewport');
   }
   const file = path.join(directory, 'knowledge/alignment-and-grids/examples/alignment.svg');
   const before = await Promise.all(expectedFiles.map(name => readFile(path.join(out, name))));

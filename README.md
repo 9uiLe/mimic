@@ -12,7 +12,7 @@
 
 ## 人向けの閲覧
 
-[GitHub Pages](https://9uile.github.io/mimic/) 向けの閲覧ページには、概念一覧と[関係グラフ](https://9uile.github.io/mimic/graph/)を用意します。グラフで概念を探し、関係の根拠と本文・出典・例へ進めます。
+[GitHub Pages](https://9uile.github.io/mimic/) 向けの閲覧ページでは、仕事中の疑問から知識の候補を比較し、本文・出典・例へ進めます。知識の一覧と[関係を調べるページ](https://9uile.github.io/mimic/graph/)も用意し、知識どうしの関係の型・向き・根拠を読めます。調べ始めた疑問と選んだ知識を保ちながら、入口・本文・関係・出典を行き来できます。
 
 ## Repositoryの構成
 
@@ -22,8 +22,9 @@
 | `relations/` | 意味付き関係グラフ・関係型の語彙と利用案内 |
 | `topics/` | 目的や題目に応じた横断的な案内 |
 | `guideline/` | 利用・編集・表示・開発・品質検査の方針 |
-| `scripts/` | 正本からの生成と検査。本文表示の既存CSSも保持 |
-| `web/` | 人向け関係グラフのブラウザ用JavaScriptとCSS |
+| `design/` | 閲覧UIのDesign Tokenと、疑問から知識を探す案内 |
+| `scripts/` | 正本からの生成と検査。単体ローカルプレビュー用CSSも保持 |
+| `web/` | Pages閲覧UIの共通CSSと、共通操作・関係探索のJavaScript |
 | `assets/` | Pagesで配布するフォント資産とライセンス |
 | `tests/`・`.quality/` | 振る舞いの検査と、その条件・根拠 |
 | `.github/` | GitHub Actionsの検査・公開処理 |
@@ -38,6 +39,7 @@
 - [Repositoryの方針と利用ガイド](guideline/README.md)
 - [AI向けの作業ガイド](guideline/ai.md)
 - [知識の構造ガイド](guideline/knowledge-structure.md)
+- [閲覧UIのデザインシステム](guideline/design-system.md)
 - [開発・公開ガイド](guideline/development.md)
 
 ## ライセンス

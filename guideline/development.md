@@ -8,10 +8,11 @@
 - 構造化した関係は `relations/graph.json`、関係型・方向・推移規則は `relations/vocabulary.json` を編集します。[関係グラフの案内](../relations/README.md)に従い、本文内の説明と根拠を照合します。
 - 複数の概念を横断して読むための案内は `topics/` を編集します。
 - Repositoryの運用方針は[利用ガイド](README.md)、AIの作業指示は[AI向けガイド](ai.md)を編集します。
-- 本文の表示構造は `scripts/` と既存の `scripts/knowledge-view.css`、グラフのブラウザ表示は `web/graph.js`・`web/graph.css` を編集します。配布フォントは `assets/` に保持します。
+- 閲覧UIの原則・スタイル・部品・状態・例外は[デザインシステム](design-system.md)、Tokenは`design/tokens.json`、疑問の案内は`design/reading-paths.json`を編集します。
+- 表示構造とToken変換は`scripts/`、Pages共通CSSは`web/reading.css`、共通操作は`web/reading.js`、関係探索は`web/graph.js`を編集します。`scripts/knowledge-view.css`は単体ローカルプレビュー用に保持します。配布フォントは`assets/`に保持します。
 - 閲覧ページは生成物です。Markdown・JSONの正本と表示実装を変更してから再生成します。
 
-「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。「プロダクト全体のUI設計」の案内は `topics/product-ui-design.md` を正本とし、Pagesでは `topics/product-ui-design.html` を生成して関連する概念のHTMLへ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した21概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
+「判断材料の選定」の案内は `topics/decision-material-selection.md` を正本とし、Pagesでは `topics/decision-material-selection.html` を生成して関連する5概念のHTMLへ案内します。「プロダクト全体のUI設計」の案内は `topics/product-ui-design.md` を正本とし、Pagesでは `topics/product-ui-design.html` を生成して関連する概念のHTMLへ案内します。「シナリオから機能と画面構成を考える」は `topics/scenario-to-screen.md` から専用HTMLを生成し、関連4概念と架空の読書メモ例へ案内します。個別概念の本文・出典・例は案内へ取り込みません。Pagesでは別途、明示した25概念と補足資料を個別のHTMLとして生成し、Markdown原文も配信します。
 
 旧 `prototypes/decision-material-selection/index.html` の人向けURLには短い移動案内を生成します。旧研究資料の全文はPagesへ配信しません。
 
@@ -35,7 +36,7 @@ bun run verify
 
 `path:.` を指定すると、Gitに未追加のNix設定も使えます。`nix-command` または `flakes` が無効の場合は、最初のコマンドを `nix --extra-experimental-features 'nix-command flakes' develop path:.` に置き換えます。開発環境に入る操作だけでは、依存の導入・生成・公開は行いません。
 
-`relations:check` は関係データの構造と本文の識別情報・版・SHA-256・根拠参照を検査します。`build:pages` はMarkdownと関係データからHTMLを生成し、公開対象を `_site/` に組み立てます。`verify` はTypeScriptの型検査と、生成・公開の振る舞いを確かめるテストを実行します。`_site/` とローカルプレビューなどの `output/` はGit管理対象外で、知識・案内・ガイドのMarkdown原文をGitで管理します。
+`relations:check` は関係データの構造と本文の識別情報・版・SHA-256・根拠参照を検査します。`build:pages`はTokenの型・alias・循環・Typographyの五要素と疑問の案内の参照を検査し、Markdownと関係データからHTMLを生成して、公開対象を`_site/`に組み立てます。Tokenから変換したCSSを`web/reading.css`と結合してHTMLへ埋め込み、同じToken CSSを`web/tokens.css`としても配信します。`verify` はTypeScriptの型検査と、生成・公開の振る舞いを確かめるテストを実行します。`_site/` とローカルプレビューなどの `output/` はGit管理対象外で、知識・案内・ガイドのMarkdown原文をGitで管理します。
 
 題目別案内を任意にローカルプレビューする場合は次のコマンドを使います。
 
@@ -64,7 +65,7 @@ bun run relations:check
 
 ## 生成の規則
 
-人向けページの表示構造は[表示規約](knowledge-view.md)、実装は[知識の生成器](../scripts/build-knowledge.ts)と[共通CSS](../scripts/knowledge-view.css)で管理します。内容を更新するたびに別の配色や配置を作らず、必要な構造の変更は表示規約と生成器に反映します。
+人向けページの表示構造は[表示規約](knowledge-view.md)、実装は[知識の生成器](../scripts/build-knowledge.ts)、[Pagesの共通枠](../scripts/pages-design.ts)、[Pages共通CSS](../web/reading.css)で管理します。Pages共通枠は`mimic-pages-reader` `1.0.0`としてID・版・指紋を記録し、Markdown生成器の生成情報を保持します。単体ローカルプレビューは`mimic-knowledge-view` `3.4.1`、CSSは`scripts/knowledge-view.css`です。色・Typography・余白・部品の判断は[デザインシステム](design-system.md)に従います。Tokenの参照をCSSへ変換し、生成後の変数やHTMLを直接編集しません。必要な構造の変更は表示規約・デザインシステム・生成器へ整合して反映します。
 
 横断的な案内のページは通常のMarkdownから生成し、H2見出しと本文の順序を保持します。生成器がリンク先の概念を読み込んだり、独自の判断手順を知識へ追加したりすることはありません。閲覧表示には正本の版を示します。8役割を指定するMarkdownの生成契約は表示規約とテストで確認します。
 
@@ -74,9 +75,9 @@ bun run relations:check
 
 ## GitHub Pagesへの公開
 
-公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口は全21概念の一覧と関係グラフへの案内です。`graph/index.html` では検索・関係型フィルタ・概念選択を使い、辺の型・方向・根拠から本文へ進めます。JavaScriptを使わない場合も静的一覧から概念・関係・根拠を読めます。各概念のHTMLから関係グラフ・関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。UI全体の設計、色の知識、AI Slopに関する案内も別の読書経路として表示します。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
+公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口では7つの仕事中の疑問から知識の候補を比較でき、全25件の知識の一覧と関係探索も使えます。疑問は概念の分類や必読順序ではありません。`graph/index.html`では関係を見たい知識を選び、つながる辺の型・方向・根拠から本文へ進めます。JavaScriptを使わない場合も静的一覧から概念・関係・根拠を読めます。各概念のHTMLから関係グラフ・関連概念・出典・例へ進めます。題目別案内はPages専用のHTMLから関連概念へ進めます。UI全体の設計、色の知識、AI Slopに関する案内も別の読書経路として表示します。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
 
-[公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。関係データの配布対象は `relations/graph.json`・`relations/vocabulary.json`・`relations/README.md`、グラフの表示対象は `graph/index.html` と `web/` の指定したJavaScript・CSSです。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
+[公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。関係データの配布対象は `relations/graph.json`・`relations/vocabulary.json`・`relations/README.md`、関係探索と共通操作の表示対象は`graph/index.html`、`web/reading.js`・`web/graph.js`・`web/reading.css`、Tokenから生成する`web/tokens.css`です。Token編集元の`design/tokens.json`とデザインシステムのMarkdown・`guideline/design-system.html`も明示して配信します。`design/reading-paths.json`は配信せず、生成した案内文として表示します。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
 
 出力先に一覧外のファイル、シンボリックリンク、想定外の構造があれば生成を止め、自動削除せず内容を確認します。作業ログ、PDF、Moletta、Git履歴は配信しません。Public Repositoryへコミットしたファイルは、Pagesの対象外でもGitHub上で閲覧できます。
 
@@ -94,7 +95,7 @@ GitHub側の設定ではPagesのSourceをGitHub Actionsに、`github-pages` 環�
 
 ## 確認すること
 
-生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度、関係データと本文の対応を確認します。グラフの検索・型フィルタ・選択詳細・根拠と本文へのリンク、JavaScriptなしの静的一覧も対象にします。知識の原典への忠実さや説明の明確さは、本文と出典を照合して確認します。生成に成功したことを、知識の正しさや実画面の使いやすさの証明にしません。
+生成・検査では、配信対象、原文との対応、リンク、生成物の鮮度、関係データと本文の対応を確認します。疑問の開閉・候補と根拠節、関係を見たい知識の選択・選択詳細・根拠と本文へのリンク、JavaScriptなしの静的一覧も対象にします。URLの`concept`と`from`が選択と元の疑問に対応し、本文・出典・例・関係・入口を往復しても保たれること、ブラウザの戻る・進む、未知ID・読込失敗・関係未登録も確認します。知識の原典への忠実さや説明の明確さは、本文と出典を照合して確認します。生成に成功したことを、知識の正しさや実画面の使いやすさの証明にしません。
 
 閲覧ページの見た目、狭い幅での表示、文字拡大、操作、読み上げは、その実物と対象環境で確認します。実施した対象と結果、未確認の環境はPRに記載します。
 

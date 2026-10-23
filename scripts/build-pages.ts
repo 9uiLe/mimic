@@ -8,11 +8,16 @@ import { figureFiles, validateFigure } from './knowledge-images.ts';
 import { pagesFontFiles, readPagesFontAssets } from './pages-fonts.ts';
 import { loadRelationBundle } from './relations.ts';
 import { renderRelationGraph } from './build-relation-graph.ts';
+import { createHash } from 'node:crypto';
+import { compileDesignTokens } from './design-tokens.ts';
+import { renderDesignSpecimens } from './design-specimens.ts';
+import { renderGraphPage, renderHome, renderReader, validateReadingPaths } from './pages-design.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const copiedFiles = Object.freeze([
   'guideline/README.md',
   'guideline/ai.md',
+  'guideline/design-system.md', 'design/tokens.json', 'web/reading.js', 'web/reading.css',
   'topics/decision-material-selection.md',
   'relations/README.md', 'relations/graph.json', 'relations/vocabulary.json',
   'web/graph.js', 'web/graph.css',
@@ -25,7 +30,7 @@ const movedKnowledge = Object.freeze({
 });
 export const publishedFiles = Object.freeze([...new Set([
   'index.html', '.nojekyll', 'guideline/index.html', 'guideline/ai.html',
-  'graph/index.html',
+  'graph/index.html', 'web/tokens.css',
   'prototypes/decision-material-selection/index.html',
   ...copiedFiles, ...Object.values(readerViews), ...Object.keys(movedKnowledge), ...pagesFontFiles,
 ])].sort());
@@ -82,16 +87,22 @@ export async function buildPages(outDir = path.join(root, '_site')) {
 <title>判断材料の選定 — 移動案内</title></head><body>
 <p>閲覧ページは<a href="../../topics/decision-material-selection.html">判断材料の選定</a>へ移動しました。</p>
 </body></html>\n`));
-  const stylesheet = await readSource('scripts/knowledge-view.css');
-  outputs.set('graph/index.html', Buffer.from(renderRelationGraph(relations, stylesheet.toString('utf8'), true)));
+  const tokens = compileDesignTokens(JSON.parse(outputs.get('design/tokens.json')!.toString('utf8')));
+  outputs.set('web/tokens.css', Buffer.from(tokens.css));
+  const stylesheet = Buffer.from(tokens.css + '\n' + outputs.get('web/reading.css')!.toString('utf8'));
+  outputs.set('graph/index.html', Buffer.from(renderGraphPage(renderRelationGraph(relations, stylesheet.toString('utf8'), true), relations)));
   const entries = new Map(conceptIds.map(id => [id, outputs.get(`knowledge/${id}/KNOWLEDGE.md`)!.toString('utf8')]));
-  outputs.set('index.html', Buffer.from(renderCatalog(outputs.get('knowledge/README.md')!.toString('utf8'), entries, stylesheet.toString('utf8'), true)));
+  const paths = validateReadingPaths(JSON.parse((await readSource('design/reading-paths.json')).toString('utf8')), entries);
+  const catalog = renderCatalog(outputs.get('knowledge/README.md')!.toString('utf8'), entries, stylesheet.toString('utf8'), true);
+  outputs.set('index.html', Buffer.from(renderHome(catalog, paths, entries)));
   for (const [sourceFile, outFile] of Object.entries(readerViews)) {
     if (sourceFile === 'knowledge/README.md') continue;
     const source = outputs.get(sourceFile)!;
     if (sourceFile.endsWith('/KNOWLEDGE.md') || sourceFile === 'topics/color.md'
-      || sourceFile === 'topics/decision-material-selection.md' || sourceFile === 'topics/product-ui-design.md') {
-      outputs.set(outFile, await renderKnowledge(source, sourceFile, stylesheet, readerViews, true));
+      || sourceFile === 'topics/decision-material-selection.md' || sourceFile === 'topics/product-ui-design.md'
+      || sourceFile === 'topics/scenario-to-screen.md') {
+      const rendered = await renderKnowledge(source, sourceFile, stylesheet, readerViews, true);
+      outputs.set(outFile, Buffer.from(renderReader(rendered.toString('utf8'), outFile, sourceFile)));
       continue;
     }
     const id = sourceFile.startsWith('knowledge/') ? sourceFile.split('/')[1] : undefined;
@@ -99,7 +110,19 @@ export async function buildPages(outDir = path.join(root, '_site')) {
     const context = id && title ? {
       title, href: path.posix.relative(path.posix.dirname(outFile), `knowledge/${id}/index.html`),
     } : undefined;
-    outputs.set(outFile, await renderDocument(source, stylesheet, { sourceFile, outFile, views: readerViews, context, pagesAssets: true }));
+    const rendered = await renderDocument(source, stylesheet, { sourceFile, outFile, views: readerViews, context, pagesAssets: true });
+    const specimens = sourceFile === 'guideline/design-system.md' ? renderDesignSpecimens(tokens.resolved) : '';
+    outputs.set(outFile, Buffer.from(renderReader(rendered.toString('utf8'), outFile, sourceFile, specimens)));
+  }
+  const frameFingerprint = createHash('sha256').update(Buffer.concat([
+    await readSource('scripts/pages-design.ts'), await readSource('scripts/design-tokens.ts'), await readSource('scripts/design-specimens.ts'),
+  ])).digest('hex');
+  for (const [file, bytes] of outputs) {
+    if (!file.endsWith('.html') || file.startsWith('prototypes/')) continue;
+    const metadata = '<meta name="pages-design-id" content="mimic-pages-reader">'
+      + '<meta name="pages-design-version" content="1.0.0">'
+      + `<meta name="pages-frame-sha256" content="${frameFingerprint}">`;
+    outputs.set(file, Buffer.from(bytes.toString('utf8').replace('</head>', `${metadata}</head>`)));
   }
   for (const [file, bytes] of await readPagesFontAssets(root, readSource)) outputs.set(file, bytes);
   // Preflight all inputs and existing output before updating any artifact file.

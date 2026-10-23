@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "coverage": {
-    "nodes": "knowledge/以下に存在する全21概念。ノードは概念本文単位。",
-    "edges": "既存relatedと本文の概念リンクが明示する関係を根拠節から編集して移行。概念間の全関係を網羅するものではない。UI全体設計の6概念は本文の関係説明とリンクを保持し、型付きの辺は未登録。",
+    "nodes": "knowledge/以下に存在する全25概念。ノードは概念本文単位。",
+    "edges": "既存relatedと本文の概念リンクが明示する関係を根拠節から編集して移行。概念間の全関係を網羅するものではない。UI全体設計の6概念は本文の関係説明とリンクを保持し、型付きの辺は未登録。 シナリオと描く過程の4概念は本文の区別を根拠に3辺を追加。 UIのレイヤー構造は視覚的な優先順位との区別を根拠に1辺を追加。",
     "absence": "辺が未記載であることは、無関係・独立・前提不要・関係の不存在を意味しない。",
     "authority": "概念説明はknowledge本文、型付き関係の定義はrelationsの正本。本文引用は根拠の追跡用であり、原典の正式分類ではない。",
     "reading": "読む量・順序・方法は消費AIや読者が選ぶ。辺は読む義務・因果・実行契約を表さない。",
@@ -12,143 +12,122 @@
   "nodes": [
     {
       "id": "aesthetic-and-minimalist-design",
-      "path": "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
-      "sha256": "570a70236a2e1e984264573d0cadc25ba4a1c587b0d4111d2aaa6ab49925731e",
       "title": "Aesthetic and Minimalist Design",
-      "version": "1.0.1"
+      "path": "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "570a70236a2e1e984264573d0cadc25ba4a1c587b0d4111d2aaa6ab49925731e"
     },
     {
       "id": "ai-slop",
-      "path": "knowledge/ai-slop/KNOWLEDGE.md",
-      "sha256": "bae23d658087f7c789ed34d0b5cdca9bada619ce96c0597b356b35bbd50304b6",
       "title": "AI Slop",
-      "version": "1.0.1"
+      "path": "knowledge/ai-slop/KNOWLEDGE.md",
+      "version": "1.1.0",
+      "sha256": "735e759040df8333e00141b4772debbd8721137271cfdd8a894377fa499924e1"
     },
     {
       "id": "alignment-and-grids",
-      "path": "knowledge/alignment-and-grids/KNOWLEDGE.md",
-      "sha256": "db877aff3f044121313701ff539dd58cfd1bfe52daeed799ffda98d589d84aa1",
       "title": "整列とグリッド",
-      "version": "1.0.1"
+      "path": "knowledge/alignment-and-grids/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "db877aff3f044121313701ff539dd58cfd1bfe52daeed799ffda98d589d84aa1"
     },
     {
       "id": "color-context",
-      "path": "knowledge/color-context/KNOWLEDGE.md",
-      "sha256": "61a1f82aaf8ca6c69e8ac713fd55a0b7cf5c47872ac3e0028ebef7262bd89c9e",
       "title": "色の文脈と相互作用",
-      "version": "1.0.1"
+      "path": "knowledge/color-context/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "61a1f82aaf8ca6c69e8ac713fd55a0b7cf5c47872ac3e0028ebef7262bd89c9e"
     },
     {
       "id": "color-contrast",
-      "path": "knowledge/color-contrast/KNOWLEDGE.md",
-      "sha256": "4ca77d5abd11e8ea9e16b3857ae0495c806381e3ef77f5993035e6392f06884d",
       "title": "色コントラスト",
-      "version": "1.0.1"
+      "path": "knowledge/color-contrast/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "4ca77d5abd11e8ea9e16b3857ae0495c806381e3ef77f5993035e6392f06884d"
     },
     {
       "id": "conceptual-models",
-      "path": "knowledge/conceptual-models/KNOWLEDGE.md",
-      "sha256": "26980ae301868ee6665542e4ff70b128ebf776632e7dc84ced1cb8547b29e84e",
       "title": "概念モデル",
-      "version": "1.0.1"
+      "path": "knowledge/conceptual-models/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "26980ae301868ee6665542e4ff70b128ebf776632e7dc84ced1cb8547b29e84e"
     },
     {
       "id": "design-systems",
-      "path": "knowledge/design-systems/KNOWLEDGE.md",
-      "sha256": "ef35691469ace73ed56e12e0aec3f0967ad47ab24e6cd160fd3b1c57226c78bd",
       "title": "デザインシステム",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "path": "knowledge/design-systems/KNOWLEDGE.md",
+      "sha256": "ef35691469ace73ed56e12e0aec3f0967ad47ab24e6cd160fd3b1c57226c78bd"
     },
     {
       "id": "design-tokens",
-      "path": "knowledge/design-tokens/KNOWLEDGE.md",
-      "sha256": "7f418302a2804917f9268e66e032311ba5071b4e72c4f704beb4e664aaa936c3",
       "title": "Design Token",
-      "version": "1.1.1"
+      "path": "knowledge/design-tokens/KNOWLEDGE.md",
+      "version": "1.1.1",
+      "sha256": "7f418302a2804917f9268e66e032311ba5071b4e72c4f704beb4e664aaa936c3"
     },
     {
       "id": "ecological-interface-design",
-      "path": "knowledge/ecological-interface-design/KNOWLEDGE.md",
-      "sha256": "2db467a01203a7a6bccd357c540b09ae05642b3754b34aec0ec67dd33ef4ba57",
       "title": "Ecological Interface Design",
-      "version": "1.0.1"
+      "path": "knowledge/ecological-interface-design/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "2db467a01203a7a6bccd357c540b09ae05642b3754b34aec0ec67dd33ef4ba57"
     },
     {
       "id": "external-representations",
-      "path": "knowledge/external-representations/KNOWLEDGE.md",
-      "sha256": "72af83d84c29060564cc0089af2da4bc59b9d70704444cff0116476fed0d8b9a",
       "title": "外的表象",
-      "version": "1.0.1"
+      "path": "knowledge/external-representations/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "72af83d84c29060564cc0089af2da4bc59b9d70704444cff0116476fed0d8b9a"
     },
     {
       "id": "grouping",
-      "path": "knowledge/grouping/KNOWLEDGE.md",
-      "sha256": "8705b947909f6a9c17a969c43d81ab1266de905ce202e80677a8a93857d4d779",
       "title": "グルーピング",
-      "version": "1.0.1"
+      "path": "knowledge/grouping/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "8705b947909f6a9c17a969c43d81ab1266de905ce202e80677a8a93857d4d779"
     },
     {
       "id": "human-centered-design",
-      "path": "knowledge/human-centered-design/KNOWLEDGE.md",
-      "sha256": "5b1d3c310507bc6b119f856fac94fd45b472810673a2743e96aacf5cc6be08d1",
       "title": "人間中心設計",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "path": "knowledge/human-centered-design/KNOWLEDGE.md",
+      "sha256": "5b1d3c310507bc6b119f856fac94fd45b472810673a2743e96aacf5cc6be08d1"
     },
     {
       "id": "information-architecture",
-      "path": "knowledge/information-architecture/KNOWLEDGE.md",
-      "sha256": "f84f88dc80ce06ba430dbae0fc8c6212da2d335341fa7fbcf5aca089b43276d9",
       "title": "情報アーキテクチャ",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "path": "knowledge/information-architecture/KNOWLEDGE.md",
+      "sha256": "f84f88dc80ce06ba430dbae0fc8c6212da2d335341fa7fbcf5aca089b43276d9"
     },
     {
       "id": "interaction-design",
-      "path": "knowledge/interaction-design/KNOWLEDGE.md",
-      "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9",
       "title": "インタラクションデザイン",
-      "version": "1.0.0"
+      "version": "1.0.0",
+      "path": "knowledge/interaction-design/KNOWLEDGE.md",
+      "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9"
     },
     {
       "id": "layout-spacing",
-      "path": "knowledge/layout-spacing/KNOWLEDGE.md",
-      "sha256": "37372a03fdefcfd0505defa59e4a645c0ad1d61c3c726465fbe20db9eb09a5c8",
       "title": "レイアウトの余白",
-      "version": "1.0.1"
+      "path": "knowledge/layout-spacing/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "37372a03fdefcfd0505defa59e4a645c0ad1d61c3c726465fbe20db9eb09a5c8"
     },
     {
       "id": "lightness-and-luminance",
-      "path": "knowledge/lightness-and-luminance/KNOWLEDGE.md",
-      "sha256": "95a60e478ac953f35981343b1878a6e5c92eb352eeb69802eefe1da26f97a56e",
       "title": "明度と相対輝度",
-      "version": "1.0.1"
+      "path": "knowledge/lightness-and-luminance/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "95a60e478ac953f35981343b1878a6e5c92eb352eeb69802eefe1da26f97a56e"
     },
     {
       "id": "typography",
-      "path": "knowledge/typography/KNOWLEDGE.md",
-      "sha256": "b68344d1ddf4e8e009fd37cbbbf3498d221a7df166bb57f136442bacaf8e4575",
       "title": "Typography",
-      "version": "1.0.1"
-    },
-    {
-      "id": "usability-testing",
-      "path": "knowledge/usability-testing/KNOWLEDGE.md",
-      "sha256": "a5baa55a51baca43cd5b95411b83a6b57f29a44ded5cc70d148bf005a41ae515",
-      "title": "ユーザビリティテスト",
-      "version": "1.0.0"
-    },
-    {
-      "id": "user-journeys",
-      "path": "knowledge/user-journeys/KNOWLEDGE.md",
-      "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32",
-      "title": "ユーザージャーニー",
-      "version": "1.0.0"
-    },
-    {
-      "id": "visual-hierarchy",
-      "path": "knowledge/visual-hierarchy/KNOWLEDGE.md",
-      "sha256": "7b76c28342abcfcb3fc5d32395ad7cfdbe1ca7c0026321da215323613d166019",
-      "title": "視覚的な優先順位",
-      "version": "1.0.1"
+      "path": "knowledge/typography/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "b68344d1ddf4e8e009fd37cbbbf3498d221a7df166bb57f136442bacaf8e4575"
     },
     {
       "id": "ui-layering",
@@ -156,11 +135,43 @@
       "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95",
       "title": "UIのレイヤー構造",
       "version": "1.0.0"
-    }
+    },
+    {
+      "id": "usability-testing",
+      "title": "ユーザビリティテスト",
+      "version": "1.0.0",
+      "path": "knowledge/usability-testing/KNOWLEDGE.md",
+      "sha256": "a5baa55a51baca43cd5b95411b83a6b57f29a44ded5cc70d148bf005a41ae515"
+    },
+    {
+      "id": "user-journeys",
+      "title": "ユーザージャーニー",
+      "version": "1.0.0",
+      "path": "knowledge/user-journeys/KNOWLEDGE.md",
+      "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32"
+    },
+    {
+      "id": "visual-hierarchy",
+      "title": "視覚的な優先順位",
+      "path": "knowledge/visual-hierarchy/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "7b76c28342abcfcb3fc5d32395ad7cfdbe1ca7c0026321da215323613d166019"
+    },
+    { "id": "goal-directed-design", "path": "knowledge/goal-directed-design/KNOWLEDGE.md", "sha256": "2e1ed5dc4a841a56287b193f66b393e77973484d12ca9cc04eaa4e69754840b7",
+    "title": "Goal-Directed Design", "version": "1.0.1" },
+    { "id": "reflective-conversation", "path": "knowledge/reflective-conversation/KNOWLEDGE.md", "sha256": "75464bd7f569e67088e1976acd5a7b453d119213ef7114d74f862914a6657619",
+    "title": "設計状況との省察的な対話", "version": "1.0.1" },
+    { "id": "scenario-based-design", "path": "knowledge/scenario-based-design/KNOWLEDGE.md", "sha256": "648b1d139b1d839fb605b7521529908931c9a13c761f8088c0ac2c0ad359efcd",
+    "title": "シナリオに基づくデザイン", "version": "1.0.1" },
+    { "id": "sketches-and-prototypes", "path": "knowledge/sketches-and-prototypes/KNOWLEDGE.md", "sha256": "883a29232a401247f21bff5c822b7f7c851af57efe98f42ed0ec34edbd366153",
+    "title": "スケッチとプロトタイプ", "version": "1.0.1" }
   ],
   "edges": [
     {
-      "id": "color-contrast--depends_on_computation--lightness-and-luminance",
+      "from": "color-contrast",
+      "to": "lightness-and-luminance",
+      "type": "depends_on_computation",
+      "statement": "WCAGのコントラスト比の計算は、相対輝度のsRGB計算で得た前景・背景の値を使う。",
       "scope": "WCAGのコントラスト比の計算が使う、相対輝度のsRGB計算で得た前景・背景の値。概念全体の定義・理解の依存ではない。",
       "evidence": [
         {
@@ -174,13 +185,13 @@
           "quotation": "二つの色の相対輝度を組み合わせると、"
         }
       ],
-      "from": "color-contrast",
-      "to": "lightness-and-luminance",
-      "type": "depends_on_computation",
-      "statement": "WCAGのコントラスト比の計算は、相対輝度のsRGB計算で得た前景・背景の値を使う。"
+      "id": "color-contrast--depends_on_computation--lightness-and-luminance"
     },
     {
-      "id": "color-context--distinguished_from--lightness-and-luminance",
+      "from": "color-context",
+      "to": "lightness-and-luminance",
+      "type": "distinguished_from",
+      "statement": "数値が表す量の区別と、周囲による色の見え方の観察は異なる説明である。",
       "evidence": [
         {
           "concept": "color-context",
@@ -188,13 +199,13 @@
           "quotation": "数値が何を表すかを明確にすることと、周囲による見え方を観察することは、別の説明です。"
         }
       ],
-      "from": "color-context",
-      "to": "lightness-and-luminance",
-      "type": "distinguished_from",
-      "statement": "数値が表す量の区別と、周囲による色の見え方の観察は異なる説明である。"
+      "id": "color-context--distinguished_from--lightness-and-luminance"
     },
     {
-      "id": "color-context--distinguished_from--color-contrast",
+      "from": "color-context",
+      "to": "color-contrast",
+      "type": "distinguished_from",
+      "statement": "色の文脈における見え方とWCAGの計算比は同じ説明ではない。",
       "evidence": [
         {
           "concept": "color-context",
@@ -207,13 +218,13 @@
           "quotation": "色相の対比や周囲による見え方の変化すべてを、この一つの比で説明するものではありません。"
         }
       ],
-      "from": "color-context",
-      "to": "color-contrast",
-      "type": "distinguished_from",
-      "statement": "色の文脈における見え方とWCAGの計算比は同じ説明ではない。"
+      "id": "color-context--distinguished_from--color-contrast"
     },
     {
-      "id": "color-contrast--complemented_by--visual-hierarchy",
+      "from": "color-contrast",
+      "to": "visual-hierarchy",
+      "type": "complemented_by",
+      "statement": "背景との差による強調の説明に、目立ち方・内容の階層・業務上の優先度の区別が補われる。",
       "evidence": [
         {
           "concept": "color-contrast",
@@ -226,13 +237,13 @@
           "quotation": "大きく表示された情報が、業務上も最優先であるとは限りません。"
         }
       ],
-      "from": "color-contrast",
-      "to": "visual-hierarchy",
-      "type": "complemented_by",
-      "statement": "背景との差による強調の説明に、目立ち方・内容の階層・業務上の優先度の区別が補われる。"
+      "id": "color-contrast--complemented_by--visual-hierarchy"
     },
     {
-      "id": "grouping--distinguished_from--visual-hierarchy",
+      "from": "grouping",
+      "to": "visual-hierarchy",
+      "type": "distinguished_from",
+      "statement": "何を同じまとまりとするかと、何を相対的に強く見せるかは異なる役割である。",
       "evidence": [
         {
           "concept": "grouping",
@@ -245,13 +256,13 @@
           "quotation": "何を同じまとまりとして構成するかを扱います。"
         }
       ],
-      "from": "grouping",
-      "to": "visual-hierarchy",
-      "type": "distinguished_from",
-      "statement": "何を同じまとまりとするかと、何を相対的に強く見せるかは異なる役割である。"
+      "id": "grouping--distinguished_from--visual-hierarchy"
     },
     {
-      "id": "layout-spacing--complemented_by--grouping",
+      "from": "layout-spacing",
+      "to": "grouping",
+      "type": "complemented_by",
+      "statement": "配置から知覚される関係の説明に、何を同じグループとするかという意味上の分類の説明が補われる。",
       "evidence": [
         {
           "concept": "layout-spacing",
@@ -264,13 +275,13 @@
           "quotation": "配置によって関係を示せても、それだけで分類の意味を説明したことにはなりません。"
         }
       ],
-      "from": "layout-spacing",
-      "to": "grouping",
-      "type": "complemented_by",
-      "statement": "配置から知覚される関係の説明に、何を同じグループとするかという意味上の分類の説明が補われる。"
+      "id": "layout-spacing--complemented_by--grouping"
     },
     {
-      "id": "layout-spacing--complemented_by--visual-hierarchy",
+      "from": "layout-spacing",
+      "to": "visual-hierarchy",
+      "type": "complemented_by",
+      "statement": "余白による焦点の説明に、視覚的な強調と業務上の重要さの違いが補われる。",
       "evidence": [
         {
           "concept": "layout-spacing",
@@ -283,13 +294,13 @@
           "quotation": "見え方で表された重要さと、判断の根拠となる重要さは、別の内容です。"
         }
       ],
-      "from": "layout-spacing",
-      "to": "visual-hierarchy",
-      "type": "complemented_by",
-      "statement": "余白による焦点の説明に、視覚的な強調と業務上の重要さの違いが補われる。"
+      "id": "layout-spacing--complemented_by--visual-hierarchy"
     },
     {
-      "id": "lightness-and-luminance--distinguished_from--color-contrast",
+      "from": "lightness-and-luminance",
+      "to": "color-contrast",
+      "type": "distinguished_from",
+      "statement": "色単体の明度や相対輝度と、背景とのコントラスト比は異なる量である。",
       "evidence": [
         {
           "concept": "lightness-and-luminance",
@@ -297,13 +308,13 @@
           "quotation": "色単体の明度や相対輝度と、背景とのコントラスト比は別の量です。"
         }
       ],
-      "from": "lightness-and-luminance",
-      "to": "color-contrast",
-      "type": "distinguished_from",
-      "statement": "色単体の明度や相対輝度と、背景とのコントラスト比は異なる量である。"
+      "id": "lightness-and-luminance--distinguished_from--color-contrast"
     },
     {
-      "id": "ecological-interface-design--distinguished_from--external-representations",
+      "from": "ecological-interface-design",
+      "to": "external-representations",
+      "type": "distinguished_from",
+      "statement": "EIDの作業領域の内容・構造と表現を扱う設計枠組みと、外的表象の分散する認知課題の分析は同じ枠組みではない。",
       "evidence": [
         {
           "concept": "ecological-interface-design",
@@ -311,13 +322,13 @@
           "quotation": "EIDと同一の枠組みではありません。"
         }
       ],
-      "from": "ecological-interface-design",
-      "to": "external-representations",
-      "type": "distinguished_from",
-      "statement": "EIDの作業領域の内容・構造と表現を扱う設計枠組みと、外的表象の分散する認知課題の分析は同じ枠組みではない。"
+      "id": "ecological-interface-design--distinguished_from--external-representations"
     },
     {
-      "id": "conceptual-models--distinguished_from--external-representations",
+      "from": "conceptual-models",
+      "to": "external-representations",
+      "type": "distinguished_from",
+      "statement": "動作を理解する文脈・理由の枠組みと、外部環境の情報が果たす役割は区別される。",
       "evidence": [
         {
           "concept": "conceptual-models",
@@ -325,13 +336,13 @@
           "quotation": "外に情報があることと、その意味を理解できることは、区別して考えられます。"
         }
       ],
-      "from": "conceptual-models",
-      "to": "external-representations",
-      "type": "distinguished_from",
-      "statement": "動作を理解する文脈・理由の枠組みと、外部環境の情報が果たす役割は区別される。"
+      "id": "conceptual-models--distinguished_from--external-representations"
     },
     {
-      "id": "aesthetic-and-minimalist-design--distinguished_from--ai-slop",
+      "from": "aesthetic-and-minimalist-design",
+      "to": "ai-slop",
+      "type": "distinguished_from",
+      "statement": "必要情報の保全を扱うUXヒューリスティックと、低品質なAI制作物への批評語は成立と対象範囲が異なる。",
       "evidence": [
         {
           "concept": "aesthetic-and-minimalist-design",
@@ -339,13 +350,13 @@
           "quotation": "は低品質なAI制作物への批評語で、このヒューリスティックとは成立も範囲も異なります。"
         }
       ],
-      "from": "aesthetic-and-minimalist-design",
-      "to": "ai-slop",
-      "type": "distinguished_from",
-      "statement": "必要情報の保全を扱うUXヒューリスティックと、低品質なAI制作物への批評語は成立と対象範囲が異なる。"
+      "id": "aesthetic-and-minimalist-design--distinguished_from--ai-slop"
     },
     {
-      "id": "aesthetic-and-minimalist-design--complemented_by--grouping",
+      "from": "aesthetic-and-minimalist-design",
+      "to": "grouping",
+      "type": "complemented_by",
+      "statement": "必要な名称・説明を保つ境界の説明に、近接による見え方と分類の意味の区別が補われる。",
       "evidence": [
         {
           "concept": "aesthetic-and-minimalist-design",
@@ -353,13 +364,13 @@
           "quotation": "近接でまとまって見えることと、分類の意味を知ることは異なります。"
         }
       ],
-      "from": "aesthetic-and-minimalist-design",
-      "to": "grouping",
-      "type": "complemented_by",
-      "statement": "必要な名称・説明を保つ境界の説明に、近接による見え方と分類の意味の区別が補われる。"
+      "id": "aesthetic-and-minimalist-design--complemented_by--grouping"
     },
     {
-      "id": "aesthetic-and-minimalist-design--complemented_by--conceptual-models",
+      "from": "aesthetic-and-minimalist-design",
+      "to": "conceptual-models",
+      "type": "complemented_by",
+      "statement": "名称・説明を残す境界の説明に、動作を理解する文脈という観点が補われる。",
       "evidence": [
         {
           "concept": "aesthetic-and-minimalist-design",
@@ -367,13 +378,13 @@
           "quotation": "が扱う、動作を理解する文脈も考慮します。"
         }
       ],
-      "from": "aesthetic-and-minimalist-design",
-      "to": "conceptual-models",
-      "type": "complemented_by",
-      "statement": "名称・説明を残す境界の説明に、動作を理解する文脈という観点が補われる。"
+      "id": "aesthetic-and-minimalist-design--complemented_by--conceptual-models"
     },
     {
-      "id": "aesthetic-and-minimalist-design--complemented_by--visual-hierarchy",
+      "from": "aesthetic-and-minimalist-design",
+      "to": "visual-hierarchy",
+      "type": "complemented_by",
+      "statement": "必要な情報を残す説明に、残した内容の強調と構造を表す観点が補われる。",
       "evidence": [
         {
           "concept": "aesthetic-and-minimalist-design",
@@ -381,13 +392,13 @@
           "quotation": "は、残した内容の強調や構造を伝える表現に関わります。"
         }
       ],
-      "from": "aesthetic-and-minimalist-design",
-      "to": "visual-hierarchy",
-      "type": "complemented_by",
-      "statement": "必要な情報を残す説明に、残した内容の強調と構造を表す観点が補われる。"
+      "id": "aesthetic-and-minimalist-design--complemented_by--visual-hierarchy"
     },
     {
-      "id": "ai-slop--complemented_by--grouping",
+      "from": "ai-slop",
+      "to": "grouping",
+      "type": "complemented_by",
+      "statement": "UIの不要要素や様式変更を説明する際に、分類・近接・名称の区別が補われる。",
       "evidence": [
         {
           "concept": "ai-slop",
@@ -395,13 +406,13 @@
           "quotation": "は、分類・近接・名称を区別して読むための概念です。"
         }
       ],
-      "from": "ai-slop",
-      "to": "grouping",
-      "type": "complemented_by",
-      "statement": "UIの不要要素や様式変更を説明する際に、分類・近接・名称の区別が補われる。"
+      "id": "ai-slop--complemented_by--grouping"
     },
     {
-      "id": "ai-slop--complemented_by--visual-hierarchy",
+      "from": "ai-slop",
+      "to": "visual-hierarchy",
+      "type": "complemented_by",
+      "statement": "UIの不要要素や様式変更を説明する際に、強調・内容の階層・業務上の優先度の区別が補われる。",
       "evidence": [
         {
           "concept": "ai-slop",
@@ -409,13 +420,13 @@
           "quotation": "は、強調と内容の階層、業務上の優先度の違いを扱います。"
         }
       ],
-      "from": "ai-slop",
-      "to": "visual-hierarchy",
-      "type": "complemented_by",
-      "statement": "UIの不要要素や様式変更を説明する際に、強調・内容の階層・業務上の優先度の区別が補われる。"
+      "id": "ai-slop--complemented_by--visual-hierarchy"
     },
     {
-      "id": "ai-slop--complemented_by--conceptual-models",
+      "from": "ai-slop",
+      "to": "conceptual-models",
+      "type": "complemented_by",
+      "statement": "UIの削除や様式変更で失う情報の説明に、構成要素や動作を理解する文脈の観点が補われる。",
       "evidence": [
         {
           "concept": "ai-slop",
@@ -423,13 +434,13 @@
           "quotation": "は、構成要素や動作を理解する文脈を扱います。"
         }
       ],
-      "from": "ai-slop",
-      "to": "conceptual-models",
-      "type": "complemented_by",
-      "statement": "UIの削除や様式変更で失う情報の説明に、構成要素や動作を理解する文脈の観点が補われる。"
+      "id": "ai-slop--complemented_by--conceptual-models"
     },
     {
-      "id": "alignment-and-grids--distinguished_from--layout-spacing",
+      "from": "alignment-and-grids",
+      "to": "layout-spacing",
+      "type": "distinguished_from",
+      "statement": "間隔の量や区切りと、配置の軸・位置の共通性は異なる関係である。",
       "evidence": [
         {
           "concept": "alignment-and-grids",
@@ -437,13 +448,13 @@
           "quotation": "間隔が等しいことと、同じ列の始まりがそろうことは別の関係です。"
         }
       ],
-      "from": "alignment-and-grids",
-      "to": "layout-spacing",
-      "type": "distinguished_from",
-      "statement": "間隔の量や区切りと、配置の軸・位置の共通性は異なる関係である。"
+      "id": "alignment-and-grids--distinguished_from--layout-spacing"
     },
     {
-      "id": "alignment-and-grids--complemented_by--typography",
+      "from": "alignment-and-grids",
+      "to": "typography",
+      "type": "complemented_by",
+      "statement": "文字を置く領域・行の位置の説明に、書体・行高・折返しという文字の形と組み方の観点が補われる。",
       "evidence": [
         {
           "concept": "alignment-and-grids",
@@ -451,13 +462,13 @@
           "quotation": "文字を置く領域や行の位置は整列と関係しますが、列を設けたことだけで、書体・行高・折返しの適切さが決まるわけではありません。"
         }
       ],
-      "from": "alignment-and-grids",
-      "to": "typography",
-      "type": "complemented_by",
-      "statement": "文字を置く領域・行の位置の説明に、書体・行高・折返しという文字の形と組み方の観点が補われる。"
+      "id": "alignment-and-grids--complemented_by--typography"
     },
     {
-      "id": "alignment-and-grids--complemented_by--visual-hierarchy",
+      "from": "alignment-and-grids",
+      "to": "visual-hierarchy",
+      "type": "complemented_by",
+      "statement": "位置をそろえる説明に、相対的な強調・内容の階層・業務上の優先度を区別する観点が補われる。",
       "evidence": [
         {
           "concept": "alignment-and-grids",
@@ -465,13 +476,13 @@
           "quotation": "位置をそろえることから、何を最優先に見せるべきかは決まりません。"
         }
       ],
-      "from": "alignment-and-grids",
-      "to": "visual-hierarchy",
-      "type": "complemented_by",
-      "statement": "位置をそろえる説明に、相対的な強調・内容の階層・業務上の優先度を区別する観点が補われる。"
+      "id": "alignment-and-grids--complemented_by--visual-hierarchy"
     },
     {
-      "id": "typography--distinguished_from--layout-spacing",
+      "from": "typography",
+      "to": "layout-spacing",
+      "type": "distinguished_from",
+      "statement": "字間・行高・段落間という文字の組版条件と、コンポーネント・グループ・セクションなどの間隔は作用する対象が異なる。",
       "evidence": [
         {
           "concept": "typography",
@@ -479,13 +490,13 @@
           "quotation": "字間・行高・段落間はTypographyの組版条件として説明します。"
         }
       ],
-      "from": "typography",
-      "to": "layout-spacing",
-      "type": "distinguished_from",
-      "statement": "字間・行高・段落間という文字の組版条件と、コンポーネント・グループ・セクションなどの間隔は作用する対象が異なる。"
+      "id": "typography--distinguished_from--layout-spacing"
     },
     {
-      "id": "typography--complemented_by--visual-hierarchy",
+      "from": "typography",
+      "to": "visual-hierarchy",
+      "type": "complemented_by",
+      "statement": "文字の役割と強弱の説明に、見た目・意味上の階層・業務上の優先度の区別が補われる。",
       "evidence": [
         {
           "concept": "typography",
@@ -493,13 +504,13 @@
           "quotation": "文字の強弱が表すのは見た目の区別です。"
         }
       ],
-      "from": "typography",
-      "to": "visual-hierarchy",
-      "type": "complemented_by",
-      "statement": "文字の役割と強弱の説明に、見た目・意味上の階層・業務上の優先度の区別が補われる。"
+      "id": "typography--complemented_by--visual-hierarchy"
     },
     {
-      "id": "typography--associated_with--grouping",
+      "from": "typography",
+      "to": "grouping",
+      "type": "associated_with",
+      "statement": "Typographyは文字の形と組み方を扱い、本文は分類・近接・名称の関係についてグルーピングを関連づけている。",
       "scope": "本文に明示された関連づけ。包含・階層・前提を示さない。",
       "evidence": [
         {
@@ -508,13 +519,13 @@
           "quotation": "は意味上のまとまりと近接による表現を区別します。"
         }
       ],
-      "from": "typography",
-      "to": "grouping",
-      "type": "associated_with",
-      "statement": "Typographyは文字の形と組み方を扱い、本文は分類・近接・名称の関係についてグルーピングを関連づけている。"
+      "id": "typography--associated_with--grouping"
     },
     {
-      "id": "typography--complemented_by--design-tokens",
+      "from": "typography",
+      "to": "design-tokens",
+      "type": "complemented_by",
+      "statement": "文字設定を役割ごとの組として共有する説明に、名前・値・参照で設計情報を管理する仕組みが補われる。",
       "evidence": [
         {
           "concept": "typography",
@@ -522,13 +533,13 @@
           "quotation": "は文字サイズなどの設計情報を名前と値で共有する仕組みです。"
         }
       ],
-      "from": "typography",
-      "to": "design-tokens",
-      "type": "complemented_by",
-      "statement": "文字設定を役割ごとの組として共有する説明に、名前・値・参照で設計情報を管理する仕組みが補われる。"
+      "id": "typography--complemented_by--design-tokens"
     },
     {
-      "id": "layout-spacing--complemented_by--design-tokens",
+      "from": "layout-spacing",
+      "to": "design-tokens",
+      "type": "complemented_by",
+      "statement": "間隔の値と用途を説明する際に、共有する値と変更を管理する仕組みが補われる。",
       "evidence": [
         {
           "concept": "layout-spacing",
@@ -536,13 +547,13 @@
           "quotation": "同じ値を使う間隔でも、用途まで同じとは限りません。"
         }
       ],
-      "from": "layout-spacing",
-      "to": "design-tokens",
-      "type": "complemented_by",
-      "statement": "間隔の値と用途を説明する際に、共有する値と変更を管理する仕組みが補われる。"
+      "id": "layout-spacing--complemented_by--design-tokens"
     },
     {
-      "id": "lightness-and-luminance--complemented_by--design-tokens",
+      "from": "lightness-and-luminance",
+      "to": "design-tokens",
+      "type": "complemented_by",
+      "statement": "色の数値が表す量の説明に、判断を名前と値で共有・管理する観点が補われる。理解上の前提ではない。",
       "evidence": [
         {
           "concept": "lightness-and-luminance",
@@ -550,13 +561,13 @@
           "quotation": "明度や相対輝度を理解するための前提ではありません。"
         }
       ],
-      "from": "lightness-and-luminance",
-      "to": "design-tokens",
-      "type": "complemented_by",
-      "statement": "色の数値が表す量の説明に、判断を名前と値で共有・管理する観点が補われる。理解上の前提ではない。"
+      "id": "lightness-and-luminance--complemented_by--design-tokens"
     },
     {
-      "id": "color-contrast--complemented_by--design-tokens",
+      "from": "color-contrast",
+      "to": "design-tokens",
+      "type": "complemented_by",
+      "statement": "前景・背景の確認の説明に、用途名と値で判断を共有・管理する仕組みが補われる。計算や基準の前提ではない。",
       "evidence": [
         {
           "concept": "color-contrast",
@@ -564,11 +575,197 @@
           "quotation": "コントラストは前景と背景の値と条件から確認でき、Tokenの使用は計算や基準の前提ではありません。"
         }
       ],
-      "from": "color-contrast",
+      "id": "color-contrast--complemented_by--design-tokens"
+    },
+    {
+      "from": "human-centered-design",
+      "to": "user-journeys",
+      "type": "complemented_by",
+      "statement": "利用者や利用状況を理解する説明に、利用前後の経験を時間の流れで捉える観点が補われる。",
+      "scope": "利用者の目的に関わる経験の広がりを理解する範囲。マップ作成の義務や固定の工程順序ではない。",
+      "evidence": [
+        {
+          "concept": "human-centered-design",
+          "heading": "関連する概念",
+          "quotation": "利用前後を含めた経験を時間の流れに沿って理解するために読みます。"
+        },
+        {
+          "concept": "user-journeys",
+          "heading": "概念",
+          "quotation": "アプリを開く前の出来事や、画面の操作後に起きることも、目的に関係するなら対象に含まれます。"
+        }
+      ],
+      "id": "human-centered-design--complemented_by--user-journeys"
+    },
+    {
+      "from": "human-centered-design",
+      "to": "usability-testing",
+      "type": "complemented_by",
+      "statement": "利用者の理解を設計と評価へ結び付ける説明に、具体的な課題に取り組む利用者を観察する方法が補われる。",
+      "scope": "本文が説明する進行役のいるユーザビリティテストによる学習。人間中心設計の全調査や評価をこの方法に限定しない。",
+      "evidence": [
+        {
+          "concept": "human-centered-design",
+          "heading": "関連する概念",
+          "quotation": "具体的な課題に取り組む利用者の観察から設計を学ぶ方法を扱います。"
+        },
+        {
+          "concept": "usability-testing",
+          "heading": "概念",
+          "quotation": "ユーザビリティテストは、実際または想定される利用者が、具体的な課題に取り組む様子を観察して、使い方の理解や困難を調べる方法です。"
+        }
+      ],
+      "id": "human-centered-design--complemented_by--usability-testing"
+    },
+    {
+      "from": "information-architecture",
+      "to": "grouping",
+      "type": "complemented_by",
+      "statement": "情報の分類や関係の説明に、意味上の分類・近接によるまとまり・名称を区別する観点が補われる。",
+      "scope": "情報の組織と画面上のまとまりの関係を説明する範囲。グルーピングの全体をIAの下位概念とする分類ではない。",
+      "evidence": [
+        {
+          "concept": "information-architecture",
+          "heading": "分類、表示上のまとまり、理解の枠組み",
+          "quotation": "情報を同じ分類に含めることと、画面上で隣に置くことは異なります。"
+        },
+        {
+          "concept": "grouping",
+          "heading": "概念",
+          "quotation": "この項目では、デジタルUIにおける意味上の分類、配置によって知覚されるまとまり、まとまりを表す名称を区別して説明します。"
+        }
+      ],
+      "id": "information-architecture--complemented_by--grouping"
+    },
+    {
+      "from": "information-architecture",
+      "to": "conceptual-models",
+      "type": "complemented_by",
+      "statement": "情報や機能の構造の説明に、構成要素や動作を利用者がどう理解するかという観点が補われる。",
+      "scope": "製品が伝える構造と利用者の理解を読み分ける範囲。構造を定めたことだけで理解の一致を保証しない。",
+      "evidence": [
+        {
+          "concept": "information-architecture",
+          "heading": "分類、表示上のまとまり、理解の枠組み",
+          "quotation": "IAで定めた構造を、利用者がそのまま理解するとは限りません。"
+        },
+        {
+          "concept": "conceptual-models",
+          "heading": "概念",
+          "quotation": "システムの主要な構成要素を結び、動作を理解するための文脈と理由を与える枠組みです。"
+        }
+      ],
+      "id": "information-architecture--complemented_by--conceptual-models"
+    },
+    {
+      "from": "information-architecture",
+      "to": "interaction-design",
+      "type": "distinguished_from",
+      "statement": "情報・機能の定義や構造と、その構造を使って行為を進める際のシステムの応答は、扱う対象が異なる。",
+      "scope": "両本文の説明対象の区別。実務の担当分離、相互排他、先行工程の義務を意味しない。",
+      "evidence": [
+        {
+          "concept": "information-architecture",
+          "heading": "概念",
+          "quotation": "情報アーキテクチャ（Information Architecture、IA）は、情報や機能を何として定義し、どのように組織し、関係付け、名付けるかを扱います。"
+        },
+        {
+          "concept": "interaction-design",
+          "heading": "背景と資料の立場",
+          "quotation": "ここでは人がその構造を使って行為を進める際の応答を扱います。"
+        }
+      ],
+      "id": "information-architecture--distinguished_from--interaction-design"
+    },
+    {
+      "from": "user-journeys",
+      "to": "interaction-design",
+      "type": "distinguished_from",
+      "statement": "利用前後や複数の接点を含む経験の流れと、具体的な操作に対する応答・状態のつながりは、説明する範囲が異なる。",
+      "scope": "ジャーニーと画面内の操作フローを読み分ける範囲。両領域の重なりや、行為が経験の一部であることを否定しない。",
+      "evidence": [
+        {
+          "concept": "user-journeys",
+          "heading": "操作フローとの違い",
+          "quotation": "ジャーニーは、その操作が必要になる背景や、待ち時間、別の窓口との接点なども含めて経験を捉えます。"
+        },
+        {
+          "concept": "interaction-design",
+          "heading": "概念",
+          "quotation": "画面を移る場合に加え、同じ画面の表示や操作可能な内容が変わる場合も含みます。"
+        }
+      ],
+      "id": "user-journeys--distinguished_from--interaction-design"
+    },
+    {
+      "from": "design-systems",
       "to": "design-tokens",
       "type": "complemented_by",
-      "statement": "前景・背景の確認の説明に、用途名と値で判断を共有・管理する仕組みが補われる。計算や基準の前提ではない。"
+      "statement": "スタイルや部品を共有する説明に、設計情報を名前と値や参照によって共有する仕組みが補われる。",
+      "scope": "デザインシステムの共有物を支えるTokenの役割。Tokenを必須の層とせず、Tokenだけで使いどころや作業を説明できるとも主張しない。",
+      "evidence": [
+        {
+          "concept": "design-systems",
+          "heading": "Tokenとガイド文書の役割",
+          "quotation": "デザインシステムの中でスタイルや部品を支えられますが、Tokenだけでは、部品の使いどころや利用者の作業は説明できません。"
+        },
+        {
+          "concept": "design-tokens",
+          "heading": "概念",
+          "quotation": "値に名前を与え、設計や実装で同じ判断を参照できるようにします。"
+        }
+      ],
+      "id": "design-systems--complemented_by--design-tokens"
     },
+    {
+      "from": "design-systems",
+      "to": "usability-testing",
+      "type": "complemented_by",
+      "statement": "共有物の利用と適用条件の説明に、利用する場面での理解や操作を観察する方法が補われる。",
+      "scope": "共有物を個別UIへ適用した場面の確認。既存の調査をそのまま使いやすさの証拠にせず、GOV.UKの貢献基準を全製品へ課さない。",
+      "evidence": [
+        {
+          "concept": "design-systems",
+          "heading": "範囲と限界",
+          "quotation": "利用する場面での理解や操作を確認することは、"
+        },
+        {
+          "concept": "usability-testing",
+          "heading": "背景と立場",
+          "quotation": "GOV.UKは、試作品や稼働中のサービスで課題に取り組む様子を見て、理解や操作の問題と改善の手掛かりを得る方法として説明しています。"
+        }
+      ],
+      "id": "design-systems--complemented_by--usability-testing"
+    },
+    {
+      "from": "interaction-design",
+      "to": "usability-testing",
+      "type": "complemented_by",
+      "statement": "意図した振る舞いを説明することに対して、利用者が実際にどう理解し操作するかを観察する観点が補われる。",
+      "scope": "本文が扱う操作・応答を個別UIで確かめる範囲。遷移図や状態表を、利用者の観察結果へ置き換えない。",
+      "evidence": [
+        {
+          "concept": "interaction-design",
+          "heading": "アクセシビリティと適用範囲",
+          "quotation": "画面遷移図や状態の表は、意図した振る舞いを説明できますが、実際の理解や操作を確かめた結果とは区別します。"
+        },
+        {
+          "concept": "usability-testing",
+          "heading": "概念",
+          "quotation": "感想を聞くだけでなく、どこを見て、何を試し、どこで進めなくなるかを確かめます。"
+        }
+      ],
+      "id": "interaction-design--complemented_by--usability-testing"
+    },
+    { "id": "scenario-based-design--distinguished_from--goal-directed-design", "evidence": [ { "concept": "goal-directed-design", "heading": "関連する概念",
+    "quotation": "Goal-Directed Designは、その使い方をペルソナの目標や他の方法と組み合わせた特定の構成を持ちます。" } ], "from": "scenario-based-design", "to": "goal-directed-design", "type": "distinguished_from",
+    "statement": "活動を物語で表す考え方と、目標や他の方法を組み合わせたGoal-Directed Designの構成を区別する。" },
+    { "id": "goal-directed-design--distinguished_from--reflective-conversation", "evidence": [ { "concept": "goal-directed-design", "heading": "関連する概念",
+    "quotation": "これらをGoal-Directed Designの同義語や一律の必須段階とはしません。" } ], "from": "goal-directed-design", "to": "reflective-conversation", "type": "distinguished_from",
+    "statement": "要求を製品の構成へ具体化する特定の方法と、変更の結果から問題や意図を考え直す認識過程は異なる説明である。" },
+    { "id": "reflective-conversation--distinguished_from--sketches-and-prototypes", "evidence": [ { "concept": "sketches-and-prototypes", "heading": "関連する概念",
+    "quotation": "その過程と、ここでの表現物の性質・意図の整理は区別します。" } ], "from": "reflective-conversation", "to": "sketches-and-prototypes", "type": "distinguished_from",
+    "statement": "設計者が変更の結果を読み取る認識過程と、表現物の性質・意図の整理を区別する。" },
     {
       "id": "ui-layering--distinguished_from--visual-hierarchy",
       "scope": "見え方を説明する対象と役割の区別。階層や理解上の前提を示さない。",
@@ -594,5 +791,6 @@
       "type": "distinguished_from",
       "statement": "UIのレイヤー構造は描画の前後と重なりによる見え方を扱い、視覚的な優先順位は相対的な目立ち方や情報の関係を扱う。描画順は内容や業務上の優先度と同一ではない。"
     }
+
   ]
 }
