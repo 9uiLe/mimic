@@ -76,6 +76,8 @@ async function fixture(input: Markdown = original, relativeSource = 'topics/deci
   const out = path.join(directory, 'prototypes/decision-material-selection');
   await cp(path.join(root, 'knowledge'), path.join(directory, 'knowledge'), { recursive: true });
   await cp(path.join(root, 'topics'), path.join(directory, 'topics'), { recursive: true });
+  await mkdir(path.join(directory, 'guideline'), { recursive: true });
+  await cp(path.join(root, 'guideline/README.md'), path.join(directory, 'guideline/README.md'));
   await mkdir(path.dirname(source), { recursive: true });
   await writeFile(source, input);
   const args = ['--source', source, '--out-dir', out];
@@ -214,7 +216,7 @@ test('each concept has a matching fixed entry, resolvable support links, and met
     'conceptual-models', 'design-systems', 'design-tokens', 'ecological-interface-design', 'external-representations',
     'goal-directed-design', 'grouping', 'human-centered-design', 'information-architecture', 'interaction-design', 'layout-spacing',
     'lightness-and-luminance', 'reflective-conversation', 'scenario-based-design', 'sketches-and-prototypes', 'typography',
-    'ui-layering', 'usability-testing', 'user-journeys', 'visual-hierarchy',
+    'ui-layering', 'usability-testing', 'user-journeys', 'visual-hierarchy', 'visual-style',
   ]);
   for (const id of concepts) {
     const relativeSource = `knowledge/${id}/KNOWLEDGE.md`;

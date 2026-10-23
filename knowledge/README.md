@@ -35,6 +35,7 @@
 | `goal-directed-design` | [Goal-Directed Design](goal-directed-design/KNOWLEDGE.md) | 利用者の目標とシナリオから要求・製品の構成を考える方法 |
 | `reflective-conversation` | [設計状況との省察的な対話](reflective-conversation/KNOWLEDGE.md) | 設計の変更と結果の読み取りを通じて問題や意図を考え直す過程 |
 | `sketches-and-prototypes` | [スケッチとプロトタイプ](sketches-and-prototypes/KNOWLEDGE.md) | 表現物の性質と、探索・具体化・検査などの意図による区別 |
+| `visual-style` | [UIの視覚的なスタイル](visual-style/KNOWLEDGE.md) | 視覚表現の組み合わせ、目的との関係、統一感と表現の幅 |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
