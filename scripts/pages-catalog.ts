@@ -30,6 +30,7 @@ export const readerViews: Readonly<Record<string, string>> = Object.freeze(Objec
   ['knowledge/README.md', 'index.html'],
   ['guideline/README.md', 'guideline/index.html'],
   ['guideline/ai.md', 'guideline/ai.html'],
+  ['guideline/design-system.md', 'guideline/design-system.html'],
   ['relations/README.md', 'relations/index.html'],
   ['topics/decision-material-selection.md', 'topics/decision-material-selection.html'],
   ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md'].map(file => [
@@ -38,6 +39,21 @@ export const readerViews: Readonly<Record<string, string>> = Object.freeze(Objec
 ]));
 export const escapeHtml = (value: string) => value.replace(/[&<>"']/g,
   character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+
+export function renderTopicGuides() {
+  const guides = [
+    ['topics/product-ui-design.html', 'プロダクト全体のUI設計',
+      '利用者の目的から、情報構造・画面・操作・確かめ方まで読む。'],
+    ['topics/decision-material-selection.html', '判断材料の選定',
+      '判断に使う情報の内容と、まとまり・強調・詳細の見せ方を考える。'],
+    ['topics/color.html', '色の知識',
+      '明るさ、前景と背景、強調、周囲による見え方から読む。'],
+    ['topics/ai-slop.html', 'AI Slopに関する知識',
+      'UIの不要な要素や画一的な見た目を、関連する知識から考える。'],
+  ] as const;
+  return guides.map(([href, title, description]) => `<li><a href="${escapeHtml(href)}">${escapeHtml(title)}</a>`
+    + `<p class="type-supporting">${escapeHtml(description)}</p></li>`).join('\n');
+}
 
 export function readerHref(href: string, sourceFile: string, outFile: string, views: Readonly<Record<string, string>>) {
   if (/^[a-z][a-z\d+.-]*:/i.test(href) || href.startsWith('#')) return href;
@@ -74,9 +90,7 @@ ${pageFontHead('index.html', pagesAssets)}
 <main id="content" class="catalog" tabindex="-1"><section aria-labelledby="concepts"><h2 id="concepts">概念から読む</h2>
 <ul class="concept-list">${items}</ul></section>
 <section class="topic-list" aria-labelledby="topics"><h2 id="topics">複数の概念から読む</h2>
-<ul><li><a href="topics/product-ui-design.html">プロダクト全体のUI設計</a></li>
-<li><a href="topics/decision-material-selection.html">判断材料の選定</a></li>
-<li><a href="topics/color.html">色の知識</a></li><li><a href="topics/ai-slop.html">AI Slopに関する知識</a></li></ul></section></main>
+<ul>${renderTopicGuides()}</ul></section></main>
 <footer><div><a href="knowledge/README.md">知識の索引のMarkdown</a> · <a href="guideline/">利用ガイド</a></div></footer>
 </body></html>\n`;
 }

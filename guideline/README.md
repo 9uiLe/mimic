@@ -43,6 +43,12 @@ Token名やコントラスト比などの数値だけで、配色の適切さや
 
 Tokenの組と値だけでは、実際の字形・折返し・拡大時の表示を保証できません。具体的な作例は[Typographyの説明例](../knowledge/typography/examples/mixed-ui-copy.md)、共有の仕組みは[Design Tokenの本文](../knowledge/design-tokens/KNOWLEDGE.md)を参照します。この提示方針はMimicの編集方針であり、DTCGの必須命名や全用途の要件ではありません。
 
+## Mimic閲覧UIへの適用
+
+MimicのGitHub Pages閲覧UIでは、[デザインシステム](design-system.md)を適用します。Tokenは`design/tokens.json`、疑問から知識を探す案内は`design/reading-paths.json`で管理します。白黒主体の表示、同じ対象を「知識」と呼ぶ表現、本文・関係・出典を行き来する共通の操作を定めます。これは案件固有の適用規則であり、知識本文に書かれた一般概念や全製品への推奨値ではありません。
+
+5つの疑問は閲覧のきっかけであり、正式な概念分類や必読順序にしません。読者は一覧・本文・関係からも読む範囲を選べます。方向の採用、機械検査、実操作の確認、人による理解、読み上げは別の確認として扱います。
+
 ## 下書きと正本
 
 一時的な調査メモ・下書き・個別UIの検証記録は、原則としてGit管理外の `output/` に置きます。正本に反映した下書きや完了した作業記録は現行ツリーに常設せず、既にGit管理されたものは履歴から参照します。知識本文・出典対応表・説明例は正本として保持します。
@@ -75,6 +81,6 @@ READMEは、そのRepositoryやディレクトリの目的、現在の内容、�
 
 複数の概念を横断する目的別の案内は `topics/` に置き、個別概念の本文を重複して持ちません。本文内の関係の説明は人向けの文脈として保持し、型・向き・適用範囲と根拠を持つ辺は `relations/` に定義します。両者が食い違う場合は本文と原典を照合して修正し、グラフの形に合わせて知識の定義を変えません。根拠のない階層や依存を補いません。
 
-Repositoryの方針は `guideline/`、生成・検査は `scripts/`、グラフのブラウザ表示は `web/`、配布フォントは `assets/`、検査とその根拠は `tests/`・`.quality/`、検査・公開処理は `.github/` に置きます。既存の本文表示CSSは `scripts/knowledge-view.css` に保持します。編集・研究資料はGit管理外の `output/`、Pages生成物はGit管理外の `_site/` で扱います。配置の詳細は[知識の構造ガイド](https://github.com/9uiLe/mimic/blob/main/guideline/knowledge-structure.md)を参照します。
+Repositoryの方針と閲覧UIの[デザインシステム](design-system.md)は `guideline/`、Tokenと入口の案内は `design/`、生成・検査は `scripts/`、閲覧UIのブラウザ処理は `web/`、配布フォントは `assets/`、検査とその根拠は `tests/`・`.quality/`、検査・公開処理は `.github/` に置きます。Pagesの共通CSSは`web/reading.css`で管理し、Tokenから生成する`web/tokens.css`の変数を参照します。`scripts/knowledge-view.css`は単体ローカルプレビュー用に保持します。編集・研究資料はGit管理外の `output/`、Pages生成物はGit管理外の `_site/` で扱います。配置の詳細は[知識の構造ガイド](https://github.com/9uiLe/mimic/blob/main/guideline/knowledge-structure.md)を参照します。
 
 生成物の更新・検査・公開の手順は[開発・公開ガイド](https://github.com/9uiLe/mimic/blob/main/guideline/development.md)に記載します。

@@ -78,7 +78,15 @@
       "topics/decision-material-selection.md",
       "topics/product-ui-design.md",
       "web/graph.css",
-      "web/graph.js"
+      "web/graph.js",
+      "scripts/design-tokens.ts",
+      "scripts/design-specimens.ts",
+      "scripts/pages-design.ts",
+      "design/tokens.json",
+      "design/reading-paths.json",
+      "web/reading.css",
+      "web/reading.js",
+      "guideline/design-system.md"
     ],
     "pages-font-assets": [
       "assets/fonts/gen-interface-jp/0.8.0/integrity.json",
@@ -352,6 +360,16 @@
       "scripts/pages-fonts.ts",
       "node_modules/marked/lib/marked.esm.js",
       "node_modules/marked/package.json"
+    ],
+    "pages-design-inputs": [
+      "scripts/design-tokens.ts",
+      "scripts/design-specimens.ts",
+      "design/tokens.json",
+      "scripts/pages-design.ts",
+      "scripts/pages-catalog.ts",
+      "scripts/pages-fonts.ts",
+      "web/reading.js",
+      "web/graph.js"
     ]
   }
 }

@@ -561,6 +561,186 @@
         }
       ],
       "id": "color-contrast--complemented_by--design-tokens"
+    },
+    {
+      "from": "human-centered-design",
+      "to": "user-journeys",
+      "type": "complemented_by",
+      "statement": "利用者や利用状況を理解する説明に、利用前後の経験を時間の流れで捉える観点が補われる。",
+      "scope": "利用者の目的に関わる経験の広がりを理解する範囲。マップ作成の義務や固定の工程順序ではない。",
+      "evidence": [
+        {
+          "concept": "human-centered-design",
+          "heading": "関連する概念",
+          "quotation": "利用前後を含めた経験を時間の流れに沿って理解するために読みます。"
+        },
+        {
+          "concept": "user-journeys",
+          "heading": "概念",
+          "quotation": "アプリを開く前の出来事や、画面の操作後に起きることも、目的に関係するなら対象に含まれます。"
+        }
+      ],
+      "id": "human-centered-design--complemented_by--user-journeys"
+    },
+    {
+      "from": "human-centered-design",
+      "to": "usability-testing",
+      "type": "complemented_by",
+      "statement": "利用者の理解を設計と評価へ結び付ける説明に、具体的な課題に取り組む利用者を観察する方法が補われる。",
+      "scope": "本文が説明する進行役のいるユーザビリティテストによる学習。人間中心設計の全調査や評価をこの方法に限定しない。",
+      "evidence": [
+        {
+          "concept": "human-centered-design",
+          "heading": "関連する概念",
+          "quotation": "具体的な課題に取り組む利用者の観察から設計を学ぶ方法を扱います。"
+        },
+        {
+          "concept": "usability-testing",
+          "heading": "概念",
+          "quotation": "ユーザビリティテストは、実際または想定される利用者が、具体的な課題に取り組む様子を観察して、使い方の理解や困難を調べる方法です。"
+        }
+      ],
+      "id": "human-centered-design--complemented_by--usability-testing"
+    },
+    {
+      "from": "information-architecture",
+      "to": "grouping",
+      "type": "complemented_by",
+      "statement": "情報の分類や関係の説明に、意味上の分類・近接によるまとまり・名称を区別する観点が補われる。",
+      "scope": "情報の組織と画面上のまとまりの関係を説明する範囲。グルーピングの全体をIAの下位概念とする分類ではない。",
+      "evidence": [
+        {
+          "concept": "information-architecture",
+          "heading": "分類、表示上のまとまり、理解の枠組み",
+          "quotation": "情報を同じ分類に含めることと、画面上で隣に置くことは異なります。"
+        },
+        {
+          "concept": "grouping",
+          "heading": "概念",
+          "quotation": "この項目では、デジタルUIにおける意味上の分類、配置によって知覚されるまとまり、まとまりを表す名称を区別して説明します。"
+        }
+      ],
+      "id": "information-architecture--complemented_by--grouping"
+    },
+    {
+      "from": "information-architecture",
+      "to": "conceptual-models",
+      "type": "complemented_by",
+      "statement": "情報や機能の構造の説明に、構成要素や動作を利用者がどう理解するかという観点が補われる。",
+      "scope": "製品が伝える構造と利用者の理解を読み分ける範囲。構造を定めたことだけで理解の一致を保証しない。",
+      "evidence": [
+        {
+          "concept": "information-architecture",
+          "heading": "分類、表示上のまとまり、理解の枠組み",
+          "quotation": "IAで定めた構造を、利用者がそのまま理解するとは限りません。"
+        },
+        {
+          "concept": "conceptual-models",
+          "heading": "概念",
+          "quotation": "システムの主要な構成要素を結び、動作を理解するための文脈と理由を与える枠組みです。"
+        }
+      ],
+      "id": "information-architecture--complemented_by--conceptual-models"
+    },
+    {
+      "from": "information-architecture",
+      "to": "interaction-design",
+      "type": "distinguished_from",
+      "statement": "情報・機能の定義や構造と、その構造を使って行為を進める際のシステムの応答は、扱う対象が異なる。",
+      "scope": "両本文の説明対象の区別。実務の担当分離、相互排他、先行工程の義務を意味しない。",
+      "evidence": [
+        {
+          "concept": "information-architecture",
+          "heading": "概念",
+          "quotation": "情報アーキテクチャ（Information Architecture、IA）は、情報や機能を何として定義し、どのように組織し、関係付け、名付けるかを扱います。"
+        },
+        {
+          "concept": "interaction-design",
+          "heading": "背景と資料の立場",
+          "quotation": "ここでは人がその構造を使って行為を進める際の応答を扱います。"
+        }
+      ],
+      "id": "information-architecture--distinguished_from--interaction-design"
+    },
+    {
+      "from": "user-journeys",
+      "to": "interaction-design",
+      "type": "distinguished_from",
+      "statement": "利用前後や複数の接点を含む経験の流れと、具体的な操作に対する応答・状態のつながりは、説明する範囲が異なる。",
+      "scope": "ジャーニーと画面内の操作フローを読み分ける範囲。両領域の重なりや、行為が経験の一部であることを否定しない。",
+      "evidence": [
+        {
+          "concept": "user-journeys",
+          "heading": "操作フローとの違い",
+          "quotation": "ジャーニーは、その操作が必要になる背景や、待ち時間、別の窓口との接点なども含めて経験を捉えます。"
+        },
+        {
+          "concept": "interaction-design",
+          "heading": "概念",
+          "quotation": "画面を移る場合に加え、同じ画面の表示や操作可能な内容が変わる場合も含みます。"
+        }
+      ],
+      "id": "user-journeys--distinguished_from--interaction-design"
+    },
+    {
+      "from": "design-systems",
+      "to": "design-tokens",
+      "type": "complemented_by",
+      "statement": "スタイルや部品を共有する説明に、設計情報を名前と値や参照によって共有する仕組みが補われる。",
+      "scope": "デザインシステムの共有物を支えるTokenの役割。Tokenを必須の層とせず、Tokenだけで使いどころや作業を説明できるとも主張しない。",
+      "evidence": [
+        {
+          "concept": "design-systems",
+          "heading": "Tokenとガイド文書の役割",
+          "quotation": "デザインシステムの中でスタイルや部品を支えられますが、Tokenだけでは、部品の使いどころや利用者の作業は説明できません。"
+        },
+        {
+          "concept": "design-tokens",
+          "heading": "概念",
+          "quotation": "値に名前を与え、設計や実装で同じ判断を参照できるようにします。"
+        }
+      ],
+      "id": "design-systems--complemented_by--design-tokens"
+    },
+    {
+      "from": "design-systems",
+      "to": "usability-testing",
+      "type": "complemented_by",
+      "statement": "共有物の利用と適用条件の説明に、利用する場面での理解や操作を観察する方法が補われる。",
+      "scope": "共有物を個別UIへ適用した場面の確認。既存の調査をそのまま使いやすさの証拠にせず、GOV.UKの貢献基準を全製品へ課さない。",
+      "evidence": [
+        {
+          "concept": "design-systems",
+          "heading": "範囲と限界",
+          "quotation": "利用する場面での理解や操作を確認することは、"
+        },
+        {
+          "concept": "usability-testing",
+          "heading": "背景と立場",
+          "quotation": "GOV.UKは、試作品や稼働中のサービスで課題に取り組む様子を見て、理解や操作の問題と改善の手掛かりを得る方法として説明しています。"
+        }
+      ],
+      "id": "design-systems--complemented_by--usability-testing"
+    },
+    {
+      "from": "interaction-design",
+      "to": "usability-testing",
+      "type": "complemented_by",
+      "statement": "意図した振る舞いを説明することに対して、利用者が実際にどう理解し操作するかを観察する観点が補われる。",
+      "scope": "本文が扱う操作・応答を個別UIで確かめる範囲。遷移図や状態表を、利用者の観察結果へ置き換えない。",
+      "evidence": [
+        {
+          "concept": "interaction-design",
+          "heading": "アクセシビリティと適用範囲",
+          "quotation": "画面遷移図や状態の表は、意図した振る舞いを説明できますが、実際の理解や操作を確かめた結果とは区別します。"
+        },
+        {
+          "concept": "usability-testing",
+          "heading": "概念",
+          "quotation": "感想を聞くだけでなく、どこを見て、何を試し、どこで進めなくなるかを確かめます。"
+        }
+      ],
+      "id": "interaction-design--complemented_by--usability-testing"
     }
   ]
 }
