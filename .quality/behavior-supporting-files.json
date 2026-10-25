@@ -105,7 +105,18 @@
       "knowledge/sketches-and-prototypes/KNOWLEDGE.md",
       "knowledge/sketches-and-prototypes/references/sources.md",
       "knowledge/goal-directed-design/examples/reading-notes.md",
-      "topics/scenario-to-screen.md"
+      "topics/scenario-to-screen.md",
+      "knowledge/double-diamond/KNOWLEDGE.md",
+      "knowledge/double-diamond/references/sources.md",
+      "knowledge/user-research/KNOWLEDGE.md",
+      "knowledge/user-research/references/sources.md",
+      "knowledge/user-needs/KNOWLEDGE.md",
+      "knowledge/user-needs/references/sources.md",
+      "knowledge/user-stories/KNOWLEDGE.md",
+      "knowledge/user-stories/references/sources.md",
+      "knowledge/heart-framework/KNOWLEDGE.md",
+      "knowledge/heart-framework/references/sources.md",
+      "topics/product-design.md"
     ],
     "pages-font-assets": [
       "assets/fonts/gen-interface-jp/0.8.0/integrity.json",

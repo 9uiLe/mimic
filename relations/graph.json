@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "coverage": {
-    "nodes": "knowledge/以下に存在する全26概念。ノードは概念本文単位。",
+    "nodes": "knowledge/以下に存在する全31概念。ノードは概念本文単位。",
     "edges": "本文の関係説明と根拠節から編集した意味辺。概念間の全関係を網羅せず、型付きの辺が未登録の概念も含む。UIの視覚的なスタイルは値の共有と表現の判断を区別する。",
     "absence": "辺が未記載であることは、無関係・独立・前提不要・関係の不存在を意味しない。",
     "authority": "概念説明はknowledge本文、型付き関係の定義はrelationsの正本。本文引用は根拠の追跡用であり、原典の正式分類ではない。",
@@ -11,162 +11,129 @@
   },
   "nodes": [
     {
-      "id": "aesthetic-and-minimalist-design",
-      "title": "Aesthetic and Minimalist Design",
-      "path": "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md",
-      "version": "1.1.0",
-      "sha256": "85f6d1dced33ace32d6453e09fe2a4168b072dbfb90019964543ab428c6f053e"
+      "id": "aesthetic-and-minimalist-design", "title": "Aesthetic and Minimalist Design", "version": "1.1.0",
+      "path": "knowledge/aesthetic-and-minimalist-design/KNOWLEDGE.md", "sha256": "85f6d1dced33ace32d6453e09fe2a4168b072dbfb90019964543ab428c6f053e"
     },
     {
-      "id": "ai-slop",
-      "title": "AI Slop",
-      "path": "knowledge/ai-slop/KNOWLEDGE.md",
-      "version": "1.1.0",
-      "sha256": "735e759040df8333e00141b4772debbd8721137271cfdd8a894377fa499924e1"
+      "id": "ai-slop", "title": "AI Slop", "version": "1.1.0",
+      "path": "knowledge/ai-slop/KNOWLEDGE.md", "sha256": "735e759040df8333e00141b4772debbd8721137271cfdd8a894377fa499924e1"
     },
     {
-      "id": "alignment-and-grids",
-      "title": "整列とグリッド",
-      "path": "knowledge/alignment-and-grids/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "db877aff3f044121313701ff539dd58cfd1bfe52daeed799ffda98d589d84aa1"
+      "id": "alignment-and-grids", "title": "整列とグリッド", "version": "1.0.1",
+      "path": "knowledge/alignment-and-grids/KNOWLEDGE.md", "sha256": "db877aff3f044121313701ff539dd58cfd1bfe52daeed799ffda98d589d84aa1"
     },
     {
-      "id": "color-context",
-      "title": "色の文脈と相互作用",
-      "path": "knowledge/color-context/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "61a1f82aaf8ca6c69e8ac713fd55a0b7cf5c47872ac3e0028ebef7262bd89c9e"
+      "id": "color-context", "title": "色の文脈と相互作用", "version": "1.0.1",
+      "path": "knowledge/color-context/KNOWLEDGE.md", "sha256": "61a1f82aaf8ca6c69e8ac713fd55a0b7cf5c47872ac3e0028ebef7262bd89c9e"
     },
     {
-      "id": "color-contrast",
-      "title": "色コントラスト",
-      "path": "knowledge/color-contrast/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "4ca77d5abd11e8ea9e16b3857ae0495c806381e3ef77f5993035e6392f06884d"
+      "id": "color-contrast", "title": "色コントラスト", "version": "1.0.1",
+      "path": "knowledge/color-contrast/KNOWLEDGE.md", "sha256": "4ca77d5abd11e8ea9e16b3857ae0495c806381e3ef77f5993035e6392f06884d"
     },
     {
-      "id": "conceptual-models",
-      "title": "概念モデル",
-      "path": "knowledge/conceptual-models/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "26980ae301868ee6665542e4ff70b128ebf776632e7dc84ced1cb8547b29e84e"
+      "id": "conceptual-models", "title": "概念モデル", "version": "1.0.1",
+      "path": "knowledge/conceptual-models/KNOWLEDGE.md", "sha256": "26980ae301868ee6665542e4ff70b128ebf776632e7dc84ced1cb8547b29e84e"
     },
     {
-      "id": "design-systems",
-      "title": "デザインシステム",
-      "version": "1.0.0",
-      "path": "knowledge/design-systems/KNOWLEDGE.md",
-      "sha256": "ef35691469ace73ed56e12e0aec3f0967ad47ab24e6cd160fd3b1c57226c78bd"
+      "id": "design-systems", "title": "デザインシステム", "version": "1.0.0",
+      "path": "knowledge/design-systems/KNOWLEDGE.md", "sha256": "ef35691469ace73ed56e12e0aec3f0967ad47ab24e6cd160fd3b1c57226c78bd"
     },
     {
-      "id": "design-tokens",
-      "title": "Design Token",
-      "path": "knowledge/design-tokens/KNOWLEDGE.md",
-      "version": "1.1.1",
-      "sha256": "7f418302a2804917f9268e66e032311ba5071b4e72c4f704beb4e664aaa936c3"
+      "id": "design-tokens", "title": "Design Token", "version": "1.1.1",
+      "path": "knowledge/design-tokens/KNOWLEDGE.md", "sha256": "7f418302a2804917f9268e66e032311ba5071b4e72c4f704beb4e664aaa936c3"
     },
     {
-      "id": "ecological-interface-design",
-      "title": "Ecological Interface Design",
-      "path": "knowledge/ecological-interface-design/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "2db467a01203a7a6bccd357c540b09ae05642b3754b34aec0ec67dd33ef4ba57"
+      "id": "ecological-interface-design", "title": "Ecological Interface Design", "version": "1.0.1",
+      "path": "knowledge/ecological-interface-design/KNOWLEDGE.md", "sha256": "2db467a01203a7a6bccd357c540b09ae05642b3754b34aec0ec67dd33ef4ba57"
     },
     {
-      "id": "external-representations",
-      "title": "外的表象",
-      "path": "knowledge/external-representations/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "72af83d84c29060564cc0089af2da4bc59b9d70704444cff0116476fed0d8b9a"
+      "id": "external-representations", "title": "外的表象", "version": "1.0.1",
+      "path": "knowledge/external-representations/KNOWLEDGE.md", "sha256": "72af83d84c29060564cc0089af2da4bc59b9d70704444cff0116476fed0d8b9a"
     },
     {
-      "id": "grouping",
-      "title": "グルーピング",
-      "path": "knowledge/grouping/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "8705b947909f6a9c17a969c43d81ab1266de905ce202e80677a8a93857d4d779"
+      "id": "grouping", "title": "グルーピング", "version": "1.0.1",
+      "path": "knowledge/grouping/KNOWLEDGE.md", "sha256": "8705b947909f6a9c17a969c43d81ab1266de905ce202e80677a8a93857d4d779"
     },
     {
-      "id": "human-centered-design",
-      "title": "人間中心設計",
-      "version": "1.0.0",
-      "path": "knowledge/human-centered-design/KNOWLEDGE.md",
-      "sha256": "5b1d3c310507bc6b119f856fac94fd45b472810673a2743e96aacf5cc6be08d1"
+      "id": "human-centered-design", "title": "人間中心設計", "version": "1.0.0",
+      "path": "knowledge/human-centered-design/KNOWLEDGE.md", "sha256": "5b1d3c310507bc6b119f856fac94fd45b472810673a2743e96aacf5cc6be08d1"
     },
     {
-      "id": "information-architecture",
-      "title": "情報アーキテクチャ",
-      "version": "1.0.0",
-      "path": "knowledge/information-architecture/KNOWLEDGE.md",
-      "sha256": "f84f88dc80ce06ba430dbae0fc8c6212da2d335341fa7fbcf5aca089b43276d9"
+      "id": "information-architecture", "title": "情報アーキテクチャ", "version": "1.0.0",
+      "path": "knowledge/information-architecture/KNOWLEDGE.md", "sha256": "f84f88dc80ce06ba430dbae0fc8c6212da2d335341fa7fbcf5aca089b43276d9"
     },
     {
-      "id": "interaction-design",
-      "title": "インタラクションデザイン",
-      "version": "1.0.0",
-      "path": "knowledge/interaction-design/KNOWLEDGE.md",
-      "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9"
+      "id": "interaction-design", "title": "インタラクションデザイン", "version": "1.0.0",
+      "path": "knowledge/interaction-design/KNOWLEDGE.md", "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9"
     },
     {
-      "id": "layout-spacing",
-      "title": "レイアウトの余白",
-      "path": "knowledge/layout-spacing/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "37372a03fdefcfd0505defa59e4a645c0ad1d61c3c726465fbe20db9eb09a5c8"
+      "id": "layout-spacing", "title": "レイアウトの余白", "version": "1.0.1",
+      "path": "knowledge/layout-spacing/KNOWLEDGE.md", "sha256": "37372a03fdefcfd0505defa59e4a645c0ad1d61c3c726465fbe20db9eb09a5c8"
     },
     {
-      "id": "lightness-and-luminance",
-      "title": "明度と相対輝度",
-      "path": "knowledge/lightness-and-luminance/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "95a60e478ac953f35981343b1878a6e5c92eb352eeb69802eefe1da26f97a56e"
+      "id": "lightness-and-luminance", "title": "明度と相対輝度", "version": "1.0.1",
+      "path": "knowledge/lightness-and-luminance/KNOWLEDGE.md", "sha256": "95a60e478ac953f35981343b1878a6e5c92eb352eeb69802eefe1da26f97a56e"
     },
     {
-      "id": "typography",
-      "title": "Typography",
-      "path": "knowledge/typography/KNOWLEDGE.md",
-      "version": "1.0.1",
-      "sha256": "b68344d1ddf4e8e009fd37cbbbf3498d221a7df166bb57f136442bacaf8e4575"
+      "id": "typography", "title": "Typography", "version": "1.0.1",
+      "path": "knowledge/typography/KNOWLEDGE.md", "sha256": "b68344d1ddf4e8e009fd37cbbbf3498d221a7df166bb57f136442bacaf8e4575"
     },
     {
-      "id": "ui-layering",
-      "path": "knowledge/ui-layering/KNOWLEDGE.md",
-      "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95",
-      "title": "UIのレイヤー構造",
-      "version": "1.0.0"
+      "id": "ui-layering", "title": "UIのレイヤー構造", "version": "1.0.0",
+      "path": "knowledge/ui-layering/KNOWLEDGE.md", "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95"
     },
     {
-      "id": "usability-testing",
-      "title": "ユーザビリティテスト",
-      "version": "1.0.0",
-      "path": "knowledge/usability-testing/KNOWLEDGE.md",
-      "sha256": "a5baa55a51baca43cd5b95411b83a6b57f29a44ded5cc70d148bf005a41ae515"
+      "id": "usability-testing", "title": "ユーザビリティテスト", "version": "1.0.0",
+      "path": "knowledge/usability-testing/KNOWLEDGE.md", "sha256": "a5baa55a51baca43cd5b95411b83a6b57f29a44ded5cc70d148bf005a41ae515"
     },
     {
-      "id": "user-journeys",
-      "title": "ユーザージャーニー",
-      "version": "1.0.0",
-      "path": "knowledge/user-journeys/KNOWLEDGE.md",
-      "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32"
+      "id": "user-journeys", "title": "ユーザージャーニー", "version": "1.0.0",
+      "path": "knowledge/user-journeys/KNOWLEDGE.md", "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32"
     },
     {
-      "id": "visual-hierarchy",
-      "title": "視覚的な優先順位",
-      "path": "knowledge/visual-hierarchy/KNOWLEDGE.md",
-      "version": "1.1.0",
-      "sha256": "8bc1694eadb833d82e7b6f08ad5a35b2494dbf0254eefaa62bbba0f0c7c9be60"
+      "id": "visual-hierarchy", "title": "視覚的な優先順位", "version": "1.1.0",
+      "path": "knowledge/visual-hierarchy/KNOWLEDGE.md", "sha256": "8bc1694eadb833d82e7b6f08ad5a35b2494dbf0254eefaa62bbba0f0c7c9be60"
     },
-    { "id": "goal-directed-design", "path": "knowledge/goal-directed-design/KNOWLEDGE.md", "sha256": "2e1ed5dc4a841a56287b193f66b393e77973484d12ca9cc04eaa4e69754840b7",
-    "title": "Goal-Directed Design", "version": "1.0.1" },
-    { "id": "reflective-conversation", "path": "knowledge/reflective-conversation/KNOWLEDGE.md", "sha256": "75464bd7f569e67088e1976acd5a7b453d119213ef7114d74f862914a6657619",
-    "title": "設計状況との省察的な対話", "version": "1.0.1" },
-    { "id": "scenario-based-design", "path": "knowledge/scenario-based-design/KNOWLEDGE.md", "sha256": "648b1d139b1d839fb605b7521529908931c9a13c761f8088c0ac2c0ad359efcd",
-    "title": "シナリオに基づくデザイン", "version": "1.0.1" },
-    { "id": "sketches-and-prototypes", "path": "knowledge/sketches-and-prototypes/KNOWLEDGE.md", "sha256": "883a29232a401247f21bff5c822b7f7c851af57efe98f42ed0ec34edbd366153",
-    "title": "スケッチとプロトタイプ", "version": "1.0.1" },
-    { "id": "visual-style", "title": "UIの視覚的なスタイル", "path": "knowledge/visual-style/KNOWLEDGE.md",
-      "version": "1.0.0", "sha256": "b1668e7c4ec1b2e07ac80c11060d0fb6c48b9c2b6a514411ab8cbbf4fff77c13" }
+    {
+      "id": "goal-directed-design", "title": "Goal-Directed Design", "version": "1.0.1",
+      "path": "knowledge/goal-directed-design/KNOWLEDGE.md", "sha256": "2e1ed5dc4a841a56287b193f66b393e77973484d12ca9cc04eaa4e69754840b7"
+    },
+    {
+      "id": "reflective-conversation", "title": "設計状況との省察的な対話", "version": "1.0.1",
+      "path": "knowledge/reflective-conversation/KNOWLEDGE.md", "sha256": "75464bd7f569e67088e1976acd5a7b453d119213ef7114d74f862914a6657619"
+    },
+    {
+      "id": "scenario-based-design", "title": "シナリオに基づくデザイン", "version": "1.0.1",
+      "path": "knowledge/scenario-based-design/KNOWLEDGE.md", "sha256": "648b1d139b1d839fb605b7521529908931c9a13c761f8088c0ac2c0ad359efcd"
+    },
+    {
+      "id": "sketches-and-prototypes", "title": "スケッチとプロトタイプ", "version": "1.0.1",
+      "path": "knowledge/sketches-and-prototypes/KNOWLEDGE.md", "sha256": "883a29232a401247f21bff5c822b7f7c851af57efe98f42ed0ec34edbd366153"
+    },
+    {
+      "id": "visual-style", "title": "UIの視覚的なスタイル", "version": "1.0.0",
+      "path": "knowledge/visual-style/KNOWLEDGE.md", "sha256": "b1668e7c4ec1b2e07ac80c11060d0fb6c48b9c2b6a514411ab8cbbf4fff77c13"
+    },
+    {
+      "id": "double-diamond", "title": "Double Diamond", "version": "1.0.0",
+      "path": "knowledge/double-diamond/KNOWLEDGE.md", "sha256": "6ccdd94cb4ea1984223bc011f8affab5ef0298a1ad38069ca72364962d5718d5"
+    },
+    {
+      "id": "user-research", "title": "ユーザーリサーチ", "version": "1.0.0",
+      "path": "knowledge/user-research/KNOWLEDGE.md", "sha256": "1a5821ff349042c16a9c2f0b47c7861c8c0a78abe1c9ab1ea0683828e0297d64"
+    },
+    {
+      "id": "user-needs", "title": "ユーザーニーズ", "version": "1.0.0",
+      "path": "knowledge/user-needs/KNOWLEDGE.md", "sha256": "d8c07fbcf46c322317fad1fb4b476c8d7d383c051c62d967f2c2e8c315d93152"
+    },
+    {
+      "id": "user-stories", "title": "ユーザーストーリーと受入条件", "version": "1.0.0",
+      "path": "knowledge/user-stories/KNOWLEDGE.md", "sha256": "5f968e40a7bde0a430eeb285754ced309a289d988b625f74a61969d488c6deaa"
+    },
+    {
+      "id": "heart-framework", "title": "HEARTと目標・シグナル・指標", "version": "1.0.0",
+      "path": "knowledge/heart-framework/KNOWLEDGE.md", "sha256": "3109d7b7c97b095787f987b06499c887e6d12607b3d91c2f5fbea9dcdcf0b3c9"
+    }
   ],
   "edges": [
     {
