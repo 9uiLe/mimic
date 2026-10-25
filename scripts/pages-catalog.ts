@@ -8,6 +8,7 @@ export const conceptIds = Object.freeze([
   'human-centered-design', 'user-journeys', 'information-architecture',
   'interaction-design', 'design-systems', 'usability-testing',
   'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes', 'visual-style',
+  'double-diamond', 'user-research', 'user-needs', 'user-stories', 'heart-framework',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -29,7 +30,7 @@ export const exampleFiles = Object.freeze([
   'knowledge/visual-style/examples/style-rationale.md',
 ]);
 export const additionalSources = Object.freeze([
-  'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md',
+  'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md', 'topics/product-design.md',
 ]);
 export const readerViews: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries([
   ['knowledge/README.md', 'index.html'],
@@ -38,7 +39,7 @@ export const readerViews: Readonly<Record<string, string>> = Object.freeze(Objec
   ['guideline/design-system.md', 'guideline/design-system.html'],
   ['relations/README.md', 'relations/index.html'],
   ['topics/decision-material-selection.md', 'topics/decision-material-selection.html'],
-  ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md'].map(file => [
+  ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md', 'topics/product-design.md'].map(file => [
     file, file.endsWith('/KNOWLEDGE.md') ? file.replace(/KNOWLEDGE\.md$/, 'index.html') : file.replace(/\.md$/, '.html'),
   ]),
 ]));
@@ -47,6 +48,8 @@ export const escapeHtml = (value: string) => value.replace(/[&<>"']/g,
 
 export function renderTopicGuides() {
   const guides = [
+    ['topics/product-design.html', 'プロダクトデザインの進め方と定義',
+      '設計の流れ、必要な情報、目的・要求・評価の違いから読む。'],
     ['topics/scenario-to-screen.html', 'シナリオから機能と画面構成を考える',
       '活動・要求・機能候補・画面構成と、表して考え直す過程を読み分ける。'],
     ['topics/product-ui-design.html', 'プロダクト全体のUI設計',

@@ -36,6 +36,11 @@
 | `reflective-conversation` | [設計状況との省察的な対話](reflective-conversation/KNOWLEDGE.md) | 設計の変更と結果の読み取りを通じて問題や意図を考え直す過程 |
 | `sketches-and-prototypes` | [スケッチとプロトタイプ](sketches-and-prototypes/KNOWLEDGE.md) | 表現物の性質と、探索・具体化・検査などの意図による区別 |
 | `visual-style` | [UIの視覚的なスタイル](visual-style/KNOWLEDGE.md) | 視覚表現の組み合わせ、目的との関係、統一感と表現の幅 |
+| `double-diamond` | [Double Diamond](double-diamond/KNOWLEDGE.md) | 問題と解決案の探索と絞り込みを、四つの活動で表すプロセス |
+| `user-research` | [ユーザーリサーチ](user-research/KNOWLEDGE.md) | 利用者の行動・目標・文脈を調べ、設計判断の根拠を得る活動 |
+| `user-needs` | [ユーザーニーズ](user-needs/KNOWLEDGE.md) | 利用者が達成する必要のあることと、特定の解決案との違い |
+| `user-stories` | [ユーザーストーリーと受入条件](user-stories/KNOWLEDGE.md) | 利用者の必要に対応する仕事と、成果を確認する条件の表現 |
+| `heart-framework` | [HEARTと目標・シグナル・指標](heart-framework/KNOWLEDGE.md) | 利用体験の目標から、兆候と測定指標を考える枠組み |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
@@ -51,7 +56,7 @@
 
 ## 複数の概念から読む
 
-横断的な案内は[「シナリオから機能と画面構成を考える」](../topics/scenario-to-screen.md)、[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
+横断的な案内は[「プロダクトデザインの進め方と定義」](../topics/product-design.md)、[「シナリオから機能と画面構成を考える」](../topics/scenario-to-screen.md)、[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
 
 「判断材料の選定」からは、UIの文字・画像・ボタンの情報の多さ、必要性、重要度、目立ち方の関係を説明する知識へ進めます。
 

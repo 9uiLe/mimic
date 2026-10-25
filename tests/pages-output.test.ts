@@ -111,6 +111,17 @@ const expectedFiles = [
   'knowledge/visual-style/KNOWLEDGE.md', 'knowledge/visual-style/index.html',
   'knowledge/visual-style/references/sources.md', 'knowledge/visual-style/references/sources.html',
   'knowledge/visual-style/examples/style-rationale.md', 'knowledge/visual-style/examples/style-rationale.html',
+  'topics/product-design.md', 'topics/product-design.html',
+  'knowledge/double-diamond/KNOWLEDGE.md', 'knowledge/double-diamond/index.html',
+  'knowledge/double-diamond/references/sources.md', 'knowledge/double-diamond/references/sources.html',
+  'knowledge/user-research/KNOWLEDGE.md', 'knowledge/user-research/index.html',
+  'knowledge/user-research/references/sources.md', 'knowledge/user-research/references/sources.html',
+  'knowledge/user-needs/KNOWLEDGE.md', 'knowledge/user-needs/index.html',
+  'knowledge/user-needs/references/sources.md', 'knowledge/user-needs/references/sources.html',
+  'knowledge/user-stories/KNOWLEDGE.md', 'knowledge/user-stories/index.html',
+  'knowledge/user-stories/references/sources.md', 'knowledge/user-stories/references/sources.html',
+  'knowledge/heart-framework/KNOWLEDGE.md', 'knowledge/heart-framework/index.html',
+  'knowledge/heart-framework/references/sources.md', 'knowledge/heart-framework/references/sources.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -165,7 +176,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 430);
+  assert.equal(expectedFiles.length, 452);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -181,8 +192,10 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
     'the home page title must identify the question lookup section');
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 26, 'catalog must expose all twenty-six reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 31, 'catalog must expose all thirty-one reviewed concepts');
   assert.match(entry, /AI Slop/);
+  assert.ok(entry.includes('href="topics/product-design.html">プロダクトデザインの進め方と定義</a>'),
+    'catalog must open the product design topic reader');
   assert.ok(entry.includes('href="topics/scenario-to-screen.html"'), 'catalog must open the scenario topic reader');
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
   assert.ok(entry.includes('href="topics/product-ui-design.html"'), 'catalog must open the UI design topic reader');
@@ -201,21 +214,24 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'interaction-design': '1.0.0', 'design-systems': '1.0.0', 'usability-testing': '1.0.0',
     'scenario-based-design': '1.0.1', 'goal-directed-design': '1.0.1',
     'reflective-conversation': '1.0.1', 'sketches-and-prototypes': '1.0.1', 'visual-style': '1.0.0',
+    'double-diamond': '1.0.0', 'user-research': '1.0.0', 'user-needs': '1.0.0',
+    'user-stories': '1.0.0', 'heart-framework': '1.0.0',
   }, 'catalog must map each concept to its source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 14,
     'catalog must show fourteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 8,
-    'catalog must show eight v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 13,
+    'catalog must show thirteen v1.0.0 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 3,
     'catalog must show three v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
-    'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/product-ui-design.html']) {
+    'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/product-ui-design.html',
+    'topics/product-design.md', 'topics/product-design.html']) {
     const content = await readFile(path.join(out, file), 'utf8');
     assert.doesNotMatch(content, /正式採用|採用済み|掲載済み/, `${file}: reader must not show adoption labels`);
   }
-  assert.doesNotMatch(entry, /research\//);
+  assert.doesNotMatch(entry, /href="(?:[^"]*\/)?research\//, 'catalog must not link to retired research directories');
   assert.ok(expectedFiles.every(file => !/\.pdf$|^output\/|^\.agents\/|^\.git\/|^README\.md$|(?:^|\/)logs?(?:\/|$)|\.log$/i.test(file)));
 });
 
@@ -463,7 +479,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 66);
+  assert.equal(readers.length, 76);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
@@ -519,6 +535,27 @@ test('topics retain their text and open every explicitly related concept reader'
       assert.ok(html.includes(`href="../knowledge/${id}/index.html"`), `${id}: topic must open the concept reader`);
     }
   }
+});
+
+test('the product design topic retains its title, text, and seven concept reader paths', async () => {
+  const { out } = await fixture();
+  await buildPages(out);
+  const source = await readFile(path.join(root, 'topics/product-design.md'), 'utf8');
+  const html = await readFile(path.join(out, 'topics/product-design.html'), 'utf8');
+  const visible = plainText(html.slice(html.indexOf('</style>')));
+  assert.ok(html.includes('<h1 class="type-title" id="title">プロダクトデザインの進め方と定義</h1>'));
+  assert.doesNotMatch(html, /<meta name="knowledge-version"|<dt>version<\/dt>/, 'title-only topic must not invent a version');
+  for (const token of marked.lexer(source.replace(/^---\n[\s\S]*?\n---\n/, ''))) {
+    if (token.type === 'space') continue;
+    assert.ok(visible.includes(plainText(marked.Parser.parse([token]))), 'product design topic source block must remain readable');
+  }
+  assert.ok(html.includes(`<meta name="source-sha256" content="${hash(Buffer.from(source))}">`));
+  assert.ok(html.includes('href="product-design.md"'), 'canonical product design topic Markdown must remain available');
+  for (const id of ['human-centered-design', 'double-diamond', 'user-research', 'user-needs',
+    'user-stories', 'usability-testing', 'heart-framework']) {
+    assert.ok(html.includes(`href="../knowledge/${id}/index.html"`), `${id}: product design topic must open the concept reader`);
+  }
+  assert.ok(html.includes('href="../knowledge/user-stories/index.html#受入条件"'), 'product design topic must retain the acceptance section');
 });
 
 test('the UI design topic and six concepts retain their text and reader paths', async () => {
