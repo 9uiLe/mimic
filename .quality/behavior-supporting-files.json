@@ -116,7 +116,13 @@
       "knowledge/user-stories/references/sources.md",
       "knowledge/heart-framework/KNOWLEDGE.md",
       "knowledge/heart-framework/references/sources.md",
-      "topics/product-design.md"
+      "topics/product-design.md",
+      "knowledge/ios-branding/KNOWLEDGE.md",
+      "knowledge/ios-branding/examples/library.md",
+      "knowledge/ios-branding/references/sources.md",
+      "knowledge/liquid-glass/KNOWLEDGE.md",
+      "knowledge/liquid-glass/examples/library-layers.md",
+      "knowledge/liquid-glass/references/sources.md"
     ],
     "pages-font-assets": [
       "assets/fonts/gen-interface-jp/0.8.0/integrity.json",

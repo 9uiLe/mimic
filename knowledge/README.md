@@ -41,6 +41,8 @@
 | `user-needs` | [ユーザーニーズ](user-needs/KNOWLEDGE.md) | 利用者が達成する必要のあることと、特定の解決案との違い |
 | `user-stories` | [ユーザーストーリーと受入条件](user-stories/KNOWLEDGE.md) | 利用者の必要に対応する仕事と、成果を確認する条件の表現 |
 | `heart-framework` | [HEARTと目標・シグナル・指標](heart-framework/KNOWLEDGE.md) | 利用体験の目標から、兆候と測定指標を考える枠組み |
+| `ios-branding` | [iOSにおけるブランド表現](ios-branding/KNOWLEDGE.md) | iOSの慣れた操作と、内容・文字・動きによる製品の個性との関係 |
+| `liquid-glass` | [Liquid Glass](liquid-glass/KNOWLEDGE.md) | Appleの素材が表す層、背景への適応、操作に応じた動き |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 

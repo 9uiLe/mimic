@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "coverage": {
-    "nodes": "knowledge/以下に存在する全31概念。ノードは概念本文単位。",
+    "nodes": "knowledge/以下に存在する全33概念。ノードは概念本文単位。",
     "edges": "本文の関係説明と根拠節から編集した意味辺。概念間の全関係を網羅せず、型付きの辺が未登録の概念も含む。UIの視覚的なスタイルは値の共有と表現の判断を区別する。",
     "absence": "辺が未記載であることは、無関係・独立・前提不要・関係の不存在を意味しない。",
     "authority": "概念説明はknowledge本文、型付き関係の定義はrelationsの正本。本文引用は根拠の追跡用であり、原典の正式分類ではない。",
@@ -133,6 +133,14 @@
     {
       "id": "heart-framework", "title": "HEARTと目標・シグナル・指標", "version": "1.0.0",
       "path": "knowledge/heart-framework/KNOWLEDGE.md", "sha256": "3109d7b7c97b095787f987b06499c887e6d12607b3d91c2f5fbea9dcdcf0b3c9"
+    },
+    {
+      "id": "ios-branding", "title": "iOSにおけるブランド表現", "version": "1.0.0",
+      "path": "knowledge/ios-branding/KNOWLEDGE.md", "sha256": "3d25ef9789a840b33777e69a60fb5f3c9f64465c2dc92d9fac763fd862cb8fe6"
+    },
+    {
+      "id": "liquid-glass", "title": "Liquid Glass", "version": "1.0.0",
+      "path": "knowledge/liquid-glass/KNOWLEDGE.md", "sha256": "55606ec408622df2a96a637ebea2f09973bf569b93cbed6830b27651d7d61f3d"
     }
   ],
   "edges": [
@@ -762,6 +770,20 @@
       "scope": "値の共有と表現の選択理由の区別。両概念の無関係や依存関係を示さない。",
       "statement": "表現の候補値を共有する仕組みと、値や組み合わせが目的に合うかというスタイルの判断を区別する。",
       "evidence": [{ "concept": "visual-style", "heading": "値の共有とスタイルの判断",
-        "quotation": "候補となる値をそろえることと、その値や組み合わせが製品の目的に合うと判断することは別です。" }] }
+        "quotation": "候補となる値をそろえることと、その値や組み合わせが製品の目的に合うと判断することは別です。" }] },
+    {
+      "id": "ios-branding--associated_with--liquid-glass", "from": "ios-branding", "to": "liquid-glass",
+      "type": "associated_with", "scope": "AppleのiOS向け指針の説明。必要前提や必読順序を意味しない。",
+      "statement": "iOSのブランド表現には、コンテンツ側の色と上に浮くLiquid Glassとの関係という接点がある。",
+      "evidence": [{"concept": "ios-branding", "heading": "言葉・色・文字による表現",
+        "quotation": "ブランド色をコンテンツ側に置き、上に浮く[Liquid Glass](../liquid-glass/KNOWLEDGE.md)との関係で表すことも案内しています。"}]
+    },
+    {
+      "id": "ios-branding--complemented_by--typography", "from": "ios-branding", "to": "typography",
+      "type": "complemented_by", "scope": "AppleのiOS向け指針の説明。必要前提や必読順序を意味しない。",
+      "statement": "iOSのブランド表現を考える材料として、Typographyが文字の組合せや拡大への対応の観点を補う。",
+      "evidence": [{"concept": "ios-branding", "heading": "関連する概念と説明例",
+        "quotation": "[Typography](../typography/KNOWLEDGE.md)は文字を組み合わせ、役割や拡大に応じる説明です。"}]
+    }
   ]
 }

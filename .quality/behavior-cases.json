@@ -186,17 +186,18 @@
         "assertionMessage": "reader link must reach the reviewed HTML concept and original section"
       }
     },
-    { "id": "pages-catalog-completeness", "requirement": "Pagesの入口から全31概念の本文を選べる。", "oracle": { "status": "confirmed", "source": "guideline/knowledge-view.md", "section": "Pagesの読書経路",
-    "quotation": "一覧の対象は明示した31概念と照合し、ファイルを追加しただけでは掲載しません。", "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき31件を固定する。実装配列の長さから期待値を作らない。" }, "input": { "index": "knowledge/README.md",
-    "conceptCount": 31 }, "expected": { "readerLinks": 31, "redirect": false }, "assumptions": [ "索引掲載数と選択経路を機械検査する。本文の意味や使いやすさの実証ではない。" ], "implementation": "scripts/pages-catalog.ts",
+    { "id": "pages-catalog-completeness", "requirement": "Pagesの入口から全33概念の本文を選べる。", "oracle": { "status": "confirmed", "source": "guideline/knowledge-view.md", "section": "Pagesの読書経路",
+    "quotation": "一覧の対象は明示した33概念と照合し、ファイルを追加しただけでは掲載しません。", "reasoning": "全知識へ進める一覧という改善依頼と表示規約に基づき33件を固定する。実装配列の長さから期待値を作らない。" }, "input": { "index": "knowledge/README.md",
+    "conceptCount": 33 }, "expected": { "readerLinks": 33, "redirect": false }, "assumptions": [ "索引掲載数と選択経路を機械検査する。本文の意味や使いやすさの実証ではない。" ], "implementation": "scripts/pages-catalog.ts",
     "test": "tests/pages-output.test.ts", "supportingFiles": [], "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes", "mutation": {
     "description": "配信ファイルは残すが、一覧から最後の概念だけ落とす。", "find": "const items = rows.map(row => {", "replace": "const items = rows.slice(0, -1).map(row => {",
-    "assertionMessage": "catalog must expose all thirty-one reviewed concepts" }, "supportingFileSets": [ "pages-build-inputs", "pages-font-assets" ] },
-    { "id": "pages-catalog-version", "requirement": "Pages入口の全31概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。", "oracle": { "status": "confirmed", "source": "guideline/knowledge-view.md",
+    "assertionMessage": "catalog must expose all thirty-three reviewed concepts" }, "supportingFileSets": [ "pages-build-inputs", "pages-font-assets" ] },
+    { "id": "pages-catalog-version", "requirement": "Pages入口の全33概念に正本の版を概念IDごとに対応させ、各本文へのリンクを保持する。", "oracle": { "status": "confirmed", "source": "guideline/knowledge-view.md",
     "section": "Pagesの読書経路", "quotation": "一覧の説明は `knowledge/README.md` の表から読み、題名・版は各本文から読みます。", "relatedSource": "knowledge/README.md#参照する前に",
-    "reasoning": "31本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。" }, "input": { "index": "knowledge/README.md", "concepts": 31 }, "expected": { "conceptVersions": { "design-tokens": "1.1.1",
+    "reasoning": "33本文の正本メタデータから題名と版を読み、入口から到達できる表示規約に基づく。" }, "input": { "index": "knowledge/README.md", "concepts": 33 }, "expected": { "conceptVersions": { "design-tokens": "1.1.1",
     "ai-slop": "1.1.0", "aesthetic-and-minimalist-design": "1.1.0", "visual-hierarchy": "1.1.0", "other14Concepts": "1.0.1", "new6Concepts": "1.0.0", "ui-layering": "1.0.0",
-    "visual-style": "1.0.0", "new5ProductDesignConcepts": "1.0.0" }, "count": 31 }, "assumptions": [ "31概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。" ], "implementation": "scripts/pages-catalog.ts",
+    "visual-style": "1.0.0", "new5ProductDesignConcepts": "1.0.0",
+    "ios-branding": "1.0.0", "liquid-glass": "1.0.0" }, "count": 33 }, "assumptions": [ "33概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。" ], "implementation": "scripts/pages-catalog.ts",
     "test": "tests/pages-output.test.ts", "supportingFiles": [], "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes", "mutation": {
     "description": "Pages一覧の各概念の版を誤表示する。", "find": "const version = source.match(/^version: \"?([^\"\\n]+)\"?$/m)?.[1];", "replace": "const version = '0.0.0';",
     "assertionMessage": "catalog must map each concept to its source version" }, "supportingFileSets": [ "pages-build-inputs", "pages-font-assets" ] },
@@ -237,8 +238,8 @@
         "quotation": "本文を一つのページへ取り込まず、概念・関連概念・例・出典をそれぞれのページで読みます。",
         "reasoning": "概念の独立性と関連資料を辿る読書経路は表示規約と利用者の改善依頼に基づく。期待hrefは固定した入出力パスから記載し、実装を呼んで計算しない。"
       },
-      "input": {"concepts": 31, "supplements": 45},
-      "expected": {"htmlReaders": 76, "sourcesHref": "references/sources.html", "relatedHref": "../visual-hierarchy/index.html"},
+      "input": {"concepts": 33, "supplements": 49},
+      "expected": {"htmlReaders": 82, "sourcesHref": "references/sources.html", "relatedHref": "../visual-hierarchy/index.html"},
       "assumptions": ["全文ブロック保持と版・リンクを機械で検査する。知識の妥当性や利用者への効果の検証ではない。"],
       "implementation": "scripts/build-knowledge.ts", "test": "tests/pages-output.test.ts",
       "supportingFiles": ["scripts/knowledge-images.ts"],
@@ -757,6 +758,34 @@
     "section": "Pagesの読書経路", "quotation": "旧研究資料の全文はPagesへ配信せず、入口から旧研究ディレクトリへリンクしません。" }, "assumptions": [ "生成内容と参照先を検査し、知識の妥当性や使いやすさは判定しない。" ], "implementation": "scripts/pages-catalog.ts",
     "test": "tests/pages-output.test.ts", "supportingFiles": [], "supportingFileSets": [ "pages-build-inputs", "pages-font-assets" ], "input": { "catalog": "index.html" }, "expected": {
     "retiredResearchLinks": 0 }, "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes", "mutation": { "description": "案内一覧へ旧研究ディレクトリのリンクを追加する。",
-    "find": "const guides = [", "replace": "const guides = [ ['research/retired.html', '旧研究資料', '旧研究資料'],", "assertionMessage": "catalog must not link to retired research directories" } }
+    "find": "const guides = [", "replace": "const guides = [ ['research/retired.html', '旧研究資料', '旧研究資料'],", "assertionMessage": "catalog must not link to retired research directories" } },
+    {
+      "id": "ios-branding-knowledge-entry", "requirement": "追加した概念の固定入口idをディレクトリ名と一致させ、本文・補足への参照を保持する。",
+      "oracle": {"status": "confirmed", "source": "guideline/knowledge-structure.md", "section": "固定の入口と補足",
+        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "reasoning": "承認された知識追加の固定入口を、生成結果ではなく索引とディレクトリ名から定める。"},
+      "input": {"conceptDirectory": "knowledge/ios-branding"}, "expected": {"id": "ios-branding"},
+      "assumptions": ["固定入口と生成の検査であり、原典への忠実さや生成品質の改善を保証しない。"],
+      "implementation": "knowledge/ios-branding/KNOWLEDGE.md", "test": "tests/knowledge-output.test.ts",
+      "supportingFiles": ["tests/fixtures/knowledge-display.md"], "supportingFileSets": ["pages-build-inputs"],
+      "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
+      "mutation": {"description": "追加した知識の入口idを誤変更してディレクトリ名との不一致を作る。",
+        "find": "id: ios-branding", "replace": "id: mismatched-ios-branding",
+        "assertionMessage": "ios-branding: entry id must match concept directory"}
+    },
+    {
+      "id": "liquid-glass-knowledge-entry", "requirement": "追加した概念の固定入口idをディレクトリ名と一致させ、本文・補足への参照を保持する。",
+      "oracle": {"status": "confirmed", "source": "guideline/knowledge-structure.md", "section": "固定の入口と補足",
+        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "reasoning": "承認された知識追加の固定入口を、生成結果ではなく索引とディレクトリ名から定める。"},
+      "input": {"conceptDirectory": "knowledge/liquid-glass"}, "expected": {"id": "liquid-glass"},
+      "assumptions": ["固定入口と生成の検査であり、原典への忠実さや生成品質の改善を保証しない。"],
+      "implementation": "knowledge/liquid-glass/KNOWLEDGE.md", "test": "tests/knowledge-output.test.ts",
+      "supportingFiles": ["tests/fixtures/knowledge-display.md"], "supportingFileSets": ["pages-build-inputs"],
+      "testName": "each concept has a matching fixed entry, resolvable support links, and metadata preserved by generation",
+      "mutation": {"description": "追加した知識の入口idを誤変更してディレクトリ名との不一致を作る。",
+        "find": "id: liquid-glass", "replace": "id: mismatched-liquid-glass",
+        "assertionMessage": "liquid-glass: entry id must match concept directory"}
+    }
   ]
 }

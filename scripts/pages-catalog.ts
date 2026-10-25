@@ -9,6 +9,7 @@ export const conceptIds = Object.freeze([
   'interaction-design', 'design-systems', 'usability-testing',
   'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes', 'visual-style',
   'double-diamond', 'user-research', 'user-needs', 'user-stories', 'heart-framework',
+  'ios-branding', 'liquid-glass',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -28,6 +29,8 @@ export const exampleFiles = Object.freeze([
   'knowledge/interaction-design/examples/recording-app.md',
   'knowledge/goal-directed-design/examples/reading-notes.md',
   'knowledge/visual-style/examples/style-rationale.md',
+  'knowledge/ios-branding/examples/library.md',
+  'knowledge/liquid-glass/examples/library-layers.md',
 ]);
 export const additionalSources = Object.freeze([
   'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md', 'topics/product-design.md',

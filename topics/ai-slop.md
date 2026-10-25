@@ -25,4 +25,8 @@ UIへの適用案とその検証は、知識の説明と区別します。版は
 情報内容や表現をさらに検討するときは[判断材料の選定](decision-material-selection.md)、
 色や値の共有を検討するときは[色の知識](color.md)と[Design Token](../knowledge/design-tokens/KNOWLEDGE.md)へ進めます。
 
+iOSの慣れた操作と製品の個性を考えるときは[iOSにおけるブランド表現](../knowledge/ios-branding/KNOWLEDGE.md)、
+素材の層や操作時の変化を考えるときは[Liquid Glass](../knowledge/liquid-glass/KNOWLEDGE.md)を読みます。
+これらはAppleの指針・設計言語の説明であり、AI Slopの原因や回避手順の効果を実証するものではありません。
+
 [知識の索引](../knowledge/README.md)に、すべての概念の入口があります。
