@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "mode": "illustration",
+  "contract": {
+    "id": "web-normal-text-contrast", "version": "1",
+    "sha256": "bc3424726d58aa5be21081e46264569aeffb601548ac9abe4699d65d05afc0ea"
+  },
+  "binding": {
+    "artifact": {
+      "path": "contracts/examples/fixture.json",
+      "sha256": "4663339629ebe6788be6c62f5afb95ada1185916af4d6a525d004671832111ad"
+    },
+    "target": "sample-caption",
+    "conditions": {"theme": "light", "state": "default", "locale": "ja", "rendering": "synthetic"},
+    "coverage": {
+      "scope": "架空の通常文字一つ。条件式の境界値の説明に限る。",
+      "members": ["sample-caption"], "basis": ["fixture"],
+      "unexamined": ["実画面、他の文字・テーマ・状態、実色対の取得と比の算出。"]
+    },
+    "adoption": {"status": "not-adopted", "reason": "契約と入力形式を説明する例。実案件へ採用していない。"},
+    "review_policy": {"authorized_reviewers": [], "basis": []}
+  },
+  "observations": {
+    "platform": {"value": "web", "evidence": ["fixture"]},
+    "is-text": {"value": true, "evidence": ["fixture"]},
+    "is-exempt": {"value": false, "evidence": ["fixture"]},
+    "text-class": {"value": "normal", "evidence": ["fixture"]},
+    "background-model": {"value": "opaque-uniform-srgb", "evidence": ["fixture"]},
+    "contrast-ratio": {"value": {"lower": "9/2", "upper": "9/2"}, "evidence": ["fixture"]}
+  },
+  "reviews": [],
+  "evidence": [
+    {
+      "id": "fixture", "path": "contracts/examples/fixture.json",
+      "sha256": "4663339629ebe6788be6c62f5afb95ada1185916af4d6a525d004671832111ad",
+      "locator": "/contrast", "method": "synthetic-input", "producer": "Mimic explanation example",
+      "limitations": ["値を与えた説明例であり、実測や実色対の計算の証拠ではない。"]
+    }
+  ],
+  "application_trace": [],
+  "result": {
+    "execution": "valid", "applicability": "applicable", "support": "supported",
+    "application": "not-demonstrated", "satisfaction": "satisfied",
+    "requirements": [
+      {
+        "id": "minimum-ratio", "result": "satisfied",
+        "reason": "与えた区間の下端が契約の閾値と等しい。入力された架空の値に限った期待結果。",
+        "evidence": ["fixture"]
+      }
+    ],
+    "diagnostics": ["実評価の結果ではない。適用記録はなく、実画面の比も確認していない。"]
+  }
+}

@@ -2,6 +2,25 @@
   "schema_version": 1,
   "contracts": [
     {
+      "id": "knowledge-application-contracts",
+      "paths": ["contracts/**/*.json"],
+      "purpose": "知識の説明から独立した製品の対象範囲・設計判断台帳と、必要な適用契約・証拠・判定を構造化する。",
+      "basis_status": "confirmed",
+      "basis": ["contracts/product-design.md", "contracts/model.md", "contracts/examples/README.md"],
+      "validation": [
+        "JSON Schema Draft 2020-12で台帳・全契約・評価記録の例を検査し、不正な構造の拒否も確認する。",
+        "本文・依存・契約・成果物・証拠のSHA-256と根拠の見出し・引用を実ファイルで照合する。",
+        "bun run quality:check",
+        "bun run quality:test",
+        "bun run build:pages",
+        "bun run verify"
+      ],
+      "unresolved": [
+        "評価器・意味検査・変換器は未実装。例にある期待結果を実行済みの評価として扱わない。",
+        "構造検査は、契約の解釈や意味判断の妥当性、実画面の品質を保証しない。"
+      ]
+    },
+    {
       "id": "repository-quality-policy",
       "paths": [
         "scripts/quality/*",
