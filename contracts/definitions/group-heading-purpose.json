@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "group-heading-purpose",
+  "version": "1",
+  "status": "example",
+  "claim": "Webのグループに既に存在する見出しが、その内容の主題または目的を説明しているかを判断する。",
+  "sources": [
+    {
+      "id": "heading-purpose",
+      "concept": "grouping",
+      "path": "knowledge/grouping/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "8705b947909f6a9c17a969c43d81ab1266de905ce202e80677a8a93857d4d779",
+      "heading": "名称と見出しで内容を説明する",
+      "quotation": "見出しとラベルが主題または目的を説明することを求めています。"
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "knowledge/grouping/references/sources.md",
+      "sha256": "57833e89a369346a20b611940f277e7c278749fbd78ba9919f880ae61ae4c44d"
+    }
+  ],
+  "assumptions": [
+    "グループの見出しを、本文が説明する見出しとラベルの一部として選んだMimicの操作的な解釈である。",
+    "意味判断の入力と判断基準はMimicが設計したもので、原典の機械判定手順ではない。",
+    "案件側が、判断者と承認の根拠を明示する。AIの提案だけでは意味判断を確定しない。"
+  ],
+  "limitations": [
+    "すべてのグループへの見出し追加、正しいマークアップ、分類自体の最適性を要求・保証しない。",
+    "近接距離や文字列の類似度を、主題または目的を説明することの代替条件にしない。",
+    "見出しについての意味判断だけで、利用者による理解や探しやすさを実証したとは扱わない。"
+  ],
+  "inputs": {
+    "platform": {
+      "type": "enum", "values": ["web", "other"], "description": "対象プラットフォーム。",
+      "evidence": "対象成果物と実行環境がWebであることの記録。"
+    },
+    "has-heading": {
+      "type": "boolean", "description": "対象グループに見出しが存在するか。",
+      "evidence": "グループと見出しの対応を示すスナップショット。"
+    },
+    "heading": {
+      "type": "text", "description": "実際に表示する見出し。", "evidence": "対象の版で取得した見出し全文。"
+    },
+    "group-content": {
+      "type": "text", "description": "見出しが説明する内容の集合。", "evidence": "対象グループの全内容と、その範囲の根拠。"
+    },
+    "user-task": {
+      "type": "text", "description": "この集合を読む利用者の作業と文脈。", "evidence": "案件が採用した課題・利用文脈の記録。"
+    }
+  },
+  "applicability": {
+    "op": "all",
+    "args": [
+      {"op": "eq", "input": "platform", "value": "web"},
+      {"op": "eq", "input": "has-heading", "value": true}
+    ]
+  },
+  "supported_domain": {"op": "eq", "input": "platform", "value": "web"},
+  "requirements": [
+    {
+      "id": "describes-purpose", "kind": "judgment",
+      "statement": "見出しが内容の主題または目的を説明している。",
+      "sources": ["heading-purpose"], "inputs": ["heading", "group-content", "user-task"],
+      "question": "利用者の作業と集合の内容に照らし、この見出しは何の集合か、または何のための集合かを説明しているか。",
+      "rubric": {
+        "accept": ["集合の内容と見出しが対応し、主題または目的を説明する理由を具体的な項目に結び付けられる。"],
+        "reject": ["見出しと集合の内容・目的の間に、具体的な食い違いを示せる。"],
+        "unknown": ["集合の範囲、利用者の作業、解釈上の対立、判断の承認のいずれかが未解決である。"]
+      }
+    }
+  ]
+}

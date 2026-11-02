@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "mode": "illustration",
+  "contract": {
+    "id": "group-heading-purpose", "version": "1",
+    "sha256": "d79b83f548ff4f349be9ba95ba8b1906e606fc9136783f9080dc56e6fc5ea298"
+  },
+  "binding": {
+    "artifact": {
+      "path": "contracts/examples/fixture.json",
+      "sha256": "4663339629ebe6788be6c62f5afb95ada1185916af4d6a525d004671832111ad"
+    },
+    "target": "sample-account-group",
+    "conditions": {"locale": "ja", "state": "default", "rendering": "synthetic"},
+    "coverage": {
+      "scope": "架空のグループ見出し一つ。意味判断が未承認の場合の説明。",
+      "members": ["sample-account-group"], "basis": ["fixture"],
+      "unexamined": ["実画面、他の集合と分類、利用者による理解、判断の承認。"]
+    },
+    "adoption": {"status": "not-adopted", "reason": "契約と入力形式を説明する例。実案件へ採用していない。"},
+    "review_policy": {"authorized_reviewers": [], "basis": []}
+  },
+  "observations": {
+    "platform": {"value": "web", "evidence": ["fixture"]},
+    "has-heading": {"value": true, "evidence": ["fixture"]},
+    "heading": {"value": "アカウント設定", "evidence": ["fixture"]},
+    "group-content": {"value": "メールアドレス変更、パスワード変更、アカウント削除。", "evidence": ["fixture"]},
+    "user-task": {"value": "自分のアカウント情報を変更する。", "evidence": ["fixture"]}
+  },
+  "reviews": [
+    {
+      "requirement": "describes-purpose", "decision": "accept", "by": "example-agent", "authority": "proposed",
+      "reason": "列挙した操作はいずれもアカウント情報の管理に関わる。ただし、この判断の承認者は未定である。",
+      "evidence": ["fixture"]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "fixture", "path": "contracts/examples/fixture.json",
+      "sha256": "4663339629ebe6788be6c62f5afb95ada1185916af4d6a525d004671832111ad",
+      "locator": "/group", "method": "synthetic-input", "producer": "Mimic explanation example",
+      "limitations": ["AIの判断案を与えた説明例。承認済みの意味判断や利用者評価ではない。"]
+    }
+  ],
+  "application_trace": [],
+  "result": {
+    "execution": "valid", "applicability": "applicable", "support": "supported",
+    "application": "not-demonstrated", "satisfaction": "undetermined",
+    "requirements": [
+      {
+        "id": "describes-purpose", "result": "undetermined",
+        "reason": "意味判断は提案であり、案件が承認した判断者と承認の根拠がない。", "evidence": ["fixture"]
+      }
+    ],
+    "diagnostics": ["見出しが存在することと、見出しが内容を適切に説明することを区別する。"]
+  }
+}

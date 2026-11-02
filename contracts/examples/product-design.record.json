@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "kind": "product-design-record",
+  "id": "fictional-record-service",
+  "revision": 1,
+  "product": "通信が中断しても記録を後から確認できるサービスを考える、架空の検討台帳。",
+  "sources": [
+    {
+      "id": "scenario", "path": "contracts/examples/product-design-basis.md",
+      "sha256": "f36119e8ec6d559d8957e4fc0b02e31335f9a47b2962baffcc7e0dd0997cc025",
+      "description": "目的・利用状況・候補・確認計画を与えた説明用の仮定。実際の要件や観察ではない。"
+    },
+    {
+      "id": "needs-knowledge", "path": "knowledge/user-needs/KNOWLEDGE.md",
+      "sha256": "d8c07fbcf46c322317fad1fb4b476c8d7d383c051c62d967f2c2e8c315d93152",
+      "description": "必要な成果と解決案を区別する知識。版1.0.0。"
+    },
+    {
+      "id": "interaction-knowledge", "path": "knowledge/interaction-design/KNOWLEDGE.md",
+      "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9",
+      "description": "行為、状態、応答と中断・再開を考える知識。版1.0.0。"
+    },
+    {
+      "id": "journey-knowledge", "path": "knowledge/user-journeys/KNOWLEDGE.md",
+      "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32",
+      "description": "利用前後と複数接点のつながりを考える知識。版1.0.0。"
+    }
+  ],
+  "goals": [
+    {"id": "recover-record", "description": "中断を経ても、入力した記録を後から確認できる。未調査の目的の仮定。", "basis": ["scenario"]}
+  ],
+  "contexts": [
+    {"id": "interrupted-mobile", "description": "移動中に通信が途切れる状況を仮定する。対象者の調査は未実施。", "basis": ["scenario"]},
+    {"id": "later-recovery", "description": "後から別端末で確認し、復旧できなければ問い合わせる状況を仮定する。", "basis": ["scenario"]}
+  ],
+  "boundary": {
+    "included": ["記録の必要性、保存結果の意味、途中の状態と伝達、中断後の再開、復旧できない場合の受け渡し。"],
+    "excluded": [],
+    "unknowns": ["利用者と必要性の実態、支援技術、情報の保護、他の接点、長期利用、その他の未発見の論点。"],
+    "inventory_basis": ["scenario", "needs-knowledge", "interaction-knowledge", "journey-knowledge"],
+    "review": {"status": "pending", "reason": "説明用に対象を選んだ段階であり、案件の対象範囲をレビューしていない。"}
+  },
+  "subjects": [
+    {"id": "record-need", "kind": "製品が満たす必要", "description": "後から記録を確認する必要そのもの。", "basis": ["scenario"]},
+    {"id": "save-meaning", "kind": "情報と結果の意味", "description": "下書き、サーバー受付、別端末での確認の違い。", "basis": ["scenario"]},
+    {"id": "feedback", "kind": "状態と伝達内容", "description": "途中・完了・失敗について利用者へ何を伝えるか。", "basis": ["scenario"]},
+    {"id": "resume-task", "kind": "中断と再開", "description": "作業を失わずに記録を続けること。", "basis": ["scenario"]},
+    {"id": "support-handoff", "kind": "利用後の他接点への受け渡し", "description": "復旧できないときの問い合わせと情報の保護。", "basis": ["scenario"]}
+  ],
+  "relations": [
+    {
+      "id": "state-to-feedback", "from": "save-meaning", "to": "feedback",
+      "meaning": "表す結果の意味が、利用者へ伝える内容を制約する。",
+      "contexts": ["interrupted-mobile", "later-recovery"], "basis": ["scenario", "interaction-knowledge"]
+    },
+    {
+      "id": "recovery-to-support", "from": "resume-task", "to": "support-handoff",
+      "meaning": "再開できない場合に、問い合わせとの受け渡しを検討する。",
+      "contexts": ["later-recovery"], "basis": ["scenario", "journey-knowledge"]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "choose-product-responsibility", "question": "通信中断時に製品は何を守り、どこまでの再開を支えるか。",
+      "concerns": ["必要な機能と担当範囲", "利用者の目的"], "goals": ["recover-record"],
+      "subjects": ["record-need", "resume-task"], "relations": [],
+      "contexts": ["interrupted-mobile", "later-recovery"], "depends_on": [], "basis": ["scenario"],
+      "materials": [
+        {"source": "needs-knowledge", "disposition": "use", "reason": "必要な結果と端末側保存という解決案を区別して検討する。", "basis": ["scenario"]}
+      ],
+      "resolution": {
+        "status": "chosen", "choice": "この説明例では、端末に下書きを残す案を選ぶ。",
+        "rationale": "中断後の再開を支える候補とする。対象者への有効性や実装を検証した選択ではない。", "basis": ["scenario"]
+      },
+      "outputs": ["scenario"],
+      "verification": {
+        "contract_status": "unmapped",
+        "checks": [
+          {
+            "id": "observe-resumption", "method": "observation", "question": "対象者は中断後の状態を理解して再開できるか。",
+            "procedure": ["scenario"], "records": []
+          }
+        ],
+        "unknowns": ["実際の利用者、試作品、観察記録、保存内容の保護、採用する評価条件。"]
+      }
+    },
+    {
+      "id": "decide-save-semantics", "question": "どの状態を保存完了と呼び、中断や失敗をどう伝えるか。",
+      "concerns": ["情報の意味", "操作と応答", "文言と期待の一致"], "goals": ["recover-record"],
+      "subjects": ["save-meaning", "feedback"], "relations": ["state-to-feedback"],
+      "contexts": ["interrupted-mobile", "later-recovery"], "depends_on": ["choose-product-responsibility"], "basis": ["scenario"],
+      "materials": [
+        {"source": "interaction-knowledge", "disposition": "use", "reason": "行為、状態、伝達内容、中断と再開を対応付ける。", "basis": ["scenario"]}
+      ],
+      "resolution": {"status": "pending", "unknowns": ["完了の意味、競合時の処理、再試行と取り消し、利用者に伝わる言葉。"]},
+      "outputs": [],
+      "verification": {
+        "contract_status": "unmapped",
+        "checks": [
+          {
+            "id": "review-action-response", "method": "review", "question": "行為と状態と伝える内容が一致するか。",
+            "procedure": ["scenario", "interaction-knowledge"], "records": []
+          }
+        ],
+        "unknowns": ["状態・遷移のモデル、対象環境、操作の実物。現行の契約形式には時相演算がない。"]
+      }
+    },
+    {
+      "id": "decide-handoff", "question": "復旧できない利用者が別の接点へ進むとき、何をどう引き継ぐか。",
+      "concerns": ["サービスのつながり", "情報の保護と利用者の制御"], "goals": ["recover-record"],
+      "subjects": ["resume-task", "support-handoff"], "relations": ["recovery-to-support"],
+      "contexts": ["later-recovery"], "depends_on": ["choose-product-responsibility", "decide-save-semantics"], "basis": ["scenario"],
+      "materials": [
+        {"source": "journey-knowledge", "disposition": "use", "reason": "画面内の操作で終わらない目的と受け渡しを考える。", "basis": ["scenario"]}
+      ],
+      "resolution": {"status": "pending", "unknowns": ["引き継ぐ情報、本人の選択、支援側の運用、適用される制約と根拠。"]},
+      "outputs": [],
+      "verification": {
+        "contract_status": "undetermined", "checks": [],
+        "unknowns": ["必要な調査・知識・確認方法を選定していない。対象外や検証済みという意味ではない。"]
+      }
+    }
+  ]
+}

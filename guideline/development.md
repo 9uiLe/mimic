@@ -7,6 +7,7 @@
 - デザイン知識の正本は `knowledge/<概念ID>/KNOWLEDGE.md` とそこから参照する補足資料です。[知識の入口](../knowledge/README.md)から参照できます。配置は[知識の構造ガイド](knowledge-structure.md)に従います。
 - 構造化した関係は `relations/graph.json`、関係型・方向・推移規則は `relations/vocabulary.json` を編集します。[関係グラフの案内](../relations/README.md)に従い、本文内の説明と根拠を照合します。
 - 複数の概念を横断して読むための案内は `topics/` を編集します。
+- 製品の設計判断台帳は `contracts/product-design.md` と `contracts/schemas/product-design.schema.json`、適用契約は `contracts/definitions/*.json` と `contracts/model.md` を編集します。実案件の台帳・証拠・結果は契約の定義へ書き込みません。提供範囲と構造検査は [案内](https://github.com/9uiLe/mimic/blob/main/contracts/README.md)を参照します。
 - Repositoryの運用方針は[利用ガイド](README.md)、AIの作業指示は[AI向けガイド](ai.md)を編集します。
 - 閲覧UIの原則・スタイル・部品・状態・例外は[デザインシステム](design-system.md)、Tokenは`design/tokens.json`、疑問の案内は`design/reading-paths.json`を編集します。
 - 表示構造とToken変換は`scripts/`、Pages共通CSSは`web/reading.css`、共通操作は`web/reading.js`、関係探索は`web/graph.js`を編集します。`scripts/knowledge-view.css`は単体ローカルプレビュー用に保持します。配布フォントは`assets/`に保持します。

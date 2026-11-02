@@ -1,0 +1,29 @@
+{
+  "purpose": "架空の入力。実画面の測定・利用者評価・意味判断の承認を示す証拠ではない。",
+  "contrast": {
+    "target": "sample-caption",
+    "conditions": {"theme": "light", "state": "default", "locale": "ja", "rendering": "synthetic"},
+    "coverage": ["sample-caption"],
+    "context": {
+      "platform": "web", "is-text": true, "is-exempt": false,
+      "text-class": "normal", "background-model": "opaque-uniform-srgb"
+    },
+    "measurement": {
+      "contrast-ratio": {"lower": "9/2", "upper": "9/2"},
+      "method": "境界値を与えた説明用の入力。実色対からの算出結果ではない。"
+    }
+  },
+  "group": {
+    "target": "sample-account-group",
+    "conditions": {"locale": "ja", "state": "default", "rendering": "synthetic"},
+    "coverage": ["sample-account-group"],
+    "context": {"platform": "web", "has-heading": true},
+    "heading": "アカウント設定",
+    "group-content": "メールアドレス変更、パスワード変更、アカウント削除。",
+    "user-task": "自分のアカウント情報を変更する。",
+    "review": {
+      "decision": "accept", "by": "example-agent", "authority": "proposed",
+      "reason": "列挙した操作はいずれもアカウント情報の管理に関わる。ただし、この判断の承認者は未定である。"
+    }
+  }
+}

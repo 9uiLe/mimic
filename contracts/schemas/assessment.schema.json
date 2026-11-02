@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mimic application assessment, format 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "mode", "contract", "binding", "observations", "reviews", "evidence", "application_trace", "result"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mode": {"enum": ["screening", "illustration", "evaluation"]},
+    "contract": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version", "sha256"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "version": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifact", "target", "conditions", "coverage", "adoption", "review_policy"],
+      "properties": {
+        "artifact": {"$ref": "contract.schema.json#/$defs/file"},
+        "target": {"$ref": "#/$defs/text"},
+        "conditions": {
+          "type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/text"}
+        },
+        "coverage": {
+          "type": "object", "additionalProperties": false, "required": ["scope", "members", "basis", "unexamined"],
+          "properties": {
+            "scope": {"$ref": "#/$defs/text"},
+            "members": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+            "basis": {"$ref": "#/$defs/ids"}, "unexamined": {"$ref": "#/$defs/texts"}
+          }
+        },
+        "adoption": {
+          "oneOf": [
+            {
+              "type": "object", "additionalProperties": false, "required": ["status", "reason"],
+              "properties": {"status": {"const": "not-adopted"}, "reason": {"$ref": "#/$defs/text"}}
+            },
+            {
+              "type": "object", "additionalProperties": false, "required": ["status", "by", "evidence"],
+              "properties": {
+                "status": {"const": "adopted"}, "by": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/ids"}
+              }
+            }
+          ]
+        },
+        "review_policy": {
+          "type": "object", "additionalProperties": false, "required": ["authorized_reviewers", "basis"],
+          "properties": {
+            "authorized_reviewers": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+            "basis": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}
+          }
+        }
+      }
+    },
+    "observations": {
+      "type": "object", "additionalProperties": false,
+      "patternProperties": {"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$": {"$ref": "#/$defs/observation"}}
+    },
+    "reviews": {"type": "array", "items": {"$ref": "#/$defs/review"}},
+    "evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidence"}},
+    "application_trace": {"type": "array", "items": {"$ref": "#/$defs/application"}},
+    "result": {"$ref": "#/$defs/result"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "evaluation"}}},
+      "then": {"properties": {"binding": {"properties": {"adoption": {"properties": {"status": {"const": "adopted"}}}}}}}
+    },
+    {
+      "if": {"properties": {"mode": {"const": "screening"}}},
+      "then": {
+        "properties": {
+          "result": {
+            "properties": {
+              "application": {"const": "undetermined"},
+              "satisfaction": {"enum": ["undetermined", "not-applicable"]},
+              "requirements": {"maxItems": 0}
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {"$ref": "contract.schema.json#/$defs/id"},
+    "ids": {"$ref": "contract.schema.json#/$defs/ids"},
+    "text": {"$ref": "contract.schema.json#/$defs/text"},
+    "texts": {"$ref": "contract.schema.json#/$defs/texts"},
+    "sha256": {"$ref": "contract.schema.json#/$defs/sha256"},
+    "observation": {
+      "type": "object", "additionalProperties": false, "required": ["value", "evidence"],
+      "properties": {
+        "value": {"oneOf": [{"type": ["boolean", "string"]}, {"$ref": "contract.schema.json#/$defs/interval"}]},
+        "evidence": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requirement", "decision", "by", "authority", "reason", "evidence"],
+      "properties": {
+        "requirement": {"$ref": "#/$defs/id"}, "decision": {"enum": ["accept", "reject", "unknown"]},
+        "by": {"$ref": "#/$defs/text"}, "authority": {"enum": ["proposed", "authorized"]},
+        "reason": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "path", "sha256", "locator", "method", "producer", "limitations"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "path": {"$ref": "contract.schema.json#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/sha256"}, "locator": {"$ref": "#/$defs/text"},
+        "method": {"$ref": "#/$defs/text"}, "producer": {"$ref": "#/$defs/text"},
+        "limitations": {"$ref": "#/$defs/texts"}
+      }
+    },
+    "application": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requirement", "target", "decision", "reason", "evidence"],
+      "properties": {
+        "requirement": {"$ref": "#/$defs/id"}, "target": {"$ref": "#/$defs/text"},
+        "decision": {"$ref": "#/$defs/text"}, "reason": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "result": {
+      "type": "object", "additionalProperties": false,
+      "required": ["execution", "applicability", "support", "application", "satisfaction", "requirements", "diagnostics"],
+      "properties": {
+        "execution": {"enum": ["valid", "invalid", "stale"]},
+        "applicability": {"enum": ["applicable", "not-applicable", "undetermined"]},
+        "support": {"enum": ["supported", "unsupported", "undetermined"]},
+        "application": {"enum": ["recorded", "not-demonstrated", "undetermined"]},
+        "satisfaction": {"enum": ["satisfied", "violated", "undetermined", "not-applicable"]},
+        "requirements": {"type": "array", "items": {"$ref": "#/$defs/requirement_result"}},
+        "diagnostics": {"$ref": "#/$defs/texts"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"execution": {"enum": ["invalid", "stale"]}}},
+          "then": {
+            "properties": {
+              "applicability": {"const": "undetermined"}, "support": {"const": "undetermined"},
+              "application": {"const": "undetermined"}, "satisfaction": {"const": "undetermined"},
+              "requirements": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"applicability": {"const": "not-applicable"}}},
+          "then": {
+            "properties": {
+              "support": {"const": "undetermined"}, "application": {"const": "undetermined"},
+              "satisfaction": {"const": "not-applicable"}, "requirements": {"maxItems": 0}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"satisfaction": {"enum": ["satisfied", "violated"]}}},
+          "then": {
+            "properties": {
+              "execution": {"const": "valid"}, "applicability": {"const": "applicable"},
+              "support": {"const": "supported"}, "requirements": {"minItems": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"application": {"const": "recorded"}}},
+          "then": {
+            "properties": {
+              "execution": {"const": "valid"}, "applicability": {"const": "applicable"}, "support": {"const": "supported"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"satisfaction": {"const": "not-applicable"}}},
+          "then": {"properties": {"applicability": {"const": "not-applicable"}}}
+        }
+      ]
+    },
+    "requirement_result": {
+      "type": "object", "additionalProperties": false, "required": ["id", "result", "reason", "evidence"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "result": {"enum": ["satisfied", "violated", "undetermined"]},
+        "reason": {"$ref": "#/$defs/text"},
+        "evidence": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}
+      }
+    }
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mimic product design record, format 1",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "kind", "id", "revision", "product", "sources", "goals", "contexts", "boundary", "subjects", "relations", "decisions"],
+  "properties": {
+    "schema_version": {"const": 1}, "kind": {"const": "product-design-record"},
+    "id": {"$ref": "#/$defs/id"}, "revision": {"type": "integer", "minimum": 1},
+    "product": {"$ref": "#/$defs/text"},
+    "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/source"}},
+    "goals": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/description"}},
+    "contexts": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/description"}},
+    "boundary": {"$ref": "#/$defs/boundary"},
+    "subjects": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/subject"}},
+    "relations": {"type": "array", "items": {"$ref": "#/$defs/relation"}},
+    "decisions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/decision"}}
+  },
+  "$defs": {
+    "id": {"$ref": "contract.schema.json#/$defs/id"},
+    "ids": {"$ref": "contract.schema.json#/$defs/ids"},
+    "text": {"$ref": "contract.schema.json#/$defs/text"},
+    "texts": {"$ref": "contract.schema.json#/$defs/texts"},
+    "references": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["id", "path", "sha256", "description"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "path": {"$ref": "contract.schema.json#/$defs/path"},
+        "sha256": {"$ref": "contract.schema.json#/$defs/sha256"}, "description": {"$ref": "#/$defs/text"}
+      }
+    },
+    "description": {
+      "type": "object", "additionalProperties": false, "required": ["id", "description", "basis"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "description": {"$ref": "#/$defs/text"}, "basis": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "boundary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["included", "excluded", "unknowns", "inventory_basis", "review"],
+      "properties": {
+        "included": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+        "excluded": {"type": "array", "items": {"$ref": "#/$defs/exclusion"}},
+        "unknowns": {"$ref": "#/$defs/texts"}, "inventory_basis": {"$ref": "#/$defs/ids"},
+        "review": {
+          "oneOf": [
+            {
+              "type": "object", "additionalProperties": false, "required": ["status", "reason"],
+              "properties": {"status": {"const": "pending"}, "reason": {"$ref": "#/$defs/text"}}
+            },
+            {
+              "type": "object", "additionalProperties": false, "required": ["status", "by", "basis", "unresolved"],
+              "properties": {
+                "status": {"const": "reviewed"}, "by": {"$ref": "#/$defs/text"},
+                "basis": {"$ref": "#/$defs/ids"}, "unresolved": {"$ref": "#/$defs/texts"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "exclusion": {
+      "type": "object", "additionalProperties": false, "required": ["description", "reason", "by", "basis"],
+      "properties": {
+        "description": {"$ref": "#/$defs/text"}, "reason": {"$ref": "#/$defs/text"},
+        "by": {"$ref": "#/$defs/text"}, "basis": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "subject": {
+      "type": "object", "additionalProperties": false, "required": ["id", "kind", "description", "basis"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "kind": {"$ref": "#/$defs/text"},
+        "description": {"$ref": "#/$defs/text"}, "basis": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "relation": {
+      "type": "object", "additionalProperties": false, "required": ["id", "from", "to", "meaning", "contexts", "basis"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "from": {"$ref": "#/$defs/id"}, "to": {"$ref": "#/$defs/id"},
+        "meaning": {"$ref": "#/$defs/text"}, "contexts": {"$ref": "#/$defs/ids"}, "basis": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "decision": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "id", "question", "concerns", "goals", "subjects", "relations", "contexts", "depends_on", "basis", "materials", "resolution", "outputs", "verification"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "question": {"$ref": "#/$defs/text"},
+        "concerns": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}},
+        "goals": {"$ref": "#/$defs/ids"}, "subjects": {"$ref": "#/$defs/ids"},
+        "relations": {"$ref": "#/$defs/references"}, "contexts": {"$ref": "#/$defs/ids"},
+        "depends_on": {"$ref": "#/$defs/references"}, "basis": {"$ref": "#/$defs/ids"},
+        "materials": {"type": "array", "items": {"$ref": "#/$defs/material"}}, "outputs": {"$ref": "#/$defs/references"},
+        "resolution": {"$ref": "#/$defs/resolution"}, "verification": {"$ref": "#/$defs/verification"}
+      }
+    },
+    "material": {
+      "type": "object", "additionalProperties": false, "required": ["source", "disposition", "reason", "basis"],
+      "properties": {
+        "source": {"$ref": "#/$defs/id"}, "disposition": {"enum": ["use", "do-not-use", "undetermined"]},
+        "reason": {"$ref": "#/$defs/text"}, "basis": {"$ref": "#/$defs/ids"}
+      }
+    },
+    "resolution": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "unknowns"],
+          "properties": {
+            "status": {"const": "pending"}, "unknowns": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "choice", "rationale", "basis"],
+          "properties": {
+            "status": {"const": "chosen"}, "choice": {"$ref": "#/$defs/text"},
+            "rationale": {"$ref": "#/$defs/text"}, "basis": {"$ref": "#/$defs/ids"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["status", "reason", "by", "basis"],
+          "properties": {
+            "status": {"const": "excluded"}, "reason": {"$ref": "#/$defs/text"},
+            "by": {"$ref": "#/$defs/text"}, "basis": {"$ref": "#/$defs/ids"}
+          }
+        }
+      ]
+    },
+    "verification": {
+      "type": "object", "additionalProperties": false, "required": ["contract_status", "checks", "unknowns"],
+      "properties": {
+        "contract_status": {"enum": ["mapped", "unmapped", "undetermined"]},
+        "checks": {"type": "array", "items": {"$ref": "#/$defs/check"}}, "unknowns": {"$ref": "#/$defs/texts"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"contract_status": {"const": "mapped"}}},
+          "then": {"properties": {"checks": {"contains": {"properties": {"method": {"const": "contract"}}, "required": ["method"]}}}}
+        },
+        {
+          "if": {"properties": {"contract_status": {"enum": ["unmapped", "undetermined"]}}},
+          "then": {"properties": {"checks": {"not": {"contains": {"properties": {"method": {"const": "contract"}}, "required": ["method"]}}}}}
+        }
+      ]
+    },
+    "check": {
+      "type": "object", "additionalProperties": false, "required": ["id", "method", "question", "procedure", "records"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "method": {"enum": ["contract", "observation", "review", "formal"]},
+        "question": {"$ref": "#/$defs/text"}, "procedure": {"$ref": "#/$defs/ids"},
+        "records": {"$ref": "#/$defs/references"},
+        "contract": {
+          "type": "object", "additionalProperties": false, "required": ["source", "requirements"],
+          "properties": {"source": {"$ref": "#/$defs/id"}, "requirements": {"$ref": "#/$defs/ids"}}
+        }
+      },
+      "allOf": [
+        {"if": {"properties": {"method": {"const": "contract"}}}, "then": {"required": ["contract"]}},
+        {"if": {"properties": {"method": {"enum": ["observation", "review", "formal"]}}}, "then": {"not": {"required": ["contract"]}}}
+      ]
+    }
+  }
+}

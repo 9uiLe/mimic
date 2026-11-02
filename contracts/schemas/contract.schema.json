@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mimic application contract, format 1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "id", "version", "status", "claim", "sources", "dependencies",
+    "assumptions", "limitations", "inputs", "applicability", "supported_domain", "requirements"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "#/$defs/id"},
+    "version": {"type": "string", "pattern": "^[1-9][0-9]*$"},
+    "status": {"enum": ["example", "candidate", "adopted", "retired"]},
+    "claim": {"$ref": "#/$defs/text"},
+    "sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/source"}},
+    "dependencies": {"type": "array", "items": {"$ref": "#/$defs/file"}},
+    "assumptions": {"$ref": "#/$defs/texts"},
+    "limitations": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+    "inputs": {
+      "type": "object", "minProperties": 1, "additionalProperties": false,
+      "patternProperties": {"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$": {"$ref": "#/$defs/input"}}
+    },
+    "applicability": {"$ref": "#/$defs/expression"},
+    "supported_domain": {"$ref": "#/$defs/expression"},
+    "requirements": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/requirement"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+    "text": {"type": "string", "minLength": 1},
+    "texts": {"type": "array", "items": {"$ref": "#/$defs/text"}},
+    "ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "path": {"type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[^\\u0000]+$"},
+    "rational": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:/[1-9][0-9]*)?$"},
+    "interval": {
+      "type": "object", "additionalProperties": false, "required": ["lower", "upper"],
+      "properties": {"lower": {"$ref": "#/$defs/rational"}, "upper": {"$ref": "#/$defs/rational"}}
+    },
+    "file": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": {"path": {"$ref": "#/$defs/path"}, "sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "concept", "path", "version", "sha256", "heading", "quotation"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "concept": {"$ref": "#/$defs/id"},
+        "path": {"$ref": "#/$defs/path"}, "version": {"$ref": "#/$defs/text"},
+        "sha256": {"$ref": "#/$defs/sha256"}, "heading": {"$ref": "#/$defs/text"},
+        "quotation": {"$ref": "#/$defs/text"}
+      }
+    },
+    "input": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "description", "evidence"],
+          "properties": {
+            "type": {"enum": ["boolean", "text"]},
+            "description": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/text"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "description", "evidence", "values"],
+          "properties": {
+            "type": {"const": "enum"}, "description": {"$ref": "#/$defs/text"}, "evidence": {"$ref": "#/$defs/text"},
+            "values": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/text"}}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["type", "description", "evidence", "unit"],
+          "properties": {
+            "type": {"const": "interval"}, "description": {"$ref": "#/$defs/text"},
+            "evidence": {"$ref": "#/$defs/text"}, "unit": {"$ref": "#/$defs/text"}
+          }
+        }
+      ]
+    },
+    "expression": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["op", "input", "value"],
+          "properties": {
+            "op": {"const": "eq"}, "input": {"$ref": "#/$defs/id"}, "value": {"type": ["boolean", "string"]}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["op", "input", "value", "unit"],
+          "properties": {
+            "op": {"const": "gte"}, "input": {"$ref": "#/$defs/id"},
+            "value": {"$ref": "#/$defs/rational"}, "unit": {"$ref": "#/$defs/text"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["op", "args"],
+          "properties": {
+            "op": {"enum": ["all", "any"]},
+            "args": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/expression"}}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["op", "arg"],
+          "properties": {"op": {"const": "not"}, "arg": {"$ref": "#/$defs/expression"}}
+        }
+      ]
+    },
+    "requirement": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "kind", "statement", "sources", "expression"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"}, "kind": {"const": "predicate"},
+            "statement": {"$ref": "#/$defs/text"}, "sources": {"$ref": "#/$defs/ids"},
+            "expression": {"$ref": "#/$defs/expression"}
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "kind", "statement", "sources", "inputs", "question", "rubric"],
+          "properties": {
+            "id": {"$ref": "#/$defs/id"}, "kind": {"const": "judgment"},
+            "statement": {"$ref": "#/$defs/text"}, "sources": {"$ref": "#/$defs/ids"},
+            "inputs": {"$ref": "#/$defs/ids"}, "question": {"$ref": "#/$defs/text"},
+            "rubric": {
+              "type": "object", "additionalProperties": false, "required": ["accept", "reject", "unknown"],
+              "properties": {
+                "accept": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+                "reject": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}},
+                "unknown": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/text"}}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

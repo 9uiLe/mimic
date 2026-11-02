@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "id": "web-normal-text-contrast",
+  "version": "1",
+  "status": "example",
+  "claim": "例外に該当しないWebの通常文字について、固定した表示条件の文字と背景の比を検査する。",
+  "sources": [
+    {
+      "id": "text-minimum",
+      "concept": "color-contrast",
+      "path": "knowledge/color-contrast/KNOWLEDGE.md",
+      "version": "1.0.1",
+      "sha256": "4ca77d5abd11e8ea9e16b3857ae0495c806381e3ef77f5993035e6392f06884d",
+      "heading": "文字：WCAG 2.2 達成基準1.4.3",
+      "quotation": "文字と文字画像の視覚表現に原則4.5:1以上を求めます。"
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "knowledge/color-contrast/references/sources.md",
+      "sha256": "02dbdce75e401ce5db138d5a0471e334d3f5d4e989d6cbab8f2b9f79a13386c6"
+    }
+  ],
+  "assumptions": [
+    "Mimicの検査例として、通常文字と不透明・一様なsRGB背景だけを検査範囲に選んでいる。",
+    "文字分類と例外の有無は、本文と原典の定義に照合した証拠で確定する。未認定は観測を省く。",
+    "比の区間はWCAGの相対輝度に基づく計算結果を囲む。計算方法・精度と前景・背景の取得根拠を証拠に残す。"
+  ],
+  "limitations": [
+    "大きな文字、透過、画像背景、非文字の検査条件はこの例に定義していない。",
+    "WCAG全体の適合、色だけによる情報伝達、画面全体の読みやすさを保証しない。",
+    "入力された比を生成する計算器と、実画面からの色の取得は、この契約の述語評価に含めない。"
+  ],
+  "inputs": {
+    "platform": {
+      "type": "enum", "values": ["web", "other"],
+      "description": "対象プラットフォーム。",
+      "evidence": "対象成果物と実行環境がWebであることの記録。"
+    },
+    "is-text": {
+      "type": "boolean", "description": "文字または文字画像であるか。",
+      "evidence": "対象要素と視覚表現を特定した記録。"
+    },
+    "is-exempt": {
+      "type": "boolean", "description": "達成基準1.4.3の例外に該当するか。",
+      "evidence": "例外の定義と対象の照合。該当しないとした根拠も記録する。"
+    },
+    "text-class": {
+      "type": "enum", "values": ["normal", "large"], "description": "達成基準の定義に沿った文字分類。",
+      "evidence": "サイズ、太さ、書体と言語を大きな文字の定義に照合した記録。"
+    },
+    "background-model": {
+      "type": "enum", "values": ["opaque-uniform-srgb", "other"], "description": "比の計算が扱う背景と合成のモデル。",
+      "evidence": "前景・背景の色空間、不透明性、一様性を確認した記録。"
+    },
+    "contrast-ratio": {
+      "type": "interval", "unit": "ratio", "description": "誤差を含め、丸め前の比を囲む区間。",
+      "evidence": "取得した色対、計算方法、精度、対象と表示条件を含む計算記録。"
+    }
+  },
+  "applicability": {
+    "op": "all",
+    "args": [
+      {"op": "eq", "input": "platform", "value": "web"},
+      {"op": "eq", "input": "is-text", "value": true},
+      {"op": "eq", "input": "is-exempt", "value": false}
+    ]
+  },
+  "supported_domain": {
+    "op": "all",
+    "args": [
+      {"op": "eq", "input": "text-class", "value": "normal"},
+      {"op": "eq", "input": "background-model", "value": "opaque-uniform-srgb"}
+    ]
+  },
+  "requirements": [
+    {
+      "id": "minimum-ratio", "kind": "predicate",
+      "statement": "対象の文字と背景のコントラスト比が4.5以上である。",
+      "sources": ["text-minimum"],
+      "expression": {"op": "gte", "input": "contrast-ratio", "value": "9/2", "unit": "ratio"}
+    }
+  ]
+}
