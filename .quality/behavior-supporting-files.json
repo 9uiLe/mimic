@@ -122,7 +122,9 @@
       "knowledge/ios-branding/references/sources.md",
       "knowledge/liquid-glass/KNOWLEDGE.md",
       "knowledge/liquid-glass/examples/library-layers.md",
-      "knowledge/liquid-glass/references/sources.md"
+      "knowledge/liquid-glass/references/sources.md",
+      "knowledge/app-icons/KNOWLEDGE.md",
+      "knowledge/app-icons/references/sources.md"
     ],
     "pages-font-assets": [
       "assets/fonts/gen-interface-jp/0.8.0/integrity.json",
