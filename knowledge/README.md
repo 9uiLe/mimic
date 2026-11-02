@@ -43,6 +43,7 @@
 | `heart-framework` | [HEARTと目標・シグナル・指標](heart-framework/KNOWLEDGE.md) | 利用体験の目標から、兆候と測定指標を考える枠組み |
 | `ios-branding` | [iOSにおけるブランド表現](ios-branding/KNOWLEDGE.md) | iOSの慣れた操作と、内容・文字・動きによる製品の個性との関係 |
 | `liquid-glass` | [Liquid Glass](liquid-glass/KNOWLEDGE.md) | Appleの素材が表す層、背景への適応、操作に応じた動き |
+| `app-icons` | [アプリアイコン](app-icons/KNOWLEDGE.md) | ブランド側の狙いとストア素材の役割分担、擬人化・対比・クロップとOSの制約 |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 

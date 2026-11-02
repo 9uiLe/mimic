@@ -128,6 +128,8 @@ const expectedFiles = [
   'knowledge/liquid-glass/KNOWLEDGE.md', 'knowledge/liquid-glass/index.html',
   'knowledge/liquid-glass/references/sources.md', 'knowledge/liquid-glass/references/sources.html',
   'knowledge/liquid-glass/examples/library-layers.md', 'knowledge/liquid-glass/examples/library-layers.html',
+  'knowledge/app-icons/KNOWLEDGE.md', 'knowledge/app-icons/index.html',
+  'knowledge/app-icons/references/sources.md', 'knowledge/app-icons/references/sources.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -182,7 +184,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 464);
+  assert.equal(expectedFiles.length, 468);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -198,7 +200,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
     'the home page title must identify the question lookup section');
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 33, 'catalog must expose all thirty-three reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 34, 'catalog must expose all thirty-four reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/product-design.html">プロダクトデザインの進め方と定義</a>'),
     'catalog must open the product design topic reader');
@@ -222,7 +224,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'reflective-conversation': '1.0.1', 'sketches-and-prototypes': '1.0.1', 'visual-style': '1.0.0',
     'double-diamond': '1.0.0', 'user-research': '1.0.0', 'user-needs': '1.0.0',
     'user-stories': '1.0.0', 'heart-framework': '1.0.0',
-    'ios-branding': '1.0.0', 'liquid-glass': '1.0.0',
+    'ios-branding': '1.0.0', 'liquid-glass': '1.0.0', 'app-icons': '1.1.0',
   }, 'catalog must map each concept to its source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 14,
     'catalog must show fourteen v1.0.1 source concept versions');
@@ -230,8 +232,8 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'catalog must show the Design Token v1.1.1 source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 15,
     'catalog must show fifteen v1.0.0 source concept versions');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 3,
-    'catalog must show three v1.1.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 4,
+    'catalog must show four v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
     'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/product-ui-design.html',
     'topics/product-design.md', 'topics/product-design.html']) {
@@ -486,7 +488,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 82);
+  assert.equal(readers.length, 84);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
