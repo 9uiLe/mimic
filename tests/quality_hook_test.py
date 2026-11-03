@@ -342,6 +342,18 @@ class QualityHookTests(unittest.TestCase):
         self.repository.write("sample.py", "selection_count = 1\n")
         self.repository.git("add", "--all")
         self.assertIn("objective checks completed", self.assert_commit(True).stdout)
+        reference = "| [概念](../knowledge/example/KNOWLEDGE.md) | 本文の先頭で確認 |\n"
+        copied_version = "| [概念](../knowledge/example/KNOWLEDGE.md) | 1.0.0 |\n"
+        for staged, working, succeeds in ((copied_version, reference, False), (reference, copied_version, True)):
+            self.repository.write("topics/fixture.md", staged)
+            self.repository.stage("topics/fixture.md")
+            self.repository.write("topics/fixture.md", working)
+            before = self.repository.state()
+            checked = self.direct_hook()
+            self.assertEqual(checked.returncode == 0, succeeds, checked.stdout)
+            self.assertEqual(before, self.repository.state(), checked.stdout)
+            self.assertIn("copied knowledge version" if not succeeds else "no changed code targets", checked.stdout)
+        self.assert_commit(True)
         self.repository.write("sample.py", "#" * 201 + "\n")
         self.repository.stage("sample.py")
         self.repository.write("sample.py", "selection_count = 1\n")
