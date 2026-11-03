@@ -48,6 +48,7 @@
 | `ios-branding` | [iOSにおけるブランド表現](ios-branding/KNOWLEDGE.md) | iOSの慣れた操作と、内容・文字・動きによる製品の個性との関係 |
 | `liquid-glass` | [Liquid Glass](liquid-glass/KNOWLEDGE.md) | Appleの素材が表す層、背景への適応、操作に応じた動き |
 | `app-icons` | [アプリアイコン](app-icons/KNOWLEDGE.md) | ブランド側の狙いとストア素材の役割分担、擬人化・対比・クロップとOSの制約 |
+| `functional-icons` | [製品内の機能アイコン](functional-icons/KNOWLEDGE.md) | 操作や状態を伝える記号、線・塗り・斜線のバリエーションと状態間の動き |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
