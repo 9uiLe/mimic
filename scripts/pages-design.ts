@@ -118,7 +118,7 @@ ${sources}<a href="${source}">Markdown原文</a><span> · 全文</span></p></div
 ${toc ? `<nav aria-label="このページの目次">${toc.replace('<details>', '<details class="toc">')}</nav>` : ''}
 <a class="back-link type-supporting" href="${home}" data-home="${home}">← 疑問から探す</a></aside>
 <div class="reader-content"><article class="prose">${article}</article>${specimens}
-<div class="reading-end"><a href="${home}" data-home="${home}">← 入口へ戻る</a><a href="#top">ページ上部へ ↑</a></div>
+<div class="reading-end"><a href="${home}" data-home="${home}">← 入口へ戻る</a></div>
 <div class="reader-provenance type-supporting">${footer}</div></div></div></main>`;
   const result = frame(route, originalHead(html), content, 'reading', id);
   if (!result.includes(`<article class="prose">${article}</article>`) || !result.includes(footer)) {
