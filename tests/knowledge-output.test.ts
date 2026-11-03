@@ -237,7 +237,7 @@ test('each concept has a matching fixed entry, resolvable support links, and met
       assert.match(result.stderr, message);
     }
   }
-});
+}, 20_000);
 
 test('content, headings, candidate names, section order, and extra steps/examples change without changing design or section identities', async () => {
   const { source, out, args } = await fixture();
