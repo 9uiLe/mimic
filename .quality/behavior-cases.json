@@ -8,7 +8,7 @@
         "status": "confirmed",
         "source": "guideline/knowledge-structure.md",
         "section": "固定の入口と補足",
-        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "quotation": "ディレクトリ名は概念を表すIDとし、入口の `id` と一致させます。",
         "reasoning": "追加するvisual-styleの入口を構造ガイドと照合する。期待idを生成結果から導かない。"
       },
       "input": {
@@ -122,7 +122,7 @@
         "status": "confirmed",
         "source": "guideline/knowledge-structure.md",
         "section": "固定の入口と補足",
-        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "quotation": "ディレクトリ名は概念を表すIDとし、入口の `id` と一致させます。",
         "reasoning": "入口idとディレクトリ名の一致は構造ガイドで定められている。追加が依頼されたlightness-and-luminanceの入口idを、生成された出力からではなく概念ディレクトリ名から固定する。"
       },
       "input": {"conceptDirectory": "knowledge/lightness-and-luminance", "entry": "knowledge/lightness-and-luminance/KNOWLEDGE.md"},
@@ -146,7 +146,7 @@
         "status": "confirmed",
         "source": "guideline/knowledge-structure.md",
         "section": "固定の入口と補足",
-        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "quotation": "ディレクトリ名は概念を表すIDとし、入口の `id` と一致させます。",
         "reasoning": "追加した概念にも同じ固定入口の契約を適用し、概念ディレクトリ名から期待idを固定する。"
       },
       "input": {"conceptDirectory": "knowledge/human-centered-design", "entry": "knowledge/human-centered-design/KNOWLEDGE.md"},
@@ -283,7 +283,7 @@
         "status": "confirmed",
         "source": "guideline/knowledge-view.md",
         "section": "Pagesの読書経路",
-        "quotation": "題目別案内も専用HTMLから、それぞれに関連する概念のHTMLへ進めます。",
+        "quotation": "題目別案内も専用HTMLから、それぞれの正本が参照する概念のHTMLへ進めます。",
         "reasoning": "題目別案内と概念を同じPages読書経路で結ぶ表示規約。7件と4件は案内のrelatedメタデータと本文のリンクを照合し、期待hrefは入出力パスから固定する。"
       },
       "input": {
@@ -740,14 +740,14 @@
       }
     },
     { "id": "pages-product-design-topic-catalog", "requirement": "Pages入口からプロダクトデザインの案内HTMLを開ける。", "oracle": { "status": "confirmed", "source": "guideline/knowledge-view.md",
-    "section": "Pagesの読書経路", "quotation": "「プロダクトデザインの進め方と定義」は、題名だけのメタデータを持つ案内として表示し、関連する7概念のHTMLへ案内します。" }, "assumptions": [ "生成内容と参照先を検査し、知識の妥当性や使いやすさは判定しない。" ],
+    "section": "Pagesの読書経路", "quotation": "題目別案内も専用HTMLから、それぞれの正本が参照する概念のHTMLへ進めます。「プロダクトデザインの進め方と定義」は、題名だけのメタデータを持つ案内として表示します。" }, "assumptions": [ "生成内容と参照先を検査し、知識の妥当性や使いやすさは判定しない。" ],
     "implementation": "scripts/pages-catalog.ts", "test": "tests/pages-output.test.ts", "supportingFiles": [], "supportingFileSets": [ "pages-build-inputs", "pages-font-assets" ], "input": {
     "topic": "topics/product-design.md" }, "expected": { "href": "topics/product-design.html" },
     "testName": "Pages contains exactly the reviewed files and repeated builds preserve their bytes", "mutation": { "description": "案内一覧の参照先だけをMarkdownへ戻す。",
     "find": "['topics/product-design.html', 'プロダクトデザインの進め方と定義',", "replace": "['topics/product-design.md', 'プロダクトデザインの進め方と定義',",
     "assertionMessage": "catalog must open the product design topic reader" } },
     { "id": "pages-product-design-topic-paths", "requirement": "題名のみの案内から7概念のHTML本文へ進める。", "oracle": { "status": "confirmed", "source": "guideline/knowledge-view.md",
-    "section": "Pagesの読書経路", "quotation": "「プロダクトデザインの進め方と定義」は、題名だけのメタデータを持つ案内として表示し、関連する7概念のHTMLへ案内します。" }, "assumptions": [ "生成内容と参照先を検査し、知識の妥当性や使いやすさは判定しない。" ],
+    "section": "Pagesの読書経路", "quotation": "題目別案内も専用HTMLから、それぞれの正本が参照する概念のHTMLへ進めます。「プロダクトデザインの進め方と定義」は、題名だけのメタデータを持つ案内として表示します。" }, "assumptions": [ "生成内容と参照先を検査し、知識の妥当性や使いやすさは判定しない。" ],
     "implementation": "scripts/pages-catalog.ts", "test": "tests/pages-output.test.ts", "supportingFiles": [], "supportingFileSets": [ "pages-build-inputs", "pages-font-assets" ], "input": {
     "topic": "topics/product-design.md", "concepts": 7 }, "expected": { "firstNewConceptHref": "../knowledge/double-diamond/index.html" },
     "testName": "the product design topic retains its title, text, and seven concept reader paths", "mutation": { "description": "Double Diamondへの参照だけをMarkdownへ戻す。",
@@ -762,7 +762,7 @@
     {
       "id": "ios-branding-knowledge-entry", "requirement": "追加した概念の固定入口idをディレクトリ名と一致させ、本文・補足への参照を保持する。",
       "oracle": {"status": "confirmed", "source": "guideline/knowledge-structure.md", "section": "固定の入口と補足",
-        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "quotation": "ディレクトリ名は概念を表すIDとし、入口の `id` と一致させます。",
         "reasoning": "承認された知識追加の固定入口を、生成結果ではなく索引とディレクトリ名から定める。"},
       "input": {"conceptDirectory": "knowledge/ios-branding"}, "expected": {"id": "ios-branding"},
       "assumptions": ["固定入口と生成の検査であり、原典への忠実さや生成品質の改善を保証しない。"],
@@ -776,7 +776,7 @@
     {
       "id": "liquid-glass-knowledge-entry", "requirement": "追加した概念の固定入口idをディレクトリ名と一致させ、本文・補足への参照を保持する。",
       "oracle": {"status": "confirmed", "source": "guideline/knowledge-structure.md", "section": "固定の入口と補足",
-        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。",
+        "quotation": "ディレクトリ名は概念を表すIDとし、入口の `id` と一致させます。",
         "reasoning": "承認された知識追加の固定入口を、生成結果ではなく索引とディレクトリ名から定める。"},
       "input": {"conceptDirectory": "knowledge/liquid-glass"}, "expected": {"id": "liquid-glass"},
       "assumptions": ["固定入口と生成の検査であり、原典への忠実さや生成品質の改善を保証しない。"],
@@ -789,7 +789,7 @@
     },
     { "id": "app-icons-knowledge-entry", "requirement": "追加した概念の固定入口idをディレクトリ名と一致させ、本文・補足への参照を保持する。",
       "oracle": { "status": "confirmed", "source": "guideline/knowledge-structure.md", "section": "固定の入口と補足",
-        "quotation": "ディレクトリ名は概念を表す英小文字とハイフンのIDとし、入口の `id` と一致させます。", "reasoning": "承認された知識追加の固定入口を、生成結果ではなく索引とディレクトリ名から定める。" },
+        "quotation": "ディレクトリ名は概念を表すIDとし、入口の `id` と一致させます。", "reasoning": "承認された知識追加の固定入口を、生成結果ではなく索引とディレクトリ名から定める。" },
       "input": {"conceptDirectory": "knowledge/app-icons"}, "expected": {"id": "app-icons"},
       "assumptions": ["固定入口と生成の検査であり、原典への忠実さや生成品質の改善を保証しない。"], "implementation": "knowledge/app-icons/KNOWLEDGE.md",
       "test": "tests/knowledge-output.test.ts", "supportingFiles": ["tests/fixtures/knowledge-display.md"], "supportingFileSets": ["pages-build-inputs"],

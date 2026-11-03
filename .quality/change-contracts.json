@@ -46,6 +46,31 @@
       ]
     },
     {
+      "id": "document-reference-guidance",
+      "paths": [
+        "scripts/quality/document_references.py",
+        "scripts/quality/check_repository.py",
+        "tests/quality_document_references_test.py",
+        "tests/quality_hook_test.py"
+      ],
+      "purpose": "案内に一覧の総件数や本文の版を独立して転記せず、定義元と本文先頭への参照を保つ。",
+      "basis_status": "confirmed",
+      "basis": [
+        "guideline/quality-checks.md#案内の件数と版",
+        "guideline/knowledge-structure.md#メタデータ",
+        "guideline/README.md#下書きと正本"
+      ],
+      "validation": [
+        "python3 -m unittest discover -s tests -p quality_document_references_test.py -v",
+        "bun run quality:test",
+        "bun run quality:check"
+      ],
+      "unresolved": [
+        "検査は明示した表記とtopicsの表行に限定し、自然言語全般の意味や汎用Markdown構文は保証しない。",
+        "検査条件とテスト自身の差分は独立したレビューが必要。"
+      ]
+    },
+    {
       "id": "knowledge-link-destination",
       "paths": [
         "scripts/knowledge-paths.ts",

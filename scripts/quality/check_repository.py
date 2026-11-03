@@ -9,6 +9,7 @@ from pathlib import Path
 import sys
 
 from change_review import criteria_changes, is_control, policy_regressions, validate_contracts
+from document_references import validate_document_references
 from file_policy import PolicyError, evaluate_files, load_policy, target_paths, tighten_baseline, validate_baseline
 from index_snapshot import SnapshotError, comparison_base
 from repository_content import ContentError, committed_files, snapshot_files, working_changes, working_files
@@ -66,6 +67,7 @@ def inspect_repository(arguments: argparse.Namespace) -> int:
     diagnostics.extend(evaluate_files(
         candidate, original, comparison, baseline, previous_baseline, policy, selected, renames,
     ))
+    diagnostics.extend(validate_document_references(candidate))
     changed_sources = changed_paths & targets
     diagnostics.extend(validate_contracts(candidate, changed_sources))
     review_records = criteria_changes(candidate, comparison, list(changed_paths))
@@ -93,7 +95,7 @@ def inspect_repository(arguments: argparse.Namespace) -> int:
             print(f"FAIL: {diagnostic}", file=sys.stderr)
         return 1
     if not changed_sources and selected is not None:
-        print("PASS: no changed code targets; required policy and baseline were still inspected.")
+        print("PASS: no changed code targets; required policy, baseline, and document references were still inspected.")
     else:
         print("PASS: objective checks completed. Criteria/test diffs still require evidence review.")
     return 0
