@@ -22,6 +22,11 @@ title: AI Slopに関する知識の案内
 元のX投稿のURLと文脈は未確認で、独立したAI Slop理論や効果実証済みの手順ではありません。
 UIへの適用案とその検証は、知識の説明と区別します。
 
+[削除と判断委任のプロンプトを読む](../knowledge/ai-slop/examples/ui-decisions.md#削除と判断委任のプロンプトを読む)では、
+説明文の一括削除と、UX・DX・AXすべての改善を任せる指示を取り上げます。
+必要情報を保つ条件、利点が衝突する場合の優先順位、確認範囲を説明するための文例です。
+紹介元は未確認で、文例の効果を実証したものではありません。
+
 情報内容や表現をさらに検討するときは[判断材料の選定](decision-material-selection.md)、
 色や値の共有を検討するときは[色の知識](color.md)と[Design Token](../knowledge/design-tokens/KNOWLEDGE.md)へ進めます。
 
