@@ -42,4 +42,22 @@
 「目的・必要情報・伝えたい印象を確かめ、役割を一貫して表す」という橋渡しと、10処方の条件・反例はMimicの編集上の整理です。
 中点の一律禁止、0.5px、250ms、12px、3〜4種の普遍的最適性、AI生成特有の原因や削除による効果を確認したものではありません。
 
+## 削除と判断委任の指示を読むための資料
+
+以下は2026-11-04に該当箇所を確認した資料です。
+[2つのプロンプトの説明例](../examples/ui-decisions.md#削除と判断委任のプロンプトを読む)は、依頼者が提示した文を題材にしています。
+紹介元のURL、作者、文脈は未確認であり、以下の資料をその出典や作者の意図の根拠にはしません。
+
+| 説明を支える範囲 | 出典と確認箇所 | 対象と注意 |
+| --- | --- | --- |
+| 説明追加前にUI自体を改善すること、短く直接的な文案 | [GOV.UK — Writing for user interfaces](https://www.gov.uk/service-manual/design/writing-for-user-interfaces)：Think about alternatives before you add more words、Keep copy short and direct。 | 英国行政サービスの文案指針。タグライン、補助文、ラベルの一括削除を求めるものではない。 |
+| 入力条件の提示と、補助情報の入力欄への関連付け | [W3C WAI — Form Instructions](https://www.w3.org/WAI/tutorials/forms/instructions/)：Overview、Overall instructions、In-line instructions。 | Webフォームの実践的な解説。必須・任意や入力形式等を扱う。配置の整理だけで必要な説明を省けるという根拠にはしない。 |
+| 利用者の目的、提供者・支援者のニーズ、仮定と調査の区別 | [GOV.UK — Learning about users and their needs](https://www.gov.uk/service-manual/user-research/start-by-learning-user-needs)：Understanding user needs、Researching users and their needs、Validating user needs。 | 英国政府のサービス開発指針。DX・AXの定義や、エージェントの判断性能を扱う資料ではない。 |
+| 問題と目標の明確化、利用文脈、変更に関わる制約 | [GOV.UK — How the discovery phase works](https://www.gov.uk/service-manual/agile-delivery/how-the-discovery-phase-works)：Set a goal for your discovery、Understanding users and their context、Understanding constraints。 | 英国政府のdiscoveryの指針。全製品に同じ優先順位を定めたり、すべての利点の同時達成を保証したりするものではない。 |
+| 具体的な課題を試す利用者の観察と、その対象条件 | [GOV.UK — Using moderated usability testing](https://www.gov.uk/service-manual/user-research/using-moderated-usability-testing)：冒頭、Plan the sessions、Design the tasks。 | 進行役のいる利用者調査。自動テストとの比較実験や、回帰不具合がないことの保証ではない。 |
+
+改善文例と優先順位、通知設定の確認対象はMimicが説明用に作成したものです。
+UX・DX・AXの対象の整理も、この文例を読むためのもので、確立した分類や尺度として提示しません。
+原典による推奨プロンプト、比較実験済みの生成手順、Repositoryやエージェントの実行契約にはしません。
+
 [本文に戻る](../KNOWLEDGE.md)
