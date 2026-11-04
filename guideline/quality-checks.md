@@ -22,7 +22,7 @@
 - `guideline/design-system.md`・`guideline/knowledge-view.md`・`guideline/development.md`・`scripts/pages-design.ts`にある「数字件の一覧」「全数字件の知識」「収録している数字件から、名前で探せます」。数値の新旧に関係なく件数の固定表記を拒否し、知識の一覧や`pages-catalog.ts`の定義元へ案内します。
 - `topics/`のMarkdownで、`KNOWLEDGE.md`へのインラインリンクと、独立したsemver値のセル（backtickによるコード書式を含む）が同じ表行にある場合。最新の版も転記せず、リンク先の本文先頭へ案内します。
 
-Markdownの先頭frontmatterとbacktick・tildeによるfence内は対象外です。件数の検査ではMarkdownのインラインコード例も除きます。TypeScriptの表示文は文字列内も検査します。対象のUTF-8読取不良は失敗にします。対象ファイルがない候補には必須ファイルや空集合の条件を追加しません。明示した35概念という公開要件、関連する部分集合の件数、別対象の版は変更しません。
+Markdownの先頭frontmatterとbacktick・tildeによるfence内は対象外です。件数の検査ではMarkdownのインラインコード例も除きます。TypeScriptの表示文は文字列内も検査します。対象のUTF-8読取不良は失敗にします。対象ファイルがない候補には必須ファイルや空集合の条件を追加しません。明示した36概念という公開要件、関連する部分集合の件数、別対象の版は変更しません。
 
 この検査は上記の表記と表行に限定します。自然言語全般の整合、別の言い換え、汎用Markdown構文、参照先や出典の意味の正しさはレビューで確認します。
 

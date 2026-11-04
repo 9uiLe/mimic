@@ -9,7 +9,7 @@ export const conceptIds = Object.freeze([
   'interaction-design', 'design-systems', 'usability-testing',
   'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes', 'visual-style',
   'double-diamond', 'user-research', 'user-needs', 'user-stories', 'heart-framework',
-  'ios-branding', 'liquid-glass', 'app-icons', 'functional-icons',
+  'ios-branding', 'liquid-glass', 'app-icons', 'functional-icons', 'edge-to-edge',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,

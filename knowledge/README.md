@@ -49,6 +49,7 @@
 | `liquid-glass` | [Liquid Glass](liquid-glass/KNOWLEDGE.md) | Appleの素材が表す層、背景への適応、操作に応じた動き |
 | `app-icons` | [アプリアイコン](app-icons/KNOWLEDGE.md) | ブランド側の狙いとストア素材の役割分担、擬人化・対比・クロップとOSの制約 |
 | `functional-icons` | [製品内の機能アイコン](functional-icons/KNOWLEDGE.md) | 操作や状態を伝える記号、線・塗り・斜線のバリエーションと状態間の動き |
+| `edge-to-edge` | [Edge-to-Edge](edge-to-edge/KNOWLEDGE.md) | システムUIの背後まで広げる描画と、Android・iPhoneで内容や操作を保護する配置 |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 

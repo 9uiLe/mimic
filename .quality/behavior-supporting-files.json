@@ -126,7 +126,9 @@
       "knowledge/app-icons/KNOWLEDGE.md",
       "knowledge/app-icons/references/sources.md",
       "knowledge/functional-icons/KNOWLEDGE.md",
-      "knowledge/functional-icons/references/sources.md"
+      "knowledge/functional-icons/references/sources.md",
+      "knowledge/edge-to-edge/KNOWLEDGE.md",
+      "knowledge/edge-to-edge/references/sources.md"
     ],
     "pages-font-assets": [
       "assets/fonts/gen-interface-jp/0.8.0/integrity.json",
