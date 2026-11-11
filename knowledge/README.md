@@ -50,6 +50,11 @@
 | `app-icons` | [アプリアイコン](app-icons/KNOWLEDGE.md) | ブランド側の狙いとストア素材の役割分担、擬人化・対比・クロップとOSの制約 |
 | `functional-icons` | [製品内の機能アイコン](functional-icons/KNOWLEDGE.md) | 操作や状態を伝える記号、線・塗り・斜線のバリエーションと状態間の動き |
 | `edge-to-edge` | [Edge-to-Edge](edge-to-edge/KNOWLEDGE.md) | システムUIの背後まで広げる描画と、Android・iPhoneで内容や操作を保護する配置 |
+| `c4-model` | [C4モデルとアーキテクチャ図](c4-model/KNOWLEDGE.md) | システムの境界・構成・配置を、抽象度と責務をそろえて伝える方法 |
+| `uml` | [UMLによる構造と振る舞いの図](uml/KNOWLEDGE.md) | 構造・やり取り・処理・状態を描き分けるモデリング言語と図の用途 |
+| `data-flow-diagrams` | [データフロー図（DFD）](data-flow-diagrams/KNOWLEDGE.md) | 処理・保存先・外部実体の間を流れるデータと、制御フローとの違い |
+| `entity-relationship-diagrams` | [ER図とデータの関連](entity-relationship-diagrams/KNOWLEDGE.md) | エンティティ間の関係、多重度・任意性、概念・論理・物理モデルの違い |
+| `statistical-charts` | [統計グラフによる比較・推移・分布の表現](statistical-charts/KNOWLEDGE.md) | 開発・性能評価での図種の選び方と、数量・分布・測定条件の読み取り |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
@@ -64,6 +69,8 @@
 実際に読めた本文と版を確認します。本文を取得できなかった場合に参照済みとは報告しません。知識の説明と、個別UIでの適用・検証を区別します。
 
 ## 複数の概念から読む
+
+[「開発資料の図とグラフを選ぶ」](../topics/development-diagrams.md)は、アーキテクチャ・振る舞い・データ・性能の問いから、図の用途と作り方を調べる案内です。各本文の出典と、架空の注文システムを使った説明例へ進めます。
 
 横断的な案内は[「プロダクトデザインの進め方と定義」](../topics/product-design.md)、[「シナリオから機能と画面構成を考える」](../topics/scenario-to-screen.md)、[「プロダクト全体のUI設計」](../topics/product-ui-design.md)、[「判断材料の選定」](../topics/decision-material-selection.md)、[「色の知識」](../topics/color.md)、[「AI Slopに関する知識」](../topics/ai-slop.md)です。案内は個別概念の本文や出典を取り込んだ全文ではありません。使う概念の `KNOWLEDGE.md` へ進みます。
 

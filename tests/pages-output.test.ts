@@ -134,6 +134,22 @@ const expectedFiles = [
   'knowledge/functional-icons/references/sources.md', 'knowledge/functional-icons/references/sources.html',
   'knowledge/edge-to-edge/KNOWLEDGE.md', 'knowledge/edge-to-edge/index.html',
   'knowledge/edge-to-edge/references/sources.md', 'knowledge/edge-to-edge/references/sources.html',
+  'knowledge/c4-model/KNOWLEDGE.md', 'knowledge/c4-model/index.html',
+  'knowledge/c4-model/references/sources.md', 'knowledge/c4-model/references/sources.html',
+  'knowledge/c4-model/examples/order-system.md', 'knowledge/c4-model/examples/order-system.html',
+  'knowledge/uml/KNOWLEDGE.md', 'knowledge/uml/index.html',
+  'knowledge/uml/references/sources.md', 'knowledge/uml/references/sources.html',
+  'knowledge/uml/examples/order-lifecycle.md', 'knowledge/uml/examples/order-lifecycle.html',
+  'knowledge/data-flow-diagrams/KNOWLEDGE.md', 'knowledge/data-flow-diagrams/index.html',
+  'knowledge/data-flow-diagrams/references/sources.md', 'knowledge/data-flow-diagrams/references/sources.html',
+  'knowledge/data-flow-diagrams/examples/order-data.md', 'knowledge/data-flow-diagrams/examples/order-data.html',
+  'knowledge/entity-relationship-diagrams/KNOWLEDGE.md', 'knowledge/entity-relationship-diagrams/index.html',
+  'knowledge/entity-relationship-diagrams/references/sources.md', 'knowledge/entity-relationship-diagrams/references/sources.html',
+  'knowledge/entity-relationship-diagrams/examples/orders.md', 'knowledge/entity-relationship-diagrams/examples/orders.html',
+  'knowledge/statistical-charts/KNOWLEDGE.md', 'knowledge/statistical-charts/index.html',
+  'knowledge/statistical-charts/references/sources.md', 'knowledge/statistical-charts/references/sources.html',
+  'knowledge/statistical-charts/examples/performance.md', 'knowledge/statistical-charts/examples/performance.html',
+  'topics/development-diagrams.md', 'topics/development-diagrams.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -188,7 +204,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 476);
+  assert.equal(expectedFiles.length, 508);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -204,13 +220,14 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
     'the home page title must identify the question lookup section');
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 36, 'catalog must expose all thirty-six reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 41, 'catalog must expose all forty-one reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/product-design.html">プロダクトデザインの進め方と定義</a>'),
     'catalog must open the product design topic reader');
   assert.ok(entry.includes('href="topics/scenario-to-screen.html"'), 'catalog must open the scenario topic reader');
   assert.ok(entry.includes('href="topics/decision-material-selection.html"'), 'catalog must open the topic reader');
   assert.ok(entry.includes('href="topics/product-ui-design.html"'), 'catalog must open the UI design topic reader');
+  assert.ok(entry.includes('href="topics/development-diagrams.html"'), 'catalog must open the development diagram topic reader');
   assert.doesNotMatch(entry, /正式採用|採用済み|掲載済み/, 'catalog must not show adoption labels');
   const catalogVersions = Object.fromEntries([...entry.matchAll(
     /<li><h3><a href="knowledge\/([^/]+)\/">[^<]+<\/a><\/h3>[\s\S]*?<p class="meta">v([^<]+)<\/p><\/li>/g,
@@ -229,13 +246,15 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'double-diamond': '1.0.0', 'user-research': '1.0.0', 'user-needs': '1.0.0',
     'user-stories': '1.0.0', 'heart-framework': '1.0.0',
     'ios-branding': '1.0.0', 'liquid-glass': '1.0.0', 'app-icons': '1.1.0', 'functional-icons': '1.0.0', 'edge-to-edge': '1.0.0',
+    'c4-model': '1.0.0', uml: '1.0.0', 'data-flow-diagrams': '1.0.0',
+    'entity-relationship-diagrams': '1.0.0', 'statistical-charts': '1.0.0',
   }, 'catalog must map each concept to its source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 14,
     'catalog must show fourteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 17,
-    'catalog must show seventeen v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 22,
+    'catalog must show twenty-two v1.0.0 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 4,
     'catalog must show four v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
@@ -492,7 +511,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 88);
+  assert.equal(readers.length, 103);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');

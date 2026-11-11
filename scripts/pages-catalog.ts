@@ -10,6 +10,7 @@ export const conceptIds = Object.freeze([
   'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes', 'visual-style',
   'double-diamond', 'user-research', 'user-needs', 'user-stories', 'heart-framework',
   'ios-branding', 'liquid-glass', 'app-icons', 'functional-icons', 'edge-to-edge',
+  'c4-model', 'uml', 'data-flow-diagrams', 'entity-relationship-diagrams', 'statistical-charts',
 ]);
 export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
@@ -31,9 +32,15 @@ export const exampleFiles = Object.freeze([
   'knowledge/visual-style/examples/style-rationale.md',
   'knowledge/ios-branding/examples/library.md',
   'knowledge/liquid-glass/examples/library-layers.md',
+  'knowledge/c4-model/examples/order-system.md',
+  'knowledge/uml/examples/order-lifecycle.md',
+  'knowledge/data-flow-diagrams/examples/order-data.md',
+  'knowledge/entity-relationship-diagrams/examples/orders.md',
+  'knowledge/statistical-charts/examples/performance.md',
 ]);
 export const additionalSources = Object.freeze([
-  'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md', 'topics/product-design.md',
+  'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md',
+  'topics/scenario-to-screen.md', 'topics/product-design.md', 'topics/development-diagrams.md',
 ]);
 export const readerViews: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries([
   ['knowledge/README.md', 'index.html'],
@@ -42,7 +49,8 @@ export const readerViews: Readonly<Record<string, string>> = Object.freeze(Objec
   ['guideline/design-system.md', 'guideline/design-system.html'],
   ['relations/README.md', 'relations/index.html'],
   ['topics/decision-material-selection.md', 'topics/decision-material-selection.html'],
-  ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/scenario-to-screen.md', 'topics/product-design.md'].map(file => [
+  ...[...conceptFiles, ...exampleFiles, 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md',
+    'topics/scenario-to-screen.md', 'topics/product-design.md', 'topics/development-diagrams.md'].map(file => [
     file, file.endsWith('/KNOWLEDGE.md') ? file.replace(/KNOWLEDGE\.md$/, 'index.html') : file.replace(/\.md$/, '.html'),
   ]),
 ]));
@@ -59,6 +67,8 @@ export function renderTopicGuides() {
       '利用者の目的から、情報構造・画面・操作・確かめ方まで読む。'],
     ['topics/decision-material-selection.html', '判断材料の選定',
       '判断に使う情報の内容と、まとまり・強調・詳細の見せ方を考える。'],
+    ['topics/development-diagrams.html', '開発資料の図とグラフを選ぶ',
+      '構造・処理・状態・データ・計測の問いから、図の使い所と作成の要点を読む。'],
     ['topics/color.html', '色の知識',
       '明るさ、前景と背景、強調、周囲による見え方から読む。'],
     ['topics/ai-slop.html', 'AI Slopに関する知識',
