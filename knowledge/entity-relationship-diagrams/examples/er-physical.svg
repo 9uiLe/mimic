@@ -1,86 +1,96 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1970" role="img" aria-labelledby="title desc">
 <title id="title">ER図：物理モデル</title>
-<desc id="desc">PostgreSQLを想定した説明例。型・NULL可否・参照先を具体化する。</desc>
-<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<desc id="desc">PostgreSQLを想定した説明例。 型・NULL可否・参照先を具体化する。</desc>
+<rect x="0" y="0" width="680" height="1970" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="28" y="35" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
  font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  20</text>
-<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="34" font-weight="600" text-anchor="start">ER図：物理モデル</text>
-<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">PostgreSQLを想定した説明例。型・NULL可否・参照先を具体化する。</text>
-<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
-<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
-<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<text x="40" y="178" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">数値＝相手1件に対応する件数　実線＝識別関係　破線＝非識別関係</text>
-<rect x="40" y="205" width="345" height="128" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="40" y="205" width="345" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="56" y="237" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="start">customer</text>
-<text x="56" y="282" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">customer_id : bigint PK</text>
-<text x="56" y="311" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">display_name : text NN</text>
-<rect x="690" y="205" width="390" height="157" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="690" y="205" width="390" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="706" y="237" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="start">purchase_order</text>
-<text x="706" y="282" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">order_id : bigint PK</text>
-<text x="706" y="311" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">customer_id : bigint FK NN</text>
-<text x="706" y="340" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">ordered_at : timestamptz NN</text>
-<rect x="40" y="445" width="345" height="128" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="40" y="445" width="345" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="56" y="477" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="start">product</text>
-<text x="56" y="522" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">product_id : bigint PK</text>
-<text x="56" y="551" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">product_name : text NN</text>
-<rect x="690" y="420" width="390" height="215" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="690" y="420" width="390" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="706" y="452" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="start">order_line</text>
-<text x="706" y="497" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">order_id : bigint PK, FK</text>
-<text x="706" y="526" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">line_no : integer PK</text>
-<text x="706" y="555" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">product_id : bigint FK NN</text>
-<text x="706" y="584" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">quantity : integer NN</text>
-<text x="706" y="613" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">unit_price : numeric(12,2) NN</text>
-<line x1="385" y1="270" x2="690" y2="270" stroke="#171717" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="402" y="258" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="start">1</text>
-<text x="672" y="258" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="end">0..*</text>
-<text x="537" y="303" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="middle">顧客IDを参照</text>
-<line x1="885" y1="362" x2="885" y2="420" stroke="#171717" stroke-width="2"/>
-<text x="905" y="383" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">1</text>
-<text x="905" y="413" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">1..*</text>
-<text x="860" y="399" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="end">含む</text>
-<line x1="385" y1="508" x2="690" y2="508" stroke="#171717" stroke-width="2" stroke-dasharray="8 6"/>
-<text x="402" y="496" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="start">1</text>
-<text x="672" y="496" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="end">0..*</text>
-<text x="537" y="541" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="middle">商品IDを参照</text>
-<text x="40" y="392" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">PK：主キー　FK：外部キー</text>
-<text x="40" y="420" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">NN：NOT NULL（PKもNULL不可）</text>
-<text x="40" y="606" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">明細1件以上は業務制約。</text>
-<text x="40" y="634" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">外部キーだけでは保証されない。</text>
+<text x="28" y="82" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="600" text-anchor="start">ER図：物理モデル</text>
+<text x="28" y="121" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">PostgreSQLを想定した説明例。</text>
+<text x="28" y="157" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">型・NULL可否・参照先を具体化する。</text>
+<line x1="28" y1="172" x2="652" y2="172" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="28" y1="1914" x2="652" y2="1914" stroke="#d8d8d8" stroke-width="2"/>
+<text x="28" y="1945" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">架空の説明例 · 前提と記法は本文を参照</text>
+<rect x="90.0" y="220" width="500" height="160" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="90.0" y="220" width="500" height="56" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="340" y="257" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">customer</text>
+<text x="340" y="318.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">customer_id : bigint PK</text>
+<text x="340" y="352.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">display_name : text NN</text>
+<rect x="90.0" y="560" width="500" height="200" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="90.0" y="560" width="500" height="56" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="340" y="597" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">purchase_order</text>
+<text x="340" y="661.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">order_id : bigint PK</text>
+<text x="340" y="695.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">customer_id : bigint FK NN</text>
+<text x="340" y="729.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">ordered_at : timestamptz NN</text>
+<rect x="90.0" y="940" width="500" height="270" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="90.0" y="940" width="500" height="56" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="340" y="977" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">order_line</text>
+<text x="340" y="1042.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">order_id : bigint PK, FK</text>
+<text x="340" y="1076.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">line_no : integer PK</text>
+<text x="340" y="1110.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">product_id : bigint FK NN</text>
+<text x="340" y="1144.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">quantity : integer NN</text>
+<text x="340" y="1178.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">unit_price : numeric(12,2) NN</text>
+<rect x="90.0" y="1410" width="500" height="160" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="90.0" y="1410" width="500" height="56" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="340" y="1447" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">product</text>
+<text x="340" y="1508.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">product_id : bigint PK</text>
+<text x="340" y="1542.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">product_name : text NN</text>
+<line x1="340" y1="380" x2="340" y2="560" stroke="#171717" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="365" y="412" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">1</text>
+<text x="365" y="542" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">0..*</text>
+<text x="310" y="458.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">顧客IDを</text>
+<text x="310" y="498.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">参照</text>
+<line x1="340" y1="760" x2="340" y2="940" stroke="#171717" stroke-width="2.5"/>
+<text x="365" y="792" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">1</text>
+<text x="365" y="922" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">1..*</text>
+<text x="310" y="858.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">含む</text>
+<line x1="340" y1="1210" x2="340" y2="1410" stroke="#171717" stroke-width="2.5" stroke-dasharray="9 7"/>
+<text x="365" y="1242" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">0..*</text>
+<text x="365" y="1392" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">1</text>
+<text x="310" y="1298.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">商品IDを</text>
+<text x="310" y="1338.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">参照</text>
+<text x="36" y="1630" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">PK＝主キー　FK＝外部キー</text>
+<text x="36" y="1667" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">NN＝NOT NULL（主キーもNULL不可）</text>
+<text x="36" y="1704" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">明細の主キーはorder_id＋line_noの組。</text>
+<text x="36" y="1750" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">実線＝識別関係　破線＝非識別関係</text>
+<text x="36" y="1783" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">端の数値＝相手の1件に対応する、この側の件数</text>
+<text x="36" y="1816" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">明細1件以上は業務制約。</text>
+<text x="36" y="1849" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">外部キーだけでは保証されない。</text>
 </svg>

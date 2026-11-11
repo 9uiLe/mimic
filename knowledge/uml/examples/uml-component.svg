@@ -1,60 +1,68 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1440" role="img" aria-labelledby="title desc">
 <title id="title">UML · コンポーネント図</title>
 <desc id="desc">利用する契約と、その契約を実装する部品を分ける</desc>
-<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  09</text>
-<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="34" font-weight="600" text-anchor="start">UML · コンポーネント図</text>
-<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">利用する契約と、その契約を実装する部品を分ける</text>
-<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
-<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
-<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<rect x="65" y="230" width="270" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="200.0" y="266" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">Web UI</text>
-<text x="200.0" y="298" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">«component»</text>
-<rect x="425" y="230" width="270" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="560.0" y="266" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">OrderAPI</text>
-<text x="560.0" y="298" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">«interface»</text>
-<rect x="785" y="230" width="270" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="920.0" y="266" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">Order Service</text>
-<text x="920.0" y="298" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">«component»</text>
-<line x1="335" y1="285" x2="425" y2="285" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
-<polyline points="413.0,280.0 425,285 413.0,290.0" fill="none" stroke="#171717" stroke-width="2"/>
-<text x="380" y="262" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">利用</text>
-<line x1="785" y1="285" x2="710" y2="285" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
-<polygon points="710,278 695,285 710,292" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<text x="740" y="262" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">実現</text>
-<rect x="425" y="480" width="270" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="560.0" y="516" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">PaymentGateway</text>
-<text x="560.0" y="548" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">«interface»</text>
-<rect x="785" y="480" width="270" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="920.0" y="516" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">Payment Adapter</text>
-<text x="920.0" y="548" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">«component»</text>
-<line x1="920" y1="340" x2="560" y2="480" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
-<polyline points="573.0,480.3 560,480 569.4,471.0" fill="none" stroke="#171717" stroke-width="2"/>
-<text x="690" y="400" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="middle">利用</text>
-<line x1="785" y1="535" x2="710" y2="535" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
-<polygon points="710,528 695,535 710,542" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<text x="740" y="512" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">実現</text>
-<text x="65" y="665" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">凡例：破線＋開いた矢印＝依存。破線＋白抜き三角＝インターフェースの実現。</text>
-<text x="65" y="695" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">提供契約を別の長方形で示した例。実行時の呼出し順序は表さない。</text>
+<rect x="0" y="0" width="680" height="1440" fill="#ffffff" stroke="none" stroke-width="3"/>
+<text x="24" y="29" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">MIMIC / DEVELOPMENT DIAGRAMS / 09</text>
+<text x="24" y="70" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="32" font-weight="600" text-anchor="start" dominant-baseline="central">UML · コンポーネント図</text>
+<text x="24" y="119.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">利用する契約と、その契約を</text>
+<text x="24" y="153.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">実装する部品を分ける</text>
+<line x1="24" y1="180" x2="656" y2="180" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="24" y1="1376" x2="656" y2="1376" stroke="#d8d8d8" stroke-width="2"/>
+<text x="24" y="1411" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="165" y="205" width="350" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="340" y="239" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">«component»</text>
+<text x="340" y="282" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle" dominant-baseline="central">Web UI</text>
+<rect x="165" y="415" width="350" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="340" y="449" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">«interface»</text>
+<text x="340" y="492" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle" dominant-baseline="central">OrderAPI</text>
+<rect x="165" y="625" width="350" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="340" y="659" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">«component»</text>
+<text x="340" y="702" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle" dominant-baseline="central">Order Service</text>
+<rect x="165" y="835" width="350" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="340" y="869" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">«interface»</text>
+<text x="340" y="912" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle" dominant-baseline="central">PaymentGateway</text>
+<rect x="165" y="1045" width="350" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="340" y="1079" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">«component»</text>
+<text x="340" y="1122" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle" dominant-baseline="central">Payment Adapter</text>
+<polyline points="340,315 340,415" fill="none" stroke="#171717" stroke-width="3" stroke-dasharray="9 6"/>
+<polyline points="348.0,397.0 340,415 332.0,397.0" fill="none" stroke="#171717" stroke-width="3"/>
+<text x="425" y="365" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">利用</text>
+<polyline points="340,625 340.0,547.0" fill="none" stroke="#171717" stroke-width="3" stroke-dasharray="9 6"/>
+<polygon points="330.0,547.0 340,525 350.0,547.0" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<text x="425" y="575" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">実現</text>
+<polyline points="340,735 340,835" fill="none" stroke="#171717" stroke-width="3" stroke-dasharray="9 6"/>
+<polyline points="348.0,817.0 340,835 332.0,817.0" fill="none" stroke="#171717" stroke-width="3"/>
+<text x="425" y="785" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">利用</text>
+<polyline points="340,1045 340.0,967.0" fill="none" stroke="#171717" stroke-width="3" stroke-dasharray="9 6"/>
+<polygon points="330.0,967.0 340,945 350.0,967.0" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<text x="425" y="995" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">実現</text>
+<text x="24" y="1200" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="600" text-anchor="start" dominant-baseline="central">凡例</text>
+<text x="24" y="1240" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">破線＋開いた矢印＝依存</text>
+<text x="24" y="1274" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">破線＋白抜き三角＝インターフェースの実現</text>
+<text x="24" y="1308" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">提供契約を別の長方形で示す。</text>
+<text x="24" y="1342" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">実行時の呼出し順序は表さない。</text>
 </svg>

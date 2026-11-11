@@ -1,47 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1190" role="img" aria-labelledby="title desc">
 <title id="title">UML · ユースケース図</title>
 <desc id="desc">外部の役割と、注文システムで達成する目的を分ける</desc>
-<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  07</text>
-<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="34" font-weight="600" text-anchor="start">UML · ユースケース図</text>
-<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">外部の役割と、注文システムで達成する目的を分ける</text>
-<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
-<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
-<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<rect x="315" y="185" width="590" height="385" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<text x="340" y="219" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="24" font-weight="600" text-anchor="start">注文システム</text>
-<circle cx="145" cy="310" r="18" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<line x1="145" y1="328" x2="145" y2="380" stroke="#171717" stroke-width="2"/>
-<line x1="115" y1="348" x2="175" y2="348" stroke="#171717" stroke-width="2"/>
-<line x1="145" y1="380" x2="117" y2="416" stroke="#171717" stroke-width="2"/>
-<line x1="145" y1="380" x2="173" y2="416" stroke="#171717" stroke-width="2"/>
-<text x="145" y="449" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="400" text-anchor="middle">購入者</text>
-<circle cx="1010" cy="310" r="18" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<line x1="1010" y1="328" x2="1010" y2="380" stroke="#171717" stroke-width="2"/>
-<line x1="980" y1="348" x2="1040" y2="348" stroke="#171717" stroke-width="2"/>
-<line x1="1010" y1="380" x2="982" y2="416" stroke="#171717" stroke-width="2"/>
-<line x1="1010" y1="380" x2="1038" y2="416" stroke="#171717" stroke-width="2"/>
-<text x="1010" y="449" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="400" text-anchor="middle">決済サービス</text>
-<ellipse cx="610" cy="285" rx="180" ry="38" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="610" y="293" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="400" text-anchor="middle">注文を登録する</text>
-<line x1="175" y1="348" x2="430" y2="285" stroke="#171717" stroke-width="2"/>
-<ellipse cx="610" cy="390" rx="180" ry="38" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="610" y="398" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="400" text-anchor="middle">支払う</text>
-<line x1="175" y1="348" x2="430" y2="390" stroke="#171717" stroke-width="2"/>
-<ellipse cx="610" cy="495" rx="180" ry="38" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="610" y="503" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="400" text-anchor="middle">注文状態を確認する</text>
-<line x1="175" y1="348" x2="430" y2="495" stroke="#171717" stroke-width="2"/>
-<line x1="790" y1="390" x2="980" y2="348" stroke="#171717" stroke-width="2"/>
-<text x="45" y="615" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">凡例：人形＝アクター（人・外部システムの役割）／楕円＝利用目的／線＝関連</text>
+<rect x="0" y="0" width="680" height="1190" fill="#ffffff" stroke="none" stroke-width="3"/>
+<text x="24" y="29" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">MIMIC / DEVELOPMENT DIAGRAMS / 07</text>
+<text x="24" y="70" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="32" font-weight="600" text-anchor="start" dominant-baseline="central">UML · ユースケース図</text>
+<text x="24" y="119.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">外部の役割と、注文システムで</text>
+<text x="24" y="153.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">達成する目的を分ける</text>
+<line x1="24" y1="180" x2="656" y2="180" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="24" y1="1126" x2="656" y2="1126" stroke="#d8d8d8" stroke-width="2"/>
+<text x="24" y="1161" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="190" y="400" width="460" height="510" fill="#ffffff" stroke="#171717" stroke-width="3"/>
+<text x="420" y="439" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle" dominant-baseline="central">注文システム</text>
+<circle cx="80" cy="570" r="20" fill="#ffffff" stroke="#171717" stroke-width="3"/>
+<line x1="80" y1="590" x2="80" y2="646" stroke="#171717" stroke-width="3"/>
+<line x1="50" y1="612" x2="110" y2="612" stroke="#171717" stroke-width="3"/>
+<line x1="80" y1="646" x2="52" y2="686" stroke="#171717" stroke-width="3"/>
+<line x1="80" y1="646" x2="108" y2="686" stroke="#171717" stroke-width="3"/>
+<text x="80" y="718" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle" dominant-baseline="central">購入者</text>
+<circle cx="470" cy="215" r="20" fill="#ffffff" stroke="#171717" stroke-width="3"/>
+<line x1="470" y1="235" x2="470" y2="291" stroke="#171717" stroke-width="3"/>
+<line x1="440" y1="257" x2="500" y2="257" stroke="#171717" stroke-width="3"/>
+<line x1="470" y1="291" x2="442" y2="331" stroke="#171717" stroke-width="3"/>
+<line x1="470" y1="291" x2="498" y2="331" stroke="#171717" stroke-width="3"/>
+<text x="470" y="363" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle" dominant-baseline="central">決済サービス</text>
+<ellipse cx="420" cy="520" rx="188" ry="50" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="420" y="520" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle" dominant-baseline="central">注文を登録する</text>
+<line x1="110" y1="612" x2="232" y2="520" stroke="#171717" stroke-width="3"/>
+<ellipse cx="420" cy="680" rx="188" ry="50" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="420" y="680" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle" dominant-baseline="central">支払う</text>
+<line x1="110" y1="612" x2="232" y2="680" stroke="#171717" stroke-width="3"/>
+<ellipse cx="420" cy="840" rx="188" ry="50" fill="#f5f5f5" stroke="#171717" stroke-width="3"/>
+<text x="420" y="840" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle" dominant-baseline="central">注文状態を確認する</text>
+<line x1="110" y1="612" x2="232" y2="840" stroke="#171717" stroke-width="3"/>
+<polyline points="500,257 630,257 630,680 608,680" fill="none" stroke="#171717" stroke-width="3"/>
+<text x="24" y="960" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="600" text-anchor="start" dominant-baseline="central">凡例</text>
+<text x="24" y="1000" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">人形＝アクター（人・外部システムの役割）</text>
+<text x="24" y="1034" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">楕円＝利用目的　囲み＝システムの範囲</text>
+<text x="24" y="1068" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">実線＝関連。処理順序は表さない。</text>
 </svg>
