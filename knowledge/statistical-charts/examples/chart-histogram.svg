@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">ヒストグラム｜応答時間の分布</title>
+<desc id="desc">架空データ · POST /orders · 15要求を200 ms幅の区間に分ける</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  23</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">ヒストグラム｜応答時間の分布</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">架空データ · POST /orders · 15要求を200 ms幅の区間に分ける</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<text x="150" y="215" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">区間内の要求（件）</text>
+<line x1="150" y1="600.0" x2="950" y2="600.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="132" y="606.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">0</text>
+<line x1="150" y1="528.0" x2="950" y2="528.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="132" y="534.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">3</text>
+<line x1="150" y1="456.0" x2="950" y2="456.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="132" y="462.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">6</text>
+<line x1="150" y1="384.0" x2="950" y2="384.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="132" y="390.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">9</text>
+<line x1="150" y1="312.0" x2="950" y2="312.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="132" y="318.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">12</text>
+<line x1="150" y1="240.0" x2="950" y2="240.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="132" y="246.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">15</text>
+<line x1="150" y1="240" x2="150" y2="600" stroke="#171717" stroke-width="2"/>
+<line x1="150" y1="600" x2="950" y2="600" stroke="#171717" stroke-width="2"/>
+<rect x="150" y="312.0" width="160" height="288.0" fill="#bcbcbc" stroke="#171717" stroke-width="1.5"/>
+<text x="230" y="295.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">12</text>
+<text x="390" y="583.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">0</text>
+<text x="550" y="583.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">0</text>
+<rect x="630" y="576.0" width="160" height="24.0" fill="#bcbcbc" stroke="#171717" stroke-width="1.5"/>
+<text x="710" y="559.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">1</text>
+<rect x="790" y="552.0" width="160" height="48.0" fill="#bcbcbc" stroke="#171717" stroke-width="1.5"/>
+<text x="870" y="535.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">2</text>
+<line x1="150" y1="600" x2="150" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="150" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">0</text>
+<line x1="310" y1="600" x2="310" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="310" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">200</text>
+<line x1="470" y1="600" x2="470" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="470" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">400</text>
+<line x1="630" y1="600" x2="630" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="630" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">600</text>
+<line x1="790" y1="600" x2="790" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="790" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">800</text>
+<line x1="950" y1="600" x2="950" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="950" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">1000</text>
+<text x="1020" y="667" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">サーバ処理時間（ms）</text>
+<rect x="720" y="177" width="24" height="20" fill="#bcbcbc" stroke="#171717" stroke-width="2"/>
+<text x="758" y="195" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">高さ = 区間件数</text>
+<text x="40" y="702" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">2026-11-01 09:00–09:03 UTC · n=15 · 下限以上、上限未満。全区間の合計は15件。</text>
+<text x="40" y="731" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">区間幅はすべて200 ms。800 msの観測は「800以上1000未満」に含まれる。</text>
+</svg>

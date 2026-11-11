@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">積上げ棒グラフ｜全体と内訳</title>
+<desc id="desc">架空データ · 各分の完了応答5件を成功4件・503が1件に分ける</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  27</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">積上げ棒グラフ｜全体と内訳</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">架空データ · 各分の完了応答5件を成功4件・503が1件に分ける</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<text x="140" y="215" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">1分区間の完了応答（件）</text>
+<line x1="140" y1="600.0" x2="980" y2="600.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="606.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="540.0" x2="980" y2="540.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="546.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">1</text>
+<line x1="140" y1="480.0" x2="980" y2="480.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="486.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">2</text>
+<line x1="140" y1="420.0" x2="980" y2="420.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="426.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">3</text>
+<line x1="140" y1="360.0" x2="980" y2="360.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="366.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">4</text>
+<line x1="140" y1="300.0" x2="980" y2="300.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="306.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">5</text>
+<line x1="140" y1="240.0" x2="980" y2="240.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="246.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">6</text>
+<line x1="140" y1="240" x2="140" y2="600" stroke="#171717" stroke-width="2"/>
+<line x1="140" y1="600" x2="980" y2="600" stroke="#171717" stroke-width="2"/>
+<rect x="245" y="360.0" width="130" height="240.0" fill="#d4d4d4" stroke="#171717" stroke-width="2"/>
+<rect x="245" y="300.0" width="130" height="60.0" fill="#373737" stroke="#171717" stroke-width="2"/>
+<text x="310" y="488.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">4</text>
+<text x="310" y="338.0" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">1</text>
+<text x="310" y="283.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">合計 5</text>
+<rect x="495" y="360.0" width="130" height="240.0" fill="#d4d4d4" stroke="#171717" stroke-width="2"/>
+<rect x="495" y="300.0" width="130" height="60.0" fill="#373737" stroke="#171717" stroke-width="2"/>
+<text x="560" y="488.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">4</text>
+<text x="560" y="338.0" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">1</text>
+<text x="560" y="283.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">合計 5</text>
+<rect x="745" y="360.0" width="130" height="240.0" fill="#d4d4d4" stroke="#171717" stroke-width="2"/>
+<rect x="745" y="300.0" width="130" height="60.0" fill="#373737" stroke="#171717" stroke-width="2"/>
+<text x="810" y="488.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">4</text>
+<text x="810" y="338.0" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">1</text>
+<text x="810" y="283.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">合計 5</text>
+<line x1="310" y1="600" x2="310" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="310" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:00</text>
+<line x1="560" y1="600" x2="560" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="560" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:01</text>
+<line x1="810" y1="600" x2="810" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="810" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:02</text>
+<text x="1020" y="667" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">分区間の開始時刻（UTC）</text>
+<rect x="550" y="176" width="25" height="22" fill="#d4d4d4" stroke="#171717" stroke-width="2"/>
+<text x="590" y="195" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">成功 200</text>
+<rect x="770" y="176" width="25" height="22" fill="#373737" stroke="#171717" stroke-width="2"/>
+<text x="810" y="195" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">エラー 503</text>
+<text x="40" y="702" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">2026-11-01 09:00–09:03 UTC · n=15 · 同じ単位で、重複しない内訳を積み上げる。</text>
+<text x="40" y="731" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">各分のエラー率は1÷5 = 20%。件数図では全体量も読み取れる。p50とp95は積み上げない。</text>
+</svg>

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">折れ線グラフ｜時間ごとの応答時間</title>
+<desc id="desc">架空データ · POST /orders · 完了応答15件（成功・503を含む）</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  21</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">折れ線グラフ｜時間ごとの応答時間</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">架空データ · POST /orders · 完了応答15件（成功・503を含む）</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<text x="140" y="215" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">サーバ処理時間（ms）</text>
+<line x1="140" y1="600.0" x2="820" y2="600.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="606.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="528.0" x2="820" y2="528.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="534.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">200</text>
+<line x1="140" y1="456.0" x2="820" y2="456.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="462.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">400</text>
+<line x1="140" y1="384.0" x2="820" y2="384.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="390.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">600</text>
+<line x1="140" y1="312.0" x2="820" y2="312.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="318.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">800</text>
+<line x1="140" y1="240.0" x2="820" y2="240.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="246.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">1000</text>
+<line x1="140" y1="240" x2="140" y2="600" stroke="#171717" stroke-width="2"/>
+<line x1="140" y1="600" x2="820" y2="600" stroke="#171717" stroke-width="2"/>
+<polyline points="180,348.0 480,312.0 780,258.0" fill="none" stroke="#171717" stroke-width="3"/>
+<circle cx="180" cy="348.0" r="6" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="180" y="331.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">700</text>
+<circle cx="480" cy="312.0" r="6" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="480" y="295.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">800</text>
+<circle cx="780" cy="258.0" r="6" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="780" y="241.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">950</text>
+<polyline points="180,564.0 480,560.4 780,555.0" fill="none" stroke="#5e5e5e" stroke-width="3" stroke-dasharray="8 5"/>
+<rect x="175" y="559.0" width="10" height="10" fill="#ffffff" stroke="#5e5e5e" stroke-width="2"/>
+<text x="180" y="547.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">100</text>
+<rect x="475" y="555.4" width="10" height="10" fill="#ffffff" stroke="#5e5e5e" stroke-width="2"/>
+<text x="480" y="543.4" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">110</text>
+<rect x="775" y="550.0" width="10" height="10" fill="#ffffff" stroke="#5e5e5e" stroke-width="2"/>
+<text x="780" y="538.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">125</text>
+<line x1="875" y1="267" x2="925" y2="267" stroke="#171717" stroke-width="3"/>
+<circle cx="900" cy="267" r="5" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="940" y="274" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">p95</text>
+<line x1="875" y1="315" x2="925" y2="315" stroke="#5e5e5e" stroke-width="3" stroke-dasharray="8 5"/>
+<rect x="895" y="310" width="10" height="10" fill="#ffffff" stroke="#5e5e5e" stroke-width="2"/>
+<text x="940" y="322" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">p50</text>
+<text x="880" y="390" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">各分 n=5</text>
+<text x="880" y="419" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">1分ごとに集計</text>
+<line x1="180" y1="600" x2="180" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="180" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:00</text>
+<line x1="480" y1="600" x2="480" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="480" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:01</text>
+<line x1="780" y1="600" x2="780" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="780" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:02</text>
+<text x="1020" y="667" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">分区間の開始時刻（UTC）</text>
+<text x="40" y="702" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">2026-11-01 09:00–09:03 UTC · 各点は1分区間の集計値。線は値の推移を結ぶ。</text>
+<text x="40" y="731" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">分位数は昇順 ceil(p × n) 番目。この小標本ではp95が各群の最大値になる。</text>
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 850" role="img" aria-labelledby="title desc">
+<title id="title">UML · 状態機械図</title>
+<desc id="desc">支払待ち・支払済み・結果確認中と、遷移を許す条件</desc>
+<rect x="0" y="0" width="1120" height="850" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  13</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">UML · 状態機械図</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">支払待ち・支払済み・結果確認中と、遷移を許す条件</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="796" x2="1080" y2="796" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="827" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="120" y="310" width="260" height="90" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="250.0" y="346" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">支払待ち</text>
+<rect x="750" y="310" width="260" height="90" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="880.0" y="346" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">支払済み</text>
+<rect x="430" y="580" width="260" height="90" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="560.0" y="616" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">結果確認中</text>
+<circle cx="65" cy="355" r="12" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="77" y1="355" x2="120" y2="355" stroke="#171717" stroke-width="2"/>
+<polygon points="108.0,350.0 120,355 108.0,360.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="380" y1="355" x2="750" y2="355" stroke="#171717" stroke-width="2"/>
+<polygon points="738.0,350.0 750,355 738.0,360.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="565" y="302" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">決済承認 [金額一致]</text>
+<text x="565" y="330" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">/ 承認IDを記録</text>
+<polyline points="220,310 220,205 330,205 330,285" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="330" y1="285" x2="330" y2="310" stroke="#171717" stroke-width="2"/>
+<polygon points="335.0,298.0 330,310 325.0,298.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="250" y="174" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">決済拒否 / 理由を記録</text>
+<line x1="330" y1="400" x2="490" y2="580" stroke="#171717" stroke-width="2"/>
+<polygon points="485.8,567.7 490,580 478.3,574.4" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="280" y="476" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">応答待ち</text>
+<text x="280" y="504" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">期限超過</text>
+<polyline points="430,630 160,630 160,425" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="160" y1="425" x2="160" y2="400" stroke="#171717" stroke-width="2"/>
+<polygon points="155.0,412.0 160,400 165.0,412.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="245" y="680" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">照会で未決済確定</text>
+<line x1="690" y1="580" x2="830" y2="400" stroke="#171717" stroke-width="2"/>
+<polygon points="818.7,406.4 830,400 826.6,412.5" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="905" y="483" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">照会で承認確定</text>
+<text x="905" y="513" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">[金額一致]</text>
+<text x="905" y="543" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">/ 承認IDを記録</text>
+<text x="55" y="740" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">凡例：丸角の箱＝状態／矢印＝トリガー [ガード] / 効果。終了・取消・返金は省略。</text>
+</svg>

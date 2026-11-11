@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">棒グラフ｜ステータス別の件数</title>
+<desc id="desc">架空データ · POST /orders · 同じ3分間の完了応答を比較</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  22</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">棒グラフ｜ステータス別の件数</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">架空データ · POST /orders · 同じ3分間の完了応答を比較</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<text x="140" y="215" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">完了応答（件）</text>
+<line x1="140" y1="600.0" x2="980" y2="600.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="606.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="528.0" x2="980" y2="528.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="534.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">3</text>
+<line x1="140" y1="456.0" x2="980" y2="456.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="462.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">6</text>
+<line x1="140" y1="384.0" x2="980" y2="384.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="390.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">9</text>
+<line x1="140" y1="312.0" x2="980" y2="312.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="318.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">12</text>
+<line x1="140" y1="240.0" x2="980" y2="240.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="246.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">15</text>
+<line x1="140" y1="240" x2="140" y2="600" stroke="#171717" stroke-width="2"/>
+<line x1="140" y1="600" x2="980" y2="600" stroke="#171717" stroke-width="2"/>
+<rect x="280" y="312.0" width="170" height="288.0" fill="#c8c8c8" stroke="#171717" stroke-width="2"/>
+<text x="365" y="294.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="600" text-anchor="middle">12件</text>
+<text x="365" y="635" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">成功 200</text>
+<rect x="670" y="528.0" width="170" height="72.0" fill="#c8c8c8" stroke="#171717" stroke-width="2"/>
+<text x="755" y="510.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="600" text-anchor="middle">3件</text>
+<text x="755" y="635" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">エラー 503</text>
+<rect x="720" y="177" width="24" height="20" fill="#c8c8c8" stroke="#171717" stroke-width="2"/>
+<text x="758" y="195" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">棒の長さ = 件数</text>
+<text x="980" y="666" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">HTTPステータス</text>
+<text x="40" y="702" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">2026-11-01 09:00–09:03 UTC · n=15 · 成功12件、503が3件。数量軸は0から。</text>
+<text x="40" y="731" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">件数の比較であり、利用者数ではない。期間・対象・単位をそろえて比較する。</text>
+</svg>

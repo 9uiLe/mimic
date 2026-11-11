@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 1100" role="img" aria-labelledby="title desc">
+<title id="title">UML · アクティビティ図</title>
+<desc id="desc">条件による選択と、承認後の並行処理・同期を区別する</desc>
+<rect x="0" y="0" width="1120" height="1100" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  12</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">UML · アクティビティ図</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">条件による選択と、承認後の並行処理・同期を区別する</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="1046" x2="1080" y2="1046" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="1077" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<circle cx="560" cy="190" r="12" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="560" y1="202" x2="560" y2="230" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,218.0 560,230 555.0,218.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="410" y="230" width="300" height="70" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="560.0" y="266" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">決済結果を受け取る</text>
+<line x1="560" y1="300" x2="560" y2="330" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,318.0 560,330 555.0,318.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<polygon points="560,330 610,380 560,430 510,380" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="560" y="387" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">承認？</text>
+<line x1="510" y1="380" x2="230" y2="380" stroke="#171717" stroke-width="2"/>
+<polygon points="242.0,385.0 230,380 242.0,375.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="370.0" y="368.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">[拒否]</text>
+<rect x="80" y="345" width="150" height="70" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="155.0" y="381" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">理由を記録</text>
+<polyline points="155,415 155,900 510,900" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="510" y1="900" x2="540" y2="900" stroke="#171717" stroke-width="2"/>
+<polygon points="528.0,895.0 540,900 528.0,905.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="610" y1="380" x2="890" y2="380" stroke="#171717" stroke-width="2"/>
+<polygon points="878.0,375.0 890,380 878.0,385.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="750.0" y="368.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">[承認・金額一致]</text>
+<rect x="890" y="345" width="160" height="70" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="970.0" y="381" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">支払済み保存</text>
+<polyline points="970,415 970,490 560,490" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="560" y1="490" x2="560" y2="520" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,508.0 560,520 555.0,508.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="285" y="520" width="550" height="9" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="380" y1="529" x2="380" y2="580" stroke="#171717" stroke-width="2"/>
+<polygon points="385.0,568.0 380,580 375.0,568.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="740" y1="529" x2="740" y2="580" stroke="#171717" stroke-width="2"/>
+<polygon points="745.0,568.0 740,580 735.0,568.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="245" y="580" width="270" height="85" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="380.0" y="616" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">購入者へ通知</text>
+<rect x="605" y="580" width="270" height="85" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="22"/>
+<text x="740.0" y="616" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">監査ログへ記録</text>
+<line x1="380" y1="665" x2="380" y2="720" stroke="#171717" stroke-width="2"/>
+<polygon points="385.0,708.0 380,720 375.0,708.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="740" y1="665" x2="740" y2="720" stroke="#171717" stroke-width="2"/>
+<polygon points="745.0,708.0 740,720 735.0,708.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="285" y="720" width="550" height="9" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="560" y1="729" x2="560" y2="880" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,868.0 560,880 555.0,868.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<polygon points="560,880 580,900 560,920 540,900" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<line x1="560" y1="920" x2="560" y2="935" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,923.0 560,935 555.0,923.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<circle cx="560" cy="944" r="13" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<circle cx="560" cy="944" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="650" y="790" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">凡例：菱形＝条件分岐・合流</text>
+<text x="650" y="823" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">太線＝並行分岐・同期</text>
+<text x="650" y="856" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">この例では応答を得た後だけを扱う。</text>
+</svg>

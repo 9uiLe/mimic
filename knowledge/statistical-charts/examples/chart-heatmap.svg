@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">ヒートマップ｜分布がいつ変わるか</title>
+<desc id="desc">架空データ · 時間 × 応答時間の区間 · セルの数値と濃さが件数</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  26</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">ヒートマップ｜分布がいつ変わるか</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">架空データ · 時間 × 応答時間の区間 · セルの数値と濃さが件数</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<text x="60" y="210" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">処理時間帯（ms）</text>
+<text x="200" y="563" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">0–&lt;200</text>
+<rect x="220" y="520" width="210" height="70" fill="#303030" stroke="#d8d8d8" stroke-width="1"/>
+<text x="325" y="564" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">4</text>
+<rect x="430" y="520" width="210" height="70" fill="#303030" stroke="#d8d8d8" stroke-width="1"/>
+<text x="535" y="564" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">4</text>
+<rect x="640" y="520" width="210" height="70" fill="#303030" stroke="#d8d8d8" stroke-width="1"/>
+<text x="745" y="564" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">4</text>
+<text x="200" y="493" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">200–&lt;400</text>
+<rect x="220" y="450" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="325" y="494" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<rect x="430" y="450" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="535" y="494" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<rect x="640" y="450" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="745" y="494" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<text x="200" y="423" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">400–&lt;600</text>
+<rect x="220" y="380" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="325" y="424" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<rect x="430" y="380" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="535" y="424" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<rect x="640" y="380" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="745" y="424" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<text x="200" y="353" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">600–&lt;800</text>
+<rect x="220" y="310" width="210" height="70" fill="#d3d3d3" stroke="#d8d8d8" stroke-width="1"/>
+<text x="325" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">1</text>
+<rect x="430" y="310" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="535" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<rect x="640" y="310" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="745" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<text x="200" y="283" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">800–&lt;1000</text>
+<rect x="220" y="240" width="210" height="70" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="325" y="284" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">0</text>
+<rect x="430" y="240" width="210" height="70" fill="#d3d3d3" stroke="#d8d8d8" stroke-width="1"/>
+<text x="535" y="284" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">1</text>
+<rect x="640" y="240" width="210" height="70" fill="#d3d3d3" stroke="#d8d8d8" stroke-width="1"/>
+<text x="745" y="284" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">1</text>
+<line x1="325" y1="590" x2="325" y2="597" stroke="#171717" stroke-width="2"/>
+<text x="325" y="623" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:00</text>
+<line x1="535" y1="590" x2="535" y2="597" stroke="#171717" stroke-width="2"/>
+<text x="535" y="623" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:01</text>
+<line x1="745" y1="590" x2="745" y2="597" stroke="#171717" stroke-width="2"/>
+<text x="745" y="623" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">09:02</text>
+<text x="1020" y="657" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">分区間の開始時刻（UTC）</text>
+<text x="900" y="230" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">件数</text>
+<rect x="900" y="265" width="35" height="34" fill="#ffffff" stroke="#d8d8d8" stroke-width="1"/>
+<text x="950" y="290" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">0</text>
+<rect x="900" y="321" width="35" height="34" fill="#d3d3d3" stroke="#d8d8d8" stroke-width="1"/>
+<text x="950" y="346" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">1</text>
+<rect x="900" y="377" width="35" height="34" fill="#a6a6a6" stroke="#d8d8d8" stroke-width="1"/>
+<text x="950" y="402" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">2</text>
+<rect x="900" y="433" width="35" height="34" fill="#717171" stroke="#d8d8d8" stroke-width="1"/>
+<text x="950" y="458" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">3</text>
+<rect x="900" y="489" width="35" height="34" fill="#303030" stroke="#d8d8d8" stroke-width="1"/>
+<text x="950" y="514" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">4</text>
+<text x="900" y="565" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">濃い = 多い</text>
+<text x="40" y="702" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">2026-11-01 09:00–09:03 UTC · n=15 · 1分 × 200 ms幅。下限以上・上限未満。</text>
+<text x="40" y="731" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">0は観測済みのゼロ件。欠測ではない。各列の合計は5件。p95だけからは復元できない。</text>
+</svg>

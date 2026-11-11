@@ -32,6 +32,10 @@ related:
 
 test('reviewed static SVG validates while executable, external, malformed, and unlisted figures reject', () => {
   assert.doesNotThrow(() => validateFigure(figure, Buffer.from(validSvg)));
+  const lineSvg = validSvg.replace('<rect width="100" height="100" fill="#fff"/>',
+    '<line x1="10" y1="20" x2="80" y2="90" stroke="#111"/>');
+  assert.doesNotThrow(() => validateFigure(figure, Buffer.from(lineSvg)), 'static line coordinate attributes must validate');
+  assert.throws(() => validateFigure(figure, Buffer.from(lineSvg.replace('x2=', 'x3='))), /static SVG/, 'unlisted numeric attributes must reject');
   assert.doesNotThrow(() => validateFigure(figure, Buffer.from(validSvg.replace('viewBox="0 0 1100 450"', 'width="1100" height="450"'))));
   for (const svg of [
     validSvg.replace('<rect ', '<script '),

@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<title id="title">C4 Dynamic：支払成功のやり取り</title>
+<desc id="desc">対象：作成済み注文の支払 · 番号はこのシナリオでの順序</desc>
+<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  06</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">C4 Dynamic：支払成功のやり取り</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">対象：作成済み注文の支払 · 番号はこのシナリオでの順序</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="60" y="226" width="250" height="154" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="185.0" y="262" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">Webアプリ</text>
+<text x="185.0" y="294" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">Container</text>
+<text x="185.0" y="320" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">支払操作と結果表示</text>
+<rect x="435" y="226" width="250" height="154" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="560.0" y="262" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">注文API</text>
+<text x="560.0" y="294" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">Container</text>
+<text x="560.0" y="320" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">支払処理を調整</text>
+<rect x="810" y="226" width="250" height="154" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="935.0" y="262" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">決済サービス</text>
+<text x="935.0" y="294" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">外部システム</text>
+<text x="935.0" y="320" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">決済を実行</text>
+<rect x="435" y="477" width="250" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="560.0" y="513" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">注文DB</text>
+<text x="560.0" y="545" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">Container：支払状態を保存</text>
+<line x1="310" y1="267" x2="435" y2="267" stroke="#171717" stroke-width="2"/>
+<polygon points="423.0,262.0 435,267 423.0,272.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="372" y="248" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">1 支払要求</text>
+<line x1="435" y1="347" x2="310" y2="347" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
+<polygon points="322.0,352.0 310,347 322.0,342.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="372" y="374" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">6 支払完了</text>
+<line x1="685" y1="267" x2="810" y2="267" stroke="#171717" stroke-width="2"/>
+<polygon points="798.0,262.0 810,267 798.0,272.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="747" y="248" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">2 決済要求</text>
+<line x1="810" y1="347" x2="685" y2="347" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
+<polygon points="697.0,352.0 685,347 697.0,342.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="747" y="374" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">3 承認</text>
+<line x1="485" y1="380" x2="485" y2="477" stroke="#171717" stroke-width="2"/>
+<polygon points="490.0,465.0 485,477 480.0,465.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="405" y="418" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">4 支払済みを</text>
+<text x="405" y="444" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">保存</text>
+<line x1="635" y1="477" x2="635" y2="380" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
+<polygon points="630.0,392.0 635,380 640.0,392.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="716" y="439" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">5 保存完了</text>
+<line x1="60" y1="618" x2="115" y2="618" stroke="#171717" stroke-width="2"/>
+<polygon points="103.0,613.0 115,618 103.0,623.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="132" y="624" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">要求</text>
+<line x1="210" y1="618" x2="265" y2="618" stroke="#171717" stroke-width="2" stroke-dasharray="7 5"/>
+<polygon points="253.0,613.0 265,618 253.0,623.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="282" y="624" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">応答</text>
+<text x="386" y="624" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">通信方式：Web・決済＝HTTPS、DB＝SQL / TLS。失敗分岐は省略。</text>
+</svg>

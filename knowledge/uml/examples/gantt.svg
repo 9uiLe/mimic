@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 760" role="img" aria-labelledby="title desc">
+<title id="title">ガントチャート：開発計画と依存</title>
+<desc id="desc">架空の予定。2026年11月2日〜11日、休日も1日として数える。</desc>
+<rect x="0" y="0" width="1120" height="760" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  31</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">ガントチャート：開発計画と依存</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">架空の予定。2026年11月2日〜11日、休日も1日として数える。</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="706" x2="1080" y2="706" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="737" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="680" y="190" width="72" height="406" fill="#f5f5f5" stroke="none" stroke-width="2"/>
+<rect x="752" y="190" width="72" height="406" fill="#f5f5f5" stroke="none" stroke-width="2"/>
+<line x1="320" y1="190" x2="320" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="392" y1="190" x2="392" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="464" y1="190" x2="464" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="536" y1="190" x2="536" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="608" y1="190" x2="608" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="680" y1="190" x2="680" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="752" y1="190" x2="752" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="824" y1="190" x2="824" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="896" y1="190" x2="896" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="968" y1="190" x2="968" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="1040" y1="190" x2="1040" y2="596" stroke="#d8d8d8" stroke-width="1"/>
+<text x="356.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/2</text>
+<text x="428.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/3</text>
+<text x="500.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/4</text>
+<text x="572.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/5</text>
+<text x="644.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/6</text>
+<text x="716.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/7</text>
+<text x="788.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/8</text>
+<text x="860.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/9</text>
+<text x="932.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/10</text>
+<text x="1004.0" y="184" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">11/11</text>
+<line x1="40" y1="214" x2="1040" y2="214" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="40" y1="278" x2="1040" y2="278" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="40" y1="342" x2="1040" y2="342" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="40" y1="406" x2="1040" y2="406" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="40" y1="470" x2="1040" y2="470" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="40" y1="534" x2="1040" y2="534" stroke="#d8d8d8" stroke-width="1"/>
+<line x1="40" y1="598" x2="1040" y2="598" stroke="#d8d8d8" stroke-width="1"/>
+<text x="48" y="253" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">A  設計</text>
+<text x="48" y="317" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">B  API実装（A後）</text>
+<text x="48" y="381" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">C  UI実装（A後）</text>
+<text x="48" y="445" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">D  結合テスト（B・C後）</text>
+<text x="48" y="509" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">E  レビュー（D後）</text>
+<text x="48" y="573" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">M  リリース（E後）</text>
+<rect x="320" y="228" width="144" height="36" fill="#171717" stroke="#171717" stroke-width="2" rx="3"/>
+<text x="392.0" y="253" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">2日</text>
+<rect x="464" y="292" width="216" height="36" fill="#171717" stroke="#171717" stroke-width="2" rx="3"/>
+<text x="572.0" y="317" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">3日</text>
+<rect x="464" y="356" width="288" height="36" fill="#171717" stroke="#171717" stroke-width="2" rx="3"/>
+<text x="608.0" y="381" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">4日</text>
+<rect x="752" y="420" width="144" height="36" fill="#171717" stroke="#171717" stroke-width="2" rx="3"/>
+<text x="824.0" y="445" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">2日</text>
+<rect x="896" y="484" width="72" height="36" fill="#171717" stroke="#171717" stroke-width="2" rx="3"/>
+<text x="932.0" y="509" fill="#ffffff" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">1日</text>
+<polyline points="464,246 480,246 480,280 464,280" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="464" y1="280" x2="464" y2="292" stroke="#171717" stroke-width="2"/>
+<polygon points="469.0,280.0 464,292 459.0,280.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<polyline points="464,246 480,246 480,270 448,270 448,374" fill="none" stroke="#171717" stroke-width="2" stroke-dasharray="6 4"/>
+<line x1="448" y1="374" x2="464" y2="374" stroke="#171717" stroke-width="2" stroke-dasharray="6 4"/>
+<polygon points="452.0,369.0 464,374 452.0,379.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<polyline points="680,310 776,310 776,404" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="776" y1="404" x2="776" y2="420" stroke="#171717" stroke-width="2"/>
+<polygon points="781.0,408.0 776,420 771.0,408.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="752" y1="392" x2="752" y2="420" stroke="#171717" stroke-width="2"/>
+<polygon points="757.0,408.0 752,420 747.0,408.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<polyline points="896,438 912,438 912,474 896,474" fill="none" stroke="#171717" stroke-width="2"/>
+<line x1="896" y1="474" x2="896" y2="484" stroke="#171717" stroke-width="2"/>
+<polygon points="901.0,472.0 896,484 891.0,472.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<line x1="968" y1="520" x2="968" y2="552" stroke="#171717" stroke-width="2" stroke-dasharray="6 4"/>
+<polygon points="968,552 982,566 968,580 954,566" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="40" y="642" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">棒：予定期間（日単位）　◆：期間を持たないマイルストーン</text>
+<text x="40" y="674" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">矢印と「〜後」：先行作業が完了してから開始。灰色列：土・日。</text>
+</svg>
