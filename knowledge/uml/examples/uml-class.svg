@@ -1,63 +1,73 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1420" role="img" aria-labelledby="title desc">
 <title id="title">UML · クラス図</title>
-<desc id="desc">型の属性・操作と、関連の両端の多重度を示す</desc>
-<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  08</text>
-<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="34" font-weight="600" text-anchor="start">UML · クラス図</text>
-<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">型の属性・操作と、関連の両端の多重度を示す</text>
-<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
-<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
-<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<rect x="65" y="240" width="270" height="250" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="65" y="240" width="270" height="52" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="200.0" y="275" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">Customer</text>
-<text x="81" y="327" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">customerId: ID</text>
-<text x="81" y="359" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">displayName: String</text>
-<rect x="425" y="240" width="270" height="250" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="425" y="240" width="270" height="52" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="560.0" y="275" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">Order</text>
-<text x="441" y="327" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">orderId: ID</text>
-<text x="441" y="359" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">status: PaymentStatus</text>
-<line x1="425" y1="425" x2="695" y2="425" stroke="#171717" stroke-width="2"/>
-<text x="441" y="461" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">confirmPayment()</text>
-<rect x="785" y="240" width="270" height="250" fill="#ffffff" stroke="#171717" stroke-width="2"/>
-<rect x="785" y="240" width="270" height="52" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="920.0" y="275" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">OrderLine</text>
-<text x="801" y="327" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">lineNo: Integer</text>
-<text x="801" y="359" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">quantity: Integer</text>
-<line x1="785" y1="425" x2="1055" y2="425" stroke="#171717" stroke-width="2"/>
-<text x="801" y="461" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">subtotal(): Money</text>
-<line x1="335" y1="350" x2="425" y2="350" stroke="#171717" stroke-width="2"/>
-<text x="345" y="330" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="start">1</text>
-<text x="390" y="330" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="start">0..*</text>
-<line x1="695" y1="350" x2="785" y2="350" stroke="#171717" stroke-width="2"/>
-<text x="705" y="330" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="start">1</text>
-<text x="747" y="330" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="20" font-weight="400" text-anchor="start">1..*</text>
-<text x="380" y="390" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">注文</text>
-<text x="740" y="390" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">明細</text>
-<text x="65" y="550" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">Customerは未注文でも存在できる。受付済みOrderには1件以上のOrderLineがある。</text>
-<text x="65" y="588" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">凡例：長方形＝クラス／区画＝名前・属性・操作／実線＝関連。DBテーブル図とは限らない。</text>
+<desc id="desc">型の属性・操作と、 関連の両端の多重度を示す</desc>
+<rect x="0" y="0" width="680" height="1420" fill="#ffffff" stroke="none" stroke-width="2.5"/>
+<text x="24" y="32" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC / DEVELOPMENT DIAGRAMS / 08</text>
+<text x="24" y="78" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="32" font-weight="600" text-anchor="start">UML · クラス図</text>
+<text x="24" y="116" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">型の属性・操作と、</text>
+<text x="24" y="152" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">関連の両端の多重度を示す</text>
+<line x1="24" y1="170" x2="656" y2="170" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="24" y1="1364" x2="656" y2="1364" stroke="#d8d8d8" stroke-width="2"/>
+<text x="24" y="1395" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="150" y="210" width="380" height="190" fill="#ffffff" stroke="#171717" stroke-width="2.5"/>
+<rect x="150" y="210" width="380" height="60" fill="#f5f5f5" stroke="#171717" stroke-width="2.5"/>
+<text x="340" y="250" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle">Customer</text>
+<text x="340" y="314" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">customerId: ID</text>
+<text x="340" y="352" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">displayName: String</text>
+<line x1="340" y1="400" x2="340" y2="510" stroke="#171717" stroke-width="2.5"/>
+<text x="378" y="431" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle">1</text>
+<text x="382" y="495" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle">0..*</text>
+<text x="278" y="463.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">注文</text>
+<rect x="150" y="510" width="380" height="244" fill="#ffffff" stroke="#171717" stroke-width="2.5"/>
+<rect x="150" y="510" width="380" height="60" fill="#f5f5f5" stroke="#171717" stroke-width="2.5"/>
+<text x="340" y="550" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle">Order</text>
+<text x="340" y="614" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">orderId: ID</text>
+<text x="340" y="652" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">status: PaymentStatus</text>
+<line x1="150" y1="684" x2="530" y2="684" stroke="#171717" stroke-width="2.5"/>
+<text x="340" y="728" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">confirmPayment()</text>
+<line x1="340" y1="754" x2="340" y2="864" stroke="#171717" stroke-width="2.5"/>
+<text x="378" y="785" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle">1</text>
+<text x="382" y="849" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="400" text-anchor="middle">1..*</text>
+<text x="278" y="817.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">明細</text>
+<rect x="150" y="864" width="380" height="244" fill="#ffffff" stroke="#171717" stroke-width="2.5"/>
+<rect x="150" y="864" width="380" height="60" fill="#f5f5f5" stroke="#171717" stroke-width="2.5"/>
+<text x="340" y="904" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="28" font-weight="600" text-anchor="middle">OrderLine</text>
+<text x="340" y="968" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">lineNo: Integer</text>
+<text x="340" y="1006" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">quantity: Integer</text>
+<line x1="150" y1="1038" x2="530" y2="1038" stroke="#171717" stroke-width="2.5"/>
+<text x="340" y="1082" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="middle">subtotal(): Money</text>
+<text x="24" y="1160" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">Customerは未注文でも存在できる。</text>
+<text x="24" y="1193" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">受付済みOrderは1件以上のOrderLineを持つ。</text>
+<text x="24" y="1245" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="start">凡例</text>
+<text x="24" y="1280" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">長方形＝クラス　実線＝関連</text>
+<text x="24" y="1313" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">区画＝名前・属性・操作</text>
+<text x="24" y="1346" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">DBテーブル図とは限らない。</text>
 </svg>

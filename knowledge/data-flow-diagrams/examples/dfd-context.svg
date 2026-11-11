@@ -1,54 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1170" role="img" aria-labelledby="title desc">
 <title id="title">DFD：コンテキスト図</title>
-<desc id="desc">注文サービス全体を一つの処理として、外部との情報交換を示す。</desc>
-<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<desc id="desc">注文サービスを一つの処理として、 外部との情報交換を示す。</desc>
+<rect x="0" y="0" width="680" height="1170" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="28" y="35" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
  font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  14</text>
-<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="34" font-weight="600" text-anchor="start">DFD：コンテキスト図</text>
-<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">注文サービス全体を一つの処理として、外部との情報交換を示す。</text>
-<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
-<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
-<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<rect x="60" y="280" width="200" height="140" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="160" y="335" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="middle">購入者</text>
-<text x="160" y="371" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="middle">外部実体</text>
-<rect x="430" y="260" width="280" height="180" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="24"/>
-<text x="570.0" y="296" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="23" font-weight="600" text-anchor="middle">注文サービス</text>
-<text x="570.0" y="328" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">注文の受付と状態照会</text>
-<text x="570.0" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">一つの処理として表現</text>
-<rect x="880" y="280" width="200" height="140" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="980" y="335" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="middle">決済サービス</text>
-<text x="980" y="371" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="22" font-weight="600" text-anchor="middle">外部実体</text>
-<line x1="260" y1="310" x2="430" y2="310" stroke="#171717" stroke-width="2"/>
-<polygon points="418.0,305.0 430,310 418.0,315.0" fill="#171717" stroke="#171717" stroke-width="2"/>
-<text x="345.0" y="298.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">注文内容・注文ID</text>
-<line x1="430" y1="390" x2="260" y2="390" stroke="#171717" stroke-width="2"/>
-<polygon points="272.0,395.0 260,390 272.0,385.0" fill="#171717" stroke="#171717" stroke-width="2"/>
-<text x="345.0" y="420.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">注文状態</text>
-<line x1="710" y1="310" x2="880" y2="310" stroke="#171717" stroke-width="2"/>
-<polygon points="868.0,305.0 880,310 868.0,315.0" fill="#171717" stroke="#171717" stroke-width="2"/>
-<text x="795.0" y="298.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">決済要求</text>
-<line x1="880" y1="390" x2="710" y2="390" stroke="#171717" stroke-width="2"/>
-<polygon points="722.0,395.0 710,390 722.0,385.0" fill="#171717" stroke="#171717" stroke-width="2"/>
-<text x="795.0" y="420.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="middle">決済結果</text>
-<text x="60" y="510" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">対象の境界：注文サービス。購入者と決済サービスは対象の外側。</text>
-<text x="60" y="547" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="21" font-weight="400" text-anchor="start">内部の処理・保存先は省略。矢印から処理順序や所要時間は読まない。</text>
-<text x="60" y="606" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="19" font-weight="400" text-anchor="start">凡例：長方形＝外部実体　角丸＝処理　矢印＝名前の付いたデータの移動</text>
+<text x="28" y="82" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="600" text-anchor="start">DFD：コンテキスト図</text>
+<text x="28" y="121" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">注文サービスを一つの処理として、</text>
+<text x="28" y="157" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">外部との情報交換を示す。</text>
+<line x1="28" y1="172" x2="652" y2="172" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="28" y1="1114" x2="652" y2="1114" stroke="#d8d8d8" stroke-width="2"/>
+<text x="28" y="1145" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">架空の説明例 · 前提と記法は本文を参照</text>
+<rect x="190" y="220" width="300" height="100" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="340.0" y="258.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">購入者</text>
+<text x="340.0" y="300.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">外部実体</text>
+<rect x="170" y="470" width="340" height="150" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="16"/>
+<text x="340.0" y="512.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">注文サービス</text>
+<text x="340.0" y="554.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">注文の受付と状態照会</text>
+<text x="340.0" y="596.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">一つの処理として表現</text>
+<rect x="190" y="790" width="300" height="100" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="340.0" y="828.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="26" font-weight="600" text-anchor="middle">決済サービス</text>
+<text x="340.0" y="870.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="middle">外部実体</text>
+<line x1="270" y1="332" x2="270.0" y2="440.0" stroke="#171717" stroke-width="2.5"/>
+<polygon points="270.00,458.00 277.00,440.00 263.00,440.00" fill="#171717" stroke="none"/>
+<text x="244" y="382" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">注文内容・</text>
+<text x="244" y="422" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">注文ID</text>
+<line x1="410" y1="458" x2="410.0" y2="350.0" stroke="#171717" stroke-width="2.5"/>
+<polygon points="410.00,332.00 403.00,350.00 417.00,350.00" fill="#171717" stroke="none"/>
+<text x="436" y="407" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">注文状態</text>
+<line x1="270" y1="632" x2="270.0" y2="760.0" stroke="#171717" stroke-width="2.5"/>
+<polygon points="270.00,778.00 277.00,760.00 263.00,760.00" fill="#171717" stroke="none"/>
+<text x="244" y="713" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="end">決済要求</text>
+<line x1="410" y1="778" x2="410.0" y2="650.0" stroke="#171717" stroke-width="2.5"/>
+<polygon points="410.00,632.00 403.00,650.00 417.00,650.00" fill="#171717" stroke="none"/>
+<text x="436" y="713" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="24" font-weight="400" text-anchor="start">決済結果</text>
+<text x="36" y="950" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">対象の境界：注文サービス。</text>
+<text x="36" y="987" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">購入者と決済サービスは対象の外側。</text>
+<text x="36" y="1024" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="400" text-anchor="start">内部の処理・保存先は省略する。</text>
+<text x="36" y="1060" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">長方形＝外部実体　角丸＝処理</text>
+<text x="36" y="1093" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">矢印＝データの移動。処理順序・時間は表さない。</text>
 </svg>
