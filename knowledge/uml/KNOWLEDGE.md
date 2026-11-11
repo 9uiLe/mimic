@@ -1,7 +1,7 @@
 ---
 id: uml
 title: UMLによる構造と振る舞いの図
-version: "1.0.0"
+version: "1.0.1"
 scope: software-modeling
 ---
 
@@ -68,6 +68,9 @@ C4が主に整理する対象と抽象度に対し、UMLは構造と振る舞い
 両者は排他的ではなく、C4で示した部品の相互作用をUMLのシーケンス図で補えます。
 
 ## 説明例と出典
+
+[図種別の画像一覧](examples/visual-guide.md)で、各パターンの作図と読み方を比較できます。
+[フローチャート・画面遷移・ガントの画像](examples/development-flows.md)は、UMLの厳密な記法とは区別した補足です。
 
 [注文の決済要求と状態遷移](examples/order-lifecycle.md)では、同じ題材を二つの観点で表すMermaidソースを示します。
 構成の推奨案や実装の検証結果ではなく、記法の違いを説明する作例です。

@@ -1,7 +1,7 @@
 ---
 id: data-flow-diagrams
 title: データフロー図（DFD）
-version: "1.0.0"
+version: "1.0.1"
 scope: software-data-flows-and-trust-boundaries
 ---
 
@@ -54,6 +54,8 @@ DFDの一本の線から、呼び出し順序、同期・非同期、トラン�
 この使い分けは、各図の対象の違いを説明するための整理です。
 
 ## 説明例と出典
+
+[図種別の画像一覧](examples/visual-guide.md)で、各パターンの作図と読み方を比較できます。
 
 [注文データの説明例](examples/order-data.md)では、架空の注文処理を、データの名前と信頼境界から読みます。
 Mermaidの汎用図形を使った簡略表現であり、特定のDFD記法の完全な実装ではありません。

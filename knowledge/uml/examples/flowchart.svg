@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">フローチャート：注文入力の検証</title>
+<desc id="desc">判断条件で処理を分ける。矢印は処理の進行方向。</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  29</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">フローチャート：注文入力の検証</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">判断条件で処理を分ける。矢印は処理の進行方向。</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="470" y="180" width="180" height="52" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="26"/>
+<text x="560" y="214" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="middle">開始</text>
+<line x1="560" y1="232" x2="560" y2="270" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,258.0 560,270 555.0,258.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="410" y="270" width="300" height="76" fill="#ffffff" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="560.0" y="306" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">注文内容を検証する</text>
+<line x1="560" y1="346" x2="560" y2="375" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,363.0 560,375 555.0,363.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<polygon points="560,375 680,435 560,495 440,435" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="560" y="428" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">入力は有効？</text>
+<line x1="560" y1="495" x2="560" y2="550" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,538.0 560,550 555.0,538.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="588" y="530" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">はい</text>
+<rect x="410" y="550" width="300" height="76" fill="#ffffff" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="560.0" y="586" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">注文を保存する</text>
+<line x1="560" y1="626" x2="560" y2="665" stroke="#171717" stroke-width="2"/>
+<polygon points="565.0,653.0 560,665 555.0,653.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="450" y="665" width="220" height="52" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="26"/>
+<text x="560" y="699" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="middle">終了：受付完了</text>
+<line x1="440" y1="435" x2="355" y2="435" stroke="#171717" stroke-width="2"/>
+<polygon points="367.0,440.0 355,435 367.0,430.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="397" y="417" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">いいえ</text>
+<rect x="55" y="397" width="300" height="76" fill="#ffffff" stroke="#171717" stroke-width="2" rx="8"/>
+<text x="205.0" y="433" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">入力エラーを表示</text>
+<line x1="205" y1="473" x2="205" y2="550" stroke="#171717" stroke-width="2"/>
+<polygon points="210.0,538.0 205,550 200.0,538.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<rect x="65" y="550" width="280" height="76" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="30"/>
+<text x="205" y="581" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">終了：未受付</text>
+<text x="205" y="609" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">入力内容は保持する</text>
+<text x="800" y="390" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="start">凡例</text>
+<text x="800" y="427" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">角丸：開始・終了</text>
+<text x="800" y="463" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">長方形：処理</text>
+<text x="800" y="499" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">ひし形：判断</text>
+<text x="800" y="580" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">保存失敗や再入力は</text>
+<text x="800" y="608" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">この例では省略。</text>
+</svg>

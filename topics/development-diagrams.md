@@ -5,6 +5,22 @@
 以下の分類はMimicによる読書案内であり、一つの規格が定める図の体系ではありません。
 定義・対象範囲・出典はリンク先の本文で、版は各本文の先頭で確認します。
 
+## 画像で見比べる
+
+この案内で扱う図種と、DFD・ERの主要な粒度の違いを31枚の作例として示します。
+この枚数は掲載例の範囲であり、UMLや統計図の全分類を意味しません。各図は架空の注文システム・データによる説明例です。
+
+| 画像一覧 | 含むパターン |
+| --- | --- |
+| [C4の6図](../knowledge/c4-model/examples/visual-guide.md) | Context、Container、Component、Code、Deployment、Dynamic |
+| [UMLの7図](../knowledge/uml/examples/visual-guide.md) | ユースケース、クラス、コンポーネント、配置、シーケンス、アクティビティ、状態 |
+| [DFDの4図](../knowledge/data-flow-diagrams/examples/visual-guide.md) | コンテキスト、論理、物理、信頼境界 |
+| [ERの3図](../knowledge/entity-relationship-diagrams/examples/visual-guide.md) | 概念、論理、物理 |
+| [統計グラフの8図](../knowledge/statistical-charts/examples/visual-guide.md) | 折れ線、棒、ヒストグラム、箱ひげ、散布、ヒートマップ、積上げ棒、積上げ面 |
+| [手順・画面・計画の3図](../knowledge/uml/examples/development-flows.md) | フローチャート、画面遷移、ガント |
+
+画像は拡大できるSVGです。各画像の下に、用途、読むポイント、前提・省略範囲を添えています。
+
 ## 問いから選ぶ
 
 | 資料で答えたい問い | 図・グラフと読む本文 | 作るときに決めること |
@@ -57,7 +73,7 @@
 
 ツールの対応図種と、記法が表す意味は別に確認します。Mermaidの`flowchart`で箱と矢印が描けても、それだけでUMLやDFDの正式記法に準拠するとは限りません。
 [GitHubの図の作成ガイド](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/creating-diagrams)は、`mermaid`コードブロックでの描画と、利用中の版の確認方法を示しています。
-MimicのPagesでは作図用コードをコードとして掲載します。GitHubや別の描画環境では対応版を確認し、文字の重なりや矢印の接続先も確かめます。
+MimicのPagesでは作図用コードをコードとして保持し、上の画像一覧では自己完結のSVGを表示します。GitHubや別の描画環境では対応版を確認し、文字の重なりや矢印の接続先も確かめます。
 画像だけでなく編集元を残し、図の内容を説明する文章を添えると、変更時の確認と図を直接読めない場合の参照に使えます。
 
 ## 手順や日程を補う場合

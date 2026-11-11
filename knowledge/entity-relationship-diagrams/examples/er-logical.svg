@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<title id="title">ER図：論理モデル</title>
+<desc id="desc">多対多を注文明細へ分け、識別方法・属性・必須の関連を示す。</desc>
+<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  19</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">ER図：論理モデル</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">多対多を注文明細へ分け、識別方法・属性・必須の関連を示す。</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="60" y="210" width="300" height="128" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="60" y="210" width="300" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="76" y="242" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="start">顧客</text>
+<text x="76" y="287" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">顧客ID［主キー］</text>
+<text x="76" y="316" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">表示名</text>
+<rect x="730" y="210" width="340" height="157" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="730" y="210" width="340" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="746" y="242" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="start">注文</text>
+<text x="746" y="287" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">注文ID［主キー］</text>
+<text x="746" y="316" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">顧客ID［必須参照］</text>
+<text x="746" y="345" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">注文日時</text>
+<rect x="60" y="460" width="300" height="128" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="60" y="460" width="300" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="76" y="492" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="start">商品</text>
+<text x="76" y="537" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">商品ID［主キー］</text>
+<text x="76" y="566" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">商品名</text>
+<rect x="730" y="430" width="340" height="186" fill="#ffffff" stroke="#171717" stroke-width="2"/>
+<rect x="730" y="430" width="340" height="48" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="746" y="462" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="start">注文明細</text>
+<text x="746" y="507" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">注文ID［主キー・必須参照］</text>
+<text x="746" y="536" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">明細番号［主キー］</text>
+<text x="746" y="565" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">商品ID［必須参照］</text>
+<text x="746" y="594" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">数量・注文時単価</text>
+<line x1="360" y1="270" x2="730" y2="270" stroke="#171717" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="545" y="246" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="middle">顧客が発注する</text>
+<text x="375" y="297" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">1</text>
+<text x="714" y="297" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">0..*</text>
+<line x1="900" y1="367" x2="900" y2="430" stroke="#171717" stroke-width="2"/>
+<text x="920" y="389" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">1</text>
+<text x="920" y="421" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">1..*</text>
+<text x="875" y="405" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="end">含む</text>
+<line x1="360" y1="521" x2="730" y2="521" stroke="#171717" stroke-width="2" stroke-dasharray="8 6"/>
+<text x="545" y="497" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="middle">商品が明細に現れる</text>
+<text x="375" y="550" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">1</text>
+<text x="714" y="550" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">0..*</text>
+<text x="60" y="387" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">明細の主キーは</text>
+<text x="60" y="417" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">注文ID＋明細番号の組。</text>
+<text x="60" y="638" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">凡例：実線＝識別関係　破線＝非識別関係　数値＝相手1件に対応する件数</text>
+</svg>

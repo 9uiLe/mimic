@@ -1,7 +1,7 @@
 ---
 id: statistical-charts
 title: 統計グラフによる比較・推移・分布の表現
-version: "1.0.0"
+version: "1.0.1"
 scope: statistical-charts-for-development-measurements-and-reports
 ---
 
@@ -128,6 +128,8 @@ p95などの分位数には計算法や推定誤差があり、インスタン�
 APIの応答時間だけで利用者の満足や課題達成を測定済みと扱うことはできません。
 
 ## 説明例と出典
+
+[図種別の画像一覧](examples/visual-guide.md)で、各パターンの作図と読み方を比較できます。
 
 [注文APIの架空計測例](examples/performance.md)では、元の観測値、集計方法、図に対応する表を示します。
 Python標準ライブラリだけで集計を再現できます。数値は説明用に作成しており、実測や推奨基準ではありません。

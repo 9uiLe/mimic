@@ -16,6 +16,13 @@ export const conceptFiles = Object.freeze(conceptIds.flatMap(id => [
   `knowledge/${id}/KNOWLEDGE.md`, `knowledge/${id}/references/sources.md`,
 ]));
 export const exampleFiles = Object.freeze([
+  'knowledge/c4-model/examples/visual-guide.md',
+  'knowledge/uml/examples/visual-guide.md',
+  'knowledge/data-flow-diagrams/examples/visual-guide.md',
+  'knowledge/entity-relationship-diagrams/examples/visual-guide.md',
+  'knowledge/statistical-charts/examples/visual-guide.md',
+  'knowledge/uml/examples/development-flows.md',
+
   'knowledge/external-representations/examples/temperature.md',
   'knowledge/grouping/examples/schedule.md',
   'knowledge/visual-hierarchy/examples/schedule.md',

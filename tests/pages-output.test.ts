@@ -15,6 +15,44 @@ const expectedFontFiles = ['400.css', '600.css', 'OFL.txt',
     `w/normal/${weight}/${String(index).padStart(3, '0')}.woff2`)),
 ].map(file => `${fontRoot}/${file}`);
 const expectedFiles = [
+  'knowledge/c4-model/examples/c4-context.svg',
+  'knowledge/c4-model/examples/c4-container.svg',
+  'knowledge/c4-model/examples/c4-component.svg',
+  'knowledge/c4-model/examples/c4-code.svg',
+  'knowledge/c4-model/examples/c4-deployment.svg',
+  'knowledge/c4-model/examples/c4-dynamic.svg',
+  'knowledge/uml/examples/uml-use-case.svg',
+  'knowledge/uml/examples/uml-class.svg',
+  'knowledge/uml/examples/uml-component.svg',
+  'knowledge/uml/examples/uml-deployment.svg',
+  'knowledge/uml/examples/uml-sequence.svg',
+  'knowledge/uml/examples/uml-activity.svg',
+  'knowledge/uml/examples/uml-state.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-context.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-logical.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-physical.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-trust-boundary.svg',
+  'knowledge/entity-relationship-diagrams/examples/er-conceptual.svg',
+  'knowledge/entity-relationship-diagrams/examples/er-logical.svg',
+  'knowledge/entity-relationship-diagrams/examples/er-physical.svg',
+  'knowledge/statistical-charts/examples/chart-line.svg',
+  'knowledge/statistical-charts/examples/chart-bar.svg',
+  'knowledge/statistical-charts/examples/chart-histogram.svg',
+  'knowledge/statistical-charts/examples/chart-boxplot.svg',
+  'knowledge/statistical-charts/examples/chart-scatter.svg',
+  'knowledge/statistical-charts/examples/chart-heatmap.svg',
+  'knowledge/statistical-charts/examples/chart-stacked-bar.svg',
+  'knowledge/statistical-charts/examples/chart-stacked-area.svg',
+  'knowledge/uml/examples/flowchart.svg',
+  'knowledge/uml/examples/screen-flow.svg',
+  'knowledge/uml/examples/gantt.svg',
+  'knowledge/c4-model/examples/visual-guide.md', 'knowledge/c4-model/examples/visual-guide.html',
+  'knowledge/uml/examples/visual-guide.md', 'knowledge/uml/examples/visual-guide.html',
+  'knowledge/data-flow-diagrams/examples/visual-guide.md', 'knowledge/data-flow-diagrams/examples/visual-guide.html',
+  'knowledge/entity-relationship-diagrams/examples/visual-guide.md', 'knowledge/entity-relationship-diagrams/examples/visual-guide.html',
+  'knowledge/statistical-charts/examples/visual-guide.md', 'knowledge/statistical-charts/examples/visual-guide.html',
+  'knowledge/uml/examples/development-flows.md', 'knowledge/uml/examples/development-flows.html',
+
   '.nojekyll',
   ...expectedFontFiles,
   'guideline/README.md',
@@ -204,7 +242,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 508);
+  assert.equal(expectedFiles.length, 551);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -246,15 +284,15 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'double-diamond': '1.0.0', 'user-research': '1.0.0', 'user-needs': '1.0.0',
     'user-stories': '1.0.0', 'heart-framework': '1.0.0',
     'ios-branding': '1.0.0', 'liquid-glass': '1.0.0', 'app-icons': '1.1.0', 'functional-icons': '1.0.0', 'edge-to-edge': '1.0.0',
-    'c4-model': '1.0.0', uml: '1.0.0', 'data-flow-diagrams': '1.0.0',
-    'entity-relationship-diagrams': '1.0.0', 'statistical-charts': '1.0.0',
+    'c4-model': '1.0.1', uml: '1.0.1', 'data-flow-diagrams': '1.0.1',
+    'entity-relationship-diagrams': '1.0.1', 'statistical-charts': '1.0.1',
   }, 'catalog must map each concept to its source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 14,
-    'catalog must show fourteen v1.0.1 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 19,
+    'catalog must show nineteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 22,
-    'catalog must show twenty-two v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 17,
+    'catalog must show seventeen v1.0.0 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 4,
     'catalog must show four v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
@@ -511,7 +549,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 103);
+  assert.equal(readers.length, 109);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
@@ -636,6 +674,38 @@ test('reviewed figure bytes and responsive reader images publish together and ba
   const isolated = await isolatedBuilder(directory);
   await isolated.buildPages(out);
   for (const [id, name, reader] of [
+    ['c4-model', 'c4-context', 'visual-guide'],
+    ['c4-model', 'c4-container', 'visual-guide'],
+    ['c4-model', 'c4-component', 'visual-guide'],
+    ['c4-model', 'c4-code', 'visual-guide'],
+    ['c4-model', 'c4-deployment', 'visual-guide'],
+    ['c4-model', 'c4-dynamic', 'visual-guide'],
+    ['uml', 'uml-use-case', 'visual-guide'],
+    ['uml', 'uml-class', 'visual-guide'],
+    ['uml', 'uml-component', 'visual-guide'],
+    ['uml', 'uml-deployment', 'visual-guide'],
+    ['uml', 'uml-sequence', 'visual-guide'],
+    ['uml', 'uml-activity', 'visual-guide'],
+    ['uml', 'uml-state', 'visual-guide'],
+    ['data-flow-diagrams', 'dfd-context', 'visual-guide'],
+    ['data-flow-diagrams', 'dfd-logical', 'visual-guide'],
+    ['data-flow-diagrams', 'dfd-physical', 'visual-guide'],
+    ['data-flow-diagrams', 'dfd-trust-boundary', 'visual-guide'],
+    ['entity-relationship-diagrams', 'er-conceptual', 'visual-guide'],
+    ['entity-relationship-diagrams', 'er-logical', 'visual-guide'],
+    ['entity-relationship-diagrams', 'er-physical', 'visual-guide'],
+    ['statistical-charts', 'chart-line', 'visual-guide'],
+    ['statistical-charts', 'chart-bar', 'visual-guide'],
+    ['statistical-charts', 'chart-histogram', 'visual-guide'],
+    ['statistical-charts', 'chart-boxplot', 'visual-guide'],
+    ['statistical-charts', 'chart-scatter', 'visual-guide'],
+    ['statistical-charts', 'chart-heatmap', 'visual-guide'],
+    ['statistical-charts', 'chart-stacked-bar', 'visual-guide'],
+    ['statistical-charts', 'chart-stacked-area', 'visual-guide'],
+    ['uml', 'flowchart', 'development-flows'],
+    ['uml', 'screen-flow', 'development-flows'],
+    ['uml', 'gantt', 'development-flows'],
+
     ['alignment-and-grids', 'alignment', 'alignment'], ['color-context', 'surrounding-colors', 'surrounding-colors'],
     ['interaction-design', 'recording-app-layout', 'recording-app'],
     ['ui-layering', 'layer-comparison', 'overlap'], ['ui-layering', 'layer-order', 'layer-order'],

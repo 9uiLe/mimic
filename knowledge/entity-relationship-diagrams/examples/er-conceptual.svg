@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<title id="title">ER図：概念モデル</title>
+<desc id="desc">業務の対象と関連を確認する。テーブル名・型・キーはまだ決めない。</desc>
+<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  18</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">ER図：概念モデル</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">業務の対象と関連を確認する。テーブル名・型・キーはまだ決めない。</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="70" y="280" width="220" height="130" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="180" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="600" text-anchor="middle">顧客</text>
+<rect x="450" y="280" width="220" height="130" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="560" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="600" text-anchor="middle">注文</text>
+<rect x="830" y="280" width="220" height="130" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="940" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="600" text-anchor="middle">商品</text>
+<line x1="290" y1="345" x2="450" y2="345" stroke="#171717" stroke-width="2"/>
+<text x="370" y="293" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="400" text-anchor="middle">発注する</text>
+<text x="305" y="333" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">1</text>
+<text x="435" y="333" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">0..*</text>
+<line x1="670" y1="345" x2="830" y2="345" stroke="#171717" stroke-width="2"/>
+<text x="750" y="293" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="400" text-anchor="middle">含む</text>
+<text x="680" y="333" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">0..*</text>
+<text x="820" y="333" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">1..*</text>
+<text x="70" y="470" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">注文と商品は多対多。数量・注文時単価は、次の論理モデルで明細に置く。</text>
+<text x="70" y="510" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">受付済み注文には商品が必要。注文のない顧客・まだ売れていない商品は存在できる。</text>
+<text x="70" y="572" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">読み方：端の数値は、反対側の1件に対応する「この側」の件数。</text>
+<text x="70" y="613" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">凡例：箱＝対象の型　線＝関連　1＝必ず1件　0..*＝0件以上　1..*＝1件以上</text>
+</svg>

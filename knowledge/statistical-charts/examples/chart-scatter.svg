@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 800" role="img" aria-labelledby="title desc">
+<title id="title">散布図｜負荷と応答時間の関係</title>
+<desc id="desc">別の架空データ · 同じ1分区間から得た二つの値を1点で表す</desc>
+<rect x="0" y="0" width="1120" height="800" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  25</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">散布図｜負荷と応答時間の関係</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">別の架空データ · 同じ1分区間から得た二つの値を1点で表す</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="746" x2="1080" y2="746" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="777" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="16" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<text x="140" y="215" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">区間内のp95応答時間（ms）</text>
+<line x1="140" y1="600.0" x2="980" y2="600.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="606.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">0</text>
+<line x1="140" y1="540.0" x2="980" y2="540.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="546.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">100</text>
+<line x1="140" y1="480.0" x2="980" y2="480.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="486.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">200</text>
+<line x1="140" y1="420.0" x2="980" y2="420.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="426.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">300</text>
+<line x1="140" y1="360.0" x2="980" y2="360.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="366.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">400</text>
+<line x1="140" y1="300.0" x2="980" y2="300.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="306.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">500</text>
+<line x1="140" y1="240.0" x2="980" y2="240.0" stroke="#d8d8d8" stroke-width="1"/>
+<text x="122" y="246.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="end">600</text>
+<line x1="140" y1="240" x2="140" y2="600" stroke="#171717" stroke-width="2"/>
+<line x1="140" y1="600" x2="980" y2="600" stroke="#171717" stroke-width="2"/>
+<line x1="140.0" y1="600" x2="140.0" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="140.0" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">0</text>
+<line x1="308.0" y1="600" x2="308.0" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="308.0" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">20</text>
+<line x1="476.0" y1="600" x2="476.0" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="476.0" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">40</text>
+<line x1="644.0" y1="600" x2="644.0" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="644.0" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">60</text>
+<line x1="812.0" y1="600" x2="812.0" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="812.0" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">80</text>
+<line x1="980.0" y1="600" x2="980.0" y2="607" stroke="#171717" stroke-width="2"/>
+<text x="980.0" y="633" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="middle">100</text>
+<text x="1020" y="667" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="end">区間平均の同時処理要求数（件）</text>
+<circle cx="224.0" cy="528.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="237.0" y="515.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">A</text>
+<circle cx="308.0" cy="513.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="321.0" y="500.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">B</text>
+<circle cx="392.0" cy="492.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="405.0" y="479.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">C</text>
+<circle cx="476.0" cy="474.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="489.0" y="461.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">D</text>
+<circle cx="560.0" cy="438.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="573.0" y="425.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">E</text>
+<circle cx="644.0" cy="408.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="657.0" y="395.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">F</text>
+<circle cx="728.0" cy="354.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="741.0" y="341.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">G</text>
+<circle cx="812.0" cy="288.0" r="7" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="825.0" y="275.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">H</text>
+<circle cx="660" cy="188" r="6" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="679" y="195" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="20" font-weight="400" text-anchor="start">1点 = 同じ1分区間の組</text>
+<text x="40" y="702" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">区間A–H · 各区間100件の完了応答からp95を求めたと仮定 · n=8組の架空集計値。</text>
+<text x="40" y="731" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">点の上昇は関連を示す例。散布図だけで因果を証明せず、環境差や第三の要因を確認する。</text>
+</svg>

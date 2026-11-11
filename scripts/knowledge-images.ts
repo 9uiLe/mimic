@@ -1,6 +1,38 @@
 import path from 'node:path';
 
 export const figureFiles = Object.freeze([
+  'knowledge/c4-model/examples/c4-context.svg',
+  'knowledge/c4-model/examples/c4-container.svg',
+  'knowledge/c4-model/examples/c4-component.svg',
+  'knowledge/c4-model/examples/c4-code.svg',
+  'knowledge/c4-model/examples/c4-deployment.svg',
+  'knowledge/c4-model/examples/c4-dynamic.svg',
+  'knowledge/uml/examples/uml-use-case.svg',
+  'knowledge/uml/examples/uml-class.svg',
+  'knowledge/uml/examples/uml-component.svg',
+  'knowledge/uml/examples/uml-deployment.svg',
+  'knowledge/uml/examples/uml-sequence.svg',
+  'knowledge/uml/examples/uml-activity.svg',
+  'knowledge/uml/examples/uml-state.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-context.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-logical.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-physical.svg',
+  'knowledge/data-flow-diagrams/examples/dfd-trust-boundary.svg',
+  'knowledge/entity-relationship-diagrams/examples/er-conceptual.svg',
+  'knowledge/entity-relationship-diagrams/examples/er-logical.svg',
+  'knowledge/entity-relationship-diagrams/examples/er-physical.svg',
+  'knowledge/statistical-charts/examples/chart-line.svg',
+  'knowledge/statistical-charts/examples/chart-bar.svg',
+  'knowledge/statistical-charts/examples/chart-histogram.svg',
+  'knowledge/statistical-charts/examples/chart-boxplot.svg',
+  'knowledge/statistical-charts/examples/chart-scatter.svg',
+  'knowledge/statistical-charts/examples/chart-heatmap.svg',
+  'knowledge/statistical-charts/examples/chart-stacked-bar.svg',
+  'knowledge/statistical-charts/examples/chart-stacked-area.svg',
+  'knowledge/uml/examples/flowchart.svg',
+  'knowledge/uml/examples/screen-flow.svg',
+  'knowledge/uml/examples/gantt.svg',
+
   'knowledge/alignment-and-grids/examples/alignment.svg',
   'knowledge/color-context/examples/surrounding-colors.svg',
   'knowledge/ui-layering/examples/layer-comparison.svg',
@@ -61,7 +93,7 @@ export function validateFigure(file: string, bytes: Buffer) {
       const attributes = new Map<string, string>();
       let remainder = opening![2]!;
       while (remainder.trim()) {
-        const attribute = remainder.match(/^\s+([a-zA-Z][a-zA-Z-]*)=(?:"([^"<>]*)"|'([^'<>]*)')/);
+        const attribute = remainder.match(/^\s+([a-zA-Z][a-zA-Z0-9-]*)=(?:"([^"<>]*)"|'([^'<>]*)')/);
         if (!attribute || !attributeNames.has(attribute[1]!) || attributes.has(attribute[1]!)) fail();
         const value = attribute![2] ?? attribute![3]!;
         if (/[&\\\u0000-\u001f]/.test(value) || /url\s*\(|https?:|javascript:|data:/i.test(value)

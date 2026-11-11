@@ -1,7 +1,7 @@
 ---
 id: entity-relationship-diagrams
 title: ER図とデータの関連
-version: "1.0.0"
+version: "1.0.1"
 scope: entity-relationship-models-for-software-data-design
 ---
 
@@ -59,6 +59,8 @@ ER図はデータの種類と関連を表し、[DFD](../data-flow-diagrams/KNOWL
 [UMLのクラス図](../uml/KNOWLEDGE.md)は型・責務・操作を含むモデルも表せるため、DBのテーブルと一対一に対応するとは限りません。
 
 ## 説明例と出典
+
+[図種別の画像一覧](examples/visual-guide.md)で、各パターンの作図と読み方を比較できます。
 
 [顧客・注文・注文明細の説明例](examples/orders.md)では、多重度、複合主キー、中間テーブル、図だけでは保証されない条件を読みます。
 [出典と説明の範囲](references/sources.md)に、Chenの原典、モデルの粒度、記法、DB制約との対応を記載します。

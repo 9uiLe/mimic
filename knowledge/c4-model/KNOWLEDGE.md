@@ -1,7 +1,7 @@
 ---
 id: c4-model
 title: C4モデルとアーキテクチャ図
-version: "1.0.0"
+version: "1.0.1"
 scope: software-architecture-communication
 ---
 
@@ -65,5 +65,7 @@ C4図がそろうことは、設計の妥当性や可用性、性能、セキュ
 図は対象と関係を共有する表現であり、設計の理由、制約、測定結果は対応する文章や記録で補います。
 
 ## 出典
+
+[図種別の画像一覧](examples/visual-guide.md)で、各パターンの作図と読み方を比較できます。
 
 [公式資料と説明の対応](references/sources.md)に、定義・各図の範囲・記法・ツール選択の確認箇所を記載します。

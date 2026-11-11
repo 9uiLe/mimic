@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 700" role="img" aria-labelledby="title desc">
+<title id="title">DFD：コンテキスト図</title>
+<desc id="desc">注文サービス全体を一つの処理として、外部との情報交換を示す。</desc>
+<rect x="0" y="0" width="1120" height="700" fill="#ffffff" stroke="none" stroke-width="2"/>
+<text x="40" y="39" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  14</text>
+<text x="40" y="86" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="34" font-weight="600" text-anchor="start">DFD：コンテキスト図</text>
+<text x="40" y="122" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">注文サービス全体を一つの処理として、外部との情報交換を示す。</text>
+<line x1="40" y1="144" x2="1080" y2="144" stroke="#d8d8d8" stroke-width="2"/>
+<line x1="40" y1="646" x2="1080" y2="646" stroke="#d8d8d8" stroke-width="2"/>
+<text x="40" y="677" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="start">説明用の架空例 · 図の前提と記法は説明文を参照</text>
+<rect x="60" y="280" width="200" height="140" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="160" y="335" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="middle">購入者</text>
+<text x="160" y="371" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="middle">外部実体</text>
+<rect x="430" y="260" width="280" height="180" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="24"/>
+<text x="570.0" y="296" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="23" font-weight="600" text-anchor="middle">注文サービス</text>
+<text x="570.0" y="328" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">注文の受付と状態照会</text>
+<text x="570.0" y="354" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">一つの処理として表現</text>
+<rect x="880" y="280" width="200" height="140" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
+<text x="980" y="335" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="middle">決済サービス</text>
+<text x="980" y="371" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="22" font-weight="600" text-anchor="middle">外部実体</text>
+<line x1="260" y1="310" x2="430" y2="310" stroke="#171717" stroke-width="2"/>
+<polygon points="418.0,305.0 430,310 418.0,315.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="345.0" y="298.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">注文内容・注文ID</text>
+<line x1="430" y1="390" x2="260" y2="390" stroke="#171717" stroke-width="2"/>
+<polygon points="272.0,395.0 260,390 272.0,385.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="345.0" y="420.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">注文状態</text>
+<line x1="710" y1="310" x2="880" y2="310" stroke="#171717" stroke-width="2"/>
+<polygon points="868.0,305.0 880,310 868.0,315.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="795.0" y="298.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">決済要求</text>
+<line x1="880" y1="390" x2="710" y2="390" stroke="#171717" stroke-width="2"/>
+<polygon points="722.0,395.0 710,390 722.0,385.0" fill="#171717" stroke="#171717" stroke-width="2"/>
+<text x="795.0" y="420.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="18" font-weight="400" text-anchor="middle">決済結果</text>
+<text x="60" y="510" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">対象の境界：注文サービス。購入者と決済サービスは対象の外側。</text>
+<text x="60" y="547" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="21" font-weight="400" text-anchor="start">内部の処理・保存先は省略。矢印から処理順序や所要時間は読まない。</text>
+<text x="60" y="606" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="19" font-weight="400" text-anchor="start">凡例：長方形＝外部実体　角丸＝処理　矢印＝名前の付いたデータの移動</text>
+</svg>
