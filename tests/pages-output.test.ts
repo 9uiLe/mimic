@@ -188,6 +188,17 @@ const expectedFiles = [
   'knowledge/statistical-charts/references/sources.md', 'knowledge/statistical-charts/references/sources.html',
   'knowledge/statistical-charts/examples/performance.md', 'knowledge/statistical-charts/examples/performance.html',
   'topics/development-diagrams.md', 'topics/development-diagrams.html',
+  'knowledge/mental-models/KNOWLEDGE.md', 'knowledge/mental-models/index.html',
+  'knowledge/mental-models/references/sources.md', 'knowledge/mental-models/references/sources.html',
+  'knowledge/cognitive-load/KNOWLEDGE.md', 'knowledge/cognitive-load/index.html',
+  'knowledge/cognitive-load/references/sources.md', 'knowledge/cognitive-load/references/sources.html',
+  'knowledge/multimedia-learning/KNOWLEDGE.md', 'knowledge/multimedia-learning/index.html',
+  'knowledge/multimedia-learning/references/sources.md', 'knowledge/multimedia-learning/references/sources.html',
+  'knowledge/explanation-design/KNOWLEDGE.md', 'knowledge/explanation-design/index.html',
+  'knowledge/explanation-design/references/sources.md', 'knowledge/explanation-design/references/sources.html',
+  'knowledge/mental-models/examples/synchronization.md', 'knowledge/mental-models/examples/synchronization.html',
+  'knowledge/explanation-design/examples/synchronization.md', 'knowledge/explanation-design/examples/synchronization.html',
+  'topics/system-understanding.md', 'topics/system-understanding.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -242,7 +253,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 551);
+  assert.equal(expectedFiles.length, 573);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -258,7 +269,7 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
     'the home page title must identify the question lookup section');
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 41, 'catalog must expose all forty-one reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 45, 'catalog must expose all forty-five reviewed concepts');
   assert.match(entry, /AI Slop/);
   assert.ok(entry.includes('href="topics/product-design.html">プロダクトデザインの進め方と定義</a>'),
     'catalog must open the product design topic reader');
@@ -286,13 +297,14 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'ios-branding': '1.0.0', 'liquid-glass': '1.0.0', 'app-icons': '1.1.0', 'functional-icons': '1.0.0', 'edge-to-edge': '1.0.0',
     'c4-model': '1.0.1', uml: '1.0.1', 'data-flow-diagrams': '1.0.1',
     'entity-relationship-diagrams': '1.0.1', 'statistical-charts': '1.0.1',
+    'mental-models': '1.0.0', 'cognitive-load': '1.0.0', 'multimedia-learning': '1.0.0', 'explanation-design': '1.0.0',
   }, 'catalog must map each concept to its source version');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.1<\/p>/g)].length, 19,
     'catalog must show nineteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 17,
-    'catalog must show seventeen v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 21,
+    'catalog must show twenty-one v1.0.0 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 4,
     'catalog must show four v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
@@ -400,10 +412,10 @@ test('canonical Markdown copies and generated readers retain source metadata and
     assert.deepEqual(await readFile(path.join(out, file)), await readFile(path.join(root, file)), file);
   }
   const topicMarkdown = await readFile(path.join(out, 'topics/decision-material-selection.md'), 'utf8');
-  assert.match(topicMarkdown, /^version: "1\.1\.0"$/m, 'canonical topic version must remain intact');
+  assert.match(topicMarkdown, /^version: "1\.2\.0"$/m, 'canonical topic version must remain intact');
   assert.doesNotMatch(topicMarkdown, /^status:/m);
   const provenanceCases: [string, string, string][] = [
-    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md', '1.1.0'],
+    ['topics/decision-material-selection.html', 'topics/decision-material-selection.md', '1.2.0'],
     ['topics/product-ui-design.html', 'topics/product-ui-design.md', '1.0.0'],
     ['topics/scenario-to-screen.html', 'topics/scenario-to-screen.md', '1.0.0'],
   ];
@@ -549,7 +561,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 109);
+  assert.equal(readers.length, 119);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');
@@ -587,7 +599,7 @@ test('topics retain their text and open every explicitly related concept reader'
   await buildPages(out);
   const topics = [
     ['decision-material-selection', ['ecological-interface-design', 'external-representations', 'conceptual-models',
-      'grouping', 'visual-hierarchy', 'aesthetic-and-minimalist-design', 'layout-spacing'], '1.1.0'],
+      'grouping', 'visual-hierarchy', 'aesthetic-and-minimalist-design', 'layout-spacing'], '1.2.0'],
     ['scenario-to-screen', ['scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes'], '1.0.0'],
   ] as const;
   for (const [topic, ids, expectedVersion] of topics) {

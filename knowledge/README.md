@@ -55,6 +55,10 @@
 | `data-flow-diagrams` | [データフロー図（DFD）](data-flow-diagrams/KNOWLEDGE.md) | 処理・保存先・外部実体の間を流れるデータと、制御フローとの違い |
 | `entity-relationship-diagrams` | [ER図とデータの関連](entity-relationship-diagrams/KNOWLEDGE.md) | エンティティ間の関係、多重度・任意性、概念・論理・物理モデルの違い |
 | `statistical-charts` | [統計グラフによる比較・推移・分布の表現](statistical-charts/KNOWLEDGE.md) | 開発・性能評価での図種の選び方と、数量・分布・測定条件の読み取り |
+| `mental-models` | [メンタルモデルの形成と修正](mental-models/KNOWLEDGE.md) | 既有知識、因果推論、自己説明、比較と転移、理解の自己評価 |
+| `cognitive-load` | [認知負荷と既有知識](cognitive-load/KNOWLEDGE.md) | 学習中の処理負担と、既有知識によって変わる説明の役割 |
+| `multimedia-learning` | [マルチメディア学習](multimedia-learning/KNOWLEDGE.md) | 言葉と図の統合、事前学習、配置・分割、動きの条件 |
+| `explanation-design` | [理解を支える説明の選択と忠実さ](explanation-design/KNOWLEDGE.md) | 比較対象に応じた説明、忠実さと説明範囲、検証の負担 |
 
 各 `KNOWLEDGE.md` と、そこから参照する補足資料が正本です。この索引だけを読んで、個別の本文を参照済みとは扱いません。
 
@@ -69,6 +73,9 @@
 実際に読めた本文と版を確認します。本文を取得できなかった場合に参照済みとは報告しません。知識の説明と、個別UIでの適用・検証を区別します。
 
 ## 複数の概念から読む
+
+[「システムを理解するための情報提示」](../topics/system-understanding.md)は、メンタルモデルの形成、処理負担、説明の内容と形式を調べる案内です。
+AIが何を見せ、何を後に回すかを考える際に、研究の知見と説明用の作例を区別して参照できます。
 
 [「開発資料の図とグラフを選ぶ」](../topics/development-diagrams.md)は、アーキテクチャ・振る舞い・データ・性能の問いから、図の用途と作り方を調べる案内です。各本文の出典と、架空の注文システムを使った説明例へ進めます。
 
