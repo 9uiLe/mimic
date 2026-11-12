@@ -91,7 +91,15 @@
     {"id": "ios-branding", "title": "iOSにおけるブランド表現", "version": "1.0.0",
       "path": "knowledge/ios-branding/KNOWLEDGE.md", "sha256": "3d25ef9789a840b33777e69a60fb5f3c9f64465c2dc92d9fac763fd862cb8fe6"},
     {"id": "liquid-glass", "title": "Liquid Glass", "version": "1.0.0",
-      "path": "knowledge/liquid-glass/KNOWLEDGE.md", "sha256": "55606ec408622df2a96a637ebea2f09973bf569b93cbed6830b27651d7d61f3d"}
+      "path": "knowledge/liquid-glass/KNOWLEDGE.md", "sha256": "55606ec408622df2a96a637ebea2f09973bf569b93cbed6830b27651d7d61f3d"},
+    {"id": "mental-models", "title": "メンタルモデルの形成と修正", "version": "1.0.0",
+      "path": "knowledge/mental-models/KNOWLEDGE.md", "sha256": "1de642d72b92144edb6fc7691dc4c27b50cc9de3774d8c0400505c41813ee460"},
+    {"id": "cognitive-load", "title": "認知負荷と既有知識", "version": "1.0.0",
+      "path": "knowledge/cognitive-load/KNOWLEDGE.md", "sha256": "fb49bf3afde4777a272f1110f1d0c55d8979396fec8d056400b07249857752a5"},
+    {"id": "multimedia-learning", "title": "マルチメディア学習", "version": "1.0.0",
+      "path": "knowledge/multimedia-learning/KNOWLEDGE.md", "sha256": "6775c2aed9f96563303455f02524438bf8abcc199102db654d4c4aba71c6a538"},
+    {"id": "explanation-design", "title": "理解を支える説明の選択と忠実さ", "version": "1.0.0",
+      "path": "knowledge/explanation-design/KNOWLEDGE.md", "sha256": "62610b001062a1177d7be1554a73013df1efc5fd60e5db150de70eb3ab051a5e"}
   ],
   "edges": [
     {
@@ -101,11 +109,8 @@
       "type": "distinguished_from",
       "statement": "C4はアーキテクチャの抽象度と範囲を整理し、UMLは構造や振る舞いのモデルを記述する。",
       "evidence": [
-        {
-          "concept": "c4-model",
-          "heading": "関連概念と対象範囲",
-          "quotation": "[UML](../uml/KNOWLEDGE.md)は構造や振る舞いを記述するモデリング言語で、C4はアーキテクチャを説明する抽象度と図の範囲を整理します。"
-        }
+        {"concept": "c4-model", "heading": "関連概念と対象範囲",
+          "quotation": "[UML](../uml/KNOWLEDGE.md)は構造や振る舞いを記述するモデリング言語で、C4はアーキテクチャを説明する抽象度と図の範囲を整理します。"}
       ]
     },
     {
@@ -115,11 +120,8 @@
       "type": "distinguished_from",
       "statement": "DFDはデータの移動と処理を表し、ER図はデータの種類と関連を表す。",
       "evidence": [
-        {
-          "concept": "data-flow-diagrams",
-          "heading": "他の図との違い",
-          "quotation": "[ER図](../entity-relationship-diagrams/KNOWLEDGE.md)がデータの種類と関連を表すのに対し、DFDはデータの移動と処理を表します。"
-        }
+        {"concept": "data-flow-diagrams", "heading": "他の図との違い",
+          "quotation": "[ER図](../entity-relationship-diagrams/KNOWLEDGE.md)がデータの種類と関連を表すのに対し、DFDはデータの移動と処理を表します。"}
       ]
     },
     {
@@ -129,11 +131,8 @@
       "type": "complemented_by",
       "statement": "DFDが表すデータの流れに、UMLのシーケンス図・アクティビティ図が順序や分岐の観点を補う。",
       "evidence": [
-        {
-          "concept": "data-flow-diagrams",
-          "heading": "他の図との違い",
-          "quotation": "順序や分岐は[UMLのシーケンス図・アクティビティ図](../uml/KNOWLEDGE.md)で補います。"
-        }
+        {"concept": "data-flow-diagrams", "heading": "他の図との違い",
+          "quotation": "順序や分岐は[UMLのシーケンス図・アクティビティ図](../uml/KNOWLEDGE.md)で補います。"}
       ]
     },
     {
@@ -143,11 +142,8 @@
       "type": "distinguished_from",
       "statement": "HEARTは目標から指標を選ぶ枠組みであり、統計グラフは選んだ値の比較や分布を表現する。",
       "evidence": [
-        {
-          "concept": "statistical-charts",
-          "heading": "開発計測の値をグラフにするとき",
-          "quotation": "[HEARTと目標・シグナル・指標](../heart-framework/KNOWLEDGE.md)は利用者の経験に関する測定対象を目標から考える枠組みであり、統計グラフは選んだ値の比較や分布を表現します。"
-        }
+        {"concept": "statistical-charts", "heading": "開発計測の値をグラフにするとき",
+          "quotation": "[HEARTと目標・シグナル・指標](../heart-framework/KNOWLEDGE.md)は利用者の経験に関する測定対象を目標から考える枠組みであり、統計グラフは選んだ値の比較や分布を表現します。"}
       ]
     },
     { "id": "edge-to-edge-distinguished-from-layout-spacing", "scope": "システムUIへの対応と、デザイン上の間隔の区別。", "evidence": [ { "concept": "edge-to-edge", "heading": "他の知識との関係",
@@ -162,11 +158,8 @@
       "type": "distinguished_from",
       "statement": "数値が表す量の区別と、周囲による色の見え方の観察は異なる説明である。",
       "evidence": [
-        {
-          "concept": "color-context",
-          "heading": "色の値と計算上の関係との違い",
-          "quotation": "数値が何を表すかを明確にすることと、周囲による見え方を観察することは、別の説明です。"
-        }
+        {"concept": "color-context", "heading": "色の値と計算上の関係との違い",
+          "quotation": "数値が何を表すかを明確にすることと、周囲による見え方を観察することは、別の説明です。"}
       ],
       "id": "color-context--distinguished_from--lightness-and-luminance"
     },
@@ -176,16 +169,10 @@
       "type": "distinguished_from",
       "statement": "色の文脈における見え方とWCAGの計算比は同じ説明ではない。",
       "evidence": [
-        {
-          "concept": "color-context",
-          "heading": "色の値と計算上の関係との違い",
-          "quotation": "見え方についての説明を、この計算比と同じものとして扱いません。"
-        },
-        {
-          "concept": "color-contrast",
-          "heading": "概念",
-          "quotation": "色相の対比や周囲による見え方の変化すべてを、この一つの比で説明するものではありません。"
-        }
+        {"concept": "color-context", "heading": "色の値と計算上の関係との違い",
+          "quotation": "見え方についての説明を、この計算比と同じものとして扱いません。"},
+        {"concept": "color-contrast", "heading": "概念",
+          "quotation": "色相の対比や周囲による見え方の変化すべてを、この一つの比で説明するものではありません。"}
       ],
       "id": "color-context--distinguished_from--color-contrast"
     },
@@ -195,16 +182,10 @@
       "type": "complemented_by",
       "statement": "背景との差による強調の説明に、目立ち方・内容の階層・業務上の優先度の区別が補われる。",
       "evidence": [
-        {
-          "concept": "color-contrast",
-          "heading": "視覚的な強調と優先度",
-          "quotation": "目立ち方・内容の階層・業務上の優先度を区別しています。"
-        },
-        {
-          "concept": "visual-hierarchy",
-          "heading": "目立ち方・内容の階層・業務上の優先度",
-          "quotation": "大きく表示された情報が、業務上も最優先であるとは限りません。"
-        }
+        {"concept": "color-contrast", "heading": "視覚的な強調と優先度",
+          "quotation": "目立ち方・内容の階層・業務上の優先度を区別しています。"},
+        {"concept": "visual-hierarchy", "heading": "目立ち方・内容の階層・業務上の優先度",
+          "quotation": "大きく表示された情報が、業務上も最優先であるとは限りません。"}
       ],
       "id": "color-contrast--complemented_by--visual-hierarchy"
     },
@@ -214,16 +195,10 @@
       "type": "distinguished_from",
       "statement": "何を同じまとまりとするかと、何を相対的に強く見せるかは異なる役割である。",
       "evidence": [
-        {
-          "concept": "grouping",
-          "heading": "関連する概念",
-          "quotation": "情報をまとめること自体は、情報を除くことや重要度を決めることとは異なります。"
-        },
-        {
-          "concept": "visual-hierarchy",
-          "heading": "関連する概念",
-          "quotation": "何を同じまとまりとして構成するかを扱います。"
-        }
+        {"concept": "grouping", "heading": "関連する概念",
+          "quotation": "情報をまとめること自体は、情報を除くことや重要度を決めることとは異なります。"},
+        {"concept": "visual-hierarchy", "heading": "関連する概念",
+          "quotation": "何を同じまとまりとして構成するかを扱います。"}
       ],
       "id": "grouping--distinguished_from--visual-hierarchy"
     },
@@ -233,16 +208,10 @@
       "type": "complemented_by",
       "statement": "配置から知覚される関係の説明に、何を同じグループとするかという意味上の分類の説明が補われる。",
       "evidence": [
-        {
-          "concept": "layout-spacing",
-          "heading": "関係と区切り",
-          "quotation": "間隔だけで分類の意味は決まりません。"
-        },
-        {
-          "concept": "grouping",
-          "heading": "近接と余白で関係を伝える",
-          "quotation": "配置によって関係を示せても、それだけで分類の意味を説明したことにはなりません。"
-        }
+        {"concept": "layout-spacing", "heading": "関係と区切り",
+          "quotation": "間隔だけで分類の意味は決まりません。"},
+        {"concept": "grouping", "heading": "近接と余白で関係を伝える",
+          "quotation": "配置によって関係を示せても、それだけで分類の意味を説明したことにはなりません。"}
       ],
       "id": "layout-spacing--complemented_by--grouping"
     },
@@ -791,6 +760,41 @@
     "statement": "機能アイコンは操作や状態を伝え、アプリアイコンはホーム画面などで製品そのものを識別する。" },
     { "id": "functional-icons--complemented_by--interaction-design", "scope": "記号が表す意味に対し、操作・応答と状態遷移の観点を補う。必読順序や概念全体の依存を意味しない。", "evidence": [ { "concept": "functional-icons",
     "heading": "関連する知識と出典", "quotation": "[インタラクションデザイン](../interaction-design/KNOWLEDGE.md)は、操作とシステムの応答、状態と遷移を扱います。" } ], "from": "functional-icons", "to": "interaction-design",
-    "type": "complemented_by", "statement": "機能アイコンが操作や状態の意味を伝えるのに対し、インタラクションデザインは操作とシステムの応答、状態と遷移を扱う。" }
+    "type": "complemented_by", "statement": "機能アイコンが操作や状態の意味を伝えるのに対し、インタラクションデザインは操作とシステムの応答、状態と遷移を扱う。" },
+    {
+      "id": "mental-models-with-conceptual-models",
+      "from": "mental-models", "to": "conceptual-models", "type": "associated_with",
+      "statement": "利用者側の理解の形成・修正と、設計者のモデル・system imageという異なる問いを結び付ける。",
+      "evidence": [{"concept": "mental-models", "heading": "関連する概念",
+        "quotation": "[概念モデル](../conceptual-models/KNOWLEDGE.md)は、設計者のモデルと利用者のモデル、製品が伝えるsystem imageをNormanの立場から説明します。"}]
+    },
+    {
+      "id": "mental-models-with-external-representations",
+      "from": "mental-models", "to": "external-representations", "type": "distinguished_from",
+      "statement": "利用者の内的な理解と、外部の表示や制約の役割を区別する。",
+      "evidence": [{"concept": "mental-models", "heading": "関連する概念",
+        "quotation": "[外的表象](../external-representations/KNOWLEDGE.md)は、外部にある情報や制約が課題遂行に果たす役割を扱います。"}]
+    },
+    {
+      "id": "cognitive-load-with-multimedia-learning",
+      "from": "cognitive-load", "to": "multimedia-learning", "type": "complemented_by",
+      "statement": "学習中の処理負担に、言葉と図の提示順序・配置・動きという観点を補う。",
+      "evidence": [{"concept": "cognitive-load", "heading": "関連する概念と出典",
+        "quotation": "[マルチメディア学習](../multimedia-learning/KNOWLEDGE.md)は、言葉と図を組み合わせた教材で、\n提示順序・配置・動きと理解の関係を扱います。"}]
+    },
+    {
+      "id": "explanation-design-with-mental-models",
+      "from": "explanation-design", "to": "mental-models", "type": "distinguished_from",
+      "statement": "提示する説明の選択・忠実さと、人が形成する理解を区別する。",
+      "evidence": [{"concept": "explanation-design", "heading": "関連する概念と対象範囲",
+        "quotation": "[メンタルモデル](../mental-models/KNOWLEDGE.md)は人が形成する理解を扱い、この項目はその理解に関わる説明の選択と忠実さを扱います。"}]
+    },
+    {
+      "id": "explanation-design-with-cognitive-load",
+      "from": "explanation-design", "to": "cognitive-load", "type": "associated_with",
+      "statement": "理解の処理負担を減らすことと、説明内容を変えることを区別して扱う。",
+      "evidence": [{"concept": "explanation-design", "heading": "関連する概念と対象範囲",
+        "quotation": "[認知負荷](../cognitive-load/KNOWLEDGE.md)は学習中の処理負担を扱います。負担を減らすことと、説明の意味を変えることは区別します。"}]
+    }
   ]
 }

@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "sets": {
     "pages-build-inputs": [
+      "knowledge/mental-models/KNOWLEDGE.md",
+      "knowledge/mental-models/references/sources.md",
+      "knowledge/cognitive-load/KNOWLEDGE.md",
+      "knowledge/cognitive-load/references/sources.md",
+      "knowledge/multimedia-learning/KNOWLEDGE.md",
+      "knowledge/multimedia-learning/references/sources.md",
+      "knowledge/explanation-design/KNOWLEDGE.md",
+      "knowledge/explanation-design/references/sources.md",
+      "knowledge/mental-models/examples/synchronization.md",
+      "knowledge/explanation-design/examples/synchronization.md",
+      "topics/system-understanding.md",
       "knowledge/c4-model/examples/c4-context.svg",
       "knowledge/c4-model/examples/c4-container.svg",
       "knowledge/c4-model/examples/c4-component.svg",
