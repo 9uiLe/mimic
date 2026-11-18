@@ -24,6 +24,8 @@ Mimicは、デザインの知識・概念・思想・哲学を言語化して説
 
 具体的なUIの文字スタイルを提示するときは、[利用ガイドのTypographyの提示方針](README.md#uiのtypographyを具体的に示すとき)を適用します。
 
+回答を書く前に[説明に図を添える判断](README.md#説明に図を添える判断)を適用する。該当するときは、読者の問いに対応する図と読み取れる結論を回答に含める。
+
 視覚的な説明が必要なときは、[整列とグリッドの本文](../knowledge/alignment-and-grids/KNOWLEDGE.md)と[整列の説明図](../knowledge/alignment-and-grids/examples/alignment.svg)、[色の文脈の本文](../knowledge/color-context/KNOWLEDGE.md)と[色の相互作用の説明図](../knowledge/color-context/examples/surrounding-colors.svg)を参照します。
 本文から例の文章も読み、図が示す関係と対象範囲を確認します。図の見た目を、普遍的な最適解や効果の実証として扱いません。
 
