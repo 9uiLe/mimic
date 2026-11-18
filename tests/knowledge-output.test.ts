@@ -214,10 +214,10 @@ test('each concept has a matching fixed entry, resolvable support links, and met
   assert.deepEqual(concepts, [
     'aesthetic-and-minimalist-design', 'ai-slop', 'alignment-and-grids', 'app-icons', 'c4-model', 'cognitive-load', 'color-context', 'color-contrast',
     'conceptual-models', 'data-flow-diagrams', 'design-systems', 'design-tokens', 'double-diamond', 'ecological-interface-design', 'edge-to-edge',
-    'entity-relationship-diagrams', 'explanation-design', 'external-representations',
+    'entity-relationship-diagrams', 'error-recovery', 'explanation-design', 'external-representations',
     'functional-icons', 'goal-directed-design', 'grouping', 'heart-framework', 'human-centered-design', 'information-architecture', 'interaction-design', 'ios-branding', 'layout-spacing',
     'lightness-and-luminance', 'liquid-glass', 'mental-models', 'multimedia-learning', 'reflective-conversation',
-    'scenario-based-design', 'sketches-and-prototypes', 'statistical-charts', 'typography',
+    'scenario-based-design', 'sketches-and-prototypes', 'statistical-charts', 'system-status-visibility', 'typography',
     'ui-layering', 'uml', 'usability-testing', 'user-journeys', 'user-needs', 'user-research', 'user-stories', 'visual-hierarchy', 'visual-style',
   ]);
   for (const id of concepts) {

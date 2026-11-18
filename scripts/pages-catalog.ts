@@ -6,7 +6,7 @@ export const conceptIds = Object.freeze([
   'lightness-and-luminance', 'color-contrast', 'design-tokens', 'ai-slop', 'aesthetic-and-minimalist-design',
   'typography', 'layout-spacing', 'alignment-and-grids', 'color-context', 'ui-layering',
   'human-centered-design', 'user-journeys', 'information-architecture',
-  'interaction-design', 'design-systems', 'usability-testing',
+  'interaction-design', 'system-status-visibility', 'error-recovery', 'design-systems', 'usability-testing',
   'scenario-based-design', 'goal-directed-design', 'reflective-conversation', 'sketches-and-prototypes', 'visual-style',
   'double-diamond', 'user-research', 'user-needs', 'user-stories', 'heart-framework',
   'ios-branding', 'liquid-glass', 'app-icons', 'functional-icons', 'edge-to-edge',
@@ -48,13 +48,17 @@ export const exampleFiles = Object.freeze([
   'knowledge/explanation-design/examples/synchronization.md',
   'knowledge/mental-models/examples/synchronization.md',
 ]);
+const agentSources = ['agent/README.md', 'agent/symptoms.md', 'agent/saving-example.md'];
 export const additionalSources = Object.freeze([
+  ...agentSources,
   'knowledge/README.md', 'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md',
   'topics/scenario-to-screen.md', 'topics/product-design.md', 'topics/development-diagrams.md',
   'topics/system-understanding.md',
 ]);
 export const readerViews: Readonly<Record<string, string>> = Object.freeze(Object.fromEntries([
   ['knowledge/README.md', 'index.html'],
+  ['agent/README.md', 'agent/index.html'],
+  ...agentSources.slice(1).map(file => [file, file.replace(/\.md$/, '.html')]),
   ['guideline/README.md', 'guideline/index.html'],
   ['guideline/ai.md', 'guideline/ai.html'],
   ['guideline/design-system.md', 'guideline/design-system.html'],
@@ -71,6 +75,8 @@ export const escapeHtml = (value: string) => value.replace(/[&<>"']/g,
 
 export function renderTopicGuides() {
   const guides = [
+    ['agent/index.html', 'MimicでUIを改善する',
+      '操作しづらいと感じた場面から、原因を調べ、改善を適用して確かめる。'],
     ['topics/product-design.html', 'プロダクトデザインの進め方と定義',
       '設計の流れ、必要な情報、目的・要求・評価の違いから読む。'],
     ['topics/scenario-to-screen.html', 'シナリオから機能と画面構成を考える',

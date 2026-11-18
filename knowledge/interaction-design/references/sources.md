@@ -8,6 +8,7 @@
 | [Apple HIG — Modality](https://developer.apple.com/design/human-interface-guidelines/modality) | 定義 / Discussion / Best practices。公式[Markdown本文](https://developer.apple.com/tutorials/data/design/human-interface-guidelines/modality.md)。 | 親の操作を止めるモード、作業への集中、明確な閉じ方、閉じる際のデータ損失への対処。 | Appleの設計指針。モーダル表示の利点と負担を扱い、すべての作業をモーダルにするものではない。 |
 | [Apple HIG — Feedback](https://developer.apple.com/design/human-interface-guidelines/feedback) | 定義 / Discussion / Best practices。公式[Markdown本文](https://developer.apple.com/tutorials/data/design/human-interface-guidelines/feedback.md)。 | 現在の状態・成否・訂正方法を伝えること、情報の重要さと中断の強さ、アクセシブルな複数の伝達方法。 | Appleの設計指針。本文ではwatchOS固有の進捗表示の指針を他のプラットフォームへ一般化しない。 |
 | [Apple HIG — Privacy](https://developer.apple.com/design/human-interface-guidelines/privacy) | Best practices / Requesting permission。公式[Markdown本文](https://developer.apple.com/tutorials/data/design/human-interface-guidelines/privacy.md)。 | 必要なデータだけを求めること、用途の透明性、権限を必要とする機能を使う文脈での要求。 | Appleのプラットフォームにおける指針。本文は権限要求が行為に関係することを説明し、法的な同意要件や個別の実装仕様を導かない。 |
+| [Don Norman — Signifiers, not affordances](https://jnd.org/signifiers-not-affordances/) | 手掛かりが意味を伝える説明、affordanceとsignifierの区別。 | 操作が可能かと、その可能性が知覚できるかの区別。 | 提唱者の論考。保存ボタンを例にした調べ方はMimicの整理。 |
 | [W3C — WCAG 2.2](https://www.w3.org/TR/WCAG22/) | Abstract / SC 3.3.1 Error Identification / SC 4.1.3 Status Messages / §5.2・§5.3。 | 自動検出した入力エラーを対象とともにテキストで示すこと、ステータスメッセージを支援技術へ伝えられること、Webの適合範囲。 | Webコンテンツの基準。4.1.3はマークアップ言語で実装された内容を扱い、フォーカスを移さずに支援技術が提示できることを求める。本資料からネイティブアプリの適合は主張しない。 |
 
 利用者の行為とシステムの応答という本文の射程は、これらの設計指針を読むために設定しています。

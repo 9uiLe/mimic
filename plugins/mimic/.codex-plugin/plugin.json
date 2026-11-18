@@ -1,0 +1,6 @@
+{
+  "name": "mimic",
+  "version": "1.0.0",
+  "description": "Investigate and improve a product UI with Mimic's design knowledge.",
+  "skills": "./skills/"
+}

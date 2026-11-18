@@ -4,6 +4,7 @@
 
 ## 編集する場所
 
+- 外部AIの共通手順と索引は `agent/`、Pluginの呼び出し口と導入案内は `plugins/` に置きます。呼び出し口を変更しなくても、共通手順・知識の更新は `main` のMarkdownから読み取れます。
 - デザイン知識の正本は `knowledge/<概念ID>/KNOWLEDGE.md` とそこから参照する補足資料です。[知識の入口](../knowledge/README.md)から参照できます。配置は[知識の構造ガイド](knowledge-structure.md)に従います。
 - 構造化した関係は `relations/graph.json`、関係型・方向・推移規則は `relations/vocabulary.json` を編集します。[関係グラフの案内](../relations/README.md)に従い、本文内の説明と根拠を照合します。
 - 複数の概念を横断して読むための案内は `topics/` を編集します。
@@ -78,7 +79,7 @@ bun run relations:check
 
 公開先はPublic Repository `9uiLe/mimic` の標準URL [https://9uile.github.io/mimic/](https://9uile.github.io/mimic/) です。入口では7つの仕事中の疑問から知識の候補を比較でき、知識の一覧と関係探索も使えます。疑問は概念の分類や必読順序ではありません。`graph/index.html`では関係を見たい知識を選び、つながる辺の型・方向・根拠から本文へ進めます。JavaScriptを使わない場合も静的一覧から概念・関係・根拠を読めます。各概念のHTMLから関係グラフ・関連概念・出典・例へ進めます。題目別案内は別の読書経路として表示し、関連する概念のHTMLへつなぎます。文書の版と対象範囲は正本のメタデータで確認し、出典は本文からたどります。
 
-[公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。関係データの配布対象は `relations/graph.json`・`relations/vocabulary.json`・`relations/README.md`、関係探索と共通操作の表示対象は`graph/index.html`、`web/reading.js`・`web/graph.js`・`web/reading.css`、Tokenから生成する`web/tokens.css`です。Token編集元の`design/tokens.json`とデザインシステムのMarkdown・`guideline/design-system.html`も明示して配信します。`design/reading-paths.json`は配信せず、生成した案内文として表示します。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
+[公開ファイルの組み立て](../scripts/build-pages.ts)と[概念・閲覧先の一覧](../scripts/pages-catalog.ts)に明示したファイルだけを `_site/` に組み立てます。共通手順と困り方の索引、保存の作例もMarkdownとHTMLで配信します。関係データの配布対象は `relations/graph.json`・`relations/vocabulary.json`・`relations/README.md`、関係探索と共通操作の表示対象は`graph/index.html`、`web/reading.js`・`web/graph.js`・`web/reading.css`、Tokenから生成する`web/tokens.css`です。Token編集元の`design/tokens.json`とデザインシステムのMarkdown・`guideline/design-system.html`も明示して配信します。`design/reading-paths.json`は配信せず、生成した案内文として表示します。知識ディレクトリやその `scripts/` を追加しても、Pagesへ自動的に公開したり、スクリプトを実行したりしません。公開済みガイドから、この開発ガイドや知識の構造ガイドへはGitHub上のMarkdownへリンクします。
 
 出力先に一覧外のファイル、シンボリックリンク、想定外の構造があれば生成を止め、自動削除せず内容を確認します。作業ログ、PDF、Moletta、Git履歴は配信しません。Public Repositoryへコミットしたファイルは、Pagesの対象外でもGitHub上で閲覧できます。
 
