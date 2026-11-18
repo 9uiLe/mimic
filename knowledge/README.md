@@ -85,4 +85,4 @@ AIが何を見せ、何を後に回すかを考える際に、研究の知見と
 
 「判断材料の選定」からは、UIの文字・画像・ボタンの情報の多さ、必要性、重要度、目立ち方の関係を説明する知識へ進めます。
 
-具体的なUI色を提示するときは、色とは独立した[Design Tokenの本文](design-tokens/KNOWLEDGE.md)と[色への適用例](design-tokens/examples/color-presentation.md)を読み、[利用ガイドの色の提示方針](../guideline/README.md#uiの色を具体的に示すとき)に従います。
+製品UIの設計では、主要操作や注目点にアクセントカラーを割り当てます。具体的なUI色を提示するときは、色とは独立した[Design Tokenの本文](design-tokens/KNOWLEDGE.md)と[色への適用例](design-tokens/examples/color-presentation.md)を読み、[利用ガイドの色の提示方針](../guideline/README.md#uiの色を具体的に示すとき)に従います。
