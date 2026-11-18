@@ -1,106 +1,104 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1400" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 26 680 1374" role="img" aria-labelledby="title desc">
 <title id="title">画面遷移図：購入の流れと戻り先</title>
 <desc id="desc">実線枠は画面、破線枠は同じ画面内の状態。</desc>
 <rect x="0" y="0" width="680" height="1400" rx="0" fill="white" stroke="none" stroke-width="2.4"/>
-<text x="24" y="28" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">MIMIC  /  DEVELOPMENT DIAGRAMS  /  30</text>
-<text x="24" y="76" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="30" font-weight="600" text-anchor="start" dominant-baseline="central">画面遷移図：購入の流れと戻り先</text>
-<text x="24" y="116" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="76" fill="#124b50" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="700" text-anchor="start" dominant-baseline="central">画面遷移図：購入の流れと戻り先</text>
+<text x="24" y="116" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="21" font-weight="400" text-anchor="start" dominant-baseline="central">実線枠は画面、破線枠は同じ画面内の状態。</text>
-<polyline points="24,144 656,144" fill="none" stroke="#d8d8d8" stroke-width="1.6" stroke-linejoin="round"/>
-<polyline points="24,1356 656,1356" fill="none" stroke="#d8d8d8" stroke-width="1.6" stroke-linejoin="round"/>
-<text x="24" y="1378" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="24,144 656,144" fill="none" stroke="#d0dce0" stroke-width="1.6" stroke-linejoin="round"/>
+<polyline points="24,1356 656,1356" fill="none" stroke="#d0dce0" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="24" y="1378" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<rect x="30" y="300" width="260" height="200" rx="8" fill="white" stroke="#171717" stroke-width="2.4"/>
-<rect x="30" y="300" width="260" height="48" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="160" y="324" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="30" y="300" width="260" height="200" rx="8" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4"/>
+<rect x="30" y="300" width="260" height="48" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="160" y="324" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">商品</text>
-<text x="160" y="382" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="160" y="382" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">商品名・価格</text>
-<text x="160" y="416" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="160" y="416" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">詳細を確認</text>
-<rect x="50" y="445" width="220" height="40" rx="5" fill="#171717" stroke="none" stroke-width="2.4"/>
+<rect x="50" y="445" width="220" height="40" rx="5" fill="#20333a" stroke="none" stroke-width="2.4"/>
 <text x="160" y="465" fill="white" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">カートに追加</text>
-<rect x="390" y="300" width="260" height="200" rx="8" fill="white" stroke="#171717" stroke-width="2.4"/>
-<rect x="390" y="300" width="260" height="48" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="520" y="324" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="390" y="300" width="260" height="200" rx="8" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4"/>
+<rect x="390" y="300" width="260" height="48" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="520" y="324" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">カート</text>
-<text x="520" y="382" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="520" y="382" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">数量・小計</text>
-<text x="520" y="416" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="520" y="416" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">内容を編集</text>
-<rect x="410" y="445" width="220" height="40" rx="5" fill="#171717" stroke="none" stroke-width="2.4"/>
+<rect x="410" y="445" width="220" height="40" rx="5" fill="#20333a" stroke="none" stroke-width="2.4"/>
 <text x="520" y="465" fill="white" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">購入へ進む</text>
-<rect x="390" y="760" width="260" height="200" rx="8" fill="white" stroke="#171717" stroke-width="2.4"/>
-<rect x="390" y="760" width="260" height="48" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="520" y="784" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="390" y="760" width="260" height="200" rx="8" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4"/>
+<rect x="390" y="760" width="260" height="48" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="520" y="784" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">注文確認</text>
-<text x="520" y="842" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="520" y="842" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">配送先・支払方法</text>
-<text x="520" y="876" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="520" y="876" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">合計を確認</text>
-<rect x="410" y="905" width="220" height="40" rx="5" fill="#171717" stroke="none" stroke-width="2.4"/>
+<rect x="410" y="905" width="220" height="40" rx="5" fill="#20333a" stroke="none" stroke-width="2.4"/>
 <text x="520" y="925" fill="white" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">支払う</text>
-<rect x="30" y="760" width="260" height="200" rx="8" fill="white" stroke="#171717" stroke-width="2.4"/>
-<rect x="30" y="760" width="260" height="48" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="160" y="784" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="30" y="760" width="260" height="200" rx="8" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4"/>
+<rect x="30" y="760" width="260" height="48" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="160" y="784" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">注文完了</text>
-<text x="160" y="842" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="160" y="842" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">注文番号</text>
-<text x="160" y="876" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="160" y="876" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">受付内容を表示</text>
-<rect x="50" y="905" width="220" height="40" rx="5" fill="#171717" stroke="none" stroke-width="2.4"/>
+<rect x="50" y="905" width="220" height="40" rx="5" fill="#20333a" stroke="none" stroke-width="2.4"/>
 <text x="160" y="925" fill="white" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">注文を見る</text>
-<polyline points="302,410 364.0,410.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round"/>
-<polygon points="364.0,401.0 378,410 364.0,419.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="340" y="378" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="302,410 364.0,410.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round"/>
+<polygon points="364.0,401.0 378,410 364.0,419.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="340" y="378" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">追加</text>
-<polyline points="520,288 520,230 160,230 160.0,274.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round"/>
-<polygon points="169.0,274.0 160,288 151.0,274.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="340" y="200" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="520,288 520,230 160,230 160.0,274.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round"/>
+<polygon points="169.0,274.0 160,288 151.0,274.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="340" y="200" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">買い物を続ける</text>
-<polyline points="590,512 590.0,734.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round"/>
-<polygon points="599.0,734.0 590,748 581.0,734.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="624" y="630" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="590,512 590.0,734.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round"/>
+<polygon points="599.0,734.0 590,748 581.0,734.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="624" y="630" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">次へ</text>
-<polyline points="450,748 450.0,526.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round"/>
-<polygon points="441.0,526.0 450,512 459.0,526.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="388" y="612" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="450,748 450.0,526.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round"/>
+<polygon points="441.0,526.0 450,512 459.0,526.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="388" y="612" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">カートを</text>
-<text x="388" y="648" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="388" y="648" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">修正</text>
-<polyline points="378,860 316.0,860.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round"/>
-<polygon points="316.0,869.0 302,860 316.0,851.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="340" y="828" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="378,860 316.0,860.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round"/>
+<polygon points="316.0,869.0 302,860 316.0,851.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="340" y="828" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">承認</text>
-<polyline points="590,972 590.0,1076.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
-<polygon points="599.0,1076.0 590,1090 581.0,1076.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="624" y="1030" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="590,972 590.0,1076.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polygon points="599.0,1076.0 590,1090 581.0,1076.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="624" y="1030" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="middle" dominant-baseline="central">拒否</text>
-<rect x="390" y="1102" width="260" height="118" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4" stroke-dasharray="7 5"/>
-<text x="520" y="1128" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="390" y="1102" width="260" height="118" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4" stroke-dasharray="7 5"/>
+<text x="520" y="1128" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="600" text-anchor="middle" dominant-baseline="central">確認画面内のエラー</text>
-<text x="520" y="1162" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="520" y="1162" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">理由を表示する</text>
-<text x="520" y="1192" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="520" y="1192" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">支払方法を修正する</text>
-<polyline points="430,1090 430.0,986.0" fill="none" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
-<polygon points="421.0,986.0 430,972 439.0,986.0" fill="#171717" stroke="none" stroke-width="2.4"/>
-<text x="370" y="1014" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<polyline points="430,1090 430.0,986.0" fill="none" stroke="#20333a" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="7 5"/>
+<polygon points="421.0,986.0 430,972 439.0,986.0" fill="#20333a" stroke="none" stroke-width="2.4"/>
+<text x="370" y="1014" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">支払方法</text>
-<text x="370" y="1044" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="370" y="1044" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">を修正</text>
-<text x="30" y="1030" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="30" y="1030" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">破線の矢印：</text>
-<text x="30" y="1060" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="30" y="1060" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">表示状態の変化</text>
-<text x="24" y="1270" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="1270" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">前提：戻ってもカート内容を保持する。</text>
-<text x="24" y="1304" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="1304" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">タイムアウト時の結果確認画面は省略。</text>
 </svg>

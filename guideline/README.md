@@ -74,6 +74,8 @@ Mimicでは、**問いに答えるために、読者が離れた文から要素�
 
 回答では図の直前か直後に、読み取ってほしい結論を一文添えます。対象・条件・数値は確認できたものを使い、不明な経路は未確認と示します。媒体が描画できる形式を選び、描画機能がない場合は整形済みの文字図や表で関係を示します。読者が文章のみを希望した場合はその指定を優先します。開発資料で使う記法と作例は[図とグラフの案内](https://github.com/9uiLe/mimic/blob/main/topics/development-diagrams.md)から選べます。
 
+図を作るときは、見出しで「何を読むか」を示し、単位・条件を関連する値の近くに置きます。見出しと説明は近づけ、凡例・作図領域・注記の間には区切りが分かる余白を取ります。縮小表示で読めるか、実際の掲載幅で確かめます。配色はデータや構造の役割に合わせます。件数の大小には明るさが順に変わる色、別系列には区別できる色を使い、数値・ラベル・線種も併用します。[英国政府Analysis Functionの図表ガイド](https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-charts/)・[Datawrapperの配色解説](https://www.datawrapper.de/blog/beautifulcolors)
+
 **判断の根拠。** LarkinとSimonは数学・物理の問題をモデル化し、関係する情報を同じ位置に集めることで、次に必要な情報を探す手間や暗黙の関係を導く操作が減る場合を示しました。上の基準で「何をたどるか」を問う根拠です。[Larkin & Simon（1987）](https://doi.org/10.1111/j.1551-6708.1987.tb00863.x)
 
 ZacksとTverskyの実験では、棒で示すと個別の値の比較、線で結ぶと傾向として解釈されやすくなりました。グラフの形式は読者に読み取ってほしい関係に合わせます。実務記事でも、個別の値を探す目的には表、パターンを見渡す目的にはグラフという使い分けが解説されています。[Zacks & Tversky（1999）](https://pubmed.ncbi.nlm.nih.gov/10586582/)・[Datawrapperの表作成ガイド](https://www.datawrapper.de/blog/guide-what-to-consider-when-creating-tables)
