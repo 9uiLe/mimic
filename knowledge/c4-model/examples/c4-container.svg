@@ -1,78 +1,76 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1570" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 26 680 1544" role="img" aria-labelledby="title desc">
 <title id="title">C4 · Container</title>
 <desc id="desc">注文システムの内部：。アプリケーションとデータストアの責務</desc>
 <rect x="0" y="0" width="680" height="1570" rx="0" fill="#ffffff" stroke="none" stroke-width="2.4"/>
-<text x="24" y="28" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">MIMIC  /  DEVELOPMENT DIAGRAMS  /  02</text>
-<text x="24" y="76" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="31" font-weight="600" text-anchor="start" dominant-baseline="central">C4 · Container</text>
-<text x="24" y="119" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="76" fill="#124b50" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="31" font-weight="700" text-anchor="start" dominant-baseline="central">C4 · Container</text>
+<text x="24" y="119" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">注文システムの内部：</text>
-<text x="24" y="153" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="153" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">アプリケーションとデータストアの責務</text>
-<line x1="24" y1="175" x2="656" y2="175" stroke="#d8d8d8" stroke-width="1.6"/>
-<line x1="24" y1="1526" x2="656" y2="1526" stroke="#d8d8d8" stroke-width="1.6"/>
-<text x="24" y="1548" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="24" y1="175" x2="656" y2="175" stroke="#d0dce0" stroke-width="1.6"/>
+<line x1="24" y1="1526" x2="656" y2="1526" stroke="#d0dce0" stroke-width="1.6"/>
+<text x="24" y="1548" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="18" font-weight="400" text-anchor="start" dominant-baseline="central">説明用の架空例 · 図の前提と記法は説明文を参照</text>
-<rect x="30" y="440" width="400" height="934" rx="10" fill="#ffffff" stroke="#171717" stroke-width="2.4" stroke-dasharray="8 6"/>
-<text x="52" y="480" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="30" y="440" width="400" height="934" rx="10" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4" stroke-dasharray="8 6"/>
+<text x="52" y="480" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="600" text-anchor="start" dominant-baseline="central">注文システム</text>
-<rect x="80" y="230" width="300" height="150" rx="8" fill="#ffffff" stroke="#171717" stroke-width="2.4"/>
-<text x="230.0" y="286.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="80" y="230" width="300" height="150" rx="8" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4"/>
+<text x="230.0" y="286.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">購入者</text>
-<text x="230.0" y="326.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="326.0" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">Person</text>
-<rect x="80" y="550" width="300" height="170" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="230.0" y="597.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="80" y="550" width="300" height="170" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="230.0" y="597.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">Webアプリ</text>
-<text x="230.0" y="637.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="637.0" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">Container · JS</text>
-<text x="230.0" y="675.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="675.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">注文画面を提供</text>
-<rect x="80" y="860" width="300" height="180" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="230.0" y="912.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="80" y="860" width="300" height="180" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="230.0" y="912.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">注文API</text>
-<text x="230.0" y="952.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="952.0" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">Container · Node.js</text>
-<text x="230.0" y="990.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="990.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">注文処理を調整</text>
-<rect x="80" y="1180" width="300" height="170" rx="8" fill="#f5f5f5" stroke="#171717" stroke-width="2.4"/>
-<text x="230.0" y="1208.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="80" y="1180" width="300" height="170" rx="8" fill="#e1f0ee" stroke="#346c6e" stroke-width="2.4"/>
+<text x="230.0" y="1208.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">注文DB</text>
-<text x="230.0" y="1248.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="1248.0" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">Container</text>
-<text x="230.0" y="1286.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="1286.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">PostgreSQL</text>
-<text x="230.0" y="1324.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="230.0" y="1324.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">注文状態を保存</text>
-<rect x="470" y="860" width="185" height="180" rx="8" fill="#ffffff" stroke="#171717" stroke-width="2.4"/>
-<text x="562.5" y="912.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="470" y="860" width="185" height="180" rx="8" fill="#f1f8f7" stroke="#346c6e" stroke-width="2.4"/>
+<text x="562.5" y="912.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle" dominant-baseline="central">決済サービス</text>
-<text x="562.5" y="952.0" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="562.5" y="952.0" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">External System</text>
-<text x="562.5" y="990.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="562.5" y="990.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">支払処理を行う</text>
-<line x1="230.0" y1="392.0" x2="230.0" y2="524.0" stroke="#171717" stroke-width="2.4"/>
-<polygon points="239,524 230,538 221,524" fill="#171717" stroke="none"/>
-<text x="262" y="480" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="230.0" y1="392.0" x2="230.0" y2="524.0" stroke="#20333a" stroke-width="2.4"/>
+<polygon points="239,524 230,538 221,524" fill="#20333a" stroke="none"/>
+<text x="262" y="480" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="start" dominant-baseline="central">入力</text>
-<line x1="230.0" y1="732.0" x2="230.0" y2="834.0" stroke="#171717" stroke-width="2.4"/>
-<polygon points="239,834 230,848 221,834" fill="#171717" stroke="none"/>
-<text x="262" y="790" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="230.0" y1="732.0" x2="230.0" y2="834.0" stroke="#20333a" stroke-width="2.4"/>
+<polygon points="239,834 230,848 221,834" fill="#20333a" stroke="none"/>
+<text x="262" y="790" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="start" dominant-baseline="central">登録</text>
-<line x1="230.0" y1="1052.0" x2="230.0" y2="1154.0" stroke="#171717" stroke-width="2.4"/>
-<polygon points="239,1154 230,1168 221,1154" fill="#171717" stroke="none"/>
-<text x="262" y="1110" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="230.0" y1="1052.0" x2="230.0" y2="1154.0" stroke="#20333a" stroke-width="2.4"/>
+<polygon points="239,1154 230,1168 221,1154" fill="#20333a" stroke="none"/>
+<text x="262" y="1110" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="start" dominant-baseline="central">読み書き</text>
-<line x1="392.0" y1="950.0" x2="444.0" y2="950.0" stroke="#171717" stroke-width="2.4"/>
-<polygon points="444,941 458,950 444,959" fill="#171717" stroke="none"/>
+<line x1="392.0" y1="950.0" x2="444.0" y2="950.0" stroke="#20333a" stroke-width="2.4"/>
+<polygon points="444,941 458,950 444,959" fill="#20333a" stroke="none"/>
 <rect x="382" y="901" width="86" height="34" rx="0" fill="#ffffff" stroke="none" stroke-width="2.4"/>
-<text x="425" y="918" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="425" y="918" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle" dominant-baseline="central">決済</text>
-<text x="24" y="1412" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="1412" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="600" text-anchor="start" dominant-baseline="central">凡例</text>
-<text x="24" y="1450" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="1450" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">矢印：要求・アクセス。応答・順序は省略。</text>
-<text x="24" y="1488" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="24" y="1488" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start" dominant-baseline="central">登録・決済：HTTPS / DB：SQL/TLS</text>
 </svg>

@@ -1,69 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 1420" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 26 680 1394" role="img" aria-labelledby="title desc">
 <title id="title">DFD：信頼境界を重ねる</title>
 <desc id="desc">注文照会の抜粋。信頼の前提が変わる場所と、 管理範囲を区別する。</desc>
 <rect x="0" y="0" width="680" height="1420" fill="#ffffff" stroke="none" stroke-width="2"/>
-<text x="28" y="35" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
- font-size="18" font-weight="400" text-anchor="start">MIMIC  /  DEVELOPMENT DIAGRAMS  /  17</text>
-<text x="28" y="82" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
- font-size="30" font-weight="600" text-anchor="start">DFD：信頼境界を重ねる</text>
-<text x="28" y="121" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="28" y="82" fill="#124b50" font-family="Noto Sans CJK JP, sans-serif"
+ font-size="30" font-weight="700" text-anchor="start">DFD：信頼境界を重ねる</text>
+<text x="28" y="121" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start">注文照会の抜粋。信頼の前提が変わる場所と、</text>
-<text x="28" y="157" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="28" y="157" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start">管理範囲を区別する。</text>
-<line x1="28" y1="172" x2="652" y2="172" stroke="#d8d8d8" stroke-width="2"/>
-<line x1="28" y1="1364" x2="652" y2="1364" stroke="#d8d8d8" stroke-width="2"/>
-<text x="28" y="1395" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="28" y1="172" x2="652" y2="172" stroke="#d0dce0" stroke-width="2"/>
+<line x1="28" y1="1364" x2="652" y2="1364" stroke="#d0dce0" stroke-width="2"/>
+<text x="28" y="1395" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="18" font-weight="400" text-anchor="start">架空の説明例 · 前提と記法は本文を参照</text>
-<rect x="80" y="470" width="520" height="600" fill="#f5f5f5" stroke="#5e5e5e" stroke-width="2"/>
-<text x="340" y="1040" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="80" y="470" width="520" height="600" fill="#e1f0ee" stroke="#485d64" stroke-width="2"/>
+<text x="340" y="1040" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle">同じ運営組織の管理範囲</text>
-<line x1="40" y1="430" x2="640" y2="430" stroke="#171717" stroke-width="2.5" stroke-dasharray="10 8"/>
-<text x="45" y="410" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="40" y1="430" x2="640" y2="430" stroke="#20333a" stroke-width="2.5" stroke-dasharray="10 8"/>
+<text x="45" y="410" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="start">T1</text>
-<line x1="100" y1="780" x2="580" y2="780" stroke="#171717" stroke-width="2.5" stroke-dasharray="10 8"/>
-<text x="105" y="760" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="100" y1="780" x2="580" y2="780" stroke="#20333a" stroke-width="2.5" stroke-dasharray="10 8"/>
+<text x="105" y="760" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="start">T2</text>
-<rect x="190" y="220" width="300" height="100" fill="#f5f5f5" stroke="#171717" stroke-width="2"/>
-<text x="340.0" y="279.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="190" y="220" width="300" height="100" fill="#e1f0ee" stroke="#346c6e" stroke-width="2"/>
+<text x="340.0" y="279.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle">購入者のクライアント</text>
-<rect x="190" y="550" width="300" height="110" fill="#f5f5f5" stroke="#171717" stroke-width="2" rx="16"/>
-<text x="340.0" y="593.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<rect x="190" y="550" width="300" height="110" fill="#e1f0ee" stroke="#346c6e" stroke-width="2" rx="16"/>
+<text x="340.0" y="593.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle">照会API</text>
-<text x="340.0" y="635.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="340.0" y="635.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle">サービス実行権限</text>
-<line x1="190" y1="880" x2="490" y2="880" stroke="#171717" stroke-width="2"/>
-<line x1="190" y1="990" x2="490" y2="990" stroke="#171717" stroke-width="2"/>
-<line x1="190" y1="880" x2="190" y2="990" stroke="#171717" stroke-width="2"/>
-<text x="340.0" y="923.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="190" y1="880" x2="490" y2="880" stroke="#20333a" stroke-width="2"/>
+<line x1="190" y1="990" x2="490" y2="990" stroke="#20333a" stroke-width="2"/>
+<line x1="190" y1="880" x2="190" y2="990" stroke="#20333a" stroke-width="2"/>
+<text x="340.0" y="923.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="26" font-weight="600" text-anchor="middle">注文DB</text>
-<text x="340.0" y="965.0" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="340.0" y="965.0" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="middle">制限したDB権限</text>
-<line x1="270" y1="332" x2="270.0" y2="520.0" stroke="#171717" stroke-width="2.5"/>
-<polygon points="270.00,538.00 277.00,520.00 263.00,520.00" fill="#171717" stroke="none"/>
-<text x="244" y="385" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="270" y1="332" x2="270.0" y2="520.0" stroke="#20333a" stroke-width="2.5"/>
+<polygon points="270.00,538.00 277.00,520.00 263.00,520.00" fill="#20333a" stroke="none"/>
+<text x="244" y="385" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="end">注文ID</text>
-<line x1="410" y1="538" x2="410.0" y2="350.0" stroke="#171717" stroke-width="2.5"/>
-<polygon points="410.00,332.00 403.00,350.00 417.00,350.00" fill="#171717" stroke="none"/>
-<text x="436" y="385" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="410" y1="538" x2="410.0" y2="350.0" stroke="#20333a" stroke-width="2.5"/>
+<polygon points="410.00,332.00 403.00,350.00 417.00,350.00" fill="#20333a" stroke="none"/>
+<text x="436" y="385" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="start">注文状態</text>
-<line x1="270" y1="672" x2="270.0" y2="850.0" stroke="#171717" stroke-width="2.5"/>
-<polygon points="270.00,868.00 277.00,850.00 263.00,850.00" fill="#171717" stroke="none"/>
-<text x="244" y="721" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="270" y1="672" x2="270.0" y2="850.0" stroke="#20333a" stroke-width="2.5"/>
+<polygon points="270.00,868.00 277.00,850.00 263.00,850.00" fill="#20333a" stroke="none"/>
+<text x="244" y="721" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="end">照会条件</text>
-<line x1="410" y1="868" x2="410.0" y2="690.0" stroke="#171717" stroke-width="2.5"/>
-<polygon points="410.00,672.00 403.00,690.00 417.00,690.00" fill="#171717" stroke="none"/>
-<text x="436" y="834" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<line x1="410" y1="868" x2="410.0" y2="690.0" stroke="#20333a" stroke-width="2.5"/>
+<polygon points="410.00,672.00 403.00,690.00 417.00,690.00" fill="#20333a" stroke="none"/>
+<text x="436" y="834" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="24" font-weight="400" text-anchor="start">注文記録</text>
-<text x="36" y="1125" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="36" y="1125" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start">T1：利用者入力・本人・注文所有者を確認。</text>
-<text x="36" y="1162" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="36" y="1162" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start">T2：API権限からDB権限へ切り替える。</text>
-<text x="36" y="1199" fill="#171717" font-family="Noto Sans CJK JP, sans-serif"
+<text x="36" y="1199" fill="#20333a" font-family="Noto Sans CJK JP, sans-serif"
  font-size="22" font-weight="400" text-anchor="start">同じ管理範囲の内部にも信頼境界がある。</text>
-<text x="36" y="1250" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="36" y="1250" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="20" font-weight="400" text-anchor="start">破線＝信頼境界　実線の囲み＝管理範囲</text>
-<text x="36" y="1283" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="36" y="1283" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="20" font-weight="400" text-anchor="start">境界を描くことは、認証・認可や通信保護の</text>
-<text x="36" y="1316" fill="#5e5e5e" font-family="Noto Sans CJK JP, sans-serif"
+<text x="36" y="1316" fill="#485d64" font-family="Noto Sans CJK JP, sans-serif"
  font-size="20" font-weight="400" text-anchor="start">実装・検証を済ませたことを意味しない。</text>
 </svg>
