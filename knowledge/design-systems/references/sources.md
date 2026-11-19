@@ -17,4 +17,19 @@
 Tokenの定義や交換形式は、独立した[Design Tokenの本文](../../design-tokens/KNOWLEDGE.md)と出典に委ねます。
 GOV.UKの構成にTokenが必須の層として定められている、という説明ではありません。
 
+## 製品の複雑化と保守の出典
+
+2026年11月19日に以下の該当箇所を確認しました。
+
+| 資料と箇所 | 支える判断と限界 |
+| --- | --- |
+| [DTCG Format 2025.10](https://www.designtokens.org/tr/2025.10/format/) の Translation tool、Alias、Composite、および [Resolver 2025.10](https://www.designtokens.org/tr/2025.10/resolver/) の Introduction | Tokenの交換表現、参照、複合値と、適用文脈による値の切り替え。実装言語や必要なテーマ数を決める製品要件ではない。 |
+| Atlassian Design System の [Color](https://atlassian.design/foundations/color)、[Spacing](https://atlassian.design/foundations/spacing)、[Radius](https://atlassian.design/foundations/radius) | 配色の役割・強調度・操作状態とテーマ、8px基準の分数倍を含む尺度、用途別の角丸。Atlassian製品の具体例として扱う。 |
+| [GOV.UK — Button, Warning buttons](https://design-system.service.gov.uk/components/button/#warning-buttons)、上表のPatternsとContribution criteria | 重大で容易に取り消せない操作に警告ボタンを限定する例。利用条件は部品の資料にも置ける。課題・ページの粒度と共有候補の採否はPatternsとContribution criteriaに基づく。 |
+| [Atlassian — Release phases](https://atlassian.design/release-phases) | Early Access、Beta、General Availability、Intent to Deprecate、Deprecated。成熟度の伝達、廃止前の告知、代替と移行の案内。名称や版の運用は同社固有。 |
+| [USWDS — Maturity model](https://designsystem.digital.gov/maturity-model/) | 原則・ガイダンス・コードの段階的採用と、利用者の観察による評価。既存システムを導入する組織への指針として読む。 |
+| [Seckler et al., Designing Usable Web Forms（CHI 2014、Table 3）](https://doi.org/10.1145/2556288.2557265)・[著者版](https://edoc.unibas.ch/server/api/core/bitstreams/a4d3ea7f-518a-4ca4-b13a-f799f6781740/content) | 元のフォームと複数の改善を組み合わせた版で初回送信を比較。特定の部品や保守体制の因果効果には分解できない。 |
+
+赤いボタンを分類して移行する例と、局所修正・ガイド改訂・共通部品拡張を選ぶ手順は、これらの資料をもとにしたMimicの適用例です。
+
 [本文に戻る](../KNOWLEDGE.md)

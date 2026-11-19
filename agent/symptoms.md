@@ -8,5 +8,6 @@
 | 次にどこを押すか迷う | 必要な操作が見つからない。見つけたが結果を予測できない。探している機能が別の分類にある。 | 画面を見てどこから探したか。操作を指せるか。押すと何が起きると思ったか。ラベルや形に、操作の手掛かりがあるか。[視覚的な優先順位](../knowledge/visual-hierarchy/KNOWLEDGE.md)・[インタラクションデザイン](../knowledge/interaction-design/KNOWLEDGE.md)・[情報アーキテクチャ](../knowledge/information-architecture/KNOWLEDGE.md) |
 | 画面を何度も行き来する | 比較する値を覚える必要がある。戻ると入力や位置を失う。実際に複数場所で別の操作が必要。 | 戻るたびに何を取りに行くか。覚えた値、消えた値、実際の作業の順番を確認する。[外的表象](../knowledge/external-representations/KNOWLEDGE.md)・[インタラクションデザイン](../knowledge/interaction-design/KNOWLEDGE.md)・[シナリオ](../knowledge/scenario-based-design/KNOWLEDGE.md) |
 | 途中でやめた。理由はうまく言えない | 作業に必要な資料がない。エラーの直し方が伝わらない。要求される手間が達成したいことに見合わない。 | 最後にできた操作と次に求められた条件を調べる。本人の環境で続きを一度試す。[ユーザーニーズ](../knowledge/user-needs/KNOWLEDGE.md)・[エラーからの回復](../knowledge/error-recovery/KNOWLEDGE.md)・[ユーザビリティテスト](../knowledge/usability-testing/KNOWLEDGE.md) |
+| 画面が増え、似た部品の使い分けや更新先が分からない | 同じ用途の指定が分散している。見た目は似ていても操作の結果が違う。移行先や担当が決まっていない。 | 直近で複数箇所を直した変更を一つ選び、各画面の目的・振る舞い・利用部品を照合する。局所修正、使い方の追記、共有部品の変更のどれが必要かを見分ける。[デザインシステム](../knowledge/design-systems/KNOWLEDGE.md)・[Design Token](../knowledge/design-tokens/KNOWLEDGE.md) |
 
 表に近い兆候がなければ、実際の出来事から「どの行為で止まったか」「本人は何が起きると予想していたか」を言葉にし、[知識の索引](../knowledge/README.md)から候補を探します。改善案の選択を左右する観察を次に行います。
