@@ -171,7 +171,7 @@
     "ai-slop": "1.1.0", "aesthetic-and-minimalist-design": "1.1.0", "visual-hierarchy": "1.1.0", "other14Concepts": "1.0.1", "new6Concepts": "1.0.0", "ui-layering": "1.0.0",
     "visual-style": "1.0.0", "interaction-design": "1.1.0", "usability-testing": "1.1.0", "user-needs": "1.1.0", "heart-framework": "1.1.0", "system-status-visibility": "1.0.0",
     "error-recovery": "1.0.0", "ios-branding": "1.0.0", "liquid-glass": "1.0.0", "app-icons": "1.1.0", "functional-icons": "1.0.0", "edge-to-edge": "1.0.0",
-    "c4-model": "1.0.1", "uml": "1.0.1", "data-flow-diagrams": "1.0.1",
+    "design-systems": "1.1.0", "c4-model": "1.0.1", "uml": "1.0.1", "data-flow-diagrams": "1.0.1",
     "entity-relationship-diagrams": "1.0.1", "statistical-charts": "1.0.1",
     "mental-models": "1.0.0", "cognitive-load": "1.0.0", "multimedia-learning": "1.0.0", "explanation-design": "1.0.0" }, "count": 47 },
     "assumptions": [ "47概念の入口・版を検査する。本文の意味や使いやすさを自動判定しない。" ], "implementation": "scripts/pages-catalog.ts",
