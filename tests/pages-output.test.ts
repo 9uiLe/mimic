@@ -199,6 +199,12 @@ const expectedFiles = [
   'knowledge/mental-models/examples/synchronization.md', 'knowledge/mental-models/examples/synchronization.html',
   'knowledge/explanation-design/examples/synchronization.md', 'knowledge/explanation-design/examples/synchronization.html',
   'topics/system-understanding.md', 'topics/system-understanding.html',
+  'agent/README.md', 'agent/index.html', 'agent/symptoms.md', 'agent/symptoms.html',
+  'agent/saving-example.md', 'agent/saving-example.html',
+  'knowledge/system-status-visibility/KNOWLEDGE.md', 'knowledge/system-status-visibility/index.html',
+  'knowledge/system-status-visibility/references/sources.md', 'knowledge/system-status-visibility/references/sources.html',
+  'knowledge/error-recovery/KNOWLEDGE.md', 'knowledge/error-recovery/index.html',
+  'knowledge/error-recovery/references/sources.md', 'knowledge/error-recovery/references/sources.html',
 ].sort();
 const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
 const movedPages = ['knowledge/decision-material-selection.md', 'knowledge/grouping.md', 'knowledge/visual-hierarchy.md'];
@@ -253,7 +259,7 @@ async function filesIn(directory: string, prefix = ''): Promise<string[]> {
 
 test('Pages contains exactly the reviewed files and repeated builds preserve their bytes', async () => {
   const { out } = await fixture();
-  assert.equal(expectedFiles.length, 573);
+  assert.equal(expectedFiles.length, 587);
   assert.deepEqual(await buildPages(out), expectedFiles);
   assert.deepEqual(await filesIn(out), expectedFiles);
   const before = await Promise.all(expectedFiles.map(file => readFile(path.join(out, file))));
@@ -269,8 +275,14 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
   assert.doesNotMatch(entry, /http-equiv="refresh"/);
   assert.match(entry, /<h1 class="type-section" id="questions-title">疑問から探す<\/h1>/,
     'the home page title must identify the question lookup section');
-  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 45, 'catalog must expose all forty-five reviewed concepts');
+  assert.equal([...entry.matchAll(/<h3><a href="knowledge\//g) ].length, 47, 'catalog must expose all reviewed concepts');
   assert.match(entry, /AI Slop/);
+  assert.ok(entry.includes('href="agent/index.html"'), 'catalog must open the UI improvement workflow');
+  const workflow = await readFile(path.join(out, 'agent/index.html'), 'utf8');
+  assert.ok(workflow.includes('href="symptoms.html"') && workflow.includes('href="saving-example.html"'),
+    'workflow must lead to the symptom index and worked example');
+  assert.deepEqual(await readFile(path.join(out, 'agent/README.md')), await readFile(path.join(root, 'agent/README.md')),
+    'the external AI must receive the canonical workflow Markdown');
   assert.ok(entry.includes('href="topics/product-design.html">プロダクトデザインの進め方と定義</a>'),
     'catalog must open the product design topic reader');
   assert.ok(entry.includes('href="topics/scenario-to-screen.html"'), 'catalog must open the scenario topic reader');
@@ -289,11 +301,12 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'aesthetic-and-minimalist-design': '1.1.0', typography: '1.0.1', 'layout-spacing': '1.0.1',
     'alignment-and-grids': '1.0.1', 'color-context': '1.0.1', 'ui-layering': '1.0.0',
     'human-centered-design': '1.0.0', 'user-journeys': '1.0.0', 'information-architecture': '1.0.0',
-    'interaction-design': '1.0.0', 'design-systems': '1.0.0', 'usability-testing': '1.0.0',
+    'interaction-design': '1.1.0', 'design-systems': '1.0.0', 'usability-testing': '1.1.0',
+    'system-status-visibility': '1.0.0', 'error-recovery': '1.0.0',
     'scenario-based-design': '1.0.1', 'goal-directed-design': '1.0.1',
     'reflective-conversation': '1.0.1', 'sketches-and-prototypes': '1.0.1', 'visual-style': '1.0.0',
-    'double-diamond': '1.0.0', 'user-research': '1.0.0', 'user-needs': '1.0.0',
-    'user-stories': '1.0.0', 'heart-framework': '1.0.0',
+    'double-diamond': '1.0.0', 'user-research': '1.0.0', 'user-needs': '1.1.0',
+    'user-stories': '1.0.0', 'heart-framework': '1.1.0',
     'ios-branding': '1.0.0', 'liquid-glass': '1.0.0', 'app-icons': '1.1.0', 'functional-icons': '1.0.0', 'edge-to-edge': '1.0.0',
     'c4-model': '1.0.1', uml: '1.0.1', 'data-flow-diagrams': '1.0.1',
     'entity-relationship-diagrams': '1.0.1', 'statistical-charts': '1.0.1',
@@ -303,10 +316,10 @@ test('Pages contains exactly the reviewed files and repeated builds preserve the
     'catalog must show nineteen v1.0.1 source concept versions');
   assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.1<\/p>/g)].length, 1,
     'catalog must show the Design Token v1.1.1 source version');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 21,
-    'catalog must show twenty-one v1.0.0 source concept versions');
-  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 4,
-    'catalog must show four v1.1.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.0\.0<\/p>/g)].length, 19,
+    'catalog must show nineteen v1.0.0 source concept versions');
+  assert.equal([...entry.matchAll(/<p class="meta">v1\.1\.0<\/p>/g)].length, 8,
+    'catalog must show eight v1.1.0 source concept versions');
   for (const file of ['knowledge/README.md', 'topics/color.html', 'topics/ai-slop.html',
     'topics/color.md', 'topics/ai-slop.md', 'topics/product-ui-design.md', 'topics/product-ui-design.html',
     'topics/product-design.md', 'topics/product-design.html']) {
@@ -561,7 +574,7 @@ test('HTML readers retain every source block, concept version, and paths to rela
   const { out } = await fixture();
   await buildPages(out);
   const readers = expectedFiles.filter(file => file.startsWith('knowledge/') && file.endsWith('.html'));
-  assert.equal(readers.length, 119);
+  assert.equal(readers.length, 123);
   for (const htmlFile of readers) {
     const sourceFile = htmlFile.endsWith('/index.html') ? htmlFile.replace(/index\.html$/, 'KNOWLEDGE.md') : htmlFile.replace(/\.html$/, '.md');
     const source = await readFile(path.join(root, sourceFile), 'utf8');

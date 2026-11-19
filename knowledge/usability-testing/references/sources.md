@@ -8,6 +8,10 @@
 | [GOV.UK — Plan a round of user research](https://www.gov.uk/service-manual/user-research/plan-round-of-user-research) | Set your research objectives／Find participants／Arrange recording and note-taking／Prepare the prototype or beta service／Run a practice session／Plan time for analysis | 次の判断に必要な研究目的と方法、参加者の条件、利用上の配慮、同意、試作品の準備と分析 | ユーザー調査一般の計画。記載された実施時間や人数を、普遍的な合格条件として採用しない。 |
 | [GOV.UK — Analyse a research session](https://www.gov.uk/service-manual/user-research/analyse-a-research-session) | Extract observations／Sort observations／Determine findings／Decide actions／Share your findings | 見聞きした記録、解釈した発見、改善や次の調査を分けること | 観察研究の分析指針。発見した改善案の効果を、分析しただけで実証したとは扱わない。 |
 
+## 課題直後の短い質問の研究
+
+[Sauro & Dumas — Comparison of Three One-Question, Post-Task Usability Questionnaires（CHI 2009、著者配布PDF）](https://measuringu.com/wp-content/uploads/2017/07/Sauro_Dumas_CHI2009.pdf) の Abstract、Experiment 2 の Method と Results を確認しました。26人による同じ五課題・二アプリで、単一質問の方式を比較しています。対象外の製品にも同じ感度が得られることや、質問だけで診断できることは示していません。
+
 ## このRepositoryでの整理
 
 AI・専門家レビュー、自動テスト、利用者観察で得られる証拠の違いは、本Repositoryによる説明です。

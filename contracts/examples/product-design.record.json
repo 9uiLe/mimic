@@ -12,13 +12,13 @@
     },
     {
       "id": "needs-knowledge", "path": "knowledge/user-needs/KNOWLEDGE.md",
-      "sha256": "d8c07fbcf46c322317fad1fb4b476c8d7d383c051c62d967f2c2e8c315d93152",
-      "description": "必要な成果と解決案を区別する知識。版1.0.0。"
+      "sha256": "cd75967ae6a870f19a081c5445b9b9fceb66f8d1a60601e9d0b0fd72f6ff6dae",
+      "description": "必要な成果と解決案を区別する知識。版1.1.0。"
     },
     {
       "id": "interaction-knowledge", "path": "knowledge/interaction-design/KNOWLEDGE.md",
-      "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9",
-      "description": "行為、状態、応答と中断・再開を考える知識。版1.0.0。"
+      "sha256": "130bad19a46f7d6715a333021742ebd02dad9958431e3801bd2084882bf978e3",
+      "description": "行為、状態、応答と中断・再開を考える知識。版1.1.0。"
     },
     {
       "id": "journey-knowledge", "path": "knowledge/user-journeys/KNOWLEDGE.md",

@@ -14,6 +14,8 @@
 
 設計に使う知識を選ぶときは、[設計判断に使う知識を選ぶ原則](../guideline/README.md#設計判断に使う知識を選ぶ原則)から、いま決めたい問いに合う本文へ進む。
 
+UIの違和感から調べるときは[困り方から調べる索引](../agent/symptoms.md)を使います。改善の相談から結果の確認までは[AI向けの共通手順](../agent/README.md)を参照できます。
+
 ## 読む本文
 
 | ID | 正本 | 説明すること |
@@ -37,6 +39,8 @@
 | `user-journeys` | [ユーザージャーニー](user-journeys/KNOWLEDGE.md) | 利用前後の出来事、接点、関係者を通して体験を捉えること |
 | `information-architecture` | [情報アーキテクチャ](information-architecture/KNOWLEDGE.md) | 情報や機能の定義・関係・分類・命名と、ナビゲーションとの違い |
 | `interaction-design` | [インタラクションデザイン](interaction-design/KNOWLEDGE.md) | 利用者の行為とシステムの応答、画面の役割、状態と遷移の関係 |
+| `system-status-visibility` | [システム状態の可視性](system-status-visibility/KNOWLEDGE.md) | 状態と成否を、作業に合う場所とタイミングで伝えること |
+| `error-recovery` | [エラーからの回復](error-recovery/KNOWLEDGE.md) | 問題に気づき、理解し、作業を続けられるようにすること |
 | `design-systems` | [デザインシステム](design-systems/KNOWLEDGE.md) | 原則・パターン・部品・指針を共有し、適用と更新を扱う仕組み |
 | `usability-testing` | [ユーザビリティテスト](usability-testing/KNOWLEDGE.md) | 利用者が課題を試す際の観察と、設計上の仮定を確かめること |
 | `scenario-based-design` | [シナリオに基づくデザイン](scenario-based-design/KNOWLEDGE.md) | 人の活動の物語を設計作業の主要な表現として使う考え方 |

@@ -1,0 +1,7 @@
+{
+  "name": "mimic-marketplace",
+  "owner": { "name": "9uiLe" },
+  "plugins": [
+    { "name": "mimic", "source": "./plugins/mimic" }
+  ]
+}

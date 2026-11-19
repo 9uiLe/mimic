@@ -1,0 +1,12 @@
+{
+  "name": "mimic-marketplace",
+  "interface": { "displayName": "Mimic" },
+  "plugins": [
+    {
+      "name": "mimic",
+      "source": { "source": "local", "path": "./plugins/mimic" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Design"
+    }
+  ]
+}

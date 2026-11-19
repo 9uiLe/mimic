@@ -1,6 +1,6 @@
 # ユーザーニーズの出典
 
-確認日は2026年10月25日です。
+確認日は2026年11月18日です。
 
 [GOV.UK, Learning about users and their needs](https://www.gov.uk/service-manual/user-research/start-by-learning-user-needs)を参照します。
 
@@ -12,7 +12,7 @@
 | Linking user needs to user stories | 広いニーズと具体的な仕事の違い、対応関係の追跡 |
 
 英国政府サービスの指針に沿った説明です。
-通知の例はMimicの作例であり、資料の例の翻訳や、通知手段の推奨ではありません。
+通知と設定画面の例はMimicの作例です。設定画面では、Understanding user needsとResearching users and their needsで確認した、目的・利用状況・根拠に基づく調査を具体化しています。
 HEARTへの接続はMimicの編集上の整理です。
 
 [本文に戻る](../KNOWLEDGE.md)

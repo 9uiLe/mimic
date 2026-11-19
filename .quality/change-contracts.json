@@ -2,6 +2,23 @@
   "schema_version": 1,
   "contracts": [
     {
+      "id": "mimic-ui-improvement-entry",
+      "paths": [
+        ".agents/plugins/marketplace.json",
+        ".claude-plugin/marketplace.json",
+        "plugins/mimic/.claude-plugin/plugin.json",
+        "plugins/mimic/.codex-plugin/plugin.json"
+      ],
+      "purpose": "Claude CodeとCodexに、GitHubの共通手順を使用時に取得するMimicの呼び出し口を配布する。",
+      "basis_status": "confirmed",
+      "basis": ["plugins/README.md", "agent/README.md"],
+      "validation": [
+        "両マーケットプレイスのsourceと各manifestから同じskillへ到達し、skillがmainの手順を参照することを静的に確認する。",
+        "マージ後に、両クライアントの呼び出し、本文と出典への到達、再インストールなしの知識の更新を確認する。"
+      ],
+      "unresolved": ["マージ後の両クライアントでの検証は利用者の環境で行う。"]
+    },
+    {
       "id": "knowledge-application-contracts",
       "paths": ["contracts/**/*.json"],
       "purpose": "知識の説明から独立した製品の対象範囲・設計判断台帳と、必要な適用契約・証拠・判定を構造化する。",

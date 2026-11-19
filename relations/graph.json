@@ -10,6 +10,10 @@
     "verification": "本文の記述との照合。本文外の原典再検証や、索引・理解改善の実測を表さない。"
   },
   "nodes": [
+    {"id": "system-status-visibility", "title": "システム状態の可視性", "version": "1.0.0",
+      "path": "knowledge/system-status-visibility/KNOWLEDGE.md", "sha256": "71c16ccc2eacdb69befe8cfa47aad588eb801bd28cf08938a14828b8e509fb76"},
+    {"id": "error-recovery", "title": "エラーからの回復", "version": "1.0.0",
+      "path": "knowledge/error-recovery/KNOWLEDGE.md", "sha256": "7b4e3fd9022a7bead60d37e0842cd589bbcc72cb7ceebf0af1720b19306337ec"},
     {"id": "c4-model", "title": "C4モデルとアーキテクチャ図", "version": "1.0.1",
       "path": "knowledge/c4-model/KNOWLEDGE.md", "sha256": "5886e918376cc9e1d2e8b214d895a7363f5e4a3c10e4ef429b8bfcd7b69a94c6"},
     {"id": "uml", "title": "UMLによる構造と振る舞いの図", "version": "1.0.1",
@@ -52,8 +56,8 @@
       "path": "knowledge/human-centered-design/KNOWLEDGE.md", "sha256": "5b1d3c310507bc6b119f856fac94fd45b472810673a2743e96aacf5cc6be08d1"},
     {"id": "information-architecture", "title": "情報アーキテクチャ", "version": "1.0.0",
       "path": "knowledge/information-architecture/KNOWLEDGE.md", "sha256": "f84f88dc80ce06ba430dbae0fc8c6212da2d335341fa7fbcf5aca089b43276d9"},
-    {"id": "interaction-design", "title": "インタラクションデザイン", "version": "1.0.0",
-      "path": "knowledge/interaction-design/KNOWLEDGE.md", "sha256": "def60b5f344168b3f807c549968a9b1613f50452632d8dfdc6ad7567b88ea3f9"},
+    {"id": "interaction-design", "title": "インタラクションデザイン", "version": "1.1.0",
+      "path": "knowledge/interaction-design/KNOWLEDGE.md", "sha256": "130bad19a46f7d6715a333021742ebd02dad9958431e3801bd2084882bf978e3"},
     {"id": "layout-spacing", "title": "レイアウトの余白", "version": "1.0.1",
       "path": "knowledge/layout-spacing/KNOWLEDGE.md", "sha256": "37372a03fdefcfd0505defa59e4a645c0ad1d61c3c726465fbe20db9eb09a5c8"},
     {"id": "lightness-and-luminance", "title": "明度と相対輝度", "version": "1.0.1",
@@ -62,8 +66,8 @@
       "path": "knowledge/typography/KNOWLEDGE.md", "sha256": "b68344d1ddf4e8e009fd37cbbbf3498d221a7df166bb57f136442bacaf8e4575"},
     {"id": "ui-layering", "title": "UIのレイヤー構造", "version": "1.0.0",
       "path": "knowledge/ui-layering/KNOWLEDGE.md", "sha256": "53ca670c9519fe3f4902055c93e9e6bf8107e00218f15aaa5052b54845a60d95"},
-    {"id": "usability-testing", "title": "ユーザビリティテスト", "version": "1.0.0",
-      "path": "knowledge/usability-testing/KNOWLEDGE.md", "sha256": "a5baa55a51baca43cd5b95411b83a6b57f29a44ded5cc70d148bf005a41ae515"},
+    {"id": "usability-testing", "title": "ユーザビリティテスト", "version": "1.1.0",
+      "path": "knowledge/usability-testing/KNOWLEDGE.md", "sha256": "0b876ae684ec814e7cd2740e9c711e82df734e1bb8f34b619d4507d9adfd5a98"},
     {"id": "user-journeys", "title": "ユーザージャーニー", "version": "1.0.0",
       "path": "knowledge/user-journeys/KNOWLEDGE.md", "sha256": "7ec61dfdb34e929d8b1c9feda26fb0df544d21ecf6c9a709bb9aa52c25462e32"},
     {"id": "visual-hierarchy", "title": "視覚的な優先順位", "version": "1.1.0",
@@ -82,12 +86,12 @@
       "path": "knowledge/double-diamond/KNOWLEDGE.md", "sha256": "6ccdd94cb4ea1984223bc011f8affab5ef0298a1ad38069ca72364962d5718d5"},
     {"id": "user-research", "title": "ユーザーリサーチ", "version": "1.0.0",
       "path": "knowledge/user-research/KNOWLEDGE.md", "sha256": "1a5821ff349042c16a9c2f0b47c7861c8c0a78abe1c9ab1ea0683828e0297d64"},
-    {"id": "user-needs", "title": "ユーザーニーズ", "version": "1.0.0",
-      "path": "knowledge/user-needs/KNOWLEDGE.md", "sha256": "d8c07fbcf46c322317fad1fb4b476c8d7d383c051c62d967f2c2e8c315d93152"},
+    {"id": "user-needs", "title": "ユーザーニーズ", "version": "1.1.0",
+      "path": "knowledge/user-needs/KNOWLEDGE.md", "sha256": "cd75967ae6a870f19a081c5445b9b9fceb66f8d1a60601e9d0b0fd72f6ff6dae"},
     {"id": "user-stories", "title": "ユーザーストーリーと受入条件", "version": "1.0.0",
       "path": "knowledge/user-stories/KNOWLEDGE.md", "sha256": "5f968e40a7bde0a430eeb285754ced309a289d988b625f74a61969d488c6deaa"},
-    {"id": "heart-framework", "title": "HEARTと目標・シグナル・指標", "version": "1.0.0",
-      "path": "knowledge/heart-framework/KNOWLEDGE.md", "sha256": "3109d7b7c97b095787f987b06499c887e6d12607b3d91c2f5fbea9dcdcf0b3c9"},
+    {"id": "heart-framework", "title": "HEARTと目標・シグナル・指標", "version": "1.1.0",
+      "path": "knowledge/heart-framework/KNOWLEDGE.md", "sha256": "4edf96791dd5dc69d4daba1b7cc9ca6221afad75749c50eee4041597cbd50d4d"},
     {"id": "ios-branding", "title": "iOSにおけるブランド表現", "version": "1.0.0",
       "path": "knowledge/ios-branding/KNOWLEDGE.md", "sha256": "3d25ef9789a840b33777e69a60fb5f3c9f64465c2dc92d9fac763fd862cb8fe6"},
     {"id": "liquid-glass", "title": "Liquid Glass", "version": "1.0.0",
@@ -102,6 +106,14 @@
       "path": "knowledge/explanation-design/KNOWLEDGE.md", "sha256": "62610b001062a1177d7be1554a73013df1efc5fd60e5db150de70eb3ab051a5e"}
   ],
   "edges": [
+    {"id": "interaction-design--complemented_by--system-status-visibility",
+      "from": "interaction-design", "to": "system-status-visibility", "type": "complemented_by",
+      "statement": "行為と応答の説明に、状態や成否を作業に合う形で伝える観点を補う。", "scope": "状態とフィードバックにおける利用者への応答。特定の部品や必読の順序を示さない。",
+      "evidence": [{"concept": "interaction-design", "heading": "状態とフィードバック", "quotation": "成否や処理中の状態が伝わるかは[システム状態の可視性](../system-status-visibility/KNOWLEDGE.md)"}]},
+    {"id": "interaction-design--complemented_by--error-recovery",
+      "from": "interaction-design", "to": "error-recovery", "type": "complemented_by",
+      "statement": "行為と応答の説明に、問題を認識し、作業を続けられるようにする観点を補う。", "scope": "状態とフィードバックにおける利用者への応答。特定の部品や必読の順序を示さない。",
+      "evidence": [{"concept": "interaction-design", "heading": "状態とフィードバック", "quotation": "失敗後に修正して作業を続けられるかは[エラーからの回復](../error-recovery/KNOWLEDGE.md)"}]},
     {
       "id": "c4-and-uml",
       "from": "c4-model",
@@ -675,26 +687,14 @@
       ],
       "id": "design-systems--complemented_by--usability-testing"
     },
-    {
-      "from": "interaction-design",
-      "to": "usability-testing",
-      "type": "complemented_by",
+    {"id": "interaction-design--complemented_by--usability-testing",
+      "from": "interaction-design", "to": "usability-testing", "type": "complemented_by",
       "statement": "意図した振る舞いを説明することに対して、利用者が実際にどう理解し操作するかを観察する観点が補われる。",
       "scope": "本文が扱う操作・応答を個別UIで確かめる範囲。遷移図や状態表を、利用者の観察結果へ置き換えない。",
       "evidence": [
-        {
-          "concept": "interaction-design",
-          "heading": "アクセシビリティと適用範囲",
-          "quotation": "画面遷移図や状態の表は、意図した振る舞いを説明できますが、実際の理解や操作を確かめた結果とは区別します。"
-        },
-        {
-          "concept": "usability-testing",
-          "heading": "概念",
-          "quotation": "感想を聞くだけでなく、どこを見て、何を試し、どこで進めなくなるかを確かめます。"
-        }
-      ],
-      "id": "interaction-design--complemented_by--usability-testing"
-    },
+        {"concept": "interaction-design", "heading": "アクセシビリティと適用範囲", "quotation": "画面遷移図や状態の表は、意図した振る舞いを説明できますが、実際の理解や操作を確かめた結果とは区別します。"},
+        {"concept": "usability-testing", "heading": "概念", "quotation": "感想を聞くだけでなく、どこを見て、何を試し、どこで進めなくなるかを確かめます。"}
+      ]},
     { "id": "scenario-based-design--distinguished_from--goal-directed-design", "evidence": [ { "concept": "goal-directed-design", "heading": "関連する概念",
     "quotation": "Goal-Directed Designは、その使い方をペルソナの目標や他の方法と組み合わせた特定の構成を持ちます。" } ], "from": "scenario-based-design", "to": "goal-directed-design", "type": "distinguished_from",
     "statement": "活動を物語で表す考え方と、目標や他の方法を組み合わせたGoal-Directed Designの構成を区別する。" },
